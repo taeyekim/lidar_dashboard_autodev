@@ -161,6 +161,7 @@ const swaggerSpec = {
       post: {
         tags: ["Control"],
         summary: "차단기 열기",
+        security: [{ bearerAuth: [] }],
         responses: {
           200: {
             description: "차단기 열기 명령 접수",
@@ -177,6 +178,7 @@ const swaggerSpec = {
       post: {
         tags: ["Control"],
         summary: "차단기 닫기",
+        security: [{ bearerAuth: [] }],
         responses: {
           200: {
             description: "차단기 닫기 명령 접수",
@@ -193,6 +195,7 @@ const swaggerSpec = {
       post: {
         tags: ["Control"],
         summary: "전광판 문구 전송",
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: false,
           content: {
@@ -277,6 +280,7 @@ const swaggerSpec = {
         summary: "Send or dry-run an integrated control board command",
         description:
           "Uses CONTROL_BOARD_DRY_RUN=true by default. Disable dry-run only after CONTROL_BOARD_HOST and CONTROL_BOARD_PORT are set for field testing.",
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: false,
           content: {
@@ -404,6 +408,7 @@ const swaggerSpec = {
       patch: {
         tags: ["Events"],
         summary: "이벤트 상태 변경",
+        security: [{ bearerAuth: [] }],
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         requestBody: {
           required: true,
@@ -441,6 +446,7 @@ const swaggerSpec = {
       patch: {
         tags: ["Events"],
         summary: "이벤트 메모 추가",
+        security: [{ bearerAuth: [] }],
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         requestBody: {
           required: true,
@@ -677,6 +683,7 @@ const swaggerSpec = {
       post: {
         tags: ["Demo"],
         summary: "감지 데모 시작",
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: false,
           content: {
@@ -712,6 +719,7 @@ const swaggerSpec = {
       post: {
         tags: ["Demo"],
         summary: "감지 데모 초기화",
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: false,
           content: {

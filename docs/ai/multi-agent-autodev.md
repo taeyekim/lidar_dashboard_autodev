@@ -7,8 +7,8 @@
 - 초기 목표, 허용 범위, 금지 범위, 검증 기준을 사용자 승인으로 간주한다.
 - 중간 승인 없이 계획, 구현, 검증, 수정 루프를 반복한다.
 - 작업 중 범위 확대, 파괴적 작업, 비밀값 처리, 실제 배포, 외부 서비스 과금/운영 영향이 필요하면 멈추고 보고한다.
-- 사용자가 무검증 브랜치 push 모드를 요청하면 기능별 브랜치 생성, 커밋, push를 중간 승인 없이 진행할 수 있다.
-- 무검증 브랜치 push 모드에서는 검증 루프를 생략할 수 있지만, 생략한 검증은 최종 보고와 PR 설명에 `미검증`으로 남긴다.
+- 현재 Git 운영은 `dev` 직접 커밋/push 모드이다. 사용자가 별도로 요청하지 않는 한 기능 브랜치와 PR은 만들지 않는다.
+- `dev` 직접 push 모드에서도 가능한 검증은 실행하고, 생략하거나 실행하지 못한 검증은 최종 보고에 `미검증`으로 남긴다.
 - 최종 수정 책임과 의사결정은 현재 작업을 수행하는 메인 에이전트가 가진다.
 - 확인하지 않은 사실, 라이다 payload 의미, 장비 프로토콜은 확정된 것처럼 다루지 않는다.
 
@@ -354,7 +354,7 @@
 - README 또는 docs 업데이트
 - curl 테스트 예시
 - 변경 이력과 남은 확인 사항
-- PR 설명 초안
+- 릴리즈 노트 초안
 
 검증 기준:
 
@@ -438,22 +438,22 @@ PM / 오케스트레이터는 먼저 다음을 정리한다.
 9. 다음 목표 선택
 ```
 
-### 무검증 브랜치 push 루프
+### dev 직접 push 루프
 
-사용자가 무검증 브랜치 push 모드를 켠 경우 아래 흐름을 사용할 수 있다.
+현재 운영 방식에서는 아래 흐름을 기본으로 사용한다.
 
 ```text
 1. 기능 또는 작업 묶음 선택
-2. `codex/<기능명>` 브랜치 생성
+2. `dev` 최신 상태와 작업 트리 확인
 3. 해당 기능 범위만 구현
-4. 검증 생략 여부 기록
+4. 가능한 검증 실행 및 미실행 검증 기록
 5. `git status --short`로 커밋 대상 확인
 6. 비밀값/생성물/범위 밖 변경이 없으면 커밋
-7. 원격 브랜치로 push
-8. 결과 보고에 브랜치, 커밋, push 결과, 미검증 항목 기록
+7. `origin/dev`로 직접 push
+8. 결과 보고에 커밋, push 결과, 검증/미검증 항목 기록
 ```
 
-무검증 push 모드에서도 비밀값, 배포, 외부 장비 영향, 파괴적 Git 작업은 중단 조건이다.
+dev 직접 push 모드에서도 비밀값, 배포, 외부 장비 영향, 파괴적 Git 작업은 중단 조건이다.
 
 ### 충돌 처리
 
@@ -541,7 +541,7 @@ PM / 오케스트레이터는 먼저 다음을 정리한다.
 - 주요 회귀 항목 확인
 - 남은 리스크와 미검증 항목 보고
 
-무검증 브랜치 push 모드에서는 M5를 생략하고 push할 수 있다. 이 경우 M5 항목 전체를 `미검증`으로 표시한다.
+dev 직접 push 모드에서도 실행하지 못한 M5 항목은 `미검증`으로 표시한다.
 
 ## 완료 정의
 
@@ -565,7 +565,6 @@ PM / 오케스트레이터는 먼저 다음을 정리한다.
 검증 명령:
 검증 결과:
 미검증:
-브랜치:
 커밋:
 push 결과:
 남은 리스크:
@@ -576,7 +575,7 @@ push 결과:
 
 기능 개발 전에는 단일 에이전트가 바로 구현하지 않고, PM이 아래 순서로 역할별 의견을 모은 뒤 계약을 확정한다.
 
-1. PM이 기능 목표, 사용자 가치, 금지 범위, 예상 브랜치를 선언한다.
+1. PM이 기능 목표, 사용자 가치, 금지 범위, 예상 작업 묶음을 선언한다.
 2. UI/UX가 화면 흐름, 관제 우선순위, 상태/오류/빈 화면, 접근성 리스크를 제안한다.
 3. Backend/DB가 API 계약, 저장 모델, migration 필요성, WebSocket/polling 계약을 제안한다.
 4. Auth/Security가 JWT, 권한, 비밀값, 공개/보호 API, 장비 ingest 인증 경계를 검토한다.
@@ -585,9 +584,9 @@ push 결과:
 7. Infrastructure/Network가 Nginx reverse proxy, 포트 노출, TLS/WebSocket proxy, 방화벽 경계를 검토한다.
 8. Security Assurance가 납품 전 보안 검사, SAST/DAST/dependency/secret/container scan, 보안 헤더/CORS/JWT 점검 범위를 정한다.
 9. Delivery/Acceptance가 설치, 검수, 운영 runbook, 증적, 인수인계 기준을 정한다.
-10. QA/DevOps가 실행 환경, 검증 명령, Docker/DB 상태, 무검증 push 시 `미검증` 표기 범위를 정한다.
+10. QA/DevOps가 실행 환경, 검증 명령, Docker/DB 상태, 미실행 검증의 `미검증` 표기 범위를 정한다.
 11. Tech Lead가 충돌을 조정하고 구현 순서와 interface freeze 항목을 확정한다.
-12. 메인 에이전트가 구현, 검증 또는 무검증 push, 결과 보고를 수행한다.
+12. 메인 에이전트가 구현, 검증, dev 직접 push, 결과 보고를 수행한다.
 
 에이전트 응답은 단순 의견이 아니라 서로에게 넘길 질문을 포함해야 한다.
 
@@ -595,7 +594,7 @@ push 결과:
 내 역할의 결론:
 다른 에이전트에게 필요한 계약:
 구현 전 확정할 interface:
-브랜치 제안:
+작업 묶음 제안:
 검증 또는 미검증 처리:
 막히면 사용할 fallback:
 ```
@@ -619,11 +618,11 @@ push 결과:
 | 보안 검사 | Security Assurance | Backend, Frontend, Infra, QA, Delivery | SAST, dependency audit, secret scan, container scan, DAST, manual checklist |
 | 납품/검수 | Delivery/Acceptance | PM, QA, DevOps, Security, Hardware, Docs | 설치 runbook, acceptance checklist, evidence package, known limitations |
 | Docker/현장 실행 | DevOps | Backend, Frontend, QA, Docs | `.env.example`, port, compose, Windows/PowerShell 실행 가이드 |
-| 릴리즈/브랜치 push | QA/DevOps | PM, Tech Lead, Security | branch, commit, push, skipped checks as `미검증` |
+| 릴리즈/dev 직접 push | QA/DevOps | PM, Tech Lead, Security | commit, push, skipped checks as `미검증` |
 
 ## 최종 기능 백로그
 
-아래 백로그는 현재 라이다 역주행 대시보드 최종 개발 범위의 기준이다. 이미 구현된 항목은 재확인 후 보강하고, 미구현 항목은 기능별 브랜치로 나누어 진행한다.
+아래 백로그는 현재 라이다 역주행 대시보드 최종 개발 범위의 기준이다. 이미 구현된 항목은 재확인 후 보강하고, 미구현 항목은 dev 직접 push 단위의 작업 묶음으로 나누어 진행한다.
 
 ### A. 인증/JWT
 
@@ -635,12 +634,12 @@ push 결과:
 - 프론트는 로그인 화면, 세션 복구, 401 session expired, 로그아웃, protected route를 제공한다.
 - `.env.example`에는 placeholder만 넣고 실제 `JWT_SECRET`, 관리자 비밀번호/해시는 커밋하지 않는다.
 
-권장 브랜치:
+권장 작업 묶음:
 
-- `codex/feature-auth-backend-core`
-- `codex/feature-auth-protect-apis`
-- `codex/feature-auth-frontend`
-- `codex/docs-swagger-auth`
+- `feature-auth-backend-core`
+- `feature-auth-protect-apis`
+- `feature-auth-frontend`
+- `docs-swagger-auth`
 
 ### B. 라이다 payload ingest와 lifecycle
 
@@ -653,12 +652,12 @@ push 결과:
 - `zone_id`는 외부 라이다 code와 DB zone 매핑 실패를 명확히 표시한다.
 - 중복 resend, 잘못된 timestamp, warning/type 불일치, raw payload 과대 입력을 방어한다.
 
-권장 브랜치:
+권장 작업 묶음:
 
-- `codex/wrongway-payload-contract`
-- `codex/vehicle-track-lifecycle`
-- `codex/wrongway-dedupe-policy`
-- `codex/wrongway-field-curl-scenarios`
+- `wrongway-payload-contract`
+- `vehicle-track-lifecycle`
+- `wrongway-dedupe-policy`
+- `wrongway-field-curl-scenarios`
 
 ### C. 백엔드 API/DB 계약
 
@@ -671,14 +670,14 @@ push 결과:
 - WebSocket message type은 `traffic-event.created`, `traffic-event.updated`, `vehicle-track.updated`, `device-status.updated`를 canonical로 정하고 기존 message는 호환 유지한다.
 - 신규 API는 `success/data/message` envelope를 우선하되 기존 `ok/items/event` 응답은 프론트 호환 기간 동안 흡수한다.
 
-권장 브랜치:
+권장 작업 묶음:
 
-- `codex/backend-api-contract-cleanup`
-- `codex/backend-sites-zones-devices-api`
-- `codex/backend-event-query-and-polling`
-- `codex/backend-event-lifecycle-schema`
-- `codex/backend-realtime-db-broadcast`
-- `codex/backend-status-swagger-qa`
+- `backend-api-contract-cleanup`
+- `backend-sites-zones-devices-api`
+- `backend-event-query-and-polling`
+- `backend-event-lifecycle-schema`
+- `backend-realtime-db-broadcast`
+- `backend-status-swagger-qa`
 
 ### D. 프론트엔드 관제 UI
 
@@ -693,15 +692,15 @@ push 결과:
 - 모바일/태블릿에서는 경보 확인과 최근 이벤트 확인이 깨지지 않아야 한다.
 - CCTV, 번호판, 차량 소유자 같은 제공되지 않는 정보를 있는 것처럼 표시하지 않는다.
 
-권장 브랜치:
+권장 작업 묶음:
 
-- `codex/frontend-auth-jwt-ux`
-- `codex/frontend-status-health-strip`
-- `codex/frontend-event-state-model`
-- `codex/frontend-raw-payload-drawer`
-- `codex/frontend-dashboard-ops-layout`
-- `codex/frontend-devices-settings-real-contract`
-- `codex/frontend-responsive-empty-error`
+- `frontend-auth-jwt-ux`
+- `frontend-status-health-strip`
+- `frontend-event-state-model`
+- `frontend-raw-payload-drawer`
+- `frontend-dashboard-ops-layout`
+- `frontend-devices-settings-real-contract`
+- `frontend-responsive-empty-error`
 
 ### E. 통합제어보드 준비
 
@@ -716,12 +715,12 @@ push 결과:
 - 향후 제어 요청 권한, audit log, timeout/retry, manual override 정책을 문서화한다.
 - Hardware/Field Control 에이전트는 UTP 배선, Ethernet 연결 방식, 통합제어보드 IP/port, TCP/UDP/HTTP bridge 여부, timeout/retry/heartbeat, 케이블 길이, 노이즈, 현장 안전 조건을 확인 필요 항목으로 관리한다.
 
-권장 브랜치:
+권장 작업 묶음:
 
-- `codex/backend-device-control-readiness`
-- `codex/hardware-rs485-control-board-advisory`
-- `codex/frontend-control-board-readiness`
-- `codex/docs-control-board-protocol-boundary`
+- `backend-device-control-readiness`
+- `hardware-rs485-control-board-advisory`
+- `frontend-control-board-readiness`
+- `docs-control-board-protocol-boundary`
 
 ### F. QA/DevOps/문서화
 
@@ -730,14 +729,14 @@ push 결과:
 - API smoke script는 health, auth, wrongway 4종 payload, events query, memo/status, logs를 확인한다.
 - 프론트 smoke는 login, dashboard, event log, raw payload drawer, reconnect/error 상태를 확인한다.
 - Swagger는 실제 route와 request/response schema에 맞춘다.
-- 무검증 브랜치 push 모드에서는 실행하지 못한 검증을 PR/최종 보고에 `미검증`으로 적는다.
+- dev 직접 push 모드에서는 실행하지 못한 검증을 최종 보고에 `미검증`으로 적는다.
 
-권장 브랜치:
+권장 작업 묶음:
 
-- `codex/qa-local-smoke-scripts`
-- `codex/devops-windows-preflight`
-- `codex/docker-runtime-stability`
-- `codex/docs-field-runbook`
+- `qa-local-smoke-scripts`
+- `devops-windows-preflight`
+- `docker-runtime-stability`
+- `docs-field-runbook`
 
 ### G. Nginx/운영 인프라
 
@@ -748,12 +747,12 @@ push 결과:
 - Docker Compose 개발 구성과 Nginx 운영 구성을 분리하고, 현장망 IP/도메인/인증서는 placeholder로만 문서화한다.
 - Nginx 설정은 `nginx -t` 또는 컨테이너 config test로 검증 가능한 형태로 둔다.
 
-권장 브랜치:
+권장 작업 묶음:
 
-- `codex/infra-nginx-reverse-proxy`
-- `codex/infra-network-firewall-runbook`
-- `codex/infra-websocket-proxy-hardening`
-- `codex/docs-nginx-delivery-topology`
+- `infra-nginx-reverse-proxy`
+- `infra-network-firewall-runbook`
+- `infra-websocket-proxy-hardening`
+- `docs-nginx-delivery-topology`
 
 ### H. 납품 보안 검사/검수
 
@@ -764,19 +763,19 @@ push 결과:
 - 검사 결과는 `차단`, `납품 전 수정`, `위험 수용`, `미검증`으로 분류한다.
 - 납품 검수에는 설치 절차, 계정 초기화, 라이다 POST, 이벤트 조회, Nginx 경유 접속, 장애 재시작, 로그 수집, 백업/복구, 알려진 제한사항을 포함한다.
 
-권장 브랜치:
+권장 작업 묶음:
 
-- `codex/security-delivery-scan-plan`
-- `codex/security-headers-cors-jwt-hardening`
-- `codex/security-zap-baseline-smoke`
-- `codex/delivery-acceptance-runbook`
+- `security-delivery-scan-plan`
+- `security-headers-cors-jwt-hardening`
+- `security-zap-baseline-smoke`
+- `delivery-acceptance-runbook`
 
 ## 최종 개발 마일스톤
 
 ### M0. 현재 상태 진단
 
 - 코드/DB/API/UI/Docker 현황을 읽고 구현됨, 미구현, 불확실 항목을 분리한다.
-- 산출물: 현황표, 위험 목록, 첫 브랜치 후보.
+- 산출물: 현황표, 위험 목록, 첫 작업 묶음 후보.
 
 ### M1. 인증 기반 운영 골격
 
@@ -811,40 +810,41 @@ push 결과:
 ### M7. 릴리즈 후보 정리
 
 - lint/build/test/API smoke/Docker 가능 범위를 검증하고, 불가 항목은 `미검증`으로 남긴다.
-- 완료 기준: 브랜치/커밋/push/PR 또는 최종 보고에 남은 리스크가 명확하다.
+- 완료 기준: 커밋/push 또는 최종 보고에 남은 리스크가 명확하다.
 
 ### M8. Nginx/보안/납품 준비
 
 - Nginx reverse proxy, 보안 검사, 납품 검수, 운영 runbook을 정리한다.
 - 완료 기준: 프록시 경로, 포트 노출, 보안 검사 결과, acceptance checklist, 증적 패키지, 미검증 항목이 명확하다.
 
-## 오토모드 브랜치 운영 계획
+## 오토모드 dev 직접 push 운영 계획
 
-- 기능 브랜치는 `codex/<area>-<feature>` 형식을 기본으로 한다.
-- 한 브랜치는 하나의 기능 계약에 집중한다.
-- 선행 계약이 필요한 경우 `docs/*` 또는 `*-contract` 브랜치를 먼저 만든다.
-- 무검증 push가 요청된 상태에서는 브랜치 push까지 진행할 수 있으나, 실행하지 않은 검증은 `미검증`으로 기록한다.
-- 브랜치 간 충돌이 예상되면 PM/Tech Lead가 순서를 재조정한다.
+- 모든 작업은 사용자가 별도로 요청하지 않는 한 `dev`에서 직접 수행한다.
+- 한 커밋은 하나의 기능 계약 또는 문서/검증 묶음에 집중한다.
+- 작업 묶음 이름은 커밋 메시지와 최종 보고에서 추적 가능하게 유지한다.
+- PR은 만들지 않는다. 기능 브랜치도 기본적으로 만들지 않는다.
+- 실행하지 않은 검증은 최종 보고에 `미검증`으로 기록한다.
+- 작업 묶음 간 충돌이 예상되면 PM/Tech Lead가 순서를 재조정한다.
 - force push, history rewrite, 비밀값 커밋, 실제 배포, 실제 장비 제어는 중단 조건이다.
 
-권장 순서:
+권장 작업 순서:
 
-1. `codex/feature-auth-backend-core`
-2. `codex/feature-auth-frontend`
-3. `codex/backend-api-contract-cleanup`
-4. `codex/wrongway-payload-contract`
-5. `codex/backend-event-query-and-polling`
-6. `codex/frontend-dashboard-ops-layout`
-7. `codex/frontend-raw-payload-drawer`
-8. `codex/backend-sites-zones-devices-api`
-9. `codex/frontend-status-health-strip`
-10. `codex/qa-local-smoke-scripts`
-11. `codex/docs-field-runbook`
-12. `codex/backend-device-control-readiness`
-13. `codex/hardware-rs485-control-board-advisory`
-14. `codex/infra-nginx-reverse-proxy`
-15. `codex/security-delivery-scan-plan`
-16. `codex/delivery-acceptance-runbook`
+1. `feature-auth-backend-core`
+2. `feature-auth-frontend`
+3. `backend-api-contract-cleanup`
+4. `wrongway-payload-contract`
+5. `backend-event-query-and-polling`
+6. `frontend-dashboard-ops-layout`
+7. `frontend-raw-payload-drawer`
+8. `backend-sites-zones-devices-api`
+9. `frontend-status-health-strip`
+10. `qa-local-smoke-scripts`
+11. `docs-field-runbook`
+12. `backend-device-control-readiness`
+13. `hardware-rs485-control-board-advisory`
+14. `infra-nginx-reverse-proxy`
+15. `security-delivery-scan-plan`
+16. `delivery-acceptance-runbook`
 
 ## 현재 핵심 쟁점
 
