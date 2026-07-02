@@ -63,6 +63,9 @@ assertIncludes(
   "controlCommands:",
   "targetDevice: true",
   "event.controlCommands.map(serializeCommand)",
+  "prisma.vehicleTrack.count()",
+  "vehiclesPassed: vehicleTracks",
+  "todayVehicleTracks",
 ].forEach((token) => assertIncludes(eventsService, token, "events service"));
 assertIncludes(schema, "model VehicleTrack", "prisma schema");
 assertIncludes(schema, "trackId                      String         @unique", "prisma schema");

@@ -71,4 +71,9 @@ assert(
   "TrafficEvent schema must expose linked eventLogs",
 );
 
+const eventSummary = swaggerSpec.components?.schemas?.EventSummaryResponse;
+["vehiclesPassed", "vehicleTracks", "todayVehicleTracks", "newEvents"].forEach((field) => {
+  assert(eventSummary?.properties?.[field]?.type === "integer", `EventSummaryResponse must expose ${field}`);
+});
+
 console.log("swagger contracts ok");

@@ -137,9 +137,19 @@ async function getSummary() {
   const todayStart = new Date(now);
   todayStart.setHours(0, 0, 0, 0);
 
-  const [total, today, byStatus, byEventType, latest] = await Promise.all([
+  const [
+    total,
+    today,
+    vehicleTracks,
+    todayVehicleTracks,
+    byStatus,
+    byEventType,
+    latest,
+  ] = await Promise.all([
     prisma.trafficEvent.count(),
     prisma.trafficEvent.count({ where: { receivedAt: { gte: todayStart } } }),
+    prisma.vehicleTrack.count(),
+    prisma.vehicleTrack.count({ where: { firstSeenAt: { gte: todayStart } } }),
     prisma.trafficEvent.groupBy({
       by: ["status"],
       _count: { _all: true },
@@ -158,6 +168,10 @@ async function getSummary() {
     ok: true,
     total,
     today,
+    vehiclesPassed: vehicleTracks,
+    vehicleTracks,
+    todayVehicleTracks,
+    newEvents: byStatus.find((item) => item.status === "NEW")?._count?._all || 0,
     byStatus: Object.fromEntries(byStatus.map((item) => [item.status, item._count._all])),
     byEventType: Object.fromEntries(byEventType.map((item) => [item.eventType, item._count._all])),
     lastEventId: latest?.id || null,

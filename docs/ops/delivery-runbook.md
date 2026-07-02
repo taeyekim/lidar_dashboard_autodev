@@ -144,6 +144,7 @@ Expected:
 - The first `normal-driving` request creates one `vehicle_tracks` row; the duplicate request updates the same row and does not create a duplicate `traffic_events` row.
 - `traffic_events` stores wrong-way and situation-ended events.
 - `vehicle_tracks` stores one row per stable `track_id`.
+- `/api/events/summary` reports `vehiclesPassed` from the DB unique `vehicle_tracks` count, not from the lidar raw counter.
 - `control_commands` stores a dry-run `STAGE_1_ON` command while dry-run is enabled.
 - Stage 2 stores a dry-run `STAGE_2_ON` command while dry-run is enabled.
 - Situation-ended stores a dry-run `STAGE_2_RETURN` command while dry-run is enabled.
