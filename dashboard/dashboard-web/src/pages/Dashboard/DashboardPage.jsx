@@ -58,6 +58,28 @@ const COMMAND_CONFIRMATIONS = {
   },
 };
 
+const CLOSED_EVENT_STATUSES = new Set(["resolved", "dismissed", "ignored", "closed", "cleared", "ended"]);
+
+function isClosedEventStatus(status) {
+  return CLOSED_EVENT_STATUSES.has(String(status || "").trim().toLowerCase());
+}
+
+function toDashboardWrongwayEvent(rawEvent) {
+  const event = normalizeEvent(rawEvent);
+  return {
+    id: event.id,
+    type: "wrong-way",
+    stage: rawEvent?.warningLevel || event.stage || 1,
+    message: event.message,
+    subMessage: `Zone: ${event.location}`,
+    timestamp: formatEventTimestamp(event.timestamp),
+    zone_id: rawEvent?.externalZoneId || event.location,
+    track_id: rawEvent?.trackId,
+    confidence: event.confidence,
+    status: event.status,
+  };
+}
+
 // ------------------------------
 // DachboardPage Component
 // ------------------------------
@@ -367,31 +389,31 @@ export default function DashboardPage({
         }));
 
         if (eventModalEnabledRef.current && isWrongWayEvent(event)) {
-          const nextDashboardEvent = {
-            id: event.id,
-            type: "wrong-way",
-            stage: msg.payload.warningLevel || 1,
-            message: event.message,
-            subMessage: `Zone: ${event.location}`,
-            timestamp: formatEventTimestamp(event.timestamp),
-            zone_id: msg.payload.externalZoneId || event.location,
-            track_id: msg.payload.trackId,
-            confidence: event.confidence,
-          };
+          const nextDashboardEvent = toDashboardWrongwayEvent(msg.payload);
           setLatestWrongwayEvent(nextDashboardEvent);
           setActiveDashboardEvent(nextDashboardEvent);
         } else if (isWrongWayEvent(event)) {
-          setLatestWrongwayEvent({
-            id: event.id,
-            type: "wrong-way",
-            stage: msg.payload.warningLevel || 1,
-            message: event.message,
-            subMessage: `Zone: ${event.location}`,
-            timestamp: formatEventTimestamp(event.timestamp),
-            zone_id: msg.payload.externalZoneId || event.location,
-            track_id: msg.payload.trackId,
-            confidence: event.confidence,
-          });
+          setLatestWrongwayEvent(toDashboardWrongwayEvent(msg.payload));
+        }
+      }
+
+      if (msg.type === "traffic-event.updated" && msg.payload) {
+        const event = normalizeEvent(msg.payload);
+        setLastLidarEvent(event);
+
+        if (isWrongWayEvent(event)) {
+          if (isClosedEventStatus(event.status)) {
+            setActiveDashboardEvent((prev) => (prev?.id === event.id ? null : prev));
+            setLatestWrongwayEvent((prev) => (prev?.id === event.id ? null : prev));
+            setRecentLogs((prev) => [
+              { msg: `${event.message} ${event.status}`, time: formatEventTime(event.timestamp) },
+              ...prev,
+            ].slice(0, MAX_RECENT_LOGS));
+          } else {
+            const nextDashboardEvent = toDashboardWrongwayEvent(msg.payload);
+            setLatestWrongwayEvent((prev) => (prev?.id === event.id ? nextDashboardEvent : prev));
+            setActiveDashboardEvent((prev) => (prev?.id === event.id ? nextDashboardEvent : prev));
+          }
         }
       }
 
@@ -824,7 +846,7 @@ export default function DashboardPage({
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
-              onClick={() => sendControlBoardCommand("STAGE_1_ON", "Stage 1 warning")}
+              onClick={() => requestControlBoardCommand("STAGE_1_ON")}
               disabled={Boolean(controlBoardBusy)}
               className="rounded bg-amber-500 px-2 py-2 text-xs font-black text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -832,7 +854,7 @@ export default function DashboardPage({
             </button>
             <button
               type="button"
-              onClick={() => sendControlBoardCommand("STAGE_2_ON", "Stage 2 barrier")}
+              onClick={() => requestControlBoardCommand("STAGE_2_ON")}
               disabled={Boolean(controlBoardBusy)}
               className="rounded bg-red-600 px-2 py-2 text-xs font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -840,7 +862,7 @@ export default function DashboardPage({
             </button>
             <button
               type="button"
-              onClick={() => sendControlBoardCommand("STAGE_2_RETURN", "Barrier return")}
+              onClick={() => requestControlBoardCommand("STAGE_2_RETURN")}
               disabled={Boolean(controlBoardBusy)}
               className="rounded bg-gray-800 px-2 py-2 text-xs font-black text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
