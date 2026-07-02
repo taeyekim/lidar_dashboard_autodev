@@ -30,6 +30,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `/api/auth/login` returns a Bearer token.
 - [ ] `/api/auth/me` returns the current operator with the token.
 - [ ] Mutation API without token returns `401`.
+- [ ] Non-JSON mutation request returns `415`.
 - [ ] Manual control command records `requestedByUserId`.
 
 ## Lidar Ingest
@@ -88,10 +89,12 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `npm --prefix dashboard/dashboard-web run lint` passes.
 - [ ] `npm run verify:audit-policy` passes.
 - [ ] Raw `npm audit --workspaces` result is documented.
+- [ ] Runtime smoke confirms security headers through the Nginx entrypoint.
+- [ ] If `DEVICE_INGEST_API_KEY` is configured, ingest without `X-Device-Key` returns `401`.
 - [ ] `scripts/security-scan.ps1` evidence exists under `artifacts/security/`, or skipped tools are documented with reasons.
-- [ ] Secret scan result is documented or marked 미검증 with reason.
-- [ ] Container scan result is documented or marked 미검증 with reason.
-- [ ] ZAP passive baseline result is documented or marked 미검증 with reason.
+- [ ] Secret scan result is documented or marked unverified with reason.
+- [ ] Container scan result is documented or marked unverified with reason.
+- [ ] ZAP passive baseline result is documented or marked unverified with reason.
 - [ ] Active scans against real control board were not run.
 
 ## Known Limitations

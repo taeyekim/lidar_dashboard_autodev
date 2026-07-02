@@ -123,6 +123,12 @@ assert(
   [runtimeSmoke, "packetHex", "runtime smoke script"],
   [runtimeSmoke, "rawPayload", "runtime smoke script"],
   [runtimeSmoke, "vehiclesPassed", "runtime smoke script"],
+  [runtimeSmoke, "Assert-HttpStatus", "runtime smoke script"],
+  [runtimeSmoke, "X-Content-Type-Options", "runtime smoke script"],
+  [runtimeSmoke, "X-Frame-Options", "runtime smoke script"],
+  [runtimeSmoke, "unauthenticated mutation smoke", "runtime smoke script"],
+  [runtimeSmoke, "non-json mutation smoke", "runtime smoke script"],
+  [runtimeSmoke, "missing X-Device-Key smoke", "runtime smoke script"],
 ].forEach(([content, token, label]) => {
   assert(content.includes(token), `${label} is missing ${token}`);
 });

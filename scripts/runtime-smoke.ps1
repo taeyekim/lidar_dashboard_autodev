@@ -70,6 +70,93 @@ function Invoke-CurlJson {
   return ($output | ConvertFrom-Json)
 }
 
+function Invoke-CurlStatus {
+  param(
+    [string]$Method = "GET",
+    [string]$Url,
+    [object]$Body = $null,
+    [string]$BearerToken = "",
+    [string]$DeviceKey = "",
+    [string]$ContentType = "",
+    [switch]$RawBody
+  )
+
+  $headersPath = Join-Path $env:TEMP "lidar-runtime-smoke-headers-$([guid]::NewGuid().ToString('N')).txt"
+  $curlArgs = @("-sS", "-o", "NUL", "-D", $headersPath, "-w", "%{http_code}", "-X", $Method)
+  if ($BearerToken) {
+    $curlArgs += @("-H", "Authorization: Bearer $BearerToken")
+  }
+  if ($DeviceKey) {
+    $curlArgs += @("-H", "X-Device-Key: $DeviceKey")
+  }
+  if ($ContentType) {
+    $curlArgs += @("-H", "Content-Type: $ContentType")
+  }
+  if ($null -ne $Body) {
+    if ($RawBody) {
+      $curlArgs += @("--data-binary", [string]$Body)
+    } else {
+      $json = $Body | ConvertTo-Json -Depth 12 -Compress
+      $curlArgs += @("-H", "Content-Type: application/json", "-d", $json)
+    }
+  }
+  $curlArgs += $Url
+
+  try {
+    $statusCode = & curl.exe @curlArgs
+    if ($LASTEXITCODE -ne 0) {
+      throw "HTTP $Method $Url status probe failed with exit code $LASTEXITCODE"
+    }
+    $headers = @{}
+    if (Test-Path $headersPath) {
+      Get-Content -LiteralPath $headersPath | ForEach-Object {
+        $line = $_
+        $index = $line.IndexOf(":")
+        if ($index -gt 0) {
+          $name = $line.Substring(0, $index).Trim().ToLowerInvariant()
+          $value = $line.Substring($index + 1).Trim()
+          $headers[$name] = $value
+        }
+      }
+    }
+
+    return @{
+      statusCode = [int]$statusCode
+      headers = $headers
+    }
+  } finally {
+    if (Test-Path $headersPath) {
+      Remove-Item -LiteralPath $headersPath -Force
+    }
+  }
+}
+
+function Assert-HttpStatus {
+  param(
+    [hashtable]$Response,
+    [int]$Expected,
+    [string]$Label
+  )
+
+  if ($Response.statusCode -ne $Expected) {
+    throw "$Label expected HTTP $Expected, got $($Response.statusCode)."
+  }
+}
+
+function Assert-ResponseHeader {
+  param(
+    [hashtable]$Response,
+    [string]$Name,
+    [string]$Expected,
+    [string]$Label
+  )
+
+  $key = $Name.ToLowerInvariant()
+  if (!$Response.headers.ContainsKey($key) -or $Response.headers[$key] -ne $Expected) {
+    throw "$Label expected ${Name}: $Expected."
+  }
+}
+
 function Wait-HttpReady {
   param([string]$Url)
 
@@ -100,6 +187,19 @@ try {
   Invoke-CurlJson -Url "$BaseUrl/api/devices/status" | Out-Null
   Invoke-CurlJson -Url "$BaseUrl/api-docs.json" | Out-Null
 
+  $healthHeaders = Invoke-CurlStatus -Url "$BaseUrl/healthz"
+  Assert-HttpStatus -Response $healthHeaders -Expected 200 -Label "healthz header smoke"
+  Assert-ResponseHeader -Response $healthHeaders -Name "X-Content-Type-Options" -Expected "nosniff" -Label "healthz security header smoke"
+  Assert-ResponseHeader -Response $healthHeaders -Name "X-Frame-Options" -Expected "SAMEORIGIN" -Label "healthz security header smoke"
+
+  $unauthMutation = Invoke-CurlStatus -Method "PATCH" -Url "$BaseUrl/api/events/runtime-smoke-missing/status" -Body @{
+    status = "RESOLVED"
+  }
+  Assert-HttpStatus -Response $unauthMutation -Expected 401 -Label "unauthenticated mutation smoke"
+
+  $nonJsonMutation = Invoke-CurlStatus -Method "POST" -Url "$BaseUrl/api/auth/login" -Body "not-json" -RawBody
+  Assert-HttpStatus -Response $nonJsonMutation -Expected 415 -Label "non-json mutation smoke"
+
   $envValues = Read-DotEnv ".env"
   $adminUser = $env:SEED_ADMIN_USER_ID
   $adminPassword = $env:SEED_ADMIN_PASSWORD
@@ -114,6 +214,16 @@ try {
     $deviceIngestKey = $envValues["DEVICE_INGEST_API_KEY"]
   }
   $deviceIngestKey = [string]($deviceIngestKey -split "," | Select-Object -First 1).Trim()
+
+  if ($deviceIngestKey) {
+    $missingDeviceKey = Invoke-CurlStatus -Method "POST" -Url "$BaseUrl/api/wrongway" -Body @{
+      type = "normal-driving"
+      zone_id = "ROUNDABOUT-01"
+      track_id = "smoke-missing-device-key"
+      timestamp = "$(Get-Date -Format o)"
+    }
+    Assert-HttpStatus -Response $missingDeviceKey -Expected 401 -Label "missing X-Device-Key smoke"
+  }
 
   if ($adminUser -and $adminPassword) {
     $login = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/auth/login" -Body @{

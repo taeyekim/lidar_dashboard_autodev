@@ -114,6 +114,13 @@ or `.env` and sends this header automatically.
 `rawPayload`, linked `controlCommands`, command `packetHex`, and summary
 `vehiclesPassed`.
 
+The same runtime smoke checks baseline delivery security behavior:
+
+- Nginx/security headers include `X-Content-Type-Options: nosniff` and `X-Frame-Options: SAMEORIGIN`.
+- Mutation APIs without an operator token return `401`.
+- Non-JSON mutation requests return `415`.
+- When `DEVICE_INGEST_API_KEY` is configured, ingest without `X-Device-Key` returns `401`.
+
 Normal-driving unique track smoke:
 
 ```bash
