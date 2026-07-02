@@ -25,6 +25,16 @@ docker compose up --build -d
 curl http://localhost:8080/healthz
 ```
 
+Windows PowerShell rehearsal:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/delivery-verify.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/runtime-smoke.ps1 -StartCompose -StopCompose
+```
+
+Use `npm.cmd` and `curl.exe` on Windows when the local PowerShell execution
+policy blocks `npm.ps1` or aliases `curl`.
+
 Default URLs:
 
 - Operator UI: `http://localhost:8080`
@@ -162,6 +172,13 @@ npm run delivery:verify
 npm audit --workspaces
 ```
 
+On Windows PowerShell:
+
+```powershell
+npm.cmd run delivery:verify
+npm.cmd audit --workspaces
+```
+
 `npm audit --workspaces` is kept as raw evidence and may exit non-zero while the
 known Prisma development-tooling advisory remains unresolved. The pass/fail gate
 is `npm run verify:audit-policy`, which is included in `npm run delivery:verify`.
@@ -188,10 +205,11 @@ Evidence package:
 
 - `.env` values redacted summary
 - `docker compose config --quiet` result
-- `npm run smoke` result
-- `npm run ci` result
+- `npm.cmd run smoke` or `npm run smoke` result
+- `npm.cmd run ci` or `npm run ci` result
 - frontend lint result
-- `npm run verify:audit-policy` result
+- `npm.cmd run verify:audit-policy` or `npm run verify:audit-policy` result
+- `scripts/runtime-smoke.ps1` result when Docker runtime smoke is available
 - raw `npm audit --workspaces` result
 - Swagger screenshots or exported API list
 - System/device status API responses
