@@ -47,7 +47,23 @@ Manual verification:
 ```bash
 npm run db:status
 curl http://localhost:8080/api/database/health
+curl http://localhost:8080/api/status
+curl http://localhost:8080/api/devices/status
 ```
+
+Field topology verification:
+
+```bash
+curl http://localhost:8080/api/sites
+curl http://localhost:8080/api/zones
+curl http://localhost:8080/api/devices
+```
+
+Expected:
+
+- `sites`, `zones`, and `devices` reflect Prisma seed or field registration data.
+- Empty device lists are treated as `장비 미구성`, not as live hardware status.
+- `/api/status` summarizes server, database, ingest, WebSocket, devices, and control board mode.
 
 ## 4. Operator Account
 
@@ -143,6 +159,7 @@ Evidence package:
 - `npm run ci` result
 - `npm audit --workspaces` result
 - Swagger screenshots or exported API list
+- System/device status API responses
 - Lidar ingest curl request/response
 - Control command DB rows or API response
 - Known limitations and skipped checks

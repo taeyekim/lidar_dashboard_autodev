@@ -16,6 +16,8 @@ const swaggerSpec = {
     { name: "Health", description: "서버 상태 확인" },
     { name: "Database", description: "DB 연결과 기본 테이블 확인" },
     { name: "Dashboard", description: "대시보드 상태와 로그 조회" },
+    { name: "System", description: "서버, DB, 수신, 장비 통합 상태" },
+    { name: "Sites", description: "현장, 구역, 장비 기준 정보 조회" },
     { name: "Control", description: "차단기와 전광판 제어" },
     { name: "Wrongway", description: "역주행 감지 이벤트" },
     { name: "Events", description: "저장된 교통 이벤트 조회와 상태 관리" },
@@ -151,6 +153,98 @@ const swaggerSpec = {
                   type: "array",
                   items: { $ref: "#/components/schemas/LogItem" },
                 },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/status": {
+      get: {
+        tags: ["System"],
+        summary: "통합 시스템 상태 조회",
+        description:
+          "서버, DB, 라이다 수신, WebSocket, 장비, 통합제어보드 상태를 한 번에 조회합니다.",
+        responses: {
+          200: {
+            description: "통합 시스템 상태",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/SystemStatusResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/sites": {
+      get: {
+        tags: ["Sites"],
+        summary: "현장 목록 조회",
+        responses: {
+          200: {
+            description: "현장 목록",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/SiteListResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/zones": {
+      get: {
+        tags: ["Sites"],
+        summary: "구역 목록 조회",
+        parameters: [
+          { name: "siteId", in: "query", schema: { type: "string" } },
+          { name: "type", in: "query", schema: { type: "string", example: "ROUNDABOUT" } },
+        ],
+        responses: {
+          200: {
+            description: "구역 목록",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ZoneListResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/devices": {
+      get: {
+        tags: ["Sites"],
+        summary: "장비 목록 조회",
+        parameters: [
+          { name: "zoneId", in: "query", schema: { type: "string" } },
+          { name: "deviceType", in: "query", schema: { type: "string", example: "CONTROL_BOARD" } },
+          { name: "status", in: "query", schema: { type: "string", example: "ONLINE" } },
+          { name: "healthStatus", in: "query", schema: { type: "string", example: "OK" } },
+        ],
+        responses: {
+          200: {
+            description: "장비 목록",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/DeviceListResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/devices/status": {
+      get: {
+        tags: ["Sites"],
+        summary: "장비 상태 요약 조회",
+        responses: {
+          200: {
+            description: "장비 상태 요약",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/DeviceStatusSummaryResponse" },
               },
             },
           },
@@ -835,6 +929,162 @@ const swaggerSpec = {
             type: "string",
             example: "DB 연결 또는 기본 테이블 조회에 실패했습니다.",
           },
+        },
+      },
+      Site: {
+        type: "object",
+        additionalProperties: true,
+        properties: {
+          id: { type: "string" },
+          name: { type: "string", example: "월출산휴게소" },
+          location: { type: "string", nullable: true, example: "전라남도 영암군" },
+          description: { type: "string", nullable: true },
+          zones: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Zone" },
+          },
+        },
+      },
+      Zone: {
+        type: "object",
+        additionalProperties: true,
+        properties: {
+          id: { type: "string" },
+          siteId: { type: "string" },
+          zoneCode: { type: "string", nullable: true, example: "ROUNDABOUT-01" },
+          name: { type: "string", example: "회전교차로 1" },
+          type: { type: "string", nullable: true, example: "ROUNDABOUT" },
+          description: { type: "string", nullable: true },
+          devices: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Device" },
+          },
+        },
+      },
+      Device: {
+        type: "object",
+        additionalProperties: true,
+        properties: {
+          id: { type: "string" },
+          zoneId: { type: "string" },
+          deviceCode: { type: "string", nullable: true, example: "CONTROL-BOARD-01" },
+          name: { type: "string", example: "회전교차로 1 통합제어보드" },
+          deviceType: { type: "string", example: "CONTROL_BOARD" },
+          status: { type: "string", example: "UNKNOWN" },
+          healthStatus: { type: "string", example: "UNKNOWN" },
+          ipAddress: { type: "string", nullable: true, example: "192.168.0.50" },
+          port: { type: "integer", nullable: true, example: 5001 },
+          lastSeenAt: { type: "string", format: "date-time", nullable: true },
+          installedLocation: { type: "string", nullable: true, example: "회전교차로 1" },
+          latestStatusLog: {
+            nullable: true,
+            oneOf: [{ $ref: "#/components/schemas/DeviceStatusLog" }],
+          },
+        },
+      },
+      DeviceStatusLog: {
+        type: "object",
+        additionalProperties: true,
+        properties: {
+          id: { type: "string" },
+          deviceId: { type: "string", nullable: true },
+          source: { type: "string", example: "CONTROL_BOARD" },
+          status: { type: "string", example: "UNKNOWN" },
+          health: { type: "string", nullable: true, example: "UNKNOWN" },
+          message: { type: "string", nullable: true },
+          createdAt: { type: "string", format: "date-time" },
+        },
+      },
+      SiteListResponse: {
+        type: "object",
+        properties: {
+          ok: { type: "boolean", example: true },
+          total: { type: "integer", example: 1 },
+          items: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Site" },
+          },
+        },
+      },
+      ZoneListResponse: {
+        type: "object",
+        properties: {
+          ok: { type: "boolean", example: true },
+          total: { type: "integer", example: 2 },
+          items: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Zone" },
+          },
+        },
+      },
+      DeviceListResponse: {
+        type: "object",
+        properties: {
+          ok: { type: "boolean", example: true },
+          total: { type: "integer", example: 4 },
+          items: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Device" },
+          },
+        },
+      },
+      DeviceStatusSummaryResponse: {
+        type: "object",
+        properties: {
+          ok: { type: "boolean", example: true },
+          total: { type: "integer", example: 4 },
+          configured: { type: "boolean", example: true },
+          byStatus: { type: "object", additionalProperties: { type: "integer" } },
+          byHealthStatus: { type: "object", additionalProperties: { type: "integer" } },
+          byType: { type: "object", additionalProperties: { type: "integer" } },
+          latestStatusLog: {
+            nullable: true,
+            oneOf: [{ $ref: "#/components/schemas/DeviceStatusLog" }],
+          },
+          latestCommand: {
+            nullable: true,
+            oneOf: [{ $ref: "#/components/schemas/ControlBoardCommand" }],
+          },
+        },
+      },
+      SystemStatusResponse: {
+        type: "object",
+        additionalProperties: true,
+        properties: {
+          ok: { type: "boolean", example: true },
+          checkedAt: { type: "string", format: "date-time" },
+          server: {
+            type: "object",
+            properties: {
+              ok: { type: "boolean", example: true },
+              status: { type: "string", example: "ONLINE" },
+              uptimeSeconds: { type: "integer", example: 3600 },
+              nodeVersion: { type: "string", example: "v22.0.0" },
+            },
+          },
+          database: {
+            type: "object",
+            properties: {
+              ok: { type: "boolean", example: true },
+              status: { type: "string", example: "ONLINE" },
+            },
+          },
+          ingest: {
+            type: "object",
+            properties: {
+              ok: { type: "boolean", example: true },
+              status: { type: "string", example: "RECEIVING_OR_READY" },
+            },
+          },
+          websocket: {
+            type: "object",
+            properties: {
+              ok: { type: "boolean", example: true },
+              status: { type: "string", example: "AVAILABLE" },
+            },
+          },
+          devices: { $ref: "#/components/schemas/DeviceStatusSummaryResponse" },
+          controlBoard: { $ref: "#/components/schemas/ControlBoardStatusResponse" },
         },
       },
       OkResponse: {

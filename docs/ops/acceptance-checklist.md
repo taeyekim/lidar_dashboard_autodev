@@ -17,6 +17,8 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `curl http://localhost:8080/healthz` returns `ok`.
 - [ ] `curl http://localhost:8080/api/health` returns `ok: true`.
 - [ ] `curl http://localhost:8080/api/database/health` returns table counts.
+- [ ] `curl http://localhost:8080/api/status` returns server, database, ingest, websocket, devices, and control board sections.
+- [ ] `curl http://localhost:8080/api/devices/status` returns configured device counts.
 
 ## Authentication
 
@@ -54,6 +56,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Wrong-way event page loads events from API.
 - [ ] Event status and memo updates require login.
 - [ ] Recent event list updates without layout breakage on desktop viewport.
+- [ ] Devices page loads `/api/devices` data and marks empty/unconfigured state clearly.
 
 ## Swagger/API
 
@@ -62,6 +65,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Wrong-way request/response schema matches implementation.
 - [ ] Control board command endpoints are documented.
 - [ ] Event list/detail/status/memo endpoints are documented.
+- [ ] Site, zone, device, device status, and system status endpoints are documented.
 
 ## Security
 
