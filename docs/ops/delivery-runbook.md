@@ -95,6 +95,14 @@ curl -X POST http://localhost:8080/api/wrongway \
   -d "{\"type\":\"normal-driving\",\"zone_id\":\"ROUNDABOUT-01\",\"track_id\":\"track-normal-001\",\"timestamp\":\"2026-07-02T10:00:00+09:00\",\"normal_moving_vehicle_count\":1}"
 ```
 
+Normal-driving duplicate track smoke:
+
+```bash
+curl -X POST http://localhost:8080/api/wrongway \
+  -H "Content-Type: application/json" \
+  -d "{\"type\":\"normal-driving\",\"zone_id\":\"ROUNDABOUT-01\",\"track_id\":\"track-normal-001\",\"timestamp\":\"2026-07-02T10:00:01+09:00\",\"normal_moving_vehicle_count\":2}"
+```
+
 Wrong-way stage 1 smoke:
 
 ```bash
@@ -103,11 +111,30 @@ curl -X POST http://localhost:8080/api/wrongway \
   -d "{\"type\":\"wrong-way-level-1\",\"zone_id\":\"ROUNDABOUT-01\",\"track_id\":\"track-wrong-001\",\"timestamp\":\"2026-07-02T10:00:05+09:00\",\"warning_level\":1,\"confidence\":0.95,\"description\":\"Wrong-way driving detected\"}"
 ```
 
+Wrong-way stage 2 smoke:
+
+```bash
+curl -X POST http://localhost:8080/api/wrongway \
+  -H "Content-Type: application/json" \
+  -d "{\"type\":\"wrong-way-level-2\",\"zone_id\":\"ROUNDABOUT-01\",\"track_id\":\"track-wrong-001\",\"timestamp\":\"2026-07-02T10:00:07+09:00\",\"warning_level\":2,\"confidence\":0.97,\"description\":\"Wrong-way escalation confirmed\"}"
+```
+
+Situation-ended smoke:
+
+```bash
+curl -X POST http://localhost:8080/api/wrongway \
+  -H "Content-Type: application/json" \
+  -d "{\"type\":\"situation-ended\",\"zone_id\":\"ROUNDABOUT-01\",\"track_id\":\"track-wrong-001\",\"timestamp\":\"2026-07-02T10:00:20+09:00\",\"warning_level\":0,\"description\":\"Wrong-way situation ended\"}"
+```
+
 Expected:
 
-- `traffic_events` stores wrong-way events.
+- The first `normal-driving` request creates one `vehicle_tracks` row; the duplicate request updates the same row and does not create a duplicate `traffic_events` row.
+- `traffic_events` stores wrong-way and situation-ended events.
 - `vehicle_tracks` stores one row per stable `track_id`.
 - `control_commands` stores a dry-run `STAGE_1_ON` command while dry-run is enabled.
+- Stage 2 stores a dry-run `STAGE_2_ON` command while dry-run is enabled.
+- Situation-ended stores a dry-run `STAGE_2_RETURN` command while dry-run is enabled.
 
 ## 6. Control Board TCP Rehearsal
 
