@@ -57,6 +57,7 @@ Manual verification:
 
 ```bash
 npm run db:status
+npm run ci:db
 curl http://localhost:8080/api/database/health
 curl http://localhost:8080/api/status
 curl http://localhost:8080/api/devices/status

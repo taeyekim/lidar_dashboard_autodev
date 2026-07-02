@@ -77,6 +77,14 @@ CI 검증:
 npm run ci
 ```
 
+CI DB 검증:
+
+```text
+npm run ci:db
+```
+
+GitHub Actions는 `dev` push만 대상으로 실행하며 PR/feature branch 트리거를 사용하지 않습니다.
+
 Smoke 검증:
 
 ```text

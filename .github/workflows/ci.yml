@@ -4,18 +4,32 @@ on:
   push:
     branches:
       - dev
-      - main
-      - "codex/**"
-      - "feature/**"
-  pull_request:
-    branches:
-      - dev
-      - main
 
 jobs:
   verify:
     name: Verify
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: lidar_dashboard_ci
+          POSTGRES_USER: lidar_dashboard_ci
+          POSTGRES_PASSWORD: lidar_dashboard_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lidar_dashboard_ci -d lidar_dashboard_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://lidar_dashboard_ci:lidar_dashboard_ci@localhost:5432/lidar_dashboard_ci?schema=public
+      JWT_SECRET: ci-only-jwt-secret-change-in-field
+      SEED_ADMIN_USER_ID: admin
+      SEED_ADMIN_PASSWORD: admin1234!
+      SEED_ADMIN_NAME: CI Administrator
+      CONTROL_BOARD_DRY_RUN: "true"
 
     steps:
       - name: Checkout
@@ -33,5 +47,17 @@ jobs:
           npm ci --include=optional
           npm --prefix dashboard/dashboard-web ci --include=optional
 
-      - name: Run CI checks
+      - name: Run smoke contracts
+        run: npm run smoke
+
+      - name: Run Prisma migration and seed checks
+        run: npm run ci:db
+
+      - name: Run frontend lint
+        run: npm --prefix dashboard/dashboard-web run lint
+
+      - name: Run build checks
         run: npm run ci
+
+      - name: Run audit policy
+        run: npm run verify:audit-policy
