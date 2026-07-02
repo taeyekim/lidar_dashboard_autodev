@@ -1,5 +1,8 @@
 const net = require("net");
-const { sendRawPacket } = require("../src/domains/control-board/adapters/tcpControlBoard.adapter");
+const {
+  CONTROL_BOARD_FRAME_LENGTH,
+  sendRawPacket,
+} = require("../src/domains/control-board/adapters/tcpControlBoard.adapter");
 const {
   buildControlBoardCommandPacket,
   parseControlBoardPacket,
@@ -20,7 +23,7 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-async function withLoopbackServer(handler) {
+async function withLoopbackServer(responseWriter, handler) {
   const server = net.createServer((socket) => {
     socket.once("data", (data) => {
       const receivedHex = bufferToHex(data);
@@ -28,7 +31,7 @@ async function withLoopbackServer(handler) {
         socket.destroy(new Error(`unexpected packet ${receivedHex}`));
         return;
       }
-      socket.write(hexToBuffer(RESPONSE_HEX));
+      responseWriter(socket);
     });
   });
 
@@ -46,7 +49,11 @@ async function withLoopbackServer(handler) {
 }
 
 async function main() {
-  await withLoopbackServer(async (port) => {
+  assert(CONTROL_BOARD_FRAME_LENGTH === 10, "control board response frame length must be 10 bytes");
+
+  await withLoopbackServer((socket) => {
+    socket.write(hexToBuffer(RESPONSE_HEX));
+  }, async (port) => {
     const packet = buildControlBoardCommandPacket("STAGE_1_ON");
     const response = await sendRawPacket(packet.buffer, {
       host: "127.0.0.1",
@@ -61,6 +68,39 @@ async function main() {
     assert(parsed.isValid, `response should be valid: ${parsed.errors?.join("; ")}`);
     assert(parsed.crcStatus === "VALID", "response CRC should be valid");
     assert(parsed.command === "STAGE_1_ON", `response parsed as ${parsed.command}`);
+  });
+
+  await withLoopbackServer((socket) => {
+    const response = hexToBuffer(RESPONSE_HEX);
+    socket.write(response.subarray(0, 4));
+    setTimeout(() => socket.write(response.subarray(4)), 10);
+  }, async (port) => {
+    const packet = buildControlBoardCommandPacket("STAGE_1_ON");
+    const response = await sendRawPacket(packet.buffer, {
+      host: "127.0.0.1",
+      port,
+      connectTimeoutMs: 1000,
+      responseTimeoutMs: 1000,
+    });
+
+    assert(response.responseHex === RESPONSE_HEX, `split TCP response was not reassembled: ${response.responseHex}`);
+    assert(response.trailingByteCount === 0, "split TCP response should not report trailing bytes");
+  });
+
+  await withLoopbackServer((socket) => {
+    socket.write(Buffer.concat([hexToBuffer(RESPONSE_HEX), Buffer.from([0xAA, 0xBB])]));
+  }, async (port) => {
+    const packet = buildControlBoardCommandPacket("STAGE_1_ON");
+    const response = await sendRawPacket(packet.buffer, {
+      host: "127.0.0.1",
+      port,
+      connectTimeoutMs: 1000,
+      responseTimeoutMs: 1000,
+    });
+
+    assert(response.responseHex === RESPONSE_HEX, `coalesced TCP response frame was incorrect: ${response.responseHex}`);
+    assert(response.trailingByteCount === 2, "coalesced TCP response should report trailing bytes");
+    assert(response.trailingHex === "AA BB", `unexpected trailing bytes ${response.trailingHex}`);
   });
 
   console.log("control board TCP loopback ok");
