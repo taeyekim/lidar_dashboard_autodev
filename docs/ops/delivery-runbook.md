@@ -193,6 +193,12 @@ trivy fs --scanners vuln,secret,misconfig .
 zap-baseline.py -t http://localhost:8080 -r zap-baseline.html
 ```
 
+Windows evidence collection:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/security-scan.ps1
+```
+
 Do not run active DAST/fuzzing against the real control board.
 
 ## 8. Stop And Collect Evidence
@@ -213,6 +219,7 @@ Evidence package:
 - `npm.cmd run verify:audit-policy` or `npm run verify:audit-policy` result
 - `scripts/runtime-smoke.ps1` result when Docker runtime smoke is available
 - raw `npm audit --workspaces` result
+- `artifacts/security/**` security scan evidence, with skipped checks explained
 - Swagger screenshots or exported API list
 - System/device status API responses
 - Lidar ingest curl request/response

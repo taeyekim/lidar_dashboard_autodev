@@ -22,6 +22,7 @@ dashboard/dashboard-web/dist/
 
 # Logs
 *.log
+artifacts/
 
 # Local config
 config.json

@@ -45,6 +45,16 @@ trivy image lidar_dashboard_autodev-frontend
 zap-baseline.py -t http://localhost:8080 -r zap-baseline.html
 ```
 
+Windows evidence script:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/security-scan.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/security-scan.ps1 -IncludeContainerImages -IncludeZap
+```
+
+The script writes raw results and skipped-check reasons under `artifacts/security/`.
+The `artifacts/` directory is intentionally ignored by Git.
+
 ## Notes
 
 - Do not run active DAST or fuzzing against the real integrated control board.
