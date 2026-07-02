@@ -11,6 +11,8 @@ import {
   RefreshCcw,
   Save,
   Search,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import {
   Area,
@@ -161,6 +163,13 @@ function RawPayloadBlock({ value }) {
   );
 }
 
+function upsertEvent(events, nextEvent) {
+  if (!nextEvent?.id) return events;
+  const index = events.findIndex((event) => event.id === nextEvent.id);
+  if (index === -1) return [nextEvent, ...events].slice(0, 100);
+  return events.map((event, i) => (i === index ? { ...event, ...nextEvent } : event));
+}
+
 export default function EventLogPage() {
   const [searchParams] = useSearchParams();
   const tabParam = (searchParams.get("tab") || "all").toLowerCase();
@@ -182,6 +191,7 @@ export default function EventLogPage() {
   const [summaryError, setSummaryError] = useState("");
   const [actionError, setActionError] = useState("");
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
+  const [realtimeStatus, setRealtimeStatus] = useState("CONNECTING");
 
   const loadSummary = useCallback(async () => {
     setSummaryLoading(true);
@@ -272,11 +282,27 @@ export default function EventLogPage() {
   useEffect(() => {
     const ws = new WebSocket(WS_BASE);
 
+    ws.onopen = () => setRealtimeStatus("CONNECTED");
+    ws.onclose = () => setRealtimeStatus("DISCONNECTED");
+    ws.onerror = () => setRealtimeStatus("ERROR");
+
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
         if (msg.type === "state" && msg.payload) {
           setSummary((prev) => ({ ...prev, ...normalizeSummary(msg.payload) }));
+        }
+        if (msg.type === "traffic-event.created" && msg.payload) {
+          const normalized = normalizeEvent(msg.payload);
+          setEvents((prev) => upsertEvent(prev, normalized));
+          setSelectedEvent((prev) => prev || normalized);
+          loadSummary();
+        }
+        if (msg.type === "traffic-event.updated" && msg.payload?.id) {
+          const normalized = normalizeEvent(msg.payload);
+          setEvents((prev) => upsertEvent(prev, normalized));
+          setSelectedEvent((prev) => (prev?.id === normalized.id ? { ...prev, ...normalized } : prev));
+          loadSummary();
         }
       } catch {
         // Ignore malformed realtime messages.
@@ -284,7 +310,7 @@ export default function EventLogPage() {
     };
 
     return () => ws.close();
-  }, []);
+  }, [loadSummary]);
 
   const filteredEvents = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -345,6 +371,14 @@ export default function EventLogPage() {
             <div className="text-sm text-gray-500">Events from the backend event API</div>
           </div>
           <div className="flex gap-2">
+            <div className="flex items-center rounded bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600">
+              {realtimeStatus === "CONNECTED" ? (
+                <Wifi className="mr-2 h-4 w-4 text-green-600" />
+              ) : (
+                <WifiOff className="mr-2 h-4 w-4 text-amber-600" />
+              )}
+              {realtimeStatus}
+            </div>
             <button
               className="flex items-center rounded bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-200"
               type="button"

@@ -1,4 +1,5 @@
 const { prisma } = require("../../prisma/client");
+const { broadcastRealtime } = require("../../realtime/bus");
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -172,7 +173,9 @@ async function updateEventStatus(id, status, message, userId = null) {
       },
     });
 
-    return serializeEvent(event);
+    const serialized = serializeEvent(event);
+    broadcastRealtime("traffic-event.updated", serialized);
+    return serialized;
   });
 }
 
@@ -195,6 +198,12 @@ async function updateEventMemo(id, memo, userId = null) {
       message: text,
       metadata: { memo: text },
     },
+  });
+
+  broadcastRealtime("traffic-event.updated", {
+    id,
+    latestLog: serializeLog(log),
+    memo: text,
   });
 
   return serializeLog(log);

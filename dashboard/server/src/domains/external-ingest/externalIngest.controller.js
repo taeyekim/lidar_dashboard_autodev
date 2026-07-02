@@ -28,24 +28,45 @@ async function receiveLidarMock(req, res) {
 }
 
 // 통합 제어보드 실제 HTTP ingest 요청을 받아 service로 넘긴다.
-function receiveControlBoard(req, res) {
+async function receiveControlBoard(req, res) {
   // RS-485 장비가 직접 HTTP를 호출하지 않더라도, 브릿지/테스트 프로그램이 같은 진입점을 사용할 수 있게 둔다.
-  const event = externalIngestService.ingestControlBoardLive(req.body || {});
-  res.json({ ok: true, eventId: event.id, receivedAt: event.receivedAt, event });
+  try {
+    const event = await externalIngestService.ingestControlBoardLive(req.body || {});
+    res.json({ ok: true, eventId: event.id, receivedAt: event.receivedAt, event });
+  } catch (error) {
+    res.status(error.status || 500).json({
+      ok: false,
+      error: error.status ? error.message : "Failed to ingest control board payload.",
+    });
+  }
 }
 
 // 통합 제어보드 mock packet 요청을 받아 service로 넘기고 수신 결과를 응답한다.
-function receiveControlBoardMock(req, res) {
+async function receiveControlBoardMock(req, res) {
   // 통합 제어보드 mock 요청도 service로 넘겨 내부 이벤트 변환 흐름을 동일하게 탄다.
-  const event = externalIngestService.ingestControlBoardMock(req.body || {});
-  res.json({ ok: true, eventId: event.id, receivedAt: event.receivedAt, event });
+  try {
+    const event = await externalIngestService.ingestControlBoardMock(req.body || {});
+    res.json({ ok: true, eventId: event.id, receivedAt: event.receivedAt, event });
+  } catch (error) {
+    res.status(error.status || 500).json({
+      ok: false,
+      error: error.status ? error.message : "Failed to ingest control board mock payload.",
+    });
+  }
 }
 
 // serial reader 테스트 요청을 받아 실제 포트 연결 전 입력 형태와 변환 흐름을 확인한다.
-function testControlBoardSerial(req, res) {
+async function testControlBoardSerial(req, res) {
   // 실제 serialport 연결 없이 현장 입력값과 samplePacket 처리 흐름만 확인하는 테스트 엔드포인트다.
-  const result = externalIngestService.createSerialTest(req.body || {});
-  res.json({ ok: true, ...result });
+  try {
+    const result = await externalIngestService.createSerialTest(req.body || {});
+    res.json({ ok: true, ...result });
+  } catch (error) {
+    res.status(error.status || 500).json({
+      ok: false,
+      error: error.status ? error.message : "Failed to test control board serial input.",
+    });
+  }
 }
 
 // 최근 외부 수신 이벤트 목록을 반환한다.

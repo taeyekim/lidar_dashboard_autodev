@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const { prisma } = require("../../prisma/client");
+const { broadcastRealtime } = require("../../realtime/bus");
 const { logger } = require("../../utils/logger");
 const {
   buildControlBoardCommandPacket,
@@ -161,6 +162,8 @@ async function sendCommand(commandType, options = {}) {
     config,
   }));
 
+  broadcastRealtime("control-command.created", serializeCommand(command));
+
   if (config.dryRun) {
     const updated = await updateCommand(
       command.id,
@@ -174,6 +177,8 @@ async function sendCommand(commandType, options = {}) {
         metadata: { packetHex: packet.packetHex },
       },
     );
+
+    broadcastRealtime("control-command.updated", serializeCommand(updated));
 
     logger.info("control board command dry-run", {
       commandId: command.id,
@@ -217,7 +222,9 @@ async function sendCommand(commandType, options = {}) {
       },
     );
 
-    return serializeCommand(updated);
+    const serialized = serializeCommand(updated);
+    broadcastRealtime("control-command.updated", serialized);
+    return serialized;
   } catch (error) {
     const updated = await updateCommand(
       command.id,
@@ -239,7 +246,9 @@ async function sendCommand(commandType, options = {}) {
       error,
     });
 
-    return serializeCommand(updated);
+    const serialized = serializeCommand(updated);
+    broadcastRealtime("control-command.updated", serialized);
+    return serialized;
   }
 }
 

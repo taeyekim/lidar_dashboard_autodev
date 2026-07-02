@@ -47,6 +47,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Dry-run command does not open a TCP socket.
 - [ ] Live TCP command records response hex and CRC status.
 - [ ] Timeout/failure records `FAILED` status and error message.
+- [ ] Control board ingest creates a `device_status_logs` row and updates the Devices page.
 
 ## Operator UI
 
@@ -57,6 +58,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Event status and memo updates require login.
 - [ ] Recent event list updates without layout breakage on desktop viewport.
 - [ ] Devices page loads `/api/devices` data and marks empty/unconfigured state clearly.
+- [ ] Event Log and Devices page show WebSocket connected/degraded state while polling fallback remains active.
 
 ## Swagger/API
 
@@ -71,6 +73,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 
 - [ ] `npm run smoke` passes.
 - [ ] `npm run ci` passes.
+- [ ] `npm --prefix dashboard/dashboard-web run lint` passes.
 - [ ] `npm audit --workspaces` result is documented.
 - [ ] Secret scan result is documented or marked 미검증 with reason.
 - [ ] Container scan result is documented or marked 미검증 with reason.

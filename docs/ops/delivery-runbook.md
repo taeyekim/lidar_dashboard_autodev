@@ -64,6 +64,8 @@ Expected:
 - `sites`, `zones`, and `devices` reflect Prisma seed or field registration data.
 - Empty device lists are treated as `장비 미구성`, not as live hardware status.
 - `/api/status` summarizes server, database, ingest, WebSocket, devices, and control board mode.
+- Control board ingest creates `device_status_logs` and broadcasts `device-status.updated`.
+- Wrong-way ingest broadcasts `traffic-event.created` and `vehicle-track.updated`; event status/memo changes broadcast `traffic-event.updated`.
 
 ## 4. Operator Account
 
@@ -129,6 +131,7 @@ Run:
 ```bash
 npm run smoke
 npm run ci
+npm --prefix dashboard/dashboard-web run lint
 npm audit --workspaces
 docker compose config --quiet
 ```
@@ -157,6 +160,7 @@ Evidence package:
 - `docker compose config --quiet` result
 - `npm run smoke` result
 - `npm run ci` result
+- frontend lint result
 - `npm audit --workspaces` result
 - Swagger screenshots or exported API list
 - System/device status API responses

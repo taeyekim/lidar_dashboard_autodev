@@ -13,6 +13,9 @@ import {
   fetchEventSummary,
   fetchRecentEvents,
   formatEventTime,
+  formatEventTimestamp,
+  isWrongWayEvent,
+  normalizeEvent,
   normalizeEvents,
   normalizeSummary,
 } from "../../features/events/eventsApi";
@@ -293,6 +296,41 @@ export default function DashboardPage({
         setKpi((prev) => ({
           ...prev,
           ...normalizeSummary(msg.payload),
+        }));
+      }
+
+      if (msg.type === "traffic-event.created" && msg.payload) {
+        const event = normalizeEvent(msg.payload);
+        setRecentLogs((prev) => [
+          { msg: event.message, time: formatEventTime(event.timestamp) },
+          ...prev,
+        ].slice(0, MAX_RECENT_LOGS));
+        setKpi((prev) => ({
+          ...prev,
+          todaysEvents: prev.todaysEvents + 1,
+          newEvents: prev.newEvents + 1,
+          wrongWayEvents: prev.wrongWayEvents + (isWrongWayEvent(event) ? 1 : 0),
+        }));
+
+        if (eventModalEnabledRef.current && isWrongWayEvent(event)) {
+          setActiveDashboardEvent({
+            id: event.id,
+            type: "wrong-way",
+            stage: msg.payload.warningLevel || 1,
+            message: event.message,
+            subMessage: `Zone: ${event.location}`,
+            timestamp: formatEventTimestamp(event.timestamp),
+            zone_id: msg.payload.externalZoneId || event.location,
+            track_id: msg.payload.trackId,
+            confidence: event.confidence,
+          });
+        }
+      }
+
+      if (msg.type === "control-command.updated" && msg.payload) {
+        setControlBoardStatus((prev) => ({
+          ...(prev || {}),
+          latestCommand: msg.payload,
         }));
       }
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -10,6 +10,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import { Card } from "../../shared/components/Card";
+import { WS_BASE } from "../../shared/api/config";
 import {
   fetchDevices,
   fetchDeviceStatus,
@@ -82,8 +83,9 @@ export default function DevicesPage() {
   const [systemStatus, setSystemStatus] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [realtimeStatus, setRealtimeStatus] = useState("CONNECTING");
 
-  async function loadDevices() {
+  const loadDevices = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -100,11 +102,31 @@ export default function DevicesPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     loadDevices();
-  }, []);
+  }, [loadDevices]);
+
+  useEffect(() => {
+    const ws = new WebSocket(WS_BASE);
+
+    ws.onopen = () => setRealtimeStatus("CONNECTED");
+    ws.onclose = () => setRealtimeStatus("DISCONNECTED");
+    ws.onerror = () => setRealtimeStatus("ERROR");
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === "device-status.updated" || msg.type === "control-command.updated") {
+          loadDevices();
+        }
+      } catch {
+        // Ignore malformed realtime messages.
+      }
+    };
+
+    return () => ws.close();
+  }, [loadDevices]);
 
   const summary = useMemo(() => {
     const total = deviceStatus.total ?? devices.length;
@@ -137,6 +159,14 @@ export default function DevicesPage() {
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           새로고침
         </button>
+        <div className="inline-flex h-10 items-center gap-2 rounded border border-gray-200 px-3 text-xs font-bold text-gray-600">
+          {realtimeStatus === "CONNECTED" ? (
+            <Wifi className="h-4 w-4 text-green-600" />
+          ) : (
+            <WifiOff className="h-4 w-4 text-amber-600" />
+          )}
+          {realtimeStatus}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">

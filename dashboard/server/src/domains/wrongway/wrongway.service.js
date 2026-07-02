@@ -1,5 +1,6 @@
 const { prisma } = require("../../prisma/client");
 const { logger } = require("../../utils/logger");
+const { broadcastRealtime } = require("../../realtime/bus");
 const controlBoardService = require("../control-board/controlBoard.service");
 const mockLidarService = require("../mock-lidar/mockLidar.service");
 
@@ -361,6 +362,16 @@ async function ingestWrongwayPayload(payload, options = {}) {
 
   const event = serializeTrafficEvent(result.event);
   const vehicleTrack = serializeVehicleTrack(result.vehicleTrack);
+
+  if (vehicleTrack) {
+    broadcastRealtime("vehicle-track.updated", {
+      vehicleTrack,
+      created: result.vehicleTrackCreated,
+    });
+  }
+  if (event) {
+    broadcastRealtime("traffic-event.created", event);
+  }
 
   return {
     ok: true,

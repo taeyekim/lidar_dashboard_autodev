@@ -1,4 +1,6 @@
 const { logger } = require("../../utils/logger");
+const { prisma } = require("../../prisma/client");
+const { broadcastRealtime } = require("../../realtime/bus");
 const mockLidarService = require("../mock-lidar/mockLidar.service");
 const wrongwayService = require("../wrongway/wrongway.service");
 const { EXTERNAL_EVENT_SOURCE, EXTERNAL_EVENT_TYPE } = require("./externalEvent.model");
@@ -18,6 +20,61 @@ function rememberEvent(event) {
   if (recentEvents.length > MAX_RECENT_EVENTS) {
     recentEvents = recentEvents.slice(0, MAX_RECENT_EVENTS);
   }
+}
+
+function serializeDate(value) {
+  return value instanceof Date ? value.toISOString() : value;
+}
+
+async function recordDeviceStatus(event) {
+  if (!event?.deviceId) return null;
+
+  const packetInvalid = event.rawSummary?.crcStatus === "INVALID" || event.rawSummary?.packetValid === false;
+  const status = packetInvalid ? "ERROR" : "ONLINE";
+  const health = packetInvalid ? "ERROR" : event.rawSummary?.crcStatus || "UNKNOWN";
+
+  const device = await prisma.device.findFirst({
+    where: { deviceCode: event.deviceId },
+    select: { id: true },
+  });
+
+  const log = await prisma.$transaction(async (tx) => {
+    if (device?.id) {
+      await tx.device.update({
+        where: { id: device.id },
+        data: {
+          status,
+          healthStatus: health,
+          lastSeenAt: new Date(event.receivedAt),
+        },
+      });
+    }
+
+    return tx.deviceStatusLog.create({
+      data: {
+        deviceId: device?.id || null,
+        source: event.source || EXTERNAL_EVENT_SOURCE.CONTROL_BOARD,
+        status,
+        health,
+        message: event.message,
+        metadata: {
+          externalDeviceId: event.deviceId,
+          eventId: event.id,
+          crcStatus: event.rawSummary?.crcStatus || null,
+          packetValid: event.rawSummary?.packetValid ?? null,
+          command: event.rawSummary?.command || null,
+        },
+      },
+      include: { device: true },
+    });
+  });
+
+  const serialized = {
+    ...log,
+    createdAt: serializeDate(log.createdAt),
+  };
+  broadcastRealtime("device-status.updated", serialized);
+  return serialized;
 }
 
 // 내부 표준 이벤트를 프론트 모달/이력에 전달할 dashboardEvent 형태로 변환한다.
@@ -102,7 +159,7 @@ function ingestLidarMock(payload) {
 }
 
 // 통합 제어보드 mock 패킷 수신을 처리하는 service 진입점이다.
-function ingestControlBoardMock(payload) {
+async function ingestControlBoardMock(payload) {
   // 통합 제어보드 mock API의 핵심 흐름: 패킷 흉내 데이터 -> control-board adapter -> 내부 이벤트 -> 화면 반영.
   // 실제 RS-485 수신 전에도 Swagger/curl로 제어보드 이벤트 흐름을 먼저 검증할 수 있다.
   const event = adaptControlBoardPacket(payload);
@@ -114,12 +171,13 @@ function ingestControlBoardMock(payload) {
   });
 
   rememberEvent(event);
+  await recordDeviceStatus(event);
   applyDashboardEffects(event);
   return event;
 }
 
 // 통합 제어보드 실제 HTTP 수신을 처리하는 service 진입점이다.
-function ingestControlBoardLive(payload) {
+async function ingestControlBoardLive(payload) {
   // 현장에서는 RS-485 직접 연결, HTTP 브릿지, 테스트 프로그램 중 어떤 방식이 될지 아직 확정되지 않았다.
   // 그래서 실제 수신용 URL은 먼저 열어두고, 내부 처리는 mock과 같은 parser/adapter 흐름을 재사용한다.
   const event = adaptControlBoardPacket(payload);
@@ -133,12 +191,13 @@ function ingestControlBoardLive(payload) {
   });
 
   rememberEvent(event);
+  await recordDeviceStatus(event);
   applyDashboardEffects(event);
   return event;
 }
 
 // 실제 COM 포트를 열기 전, serial reader 입력 형태만 검증하는 테스트 진입점이다.
-function createSerialTest(payload = {}) {
+async function createSerialTest(payload = {}) {
   // serial reader 테스트는 아직 COM 포트를 열지 않는다.
   // 지금은 현장에서 사용할 port/baudRate/samplePacket 입력 형태와 adapter 연결 흐름만 미리 맞춰둔다.
   const serial = {
@@ -155,6 +214,7 @@ function createSerialTest(payload = {}) {
 
   if (event) {
     rememberEvent(event);
+    await recordDeviceStatus(event);
     applyDashboardEffects(event);
   }
 
