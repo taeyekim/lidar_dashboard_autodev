@@ -256,6 +256,25 @@ async function createCommandForWrongwayEvent(payloadType, trafficEvent) {
   const commandType = WRONGWAY_COMMAND_MAP[payloadType];
   if (!commandType || !trafficEvent?.id) return null;
 
+  const existingCommand = await prisma.controlCommand.findFirst({
+    where: {
+      trafficEventId: trafficEvent.id,
+      commandType,
+    },
+    orderBy: { requestedAt: "asc" },
+    include: { logs: { orderBy: { createdAt: "asc" } } },
+  });
+
+  if (existingCommand) {
+    logger.info("control board command reused for wrongway event", {
+      commandId: existingCommand.id,
+      commandType,
+      trafficEventId: trafficEvent.id,
+      status: existingCommand.status,
+    });
+    return serializeCommand(existingCommand);
+  }
+
   return sendCommand(commandType, {
     trafficEventId: trafficEvent.id,
     trigger: "WRONGWAY_EVENT",

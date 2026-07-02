@@ -15,6 +15,7 @@ function assertIncludes(content, token, label) {
 }
 
 const service = readProjectFile("dashboard/server/src/domains/wrongway/wrongway.service.js");
+const controlBoardService = readProjectFile("dashboard/server/src/domains/control-board/controlBoard.service.js");
 const schema = readProjectFile("dashboard/server/prisma/schema.prisma");
 const payloadSpec = readProjectFile("docs/specs/lidar-dashboard-payload.md");
 const runbook = readProjectFile("docs/ops/delivery-runbook.md");
@@ -51,6 +52,12 @@ assertIncludes(
   "controlBoardService.createCommandForWrongwayEvent(data.type, result.event)",
   "wrongway service",
 );
+[
+  "prisma.controlCommand.findFirst",
+  "trafficEventId: trafficEvent.id",
+  "commandType",
+  "control board command reused for wrongway event",
+].forEach((token) => assertIncludes(controlBoardService, token, "control board service"));
 assertIncludes(schema, "model VehicleTrack", "prisma schema");
 assertIncludes(schema, "trackId                      String         @unique", "prisma schema");
 assertIncludes(schema, "rawPayload               Json", "prisma schema");
