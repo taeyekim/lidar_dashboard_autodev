@@ -1,6 +1,6 @@
 const PACKET_LENGTH = 10;
 
-// PDF 기준 통합 제어보드 패킷은 항상 10바이트 고정이다.
+// The integrated control-board frame is always fixed to 10 bytes.
 // Byte 0: STX, Byte 1: ID, Byte 2: TYPE, Byte 3: MODE, Byte 4: STATUS,
 // Byte 5: SELECT, Byte 6: RESERVED, Byte 7: CRC, Byte 8: ETX, Byte 9: EOF(CR)
 const STX = 0x02;
@@ -8,7 +8,7 @@ const DEVICE_ID = 0xa1;
 const ETX = 0x03;
 const EOF = 0x0d;
 
-// TYPE은 패킷이 PC/백엔드에서 보낸 명령인지, 보드가 돌려준 응답 로그인지 구분한다.
+// TYPE distinguishes outbound dashboard commands from board response logs.
 const TYPE_LABEL = {
   0x10: "COMMAND",
   0x20: "RESPONSE_LOG",
@@ -19,7 +19,7 @@ const TYPE_CODE = {
   RESPONSE_LOG: 0x20,
 };
 
-// MODE는 역주행 경고 단계를 표현한다. 화면에서는 stage 값으로 다시 매핑된다.
+// MODE represents the warning stage shown in the operator UI.
 const MODE_LABEL = {
   0x00: "WAIT",
   0x01: "STAGE_1",
@@ -32,7 +32,7 @@ const MODE_CODE = {
   STAGE_2: 0x02,
 };
 
-// STATUS는 장비 동작 상태를 표현한다. 0x02는 차단기 복귀/상승 상황으로 해석한다.
+// STATUS represents device action state. 0x02 is treated as barrier return.
 const STATUS_LABEL = {
   0x00: "OFF",
   0x01: "ON",
@@ -45,7 +45,7 @@ const STATUS_CODE = {
   BARRIER_RETURN: 0x02,
 };
 
-// SELECT는 어떤 설비 묶음을 제어하는지 나타낸다. 현재는 진단 정보로만 보관한다.
+// SELECT identifies the target device group. Keep diagnostic labels explicit.
 const SELECT_LABEL = {
   0x01: "ALL",
   0x02: "WARNING_SET",
@@ -99,7 +99,7 @@ function parseByteToken(token) {
   const normalized = String(token).trim();
   if (!normalized) return null;
 
-  // "A1"과 "0xA1"을 모두 허용한다. Swagger/curl에서 입력 방식이 섞일 수 있기 때문이다.
+  // Accept both "A1" and "0xA1" so Swagger and curl samples are easy to use.
   const value = normalized.toLowerCase().startsWith("0x")
     ? Number.parseInt(normalized.slice(2), 16)
     : Number.parseInt(normalized, 16);
@@ -109,8 +109,8 @@ function parseByteToken(token) {
 }
 
 function normalizePacket(packet) {
-  // RS-485 serial reader가 붙기 전에는 HTTP mock API로 패킷을 테스트한다.
-  // 그래서 "02 A1 10 ..." 같은 HEX 문자열과 [2, 161, ...] 바이트 배열을 모두 같은 배열로 정규화한다.
+  // Normalize HEX strings and byte arrays into the same byte list before the
+  // serial reader is connected, so HTTP mock tests exercise the same parser.
   if (Array.isArray(packet)) {
     const bytes = packet.map((value) => {
       if (typeof value === "number") return value;
@@ -118,7 +118,7 @@ function normalizePacket(packet) {
     });
 
     if (bytes.some((value) => !Number.isInteger(value) || value < 0 || value > 0xff)) {
-      return { ok: false, error: "패킷 배열에는 0~255 범위의 바이트 값만 사용할 수 있습니다.", bytes: [] };
+      return { ok: false, error: "Packet arrays may contain only byte values from 0 to 255.", bytes: [] };
     }
 
     return { ok: true, bytes };
@@ -126,33 +126,33 @@ function normalizePacket(packet) {
 
   if (typeof packet === "string") {
     const trimmed = packet.trim();
-    if (!trimmed) return { ok: false, error: "패킷 문자열이 비어 있습니다.", bytes: [] };
+    if (!trimmed) return { ok: false, error: "Packet string must not be empty.", bytes: [] };
 
-    // 공백/콤마로 구분된 입력과 "02A110..."처럼 붙어 있는 입력을 모두 지원한다.
+    // Support whitespace/comma separated input and compact strings such as
+    // "02A11001010200E2030D".
     const tokens = trimmed.includes(" ") || trimmed.includes(",")
       ? trimmed.split(/[\s,]+/).filter(Boolean)
       : trimmed.match(/.{1,2}/g) || [];
 
     const bytes = tokens.map(parseByteToken);
     if (bytes.some((value) => value === null)) {
-      return { ok: false, error: "패킷 문자열에는 HEX 바이트만 사용할 수 있습니다.", bytes: [] };
+      return { ok: false, error: "Packet strings may contain only HEX bytes.", bytes: [] };
     }
 
     return { ok: true, bytes };
   }
 
-  return { ok: false, error: "packet은 HEX 문자열 또는 바이트 배열이어야 합니다.", bytes: [] };
+  return { ok: false, error: "packet must be a HEX string or byte array.", bytes: [] };
 }
 
 function calculateCrc8Smbus(dataBytes) {
-  // CRC 계산 범위는 PDF 기준 Byte 1~6, 즉 ID부터 RESERVED까지다.
-  // STX(0x02), CRC Byte, ETX(0x03), EOF(0x0D)는 계산에 포함하지 않는다.
-  // PDF에는 LSB-First라고 적혀 있지만, 문서의 테스트 벡터는 표준 CRC-8/SMBUS(MSB-first) 결과와 일치한다.
-  // 따라서 안전하게 문서의 기대 CRC 값을 정답으로 보고 poly 0x07, init 0x00 방식으로 구현한다.
+  // CRC covers Byte 1..6 only: ID, TYPE, MODE, STATUS, SELECT, RESERVED.
+  // STX, CRC, ETX, and EOF are not included. The verified PDF vectors match
+  // CRC-8/SMBUS: poly 0x07, init 0x00, MSB-first.
   let crc = 0x00;
 
   for (const byte of dataBytes) {
-    // 각 바이트를 현재 CRC에 XOR한 뒤 8비트씩 밀면서 다항식 0x07을 적용한다.
+    // XOR the next byte into the accumulator, then shift through 8 bits.
     crc ^= byte;
 
     for (let bit = 0; bit < 8; bit += 1) {
@@ -205,8 +205,8 @@ function buildControlBoardCommandPacket(commandType) {
 }
 
 function getProtocolCommand(parsed) {
-  // PDF의 시나리오 4개를 command로 그대로 분리한다.
-  // 나중에 프로토콜이 바뀌어도 이 함수만 보면 어떤 MODE/STATUS 조합을 어떤 상황으로 보는지 추적하기 쉽다.
+  // Keep the four PDF scenarios mapped to named commands so later protocol
+  // changes can be traced by MODE/STATUS combinations.
   if (parsed.mode === "STAGE_1" && parsed.status === "ON") return "STAGE_1_ON";
   if (parsed.mode === "STAGE_2" && parsed.status === "ON") return "STAGE_2_ON";
   if (parsed.mode === "STAGE_2" && parsed.status === "BARRIER_RETURN") return "STAGE_2_RETURN";
@@ -215,8 +215,8 @@ function getProtocolCommand(parsed) {
 }
 
 function parseControlBoardPacket(packet) {
-  // 이 함수는 외부에서 들어온 packet 하나를 검증 가능한 진단 객체로 바꾼다.
-  // adapter는 이 결과를 rawSummary에 넣어 Swagger/최근 이벤트 조회에서 확인할 수 있게 한다.
+  // Convert one inbound packet into a diagnostic object that can be stored in
+  // rawSummary and shown in Swagger or recent event views.
   const normalized = normalizePacket(packet);
   if (!normalized.ok) {
     return {
@@ -231,60 +231,56 @@ function parseControlBoardPacket(packet) {
   const bytes = normalized.bytes;
   const errors = [];
 
-  // 프레임 구조 검증: 길이와 시작/종료 제어 문자가 맞아야 실제 제어보드 패킷으로 볼 수 있다.
-  if (bytes.length !== PACKET_LENGTH) errors.push(`패킷 길이는 ${PACKET_LENGTH}바이트여야 합니다.`);
-  if (bytes[0] !== STX) errors.push("STX 값이 0x02가 아닙니다.");
-  if (bytes[1] !== DEVICE_ID) errors.push("장비 ID 값이 0xA1이 아닙니다.");
-  if (bytes[8] !== ETX) errors.push("ETX 값이 0x03이 아닙니다.");
-  if (bytes[9] !== EOF) errors.push("EOF 값이 0x0D가 아닙니다.");
+  // Validate frame shape before treating it as an integrated control-board frame.
+  if (bytes.length !== PACKET_LENGTH) errors.push(`Packet length must be ${PACKET_LENGTH} bytes.`);
+  if (bytes[0] !== STX) errors.push("STX must be 0x02.");
+  if (bytes[1] !== DEVICE_ID) errors.push("Device ID must be 0xA1.");
+  if (bytes[8] !== ETX) errors.push("ETX must be 0x03.");
+  if (bytes[9] !== EOF) errors.push("EOF must be 0x0D.");
 
-  // CRC 검증: Byte 1~6만 잘라 계산하고, 패킷의 Byte 7과 비교한다.
-  // Byte 1~6은 실제 데이터 영역이다.
-  // 순서대로 ID, TYPE, MODE, STATUS, SELECT, RESERVED이며 이 6바이트만 CRC 계산에 사용한다.
+  // Compare the transmitted Byte 7 CRC with a fresh calculation over Byte 1..6.
   const dataArea = bytes.slice(1, 7);
 
-  // Byte 7은 송신 측이 계산해서 넣어준 CRC 값이다.
-  // 우리가 Byte 1~6으로 다시 계산한 값과 같아야 패킷이 전송 중 깨지지 않았다고 볼 수 있다.
   const expectedCrc = bytes[7];
   const calculatedCrc = dataArea.length === 6 ? calculateCrc8Smbus(dataArea) : null;
   const crcValid = calculatedCrc !== null && expectedCrc === calculatedCrc;
 
-  if (!crcValid) errors.push("CRC-8 검증에 실패했습니다.");
+  if (!crcValid) errors.push("CRC-8 validation failed.");
 
-  // 사람이 보기 쉬운 HEX 코드와 라벨을 함께 만든다. 이 값들은 현장 디버깅용 rawSummary에 들어간다.
+  // Keep parsed labels and HEX codes together for field debugging.
   const parsed = {
-    // Byte 0: 패킷 시작 표시. 항상 0x02여야 한다.
+    // Byte 0: frame start marker.
     stx: toHex(bytes[0] ?? 0),
 
-    // Byte 1: 장비 식별 ID. PDF에서는 통합 제어보드 ID를 0xA1로 고정한다.
+    // Byte 1: integrated control-board device ID.
     id: toHex(bytes[1] ?? 0),
 
-    // Byte 2: 패킷 종류. 0x10은 명령, 0x20은 보드 응답/로그다.
+    // Byte 2: frame type. 0x10 is command; 0x20 is response/log.
     typeCode: toHex(bytes[2] ?? 0),
     type: TYPE_LABEL[bytes[2]] || "UNKNOWN",
 
-    // Byte 3: 경고 단계. 0x00 대기, 0x01 1차 경고, 0x02 2차 경고다.
+    // Byte 3: warning stage.
     modeCode: toHex(bytes[3] ?? 0),
     mode: MODE_LABEL[bytes[3]] || "UNKNOWN",
 
-    // Byte 4: 동작 상태. 0x00 OFF, 0x01 ON, 0x02 차단기 복귀/상승이다.
+    // Byte 4: action state.
     statusCode: toHex(bytes[4] ?? 0),
     status: STATUS_LABEL[bytes[4]] || "UNKNOWN",
 
-    // Byte 5: 제어 대상. 전체/경보 세트/안전 세트/개별 장비를 구분한다.
+    // Byte 5: target selection.
     selectCode: toHex(bytes[5] ?? 0),
     select: SELECT_LABEL[bytes[5]] || "UNKNOWN",
 
-    // Byte 6: 예약 필드. 현재는 0x00으로 두고 추후 확장에 사용한다.
+    // Byte 6: reserved for future expansion.
     reserved: toHex(bytes[6] ?? 0),
 
-    // Byte 7: 송신 측 CRC 값. calculatedCrc와 비교해 무결성을 판단한다.
+    // Byte 7: transmitted CRC value.
     crc: toHex(bytes[7] ?? 0),
 
-    // Byte 8: 패킷 종료 표시. 항상 0x03이어야 한다.
+    // Byte 8: frame end marker.
     etx: toHex(bytes[8] ?? 0),
 
-    // Byte 9: 최종 종료 확인 값(CR). 항상 0x0D여야 한다.
+    // Byte 9: final CR marker.
     eof: toHex(bytes[9] ?? 0),
   };
 
@@ -305,9 +301,35 @@ function parseControlBoardPacket(packet) {
   };
 }
 
+function validateControlBoardCommandResponse(commandType, parsed) {
+  const errors = [];
+
+  if (!parsed?.isValid) {
+    errors.push(...(parsed?.errors || ["Invalid control board response."]));
+  }
+
+  if (parsed?.crcStatus !== "VALID") {
+    errors.push("Control board response CRC is not valid.");
+  }
+
+  if (parsed?.parsed?.type !== "RESPONSE_LOG") {
+    errors.push(`Control board response type must be RESPONSE_LOG, got ${parsed?.parsed?.type || "UNKNOWN"}.`);
+  }
+
+  if (parsed?.command !== commandType) {
+    errors.push(`Control board response command mismatch: expected ${commandType}, got ${parsed?.command || "UNKNOWN"}.`);
+  }
+
+  return {
+    ok: errors.length === 0,
+    errors,
+  };
+}
+
 module.exports = {
   COMMAND_DEFINITION,
   buildControlBoardCommandPacket,
   calculateCrc8Smbus,
   parseControlBoardPacket,
+  validateControlBoardCommandResponse,
 };

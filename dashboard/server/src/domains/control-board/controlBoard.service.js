@@ -5,6 +5,7 @@ const { logger } = require("../../utils/logger");
 const {
   buildControlBoardCommandPacket,
   parseControlBoardPacket,
+  validateControlBoardCommandResponse,
 } = require("../external-ingest/protocol/controlBoardProtocol");
 const { getControlBoardConfig } = require("./controlBoard.config");
 const { sendRawPacket } = require("./adapters/tcpControlBoard.adapter");
@@ -203,7 +204,8 @@ async function sendCommand(commandType, options = {}) {
 
     const response = await sendRawPacketWithRetry(packet.buffer, config, command.id);
     const parsed = parseControlBoardPacket(Array.from(response.responseBuffer));
-    const ok = parsed.isValid && parsed.crcStatus === "VALID";
+    const validation = validateControlBoardCommandResponse(commandType, parsed);
+    const ok = validation.ok;
 
     const updated = await updateCommand(
       command.id,
@@ -213,12 +215,18 @@ async function sendCommand(commandType, options = {}) {
         crcStatus: parsed.crcStatus,
         acknowledgedAt: ok ? new Date() : null,
         completedAt: new Date(),
-        errorMessage: ok ? null : parsed.errors?.join("; ") || "Invalid control board response.",
+        errorMessage: ok ? null : validation.errors.join("; "),
       },
       {
         action: ok ? "TCP_RESPONSE_ACKNOWLEDGED" : "TCP_RESPONSE_INVALID",
         message: ok ? "Control board response acknowledged." : "Control board response failed validation.",
-        metadata: { responseHex: response.responseHex, parsed },
+        metadata: {
+          responseHex: response.responseHex,
+          trailingByteCount: response.trailingByteCount,
+          trailingHex: response.trailingHex,
+          parsed,
+          validation,
+        },
       },
     );
 

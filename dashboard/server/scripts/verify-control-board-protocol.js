@@ -1,6 +1,7 @@
 const {
   buildControlBoardCommandPacket,
   parseControlBoardPacket,
+  validateControlBoardCommandResponse,
 } = require("../src/domains/external-ingest/protocol/controlBoardProtocol");
 
 const commandVectors = [
@@ -33,6 +34,25 @@ for (const [commandType, responseHex] of responseVectors) {
   assert(parsed.isValid, `${commandType} response should be valid: ${parsed.errors?.join("; ")}`);
   assert(parsed.crcStatus === "VALID", `${commandType} response CRC should be valid`);
   assert(parsed.command === commandType, `${commandType} response parsed as ${parsed.command}`);
+
+  const validation = validateControlBoardCommandResponse(commandType, parsed);
+  assert(validation.ok, `${commandType} response should be accepted: ${validation.errors.join("; ")}`);
 }
+
+const commandFrameAsResponse = parseControlBoardPacket(commandVectors[0][1]);
+const commandFrameValidation = validateControlBoardCommandResponse("STAGE_1_ON", commandFrameAsResponse);
+assert(!commandFrameValidation.ok, "command frame must not be accepted as an ACK response");
+assert(
+  commandFrameValidation.errors.some((error) => error.includes("RESPONSE_LOG")),
+  "command-frame ACK rejection must explain response type mismatch",
+);
+
+const wrongCommandResponse = parseControlBoardPacket(responseVectors[1][1]);
+const wrongCommandValidation = validateControlBoardCommandResponse("STAGE_1_ON", wrongCommandResponse);
+assert(!wrongCommandValidation.ok, "different command response must not be accepted as ACK");
+assert(
+  wrongCommandValidation.errors.some((error) => error.includes("command mismatch")),
+  "wrong-command ACK rejection must explain command mismatch",
+);
 
 console.log("control board protocol vectors ok");

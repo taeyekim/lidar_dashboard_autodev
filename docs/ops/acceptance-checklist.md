@@ -83,6 +83,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 ## Security
 
 - [ ] `npm run smoke` passes.
+- [ ] `npm --prefix dashboard/server test` passes for backend protocol and contract checks.
 - [ ] `npm run ci` passes.
 - [ ] `npm --prefix dashboard/dashboard-web run lint` passes.
 - [ ] `npm run verify:audit-policy` passes.

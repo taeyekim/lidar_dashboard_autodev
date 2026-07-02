@@ -76,7 +76,7 @@ curl http://localhost:8080/api/devices
 Expected:
 
 - `sites`, `zones`, and `devices` reflect Prisma seed or field registration data.
-- Empty device lists are treated as `장비 미구성`, not as live hardware status.
+- Empty device lists are treated as `not configured`, not as live hardware status.
 - `/api/status` summarizes server, database, ingest, WebSocket, devices, and control board mode.
 - Control board ingest creates `device_status_logs` and broadcasts `device-status.updated`.
 - Wrong-way ingest broadcasts `traffic-event.created` and `vehicle-track.updated`; event status/memo changes broadcast `traffic-event.updated`.
@@ -187,6 +187,7 @@ Run:
 
 ```bash
 npm run delivery:verify
+npm --prefix dashboard/server test
 npm audit --workspaces
 ```
 
@@ -194,6 +195,7 @@ On Windows PowerShell:
 
 ```powershell
 npm.cmd run delivery:verify
+npm.cmd --prefix dashboard/server test
 npm.cmd audit --workspaces
 ```
 

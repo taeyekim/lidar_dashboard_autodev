@@ -10,7 +10,8 @@
     "db:seed": "prisma db seed",
     "db:status": "prisma migrate status",
     "db:studio": "prisma studio",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "verify": "node scripts/verify-control-board-protocol.js && node scripts/verify-control-board-tcp-loopback.js && node scripts/verify-auth-crypto.js && node scripts/verify-device-ingest-key.js && node scripts/verify-wrongway-contracts.js && node scripts/check-syntax.js",
+    "test": "npm run verify",
     "start": "node server.js"
   },
   "prisma": {
