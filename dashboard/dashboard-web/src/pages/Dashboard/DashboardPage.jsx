@@ -3,6 +3,19 @@ import { useState, useEffect, useRef } from "react";
 import { Card } from "../../shared/components/Card";
 import { apiUrl, detectorUrl, WS_BASE } from "../../shared/api/config";
 import { postJson } from "../../shared/api/http";
+import {
+  controlBoardModeLabel,
+  fetchControlBoardStatus,
+  latestCommandSummary,
+  sendControlBoardTestCommand,
+} from "../../features/controlBoard/controlBoardApi";
+import {
+  fetchEventSummary,
+  fetchRecentEvents,
+  formatEventTime,
+  normalizeEvents,
+  normalizeSummary,
+} from "../../features/events/eventsApi";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowUpRight,
@@ -19,6 +32,8 @@ import {
   X,
 } from "lucide-react";
 
+const MAX_RECENT_LOGS = 5;
+
 // ------------------------------
 // DachboardPage Component
 // ------------------------------
@@ -26,19 +41,13 @@ import {
 // 서버 상태, KPI, WebSocket 알림, 차단기/VMS 제어 UI를 한 화면에서 보여준다.
 // 현재는 화면 로직이 큰 파일에 모여 있으므로 이후 dashboard/wrongway feature로 점진 분리한다.
 export default function DashboardPage({
-  onNavigateToEvent,
-  onNavigateToVehiclesPassed,
   onNavigateToTotalVehicles,
   onNavigateToUnidentified,
 }) {
   const [activeDashboardEvent, setActiveDashboardEvent] = useState(null); // 모달로 표시할 대시보드 이벤트
   const [eventModalEnabled, setEventModalEnabled] = useState(true); // 이벤트 모달 허용 토글(ON/OFF)
   const [vmsText, setVmsText] = useState(""); // 전광판 입력
-  const [recentLogs, setRecentLogs] = useState([ // 최근 로그 목록
-    { msg: "차량 진출로 B 통과", time: "10:42" },
-    { msg: "LIDAR_01 동기화 정상", time: "10:41" },
-    { msg: "차단기 A 열림", time: "10:38" },
-  ]);
+  const [recentLogs, setRecentLogs] = useState([]); // recent event list
   
   const [serverAlive, setServerAlive] = useState(false); // 서버 alive 표시 => /api/health
   const [kpi, setKpi] = useState({ 
@@ -47,6 +56,9 @@ export default function DashboardPage({
     wrongWayEvents: 0, 
     unidentified: 0 
   }); 
+  const [controlBoardStatus, setControlBoardStatus] = useState(null);
+  const [controlBoardError, setControlBoardError] = useState("");
+  const [controlBoardBusy, setControlBoardBusy] = useState("");
 
   // kpi 페이지 이동 함수
   const navigate = useNavigate();
@@ -58,7 +70,91 @@ export default function DashboardPage({
     eventModalEnabledRef.current = eventModalEnabled;
   }, [eventModalEnabled]);
 
+  useEffect(() => {
+    let ignore = false;
+
+    const loadEventApiFallback = async () => {
+      const [summaryResult, recentResult] = await Promise.allSettled([
+        fetchEventSummary(),
+        fetchRecentEvents(MAX_RECENT_LOGS),
+      ]);
+
+      if (ignore) return;
+
+      if (summaryResult.status === "fulfilled") {
+        setKpi((prev) => ({
+          ...prev,
+          ...normalizeSummary(summaryResult.value),
+        }));
+      }
+
+      if (recentResult.status === "fulfilled") {
+        const nextLogs = normalizeEvents(recentResult.value)
+          .map((event) => ({
+            msg: event.message,
+            time: formatEventTime(event.timestamp),
+          }))
+          .slice(0, MAX_RECENT_LOGS);
+        setRecentLogs(nextLogs);
+      }
+    };
+
+    loadEventApiFallback();
+    const timer = setInterval(loadEventApiFallback, 10000);
+
+    return () => {
+      ignore = true;
+      clearInterval(timer);
+    };
+  }, []);
+
   // 팝업 버튼 핸들러
+  const refreshControlBoardStatus = async () => {
+    try {
+      const status = await fetchControlBoardStatus();
+      setControlBoardStatus(status);
+      setControlBoardError("");
+      return status;
+    } catch (error) {
+      setControlBoardError(error.message || "Failed to load control board status.");
+      setControlBoardStatus((prev) => prev || { ok: false, mode: "OFFLINE" });
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    let ignore = false;
+
+    const loadStatus = async () => {
+      const status = await refreshControlBoardStatus();
+      if (ignore || !status) return;
+      setControlBoardStatus(status);
+    };
+
+    loadStatus();
+    const timer = setInterval(loadStatus, 5000);
+
+    return () => {
+      ignore = true;
+      clearInterval(timer);
+    };
+  }, []);
+
+  const sendControlBoardCommand = async (commandType, label) => {
+    setControlBoardBusy(commandType);
+    try {
+      const command = await sendControlBoardTestCommand(commandType);
+      pushLog(`${label} command ${command.status || "sent"}`);
+      await refreshControlBoardStatus();
+    } catch (error) {
+      const message = error.message || `${label} command failed`;
+      setControlBoardError(message);
+      pushLog(message);
+    } finally {
+      setControlBoardBusy("");
+    }
+  };
+
   const handleDismissDashboardEvent = () => {
     setActiveDashboardEvent(null);
   }; 
@@ -73,8 +169,6 @@ export default function DashboardPage({
     setActiveDashboardEvent(null);
   };
 
-  const MAX_RECENT_LOGS = 5;
-
   const pushLog = (msg) => {
     const t = new Date().toLocaleTimeString([], {
       hour: "2-digit", 
@@ -82,14 +176,13 @@ export default function DashboardPage({
     });
     setRecentLogs((prev)=> [
       {msg, time:t}, 
-      ...prev]);
+      ...prev].slice(0, MAX_RECENT_LOGS));
   };
 
   // demo start-end 지점
   const videoRef = useRef(null);
   const camVideoRef = useRef(null); 
   const DEMO_START_SEC = 0; // 시작 시점
-  const DEMO_END_SEC = 36.5; // 종료 시점
   const CAMERA_VIDEO_SRC = "/wrongway_test.mp4";
 
   // YOLO 감지 서버 상태
@@ -109,29 +202,6 @@ export default function DashboardPage({
     timer = setInterval(pingDetector, 3000);
     return () => clearInterval(timer);
   }, []);
-  //
-
-  const handleVideoLoad = (e) => {
-    e.target.currentTime = DEMO_START_SEC;
-  };
-
-  //
-  const handleDemoTimeUpdate = () => {
-    const v = videoRef.current;
-    const v2 = camVideoRef.current;
-    
-    // 메인 리플레이 영상(라이다) 기준 종료 처리
-    if (v && v.currentTime >= DEMO_END_SEC) {
-      v.pause();
-      v.currentTime = DEMO_START_SEC;
-      
-      if (v2) {
-        v2.pause();
-        v2.currentTime = DEMO_START_SEC;
-      }
-      pushLog("Demo 영상 종료");
-    }
-  };
   //
 
   // ------------------------------
@@ -193,8 +263,8 @@ export default function DashboardPage({
     pushLog(`전광판 문구 선택: ${text}`);
   };
 
-  const openGate = () => pushLog("차단기 열기 요청");
-  const closeGate = () => pushLog("차단기 닫기 요청");
+  const openGate = () => sendControlBoardCommand("STAGE_2_RETURN", "Barrier return");
+  const closeGate = () => sendControlBoardCommand("STAGE_2_ON", "Stage 2 barrier");
 
   // ------------------------------
   // websocket 수신 로직
@@ -213,14 +283,17 @@ export default function DashboardPage({
 
         //Logs/state는 원하면 반영
         if(msg.type === "log" && msg.payload?.msg) {
-          setRecentLogs((prev) => [{ msg: msg.payload.msg, time: msg.payload.time || "" }, ...prev].slice(0, 10));
+          setRecentLogs((prev) => [{ msg: msg.payload.msg, time: msg.payload.time || "" }, ...prev].slice(0, MAX_RECENT_LOGS));
         }
         if (msg.type === "logs" && Array.isArray(msg.payload)) {
-        setRecentLogs(msg.payload.slice(0, 10));
+        setRecentLogs(msg.payload.slice(0, MAX_RECENT_LOGS));
       }
 
       if (msg.type === "state" && msg.payload) {
-        setKpi(msg.payload);
+        setKpi((prev) => ({
+          ...prev,
+          ...normalizeSummary(msg.payload),
+        }));
       }
 
       // 팝업은 wrong-way만, 토글 on일 때만
@@ -230,7 +303,7 @@ export default function DashboardPage({
         //토글 off면 팝업 금지, 로그만
         if (!eventModalEnabledRef.current) {
           if (dashboardEvent?.subMessage) {
-            setRecentLogs((prev) => [{ msg: `(Muted) ${dashboardEvent.subMessage}`, time:dashboardEvent.timestamp || "" }, ...prev].slice(0, 10));
+            setRecentLogs((prev) => [{ msg: `(Muted) ${dashboardEvent.subMessage}`, time:dashboardEvent.timestamp || "" }, ...prev].slice(0, MAX_RECENT_LOGS));
           }
           return;
         }
@@ -240,7 +313,7 @@ export default function DashboardPage({
         } else {
           // 다른 타입은 로그만
           if (dashboardEvent?.subMessage) {
-            setRecentLogs((prev) => [{ msg: dashboardEvent.subMessage, time: dashboardEvent.timestamp || "" }, ...prev].slice(0, 10));
+            setRecentLogs((prev) => [{ msg: dashboardEvent.subMessage, time: dashboardEvent.timestamp || "" }, ...prev].slice(0, MAX_RECENT_LOGS));
           }
         }
       }
@@ -293,6 +366,10 @@ export default function DashboardPage({
     timer=setInterval(ping, 3000); //3초마다
     return () => clearInterval(timer);
   }, []);
+
+  const controlBoardMode = controlBoardModeLabel(controlBoardStatus || {});
+  const latestControlCommand = controlBoardStatus?.latestCommand || null;
+  const controlBoardLive = controlBoardMode === "LIVE_TCP";
 
 
   return (
@@ -390,6 +467,17 @@ export default function DashboardPage({
             {serverAlive ? "SERVER" : "OFFLINE"}
           </span>
         </div>
+        <div className="flex items-center gap-2 bg-gray-100 border border-gray-300 rounded px-3 h-10">
+          <span
+            className={`w-2.5 h-2.5 rounded-full ${
+              detectorAlive ? "bg-green-500" : "bg-red-500"
+            }`}
+            title={detectorAlive ? "DETECTOR OK" : "DETECTOR DOWN"}
+          />
+          <span className="font-mono text-xs text-gray-600">
+            {detectorAlive ? "DETECTOR" : "DETECTOR OFF"}
+          </span>
+        </div>
           <button
             onClick={startDemo}
             className="h-10 px-4 rounded bg-gray-900 text-white text-xs font-bold hover:bg-gray-700"
@@ -437,6 +525,82 @@ export default function DashboardPage({
             />
           </div>
         </button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Card className="flex min-h-32 flex-col justify-between border-solid bg-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider text-gray-400">Control board</div>
+              <div className="mt-1 text-xl font-black text-gray-900">{controlBoardMode}</div>
+            </div>
+            <span
+              className={`h-3 w-3 rounded-full ${
+                controlBoardLive ? "bg-green-500" : controlBoardMode === "DRY_RUN" ? "bg-amber-500" : "bg-red-500"
+              }`}
+              title={controlBoardMode}
+            />
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-500">
+            <div>
+              <span className="font-bold text-gray-700">Host</span>{" "}
+              {controlBoardStatus?.hostConfigured ? "configured" : "not set"}
+            </div>
+            <div>
+              <span className="font-bold text-gray-700">Port</span>{" "}
+              {controlBoardStatus?.portConfigured ? "configured" : "not set"}
+            </div>
+          </div>
+          {controlBoardError && (
+            <div className="mt-2 truncate text-xs font-semibold text-red-600">{controlBoardError}</div>
+          )}
+        </Card>
+
+        <Card className="min-h-32 border-solid bg-white">
+          <div className="text-xs font-bold uppercase tracking-wider text-gray-400">Latest command</div>
+          <div className="mt-2 text-sm font-black text-gray-900">
+            {latestCommandSummary(latestControlCommand)}
+          </div>
+          <div className="mt-2 truncate font-mono text-xs text-gray-500">
+            {latestControlCommand?.packetHex || "No packet yet"}
+          </div>
+          <div className="mt-2 text-xs text-gray-400">
+            CRC {latestControlCommand?.crcStatus || "-"} / retry {controlBoardStatus?.retryCount ?? "-"}
+          </div>
+        </Card>
+
+        <Card className="min-h-32 border-solid bg-white">
+          <div className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-400">Manual command</div>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => sendControlBoardCommand("STAGE_1_ON", "Stage 1 warning")}
+              disabled={Boolean(controlBoardBusy)}
+              className="rounded bg-amber-500 px-2 py-2 text-xs font-black text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              1st
+            </button>
+            <button
+              type="button"
+              onClick={() => sendControlBoardCommand("STAGE_2_ON", "Stage 2 barrier")}
+              disabled={Boolean(controlBoardBusy)}
+              className="rounded bg-red-600 px-2 py-2 text-xs font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              2nd
+            </button>
+            <button
+              type="button"
+              onClick={() => sendControlBoardCommand("STAGE_2_RETURN", "Barrier return")}
+              disabled={Boolean(controlBoardBusy)}
+              className="rounded bg-gray-800 px-2 py-2 text-xs font-black text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Return
+            </button>
+          </div>
+          <div className="mt-3 text-xs text-gray-500">
+            {controlBoardBusy ? `Sending ${controlBoardBusy}` : "Uses dry-run until live TCP is enabled."}
+          </div>
+        </Card>
       </div>
 
       {/* KPI */}
@@ -635,6 +799,10 @@ export default function DashboardPage({
             <div>
               <div className="text-xs font-bold text-gray-400 mb-2 tracking-wider">최근 이벤트</div>
               <div className="space-y-2 bg-gray-50 p-2 rounded border border-gray-100 max-h-[117px] ">
+
+                {recentLogs.length === 0 && (
+                  <div className="text-xs text-gray-400">No recent events.</div>
+                )}
 
                 {recentLogs.slice(0,4).map((item, i) => (
                   <div

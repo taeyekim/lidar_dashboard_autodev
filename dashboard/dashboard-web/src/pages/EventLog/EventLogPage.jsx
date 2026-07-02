@@ -1,185 +1,131 @@
-import { useEffect, useMemo, useState } from "react";
-import { Card } from "../../shared/components/Card";
-import { WS_BASE } from "../../shared/api/config";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
-  Search,
-  Filter,
-  Download,
-  AlertTriangle,
-  CheckCircle,
-  Info,
-  XSquare,
-  Crosshair,
-  Calendar,
   Activity,
+  AlertTriangle,
+  Calendar,
+  CheckCircle,
+  Download,
   Eye,
-  Megaphone,
+  Info,
+  RefreshCcw,
+  Save,
+  Search,
 } from "lucide-react";
 import {
-  AreaChart,
   Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
 } from "recharts";
-
-/* -----------------------------
-   목업 데이터
------------------------------- */
-
-// 이벤트/시스템 로그를 조회하고 필터링하는 페이지이다.
-// 지금은 mock 로그를 기준으로 화면을 구성하며, 실제 API 연결 시 데이터 소스만 교체한다.
-// URL query parameter를 사용해 특정 탭이나 상태로 진입할 수 있게 한다.
-const MOCK_LOGS = [
-  {
-    id: "EVT-001",
-    type: "warning",
-    category: "역주행",
-    message: "진출로 B에서 차량이 감지되었습니다.",
-    time: "10:42",
-    status: "pending",
-  },
-  {
-    id: "EVT-002",
-    type: "warning",
-    category: "미식별",
-    message: "게이트 A에서 미확인 감지가 발생했습니다.",
-    time: "10:15",
-    status: "pending",
-  },
-  {
-    id: "EVT-003",
-    type: "error",
-    category: "연결",
-    message: "LIDAR_02 연결이 끊겼습니다.",
-    time: "09:42",
-    status: "resolved",
-    user: "관리자",
-  },
-  {
-    id: "EVT-004",
-    type: "success",
-    category: "시스템",
-    message: "시스템 백업이 완료되었습니다.",
-    time: "09:00",
-    status: "resolved",
-  },
-  {
-    id: "EVT-005",
-    type: "info",
-    category: "접근",
-    message: "admin 계정 로그인",
-    time: "08:55",
-    status: "resolved",
-  },
-  {
-    id: "EVT-006",
-    type: "warning",
-    category: "네트워크",
-    message: "CAM_01 지연 시간이 높습니다.",
-    time: "08:30",
-    status: "dismissed",
-    user: "시스템",
-  },
-  {
-    id: "EVT-007",
-    type: "warning",
-    category: "미식별",
-    message: "Zone C에서 낮은 신뢰도 객체가 감지되었습니다.",
-    time: "08:15",
-    status: "pending",
-  },
-  {
-    id: "EVT-008",
-    type: "success",
-    category: "점검",
-    message: "일일 점검 스크립트 실행 완료",
-    time: "04:00",
-    status: "resolved",
-  },
-];
+import { Card } from "../../shared/components/Card";
+import { WS_BASE } from "../../shared/api/config";
+import {
+  fetchEvent,
+  fetchEventLogs,
+  fetchEvents,
+  fetchEventSummary,
+  formatConfidencePercent,
+  formatEventTime,
+  formatEventTimestamp,
+  normalizeEvent,
+  normalizeEvents,
+  normalizeSummary,
+  updateEventMemo,
+  updateEventStatus,
+} from "../../features/events/eventsApi";
 
 const INITIAL_HOURLY_DATA = Array.from({ length: 24 }, (_, i) => ({
   hour: `${String(i).padStart(2, "0")}:00`,
   events: 0,
 }));
 
-const MOCK_UNCONFIRMED = [
-  {
-    id: "unc-001",
-    timestamp: "오늘 10:45:12",
-    location: "Zone B - 서비스 차로",
-    confidence: 68.5,
-    status: "pending",
-  },
-  {
-    id: "unc-002",
-    timestamp: "오늘 10:48:33",
-    location: "Gate A - 접근 구간",
-    confidence: 52.1,
-    status: "pending",
-  },
-  {
-    id: "unc-003",
-    timestamp: "오늘 10:55:01",
-    location: "Exit Ramp C",
-    confidence: 71.0,
-    status: "pending",
-  },
-];
+const EMPTY_SUMMARY = {
+  todaysEvents: 0,
+  wrongWayEvents: 0,
+  vehiclesPassed: 0,
+  unidentified: 0,
+  newEvents: 0,
+  hourlyEvents: INITIAL_HOURLY_DATA,
+};
 
-/* -----------------------------
-   내부 뷰 컴포넌트
------------------------------- */
+function statusLabel(status) {
+  if (status === "pending" || status === "new") return "Pending";
+  if (status === "resolved" || status === "reviewed") return "Resolved";
+  if (status === "dismissed" || status === "ignored") return "Dismissed";
+  return status || "-";
+}
 
-function AnalyticsView({ kpi }) {
+function statusBadgeClass(status) {
+  if (status === "pending" || status === "new") {
+    return "bg-orange-50 text-orange-700 border-orange-200";
+  }
+  if (status === "resolved" || status === "reviewed") {
+    return "bg-green-50 text-green-700 border-green-200";
+  }
+  if (status === "dismissed" || status === "ignored") {
+    return "bg-gray-50 text-gray-600 border-gray-200";
+  }
+  return "bg-blue-50 text-blue-700 border-blue-200";
+}
+
+function iconByStatus(status) {
+  if (status === "resolved" || status === "reviewed") return <CheckCircle className="h-4 w-4" />;
+  if (status === "dismissed" || status === "ignored") return <Info className="h-4 w-4" />;
+  return <AlertTriangle className="h-4 w-4" />;
+}
+
+function iconWrapClass(status) {
+  if (status === "resolved" || status === "reviewed") return "bg-green-100 text-green-600";
+  if (status === "dismissed" || status === "ignored") return "bg-gray-100 text-gray-600";
+  return "bg-orange-100 text-orange-600";
+}
+
+function AnalyticsView({ summary, loading, error }) {
   const hourlyData =
-    kpi?.hourlyEvents && kpi.hourlyEvents.length > 0
-      ? kpi.hourlyEvents
+    summary.hourlyEvents && summary.hourlyEvents.length > 0
+      ? summary.hourlyEvents
       : INITIAL_HOURLY_DATA;
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-4 bg-blue-50 border-blue-100">
-          <div className="text-sm font-bold text-blue-800 mb-1">오늘 이벤트</div>
-          <div className="text-3xl font-bold text-gray-900">
-            {kpi?.todaysEvents ?? 0}
-          </div>
-          <div className="text-xs text-blue-600 mt-1">어제 대비 +0</div>
+      {error && (
+        <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <Card className="border-blue-100 bg-blue-50 p-4">
+          <div className="mb-1 text-sm font-bold text-blue-800">Today events</div>
+          <div className="text-3xl font-bold text-gray-900">{summary.todaysEvents}</div>
+          <div className="mt-1 text-xs text-blue-600">{loading ? "Loading..." : "API summary"}</div>
         </Card>
 
-        <Card className="p-4 bg-red-50 border-red-100">
-          <div className="text-sm font-bold text-red-800 mb-1">활성 경보</div>
-          <div className="text-3xl font-bold text-red-600">
-            {kpi?.wrongWayEvents ?? 0}
-          </div>
-          <div className="text-xs text-red-400 mt-1">조치 필요</div>
+        <Card className="border-red-100 bg-red-50 p-4">
+          <div className="mb-1 text-sm font-bold text-red-800">Wrong-way events</div>
+          <div className="text-3xl font-bold text-red-600">{summary.wrongWayEvents}</div>
+          <div className="mt-1 text-xs text-red-500">Needs review</div>
         </Card>
 
-        <Card className="p-4 bg-green-50 border-green-100">
-          <div className="text-sm font-bold text-green-800 mb-1">시스템 가동률</div>
-          <div className="text-3xl font-bold text-gray-900">99.9%</div>
-          <div className="text-xs text-green-600 mt-1">센서 정상</div>
+        <Card className="border-green-100 bg-green-50 p-4">
+          <div className="mb-1 text-sm font-bold text-green-800">Pending events</div>
+          <div className="text-3xl font-bold text-gray-900">{summary.newEvents}</div>
+          <div className="mt-1 text-xs text-green-600">From event API</div>
         </Card>
       </div>
 
-      <Card title="시간대별 이벤트 분포" className="h-96">
+      <Card title="Hourly event distribution" className="h-96">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={hourlyData}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis
-              dataKey="hour"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 11 }}
-            />
+            <XAxis dataKey="hour" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
             <Tooltip />
-            <Area type="monotone" dataKey="events" />
+            <Area type="monotone" dataKey="events" stroke="#2563eb" fill="#bfdbfe" />
           </AreaChart>
         </ResponsiveContainer>
       </Card>
@@ -187,428 +133,468 @@ function AnalyticsView({ kpi }) {
   );
 }
 
-function VehiclesView() {
+function ContractEmptyView({ title }) {
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between bg-white p-2 rounded border border-gray-200">
-            <div className="flex items-center space-x-2">
-              <Filter className="w-4 h-4 text-gray-400" />
-              <span className="text-sm font-bold text-gray-600">필터:</span>
-              <span className="px-2 py-1 bg-gray-100 rounded text-xs font-mono cursor-pointer hover:bg-gray-200">
-                시간 범위
-              </span>
-              <span className="px-2 py-1 bg-gray-100 rounded text-xs font-mono cursor-pointer hover:bg-gray-200">
-                게이트
-              </span>
-            </div>
-            <div className="text-sm text-gray-500">50 / 12,842 표시</div>
-          </div>
-
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-gray-50 text-gray-500 font-mono text-xs uppercase border-b border-gray-200">
-                <tr>
-                  <th className="px-4 py-3">시간</th>
-                  <th className="px-4 py-3">차종</th>
-                  <th className="px-4 py-3">번호판(OCR)</th>
-                  <th className="px-4 py-3">속도</th>
-                  <th className="px-4 py-3">게이트</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <tr key={i} className="hover:bg-gray-50 cursor-pointer">
-                    <td className="px-4 py-3 font-mono text-gray-600">10:4{i}</td>
-                    <td className="px-4 py-3">승용차</td>
-                    <td className="px-4 py-3 font-mono font-bold">ABC-123{i}</td>
-                    <td className="px-4 py-3 font-bold">45 km/h</td>
-                    <td className="px-4 py-3 text-gray-500">Gate A</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <Card title="교통량(예시)">
-            <div className="flex items-end space-x-1 h-32 mt-2">
-              {[40, 60, 45, 70, 80, 50, 60, 75, 90, 60, 50, 40].map((h, i) => (
-                <div key={i} className="flex-1 bg-gray-800 rounded-t opacity-80" style={{ height: `${h}%` }} />
-              ))}
-            </div>
-          </Card>
-
-          <Card title="차종 비율(예시)">
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-600">승용차</span> <span className="font-bold">65%</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-1.5">
-                <div className="h-1.5 rounded-full" style={{ width: "65%" }} />
-              </div>
-
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-600">트럭</span> <span className="font-bold">20%</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-1.5">
-                <div className="h-1.5 rounded-full" style={{ width: "20%" }} />
-              </div>
-
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-600">오토바이</span> <span className="font-bold">15%</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-1.5">
-                <div className="h-1.5 rounded-full" style={{ width: "15%" }} />
-              </div>
-            </div>
-          </Card>
-        </div>
+    <Card className="p-8">
+      <div className="mx-auto flex max-w-xl flex-col items-center justify-center text-center text-gray-500">
+        <Info className="mb-3 h-8 w-8 text-gray-300" />
+        <h2 className="mb-2 text-lg font-bold text-gray-900">{title}</h2>
+        <p className="text-sm leading-6">
+          The current event API contract does not provide CCTV, license plate, vehicle owner,
+          or vehicle registry data. This screen no longer renders sample data as if it were real.
+        </p>
       </div>
-    </div>
+    </Card>
   );
 }
 
-function UnidentifiedView() {
-  const [selectedId, setSelectedId] = useState(MOCK_UNCONFIRMED[0]?.id);
-  const selected = MOCK_UNCONFIRMED.find((u) => u.id === selectedId);
-
+function RawPayloadBlock({ value }) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-280px)]">
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
-        <div className="p-3 bg-gray-50 border-b border-gray-200 font-bold text-xs text-gray-500 uppercase">
-          검토 대기 목록
-        </div>
-        <div className="overflow-y-auto flex-1 p-2 space-y-2">
-          {MOCK_UNCONFIRMED.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => setSelectedId(item.id)}
-              className={`p-3 rounded border cursor-pointer transition-colors ${
-                selectedId === item.id
-                  ? "bg-orange-50 border-orange-300 ring-1 ring-orange-200"
-                  : "bg-white border-gray-200 hover:bg-gray-50"
-              }`}
-            >
-              <div className="flex justify-between mb-1">
-                <span className="font-mono text-xs font-bold text-gray-700">{item.id}</span>
-                <span className="text-xs text-red-600 font-bold">{item.confidence}%</span>
-              </div>
-              <div className="text-sm text-gray-800">{item.location}</div>
-              <div className="text-xs text-gray-400 mt-1">{item.timestamp}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="lg:col-span-2 flex flex-col space-y-4">
-        <Card className="flex-1 flex flex-col relative overflow-hidden bg-gray-900 border-gray-800">
-          <div className="absolute top-4 left-4 z-10 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
-            미확정 객체
-          </div>
-
-          <div className="flex-1 flex items-center justify-center opacity-40 relative">
-            <div className="w-full h-full bg-[radial-gradient(circle,_var(--tw-gradient-stops))] from-gray-700 to-black" />
-            <Crosshair className="w-32 h-32 text-white/20 absolute" />
-          </div>
-
-          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
-            <div className="flex justify-between items-end text-white">
-              <div>
-                <div className="font-mono text-lg font-bold">{selected?.location || "-"}</div>
-                <div className="font-mono text-xs text-gray-400">
-                  CAM_02_FEED • {selected?.timestamp || "-"}
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <div className="flex space-x-3">
-          <button
-            className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded shadow-sm flex items-center justify-center"
-            onClick={() => {
-              /* TODO: 확정 처리 */
-            }}
-          >
-            <CheckCircle className="w-4 h-4 mr-2" /> 사건 확정
-          </button>
-          <button
-            className="flex-1 py-3 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold rounded flex items-center justify-center"
-            onClick={() => {
-              /* TODO: 오탐 처리 */
-            }}
-          >
-            <XSquare className="w-4 h-4 mr-2" /> 오탐/무시
-          </button>
-        </div>
-      </div>
-    </div>
+    <details className="rounded border border-gray-200 bg-gray-50">
+      <summary className="cursor-pointer px-3 py-2 text-xs font-bold uppercase text-gray-500">
+        rawPayload JSON
+      </summary>
+      <pre className="max-h-72 overflow-auto border-t border-gray-200 p-3 text-xs text-gray-700">
+        {JSON.stringify(value ?? {}, null, 2)}
+      </pre>
+    </details>
   );
 }
 
-/* -----------------------------
-   메인 페이지 컴포넌트
------------------------------- */
 export default function EventLogPage() {
   const [searchParams] = useSearchParams();
-
-  // URL 쿼리에서 tab 읽기
   const tabParam = (searchParams.get("tab") || "all").toLowerCase();
-
-  // 허용된 탭만 통과
   const safeTab = ["all", "analytics", "vehicles", "unidentified"].includes(tabParam)
     ? tabParam
     : "all";
 
   const [activeTab, setActiveTab] = useState(safeTab);
-  const [selectedLog, setSelectedLog] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [eventLogs, setEventLogs] = useState([]);
   const [query, setQuery] = useState("");
+  const [memoDraft, setMemoDraft] = useState("");
+  const [listLoading, setListLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [listError, setListError] = useState("");
+  const [detailError, setDetailError] = useState("");
+  const [summaryError, setSummaryError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [summary, setSummary] = useState(EMPTY_SUMMARY);
 
-  const [kpi, setKpi] = useState({
-    todaysEvents: 0,
-    wrongWayEvents: 0,
-    hourlyEvents: INITIAL_HOURLY_DATA,
-  });
+  const loadSummary = useCallback(async () => {
+    setSummaryLoading(true);
+    setSummaryError("");
+    try {
+      const data = normalizeSummary(await fetchEventSummary());
+      setSummary((prev) => ({ ...prev, ...data }));
+    } catch (err) {
+      setSummaryError(err.message || "Failed to load event summary.");
+    } finally {
+      setSummaryLoading(false);
+    }
+  }, []);
 
-  // WebSocket 연결
+  const loadEvents = useCallback(async () => {
+    setListLoading(true);
+    setListError("");
+    try {
+      const data = normalizeEvents(await fetchEvents({ limit: 50 }));
+      setEvents(data);
+      setSelectedEvent((prev) => {
+        if (prev && data.some((event) => event.id === prev.id)) return prev;
+        return data[0] || null;
+      });
+    } catch (err) {
+      setListError(err.message || "Failed to load events.");
+      setEvents([]);
+      setSelectedEvent(null);
+    } finally {
+      setListLoading(false);
+    }
+  }, []);
+
+  const loadSelectedDetail = useCallback(async (eventId) => {
+    if (!eventId) {
+      setEventLogs([]);
+      return;
+    }
+    setDetailLoading(true);
+    setDetailError("");
+    try {
+      const [detail, logs] = await Promise.all([
+        fetchEvent(eventId).catch(() => null),
+        fetchEventLogs(eventId).catch(() => []),
+      ]);
+      if (detail) {
+        const normalized = normalizeEvent(detail);
+        setSelectedEvent(normalized);
+        setMemoDraft(normalized.memo || "");
+      }
+      setEventLogs(logs.map((log) => normalizeEvent(log)));
+    } catch (err) {
+      setDetailError(err.message || "Failed to load event detail.");
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    setActiveTab(safeTab);
+  }, [safeTab]);
+
+  useEffect(() => {
+    loadEvents();
+    loadSummary();
+  }, [loadEvents, loadSummary]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      loadEvents();
+      loadSummary();
+    }, 10000);
+    return () => clearInterval(timer);
+  }, [loadEvents, loadSummary]);
+
+  useEffect(() => {
+    loadSelectedDetail(selectedEvent?.id);
+  }, [loadSelectedDetail, selectedEvent?.id]);
+
+  useEffect(() => {
+    if (!selectedEvent) {
+      setMemoDraft("");
+    } else {
+      setMemoDraft(selectedEvent.memo || "");
+    }
+  }, [selectedEvent]);
+
   useEffect(() => {
     const ws = new WebSocket(WS_BASE);
 
-    ws.onmessage = (e) => {
+    ws.onmessage = (event) => {
       try {
-        const msg = JSON.parse(e.data);
+        const msg = JSON.parse(event.data);
         if (msg.type === "state" && msg.payload) {
-          setKpi(msg.payload);
+          setSummary((prev) => ({ ...prev, ...normalizeSummary(msg.payload) }));
         }
-      } catch (err) {
-        // ignore
+      } catch {
+        // Ignore malformed realtime messages.
       }
     };
 
     return () => ws.close();
   }, []);
 
-  // URL tab 변경 시 탭 동기화
-  useEffect(() => {
-    setActiveTab(safeTab);
-  }, [safeTab]);
-
-  const filteredLogs = useMemo(() => {
+  const filteredEvents = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return MOCK_LOGS;
-    return MOCK_LOGS.filter((log) => {
+    if (!q) return events;
+    return events.filter((event) => {
       return (
-        log.id.toLowerCase().includes(q) ||
-        log.category.toLowerCase().includes(q) ||
-        log.message.toLowerCase().includes(q) ||
-        (log.status || "").toLowerCase().includes(q)
+        event.id.toLowerCase().includes(q) ||
+        event.type.toLowerCase().includes(q) ||
+        event.category.toLowerCase().includes(q) ||
+        event.message.toLowerCase().includes(q) ||
+        event.location.toLowerCase().includes(q) ||
+        event.status.toLowerCase().includes(q)
       );
     });
-  }, [query]);
+  }, [events, query]);
 
-  const statusLabel = (status) => {
-    if (status === "pending") return "대기";
-    if (status === "resolved") return "해결";
-    if (status === "dismissed") return "무시";
-    return status;
+  const handleSelect = (event) => {
+    setActionError("");
+    setSelectedEvent(event);
   };
 
-  const statusBadgeClass = (status) => {
-    if (status === "pending") return "bg-orange-50 text-orange-700 border-orange-200";
-    if (status === "resolved") return "bg-green-50 text-green-700 border-green-200";
-    if (status === "dismissed") return "bg-gray-50 text-gray-600 border-gray-200";
-    return "bg-gray-50 text-gray-600 border-gray-200";
+  const handleStatus = async (status) => {
+    if (!selectedEvent) return;
+    setActionError("");
+    try {
+      const updated = normalizeEvent((await updateEventStatus(selectedEvent.id, status)) || {
+        ...selectedEvent.raw,
+        status,
+      });
+      setSelectedEvent(updated);
+      setEvents((prev) => prev.map((event) => (event.id === updated.id ? updated : event)));
+    } catch (err) {
+      setActionError(err.message || "Failed to update status.");
+    }
   };
 
-  const iconByType = (type) => {
-    if (type === "error" || type === "warning") return <AlertTriangle className="w-4 h-4" />;
-    if (type === "success") return <CheckCircle className="w-4 h-4" />;
-    return <Info className="w-4 h-4" />;
-  };
-
-  const iconWrapClass = (type) => {
-    if (type === "error") return "bg-red-100 text-red-600";
-    if (type === "warning") return "bg-orange-100 text-orange-600";
-    if (type === "success") return "bg-green-100 text-green-600";
-    return "bg-blue-100 text-blue-600";
+  const handleMemoSave = async () => {
+    if (!selectedEvent) return;
+    setActionError("");
+    try {
+      const updated = normalizeEvent((await updateEventMemo(selectedEvent.id, memoDraft)) || {
+        ...selectedEvent.raw,
+        memo: memoDraft,
+      });
+      setSelectedEvent(updated);
+      setEvents((prev) => prev.map((event) => (event.id === updated.id ? updated : event)));
+    } catch (err) {
+      setActionError(err.message || "Failed to save memo.");
+    }
   };
 
   return (
-    <div className="p-6 space-y-6 bg-white min-h-screen font-sans">
-      {/* 헤더 */}
-      <div className="flex flex-col space-y-6 mb-2">
-        <div className="flex justify-between items-center">
+    <div className="min-h-screen space-y-6 bg-white p-6 font-sans">
+      <div className="mb-2 flex flex-col space-y-6">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">시스템 활동 로그</h1>
-            <div className="text-sm text-gray-500">통합 모니터링 및 리포팅</div>
+            <h1 className="text-2xl font-bold text-gray-800">Event log</h1>
+            <div className="text-sm text-gray-500">Events from the backend event API</div>
           </div>
-          <div className="flex space-x-2">
-            <button className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-xs font-bold text-gray-600 flex items-center">
-              <Download className="w-4 h-4 mr-2" /> CSV 내보내기
+          <div className="flex gap-2">
+            <button
+              className="flex items-center rounded bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-200"
+              type="button"
+              onClick={() => {
+                loadEvents();
+                loadSummary();
+              }}
+            >
+              <RefreshCcw className="mr-2 h-4 w-4" /> Refresh
+            </button>
+            <button
+              className="flex items-center rounded bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600"
+              type="button"
+            >
+              <Download className="mr-2 h-4 w-4" /> CSV
             </button>
           </div>
         </div>
 
-        {/* 탭 */}
         <div className="flex items-center space-x-1 border-b border-gray-200">
           <button
             onClick={() => setActiveTab("all")}
-            className={`px-4 py-2 text-sm font-bold border-b-2 transition-colors flex items-center ${
+            className={`flex px-4 py-2 text-sm font-bold border-b-2 ${
               activeTab === "all"
                 ? "border-gray-800 text-gray-800"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
+            type="button"
           >
-            전체 로그
+            All events
           </button>
 
           <button
             onClick={() => setActiveTab("analytics")}
-            className={`px-4 py-2 text-sm font-bold border-b-2 transition-colors flex items-center ${
+            className={`flex items-center px-4 py-2 text-sm font-bold border-b-2 ${
               activeTab === "analytics"
                 ? "border-gray-800 text-gray-800"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
+            type="button"
           >
-            <Activity className="w-4 h-4 mr-2" />
-            오늘 통계
+            <Activity className="mr-2 h-4 w-4" />
+            Analytics
           </button>
 
           <button
             onClick={() => setActiveTab("vehicles")}
-            className={`px-4 py-2 text-sm font-bold border-b-2 transition-colors flex items-center ${
+            className={`flex items-center px-4 py-2 text-sm font-bold border-b-2 ${
               activeTab === "vehicles"
                 ? "border-gray-800 text-gray-800"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
+            type="button"
           >
-            <Calendar className="w-4 h-4 mr-2" />
-            차량 이력
+            <Calendar className="mr-2 h-4 w-4" />
+            Vehicle history
           </button>
 
           <button
             onClick={() => setActiveTab("unidentified")}
-            className={`px-4 py-2 text-sm font-bold border-b-2 transition-colors flex items-center ${
+            className={`flex items-center px-4 py-2 text-sm font-bold border-b-2 ${
               activeTab === "unidentified"
                 ? "border-gray-800 text-gray-800"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
+            type="button"
           >
-            <Eye className="w-4 h-4 mr-2" />
-            검토 대기
-            <span className="ml-2 bg-gray-100 text-gray-700 text-[10px] px-1.5 py-0.5 rounded-full">
-              {MOCK_UNCONFIRMED.length}
-            </span>
+            <Eye className="mr-2 h-4 w-4" />
+            Unidentified
           </button>
         </div>
       </div>
 
-      {/* 콘텐츠 */}
       <div className="min-h-[500px]">
-        {activeTab === "analytics" && <AnalyticsView kpi={kpi} />}
-        {activeTab === "vehicles" && <VehiclesView />}
-        {activeTab === "unidentified" && <UnidentifiedView />}
+        {activeTab === "analytics" && (
+          <AnalyticsView summary={summary} loading={summaryLoading} error={summaryError} />
+        )}
+
+        {activeTab === "vehicles" && <ContractEmptyView title="Vehicle history is not in this API contract" />}
+        {activeTab === "unidentified" && <ContractEmptyView title="Unidentified vehicle data is not in this API contract" />}
 
         {activeTab === "all" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* 리스트 */}
-            <div className="lg:col-span-8 space-y-4">
-              <div className="flex items-center space-x-2 bg-gray-50 p-2 rounded border border-gray-200">
-                <Search className="w-4 h-4 text-gray-400 ml-2" />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+            <div className="space-y-4 lg:col-span-8">
+              <div className="flex items-center rounded border border-gray-200 bg-gray-50 p-2">
+                <Search className="ml-2 h-4 w-4 text-gray-400" />
                 <input
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+                  onChange={(event) => setQuery(event.target.value)}
                   type="text"
-                  placeholder="로그 검색..."
-                  className="bg-transparent border-none focus:outline-none text-sm w-full"
+                  placeholder="Search id, type, status, location..."
+                  className="w-full border-none bg-transparent text-sm focus:outline-none"
                 />
               </div>
 
+              {listError && (
+                <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {listError}
+                </div>
+              )}
+
               <div className="space-y-2">
-                {filteredLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    onClick={() => setSelectedLog(log)}
-                    className={`p-4 rounded-lg border transition-all cursor-pointer flex items-center justify-between group ${
-                      selectedLog?.id === log.id
-                        ? "bg-gray-50 border-gray-300 shadow-sm"
-                        : "bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm"
-                    }`}
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className={`p-2 rounded-full ${iconWrapClass(log.type)}`}>
-                        {iconByType(log.type)}
-                      </div>
-
-                      <div>
-                        <div className="flex items-center space-x-2 mb-0.5">
-                          <span className="font-mono text-xs font-bold text-gray-400">{log.id}</span>
-                          <span
-                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${statusBadgeClass(
-                              log.status
-                            )}`}
-                          >
-                            {statusLabel(log.status)}
-                          </span>
-                        </div>
-                        <div className="text-sm font-bold text-gray-800">{log.message}</div>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <div className="font-mono text-xs text-gray-500 mb-1">{log.time}</div>
-                      <div className="text-xs text-gray-400">{log.category}</div>
-                    </div>
+                {listLoading && (
+                  <div className="rounded border border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
+                    Loading events...
                   </div>
-                ))}
+                )}
+
+                {!listLoading && !listError && filteredEvents.length === 0 && (
+                  <div className="rounded border border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
+                    No events found.
+                  </div>
+                )}
+
+                {!listLoading &&
+                  filteredEvents.map((event) => (
+                    <button
+                      key={event.id}
+                      onClick={() => handleSelect(event)}
+                      className={`flex w-full cursor-pointer items-center justify-between rounded-lg border p-4 text-left transition-all ${
+                        selectedEvent?.id === event.id
+                          ? "border-gray-300 bg-gray-50 shadow-sm"
+                          : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
+                      }`}
+                      type="button"
+                    >
+                      <div className="flex min-w-0 items-center space-x-4">
+                        <div className={`rounded-full p-2 ${iconWrapClass(event.status)}`}>
+                          {iconByStatus(event.status)}
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="mb-0.5 flex items-center space-x-2">
+                            <span className="font-mono text-xs font-bold text-gray-400">{event.id}</span>
+                            <span
+                              className={`rounded border px-1.5 py-0.5 text-[10px] font-bold ${statusBadgeClass(
+                                event.status,
+                              )}`}
+                            >
+                              {statusLabel(event.status)}
+                            </span>
+                          </div>
+                          <div className="truncate text-sm font-bold text-gray-800">{event.message}</div>
+                          <div className="mt-1 text-xs text-gray-500">{event.location}</div>
+                        </div>
+                      </div>
+
+                      <div className="ml-4 shrink-0 text-right">
+                        <div className="mb-1 font-mono text-xs text-gray-500">
+                          {formatEventTime(event.timestamp)}
+                        </div>
+                        <div className="text-xs text-gray-400">{event.category}</div>
+                      </div>
+                    </button>
+                  ))}
               </div>
             </div>
 
-            {/* 상세 */}
             <div className="lg:col-span-4">
-              <Card title="로그 상세" className="h-full sticky top-6">
-                {selectedLog ? (
-                  <div className="space-y-6">
+              <Card title="Event detail" className="sticky top-6 h-full">
+                {selectedEvent ? (
+                  <div className="space-y-5">
                     <div className="border-b border-gray-100 pb-4">
-                      <div className="text-2xl font-mono font-bold text-gray-900">{selectedLog.id}</div>
-                      <div className="text-xs text-gray-500 font-bold mt-1">{selectedLog.category}</div>
+                      <div className="text-2xl font-mono font-bold text-gray-900">{selectedEvent.id}</div>
+                      <div className="mt-1 text-xs font-bold text-gray-500">{selectedEvent.category}</div>
                     </div>
+
+                    {detailLoading && <div className="text-xs text-gray-500">Loading detail...</div>}
+                    {detailError && <div className="text-xs text-red-600">{detailError}</div>}
+                    {actionError && <div className="text-xs text-red-600">{actionError}</div>}
 
                     <div>
-                      <div className="text-xs text-gray-400 font-bold mb-1">내용</div>
-                      <p className="text-gray-800 text-sm">{selectedLog.message}</p>
+                      <div className="mb-1 text-xs font-bold text-gray-400">Message</div>
+                      <p className="text-sm text-gray-800">{selectedEvent.message}</p>
                     </div>
 
-                    <div>
-                      <div className="text-xs text-gray-400 font-bold mb-1">상태</div>
-                      <div className="text-sm text-gray-700">{statusLabel(selectedLog.status)}</div>
-                    </div>
-
-                    {selectedLog.user && (
+                    <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
-                        <div className="text-xs text-gray-400 font-bold mb-1">처리자</div>
-                        <div className="text-sm text-gray-700">{selectedLog.user}</div>
+                        <div className="mb-1 text-xs font-bold text-gray-400">Status</div>
+                        <div className="text-gray-700">{statusLabel(selectedEvent.status)}</div>
                       </div>
-                    )}
+                      <div>
+                        <div className="mb-1 text-xs font-bold text-gray-400">Confidence</div>
+                        <div className="text-gray-700">{formatConfidencePercent(selectedEvent.confidence)}</div>
+                      </div>
+                      <div className="col-span-2">
+                        <div className="mb-1 text-xs font-bold text-gray-400">Time</div>
+                        <div className="text-gray-700">{formatEventTimestamp(selectedEvent.timestamp)}</div>
+                      </div>
+                      <div className="col-span-2">
+                        <div className="mb-1 text-xs font-bold text-gray-400">Location</div>
+                        <div className="text-gray-700">{selectedEvent.location}</div>
+                      </div>
+                    </div>
 
-                    {selectedLog.status === "pending" && (
-                      <div className="pt-4 border-t border-gray-100 space-y-2">
-                        <button className="w-full py-2 bg-gray-900 text-white text-sm font-bold rounded shadow-sm hover:bg-gray-800">
-                          해결 처리
-                        </button>
-                        <button className="w-full py-2 bg-white border border-gray-300 text-gray-700 text-sm font-bold rounded hover:bg-gray-50">
-                          무시 처리
-                        </button>
+                    <div>
+                      <div className="mb-1 text-xs font-bold text-gray-400">Memo</div>
+                      <textarea
+                        value={memoDraft}
+                        onChange={(event) => setMemoDraft(event.target.value)}
+                        className="min-h-24 w-full rounded border border-gray-200 p-2 text-sm focus:border-blue-400 focus:outline-none"
+                        placeholder="Add operator memo"
+                      />
+                      <button
+                        onClick={handleMemoSave}
+                        className="mt-2 flex w-full items-center justify-center rounded bg-gray-900 py-2 text-sm font-bold text-white hover:bg-gray-800"
+                        type="button"
+                      >
+                        <Save className="mr-2 h-4 w-4" />
+                        Save memo
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 border-t border-gray-100 pt-4">
+                      <button
+                        className="rounded bg-green-600 py-2 text-sm font-bold text-white hover:bg-green-700"
+                        onClick={() => handleStatus("resolved")}
+                        type="button"
+                      >
+                        Resolve
+                      </button>
+                      <button
+                        className="rounded border border-gray-300 bg-white py-2 text-sm font-bold text-gray-700 hover:bg-gray-50"
+                        onClick={() => handleStatus("dismissed")}
+                        type="button"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+
+                    <RawPayloadBlock value={selectedEvent.rawPayload} />
+
+                    {eventLogs.length > 0 && (
+                      <div>
+                        <div className="mb-2 text-xs font-bold uppercase text-gray-400">Event logs</div>
+                        <div className="space-y-2">
+                          {eventLogs.slice(0, 5).map((log) => (
+                            <div key={log.id} className="rounded border border-gray-100 bg-gray-50 p-2 text-xs">
+                              <div className="font-bold text-gray-700">{log.message}</div>
+                              <div className="mt-1 text-gray-400">{formatEventTimestamp(log.timestamp)}</div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-48 text-gray-400">
-                    <Info className="w-8 h-8 mb-2 opacity-20" />
-                    <p className="text-xs">항목을 선택하세요</p>
+                  <div className="flex h-48 flex-col items-center justify-center text-gray-400">
+                    <Info className="mb-2 h-8 w-8 opacity-20" />
+                    <p className="text-xs">Select an event.</p>
                   </div>
                 )}
               </Card>

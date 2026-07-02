@@ -3,28 +3,29 @@ import React, { useState } from "react"
 import { Card } from "../../shared/components/Card";
 import { Save, Bell, Shield, Globe, Monitor } from "lucide-react";
 
+function NavItem({ id, icon, label, activeSection, onSelect }) {
+    const active = activeSection === id;
+    const iconElement = React.createElement(icon, { className: "w-4 h-4" });
+    return (
+        <button
+            type="button"
+            onClick={() => onSelect(id)}
+            className={`w-full text-left p-3 rounded cursor-pointer flex items-center space-x-3 transition-colors ${
+            active ? "bg-gray-100 text-gray-800 font-bold" : "hover:bg-gray-50 text-gray-600"
+            }`}
+        >
+            {iconElement}
+            <span>{label}</span>
+        </button>
+    );
+}
+
 // 시스템 설정 화면을 담당한다.
 // 왼쪽 메뉴에서 설정 섹션을 선택하고, 오른쪽 영역에 해당 설정 패널을 보여준다.
 // 실제 저장 API가 붙기 전까지는 화면 상태 중심으로 동작한다.
 export default function SettingsPage() {
     const [activeSection, setActiveSection] = useState("general");
     const [autoBackup, setAutoBackup] = useState(true);
-
-    const NavItem = ({ id, icon: Icon, label }) => {
-        const active = activeSection === id;
-        return (
-            <button
-                type="button"
-                onClick={() => setActiveSection(id)}
-                className={`w-full text-left p-3 rounded cursor-pointer flex items-center space-x-3 transition-colors ${
-                active ? "bg-gray-100 text-gray-800 font-bold" : "hover:bg-gray-50 text-gray-600"
-                }`}
-            >
-                <Icon className="w-4 h-4" />
-                <span>{label}</span>
-            </button>
-            );
-        };
      
         return (
         <div className="p-6 space-y-6 bg-white min-h-screen font-sans">
@@ -46,10 +47,10 @@ export default function SettingsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left Nav */}
             <div className="lg:col-span-1 space-y-1">
-            <NavItem id="general" icon={Globe} label="일반" />
-            <NavItem id="notifications" icon={Bell} label="알림" />
-            <NavItem id="security" icon={Shield} label="보안" />
-            <NavItem id="display" icon={Monitor} label="화면" />
+            <NavItem id="general" icon={Globe} label="일반" activeSection={activeSection} onSelect={setActiveSection} />
+            <NavItem id="notifications" icon={Bell} label="알림" activeSection={activeSection} onSelect={setActiveSection} />
+            <NavItem id="security" icon={Shield} label="보안" activeSection={activeSection} onSelect={setActiveSection} />
+            <NavItem id="display" icon={Monitor} label="화면" activeSection={activeSection} onSelect={setActiveSection} />
             </div>
 
             {/* Right Panels */}

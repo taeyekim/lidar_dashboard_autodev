@@ -35,3 +35,19 @@ export async function postJson(path, body = {}, options = {}) {
 
   return data;
 }
+
+export async function patchJson(path, body = {}, options = {}) {
+  const response = await fetch(apiUrl(path), {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    body: JSON.stringify(body),
+    ...options,
+  });
+  const data = await parseJson(response);
+
+  if (!response.ok || data.ok === false || data.success === false) {
+    throw new Error(data.error || data.message || `PATCH ${path} failed`);
+  }
+
+  return data;
+}
