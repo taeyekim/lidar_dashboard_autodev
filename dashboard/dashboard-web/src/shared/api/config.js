@@ -11,7 +11,7 @@ export const API_BASE = trimTrailingSlash(
 );
 
 export const WS_BASE = trimTrailingSlash(
-  import.meta.env.VITE_WS_BASE_URL || `ws://${API_HOST}:${API_PORT}`,
+  import.meta.env.VITE_WS_BASE_URL || `ws://${API_HOST}:${API_PORT}/ws`,
 );
 
 export const DETECTOR_BASE = trimTrailingSlash(

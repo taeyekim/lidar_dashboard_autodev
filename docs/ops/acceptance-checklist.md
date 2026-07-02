@@ -19,6 +19,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `curl http://localhost:8080/api/database/health` returns table counts.
 - [ ] `curl http://localhost:8080/api/status` returns server, database, ingest, websocket, devices, and control board sections.
 - [ ] `curl http://localhost:8080/api/devices/status` returns configured device counts.
+- [ ] Browser WebSocket URL uses `ws://<host>:<NGINX_PORT>/ws` through Nginx.
 
 ## Authentication
 
@@ -59,6 +60,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Recent event list updates without layout breakage on desktop viewport.
 - [ ] Devices page loads `/api/devices` data and marks empty/unconfigured state clearly.
 - [ ] Event Log and Devices page show WebSocket connected/degraded state while polling fallback remains active.
+- [ ] Event Log receives realtime updates through `/ws` when Nginx is the browser entrypoint.
 
 ## Swagger/API
 

@@ -29,6 +29,7 @@ Default URLs:
 
 - Operator UI: `http://localhost:8080`
 - Backend API through proxy: `http://localhost:8080/api/health`
+- WebSocket through proxy: `ws://localhost:8080/ws`
 - Swagger: `http://localhost:8080/api-docs`
 - Backend direct health: `http://localhost:5000/api/health`
 
@@ -66,6 +67,7 @@ Expected:
 - `/api/status` summarizes server, database, ingest, WebSocket, devices, and control board mode.
 - Control board ingest creates `device_status_logs` and broadcasts `device-status.updated`.
 - Wrong-way ingest broadcasts `traffic-event.created` and `vehicle-track.updated`; event status/memo changes broadcast `traffic-event.updated`.
+- Browser WebSocket traffic uses `/ws`; Nginx must proxy that path to the backend with upgrade headers.
 
 ## 4. Operator Account
 

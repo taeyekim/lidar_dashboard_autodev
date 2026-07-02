@@ -21,7 +21,8 @@
     "verify:auth-crypto": "node dashboard/server/scripts/verify-auth-crypto.js",
     "verify:swagger-contracts": "node dashboard/server/scripts/verify-swagger-contracts.js",
     "verify:realtime-contracts": "node dashboard/server/scripts/verify-realtime-contracts.js",
-    "smoke": "npm run verify:control-board-protocol && npm run verify:control-board-tcp && npm run verify:auth-crypto && npm run verify:swagger-contracts && npm run verify:realtime-contracts && npm run check:server",
+    "verify:delivery-proxy-contracts": "node dashboard/server/scripts/verify-delivery-proxy-contracts.js",
+    "smoke": "npm run verify:control-board-protocol && npm run verify:control-board-tcp && npm run verify:auth-crypto && npm run verify:swagger-contracts && npm run verify:realtime-contracts && npm run verify:delivery-proxy-contracts && npm run check:server",
     "ci": "npm run build:web && npm run check:server",
     "setup:demo": "python -m venv dashboard/demo-server/venv && \"dashboard\\demo-server\\venv\\Scripts\\python.exe\" -m pip install -r dashboard/demo-server/requirements.txt"
   }

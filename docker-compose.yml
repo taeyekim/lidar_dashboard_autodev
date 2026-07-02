@@ -67,7 +67,7 @@ services:
       VITE_DETECTOR_HOST: ${PUBLIC_HOST:-localhost}
       VITE_DETECTOR_PORT: ${DETECTOR_PORT:-8888}
       VITE_API_BASE_URL: http://${PUBLIC_HOST:-localhost}:${NGINX_PORT:-8080}
-      VITE_WS_BASE_URL: ws://${PUBLIC_HOST:-localhost}:${NGINX_PORT:-8080}
+      VITE_WS_BASE_URL: ws://${PUBLIC_HOST:-localhost}:${NGINX_PORT:-8080}/ws
       VITE_DETECTOR_BASE_URL: http://${PUBLIC_HOST:-localhost}:${DETECTOR_PORT:-8888}
     ports:
       # 로컬 PC에서 프론트엔드 화면에 접근하기 위한 포트 매핑입니다.
