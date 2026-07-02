@@ -6,8 +6,11 @@ Use this checklist during delivery rehearsal and field acceptance.
 
 - [ ] `.env` exists locally and is not committed.
 - [ ] `JWT_SECRET` is unique and not the example value.
+- [ ] `DEVICE_INGEST_API_KEY` is set when the lidar PC or bridge can send `X-Device-Key`, or the trusted-LAN exception is documented.
 - [ ] `CONTROL_BOARD_DRY_RUN=true` before real hardware approval.
 - [ ] `CORS_ORIGINS` only includes trusted operator UI origins.
+- [ ] `NGINX_WRONGWAY_RATE_LIMIT` and `NGINX_WRONGWAY_BURST` match the expected lidar event rate.
+- [ ] `NGINX_SWAGGER_ALLOW` is restricted to the operator/internal network if Swagger should not be open to all internal clients.
 - [ ] Nginx entrypoint is reachable at `http://<host>:<NGINX_PORT>`.
 
 ## Startup
@@ -37,6 +40,8 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `wrong-way-level-2` creates or updates a traffic event and stage 2 control command.
 - [ ] `situation-ended` creates an end event and barrier return command.
 - [ ] Raw payload is retained for diagnostics.
+- [ ] `/api/events/summary` reports `vehiclesPassed` from DB unique `vehicle_tracks`, not from the lidar raw counter.
+- [ ] `scripts/runtime-smoke.ps1` passes with `DEVICE_INGEST_API_KEY` enabled when field ingest keys are configured.
 
 ## Control Board
 
@@ -49,12 +54,14 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Live TCP command records response hex and CRC status.
 - [ ] Timeout/failure records `FAILED` status and error message.
 - [ ] Control board ingest creates a `device_status_logs` row and updates the Devices page.
+- [ ] Event detail exposes linked `controlCommands`, `packetHex`, response hex, CRC status, and command logs.
 
 ## Operator UI
 
 - [ ] Dashboard shows server, detector, and control board status.
 - [ ] Dashboard clearly distinguishes `DRY_RUN` from `LIVE_TCP`.
 - [ ] Latest command panel shows packet hex and command status.
+- [ ] Event detail shows raw payload and the control command timeline for wrong-way events.
 - [ ] Wrong-way event page loads events from API.
 - [ ] Event status and memo updates require login.
 - [ ] Recent event list updates without layout breakage on desktop viewport.
@@ -67,8 +74,10 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Swagger opens through Nginx at `/api-docs`.
 - [ ] Auth schemas and Bearer scheme are visible.
 - [ ] Wrong-way request/response schema matches implementation.
+- [ ] Wrong-way and external ingest endpoints document optional `X-Device-Key` security.
 - [ ] Control board command endpoints are documented.
 - [ ] Event list/detail/status/memo endpoints are documented.
+- [ ] Event detail schema includes linked `controlCommands` and `eventLogs`.
 - [ ] Site, zone, device, device status, and system status endpoints are documented.
 
 ## Security
@@ -78,6 +87,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `npm --prefix dashboard/dashboard-web run lint` passes.
 - [ ] `npm run verify:audit-policy` passes.
 - [ ] Raw `npm audit --workspaces` result is documented.
+- [ ] `scripts/security-scan.ps1` evidence exists under `artifacts/security/`, or skipped tools are documented with reasons.
 - [ ] Secret scan result is documented or marked 미검증 with reason.
 - [ ] Container scan result is documented or marked 미검증 with reason.
 - [ ] ZAP passive baseline result is documented or marked 미검증 with reason.
@@ -86,6 +96,6 @@ Use this checklist during delivery rehearsal and field acceptance.
 ## Known Limitations
 
 - [ ] `wrong-way-level-2` dashboard-side escalation criteria are still field-measurement dependent.
-- [ ] Lidar/device network authentication beyond trusted LAN/IP policy is a follow-up security item.
+- [ ] If `DEVICE_INGEST_API_KEY` is not used, lidar/device network authentication remains a documented follow-up or accepted trusted-LAN risk.
 - [ ] Real integrated control board TCP test requires field IP/port and hardware approval.
 - [ ] Docker Desktop/PostgreSQL availability is recorded for the test machine.
