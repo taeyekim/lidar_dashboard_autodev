@@ -37,6 +37,27 @@ import {
 
 const MAX_RECENT_LOGS = 5;
 
+const COMMAND_CONFIRMATIONS = {
+  STAGE_1_ON: {
+    label: "1차 경고",
+    title: "1차 경고 명령 전송",
+    description: "전광판과 스피커를 통해 역주행 차량에 1차 경고를 보냅니다.",
+    buttonClass: "bg-amber-500 hover:bg-amber-600 focus:ring-amber-300",
+  },
+  STAGE_2_ON: {
+    label: "2차 차단",
+    title: "2차 차단 명령 전송",
+    description: "차단기를 내려 진입을 막는 명령입니다. 현장 상황을 확인한 뒤 실행합니다.",
+    buttonClass: "bg-red-600 hover:bg-red-700 focus:ring-red-300",
+  },
+  STAGE_2_RETURN: {
+    label: "차단기 복귀",
+    title: "차단기 복귀 명령 전송",
+    description: "차단기를 복귀시켜 통행 가능 상태로 전환합니다.",
+    buttonClass: "bg-gray-800 hover:bg-gray-700 focus:ring-gray-300",
+  },
+};
+
 // ------------------------------
 // DachboardPage Component
 // ------------------------------
@@ -48,6 +69,9 @@ export default function DashboardPage({
   onNavigateToUnidentified,
 }) {
   const [activeDashboardEvent, setActiveDashboardEvent] = useState(null); // 모달로 표시할 대시보드 이벤트
+  const [latestWrongwayEvent, setLatestWrongwayEvent] = useState(null);
+  const [lastLidarEvent, setLastLidarEvent] = useState(null);
+  const [wsStatus, setWsStatus] = useState("CONNECTING");
   const [eventModalEnabled, setEventModalEnabled] = useState(true); // 이벤트 모달 허용 토글(ON/OFF)
   const [vmsText, setVmsText] = useState(""); // 전광판 입력
   const [recentLogs, setRecentLogs] = useState([]); // recent event list
@@ -62,6 +86,7 @@ export default function DashboardPage({
   const [controlBoardStatus, setControlBoardStatus] = useState(null);
   const [controlBoardError, setControlBoardError] = useState("");
   const [controlBoardBusy, setControlBoardBusy] = useState("");
+  const [pendingCommand, setPendingCommand] = useState(null);
 
   // kpi 페이지 이동 함수
   const navigate = useNavigate();
@@ -156,6 +181,25 @@ export default function DashboardPage({
     } finally {
       setControlBoardBusy("");
     }
+  };
+
+  const requestControlBoardCommand = (commandType) => {
+    setPendingCommand({
+      commandType,
+      ...(COMMAND_CONFIRMATIONS[commandType] || {
+        label: commandType,
+        title: `${commandType} 명령 전송`,
+        description: "통합제어보드로 명령을 전송합니다.",
+        buttonClass: "bg-gray-800 hover:bg-gray-700 focus:ring-gray-300",
+      }),
+    });
+  };
+
+  const confirmPendingCommand = async () => {
+    if (!pendingCommand) return;
+    const command = pendingCommand;
+    setPendingCommand(null);
+    await sendControlBoardCommand(command.commandType, command.label);
   };
 
   const handleDismissDashboardEvent = () => {
@@ -266,8 +310,8 @@ export default function DashboardPage({
     pushLog(`전광판 문구 선택: ${text}`);
   };
 
-  const openGate = () => sendControlBoardCommand("STAGE_2_RETURN", "Barrier return");
-  const closeGate = () => sendControlBoardCommand("STAGE_2_ON", "Stage 2 barrier");
+  const openGate = () => requestControlBoardCommand("STAGE_2_RETURN");
+  const closeGate = () => requestControlBoardCommand("STAGE_2_ON");
 
   // ------------------------------
   // websocket 수신 로직
@@ -275,9 +319,18 @@ export default function DashboardPage({
   useEffect(() => {
     const ws = new WebSocket(WS_BASE);
 
-    ws.onopen = () => pushLog("WS연결됨");
-    ws.onclose = () => pushLog("WS 연결 종료");
-    ws.onerror = () => pushLog("WS 에러");
+    ws.onopen = () => {
+      setWsStatus("CONNECTED");
+      pushLog("WS연결됨");
+    };
+    ws.onclose = () => {
+      setWsStatus("DISCONNECTED");
+      pushLog("WS 연결 종료");
+    };
+    ws.onerror = () => {
+      setWsStatus("ERROR");
+      pushLog("WS 에러");
+    };
 
     ws.onmessage = (e) => {
       try {
@@ -301,6 +354,7 @@ export default function DashboardPage({
 
       if (msg.type === "traffic-event.created" && msg.payload) {
         const event = normalizeEvent(msg.payload);
+        setLastLidarEvent(event);
         setRecentLogs((prev) => [
           { msg: event.message, time: formatEventTime(event.timestamp) },
           ...prev,
@@ -313,7 +367,21 @@ export default function DashboardPage({
         }));
 
         if (eventModalEnabledRef.current && isWrongWayEvent(event)) {
-          setActiveDashboardEvent({
+          const nextDashboardEvent = {
+            id: event.id,
+            type: "wrong-way",
+            stage: msg.payload.warningLevel || 1,
+            message: event.message,
+            subMessage: `Zone: ${event.location}`,
+            timestamp: formatEventTimestamp(event.timestamp),
+            zone_id: msg.payload.externalZoneId || event.location,
+            track_id: msg.payload.trackId,
+            confidence: event.confidence,
+          };
+          setLatestWrongwayEvent(nextDashboardEvent);
+          setActiveDashboardEvent(nextDashboardEvent);
+        } else if (isWrongWayEvent(event)) {
+          setLatestWrongwayEvent({
             id: event.id,
             type: "wrong-way",
             stage: msg.payload.warningLevel || 1,
@@ -325,6 +393,13 @@ export default function DashboardPage({
             confidence: event.confidence,
           });
         }
+      }
+
+      if (msg.type === "control-command.created" && msg.payload) {
+        setControlBoardStatus((prev) => ({
+          ...(prev || {}),
+          latestCommand: msg.payload,
+        }));
       }
 
       if (msg.type === "control-command.updated" && msg.payload) {
@@ -408,6 +483,16 @@ export default function DashboardPage({
   const controlBoardMode = controlBoardModeLabel(controlBoardStatus || {});
   const latestControlCommand = controlBoardStatus?.latestCommand || null;
   const controlBoardLive = controlBoardMode === "LIVE_TCP";
+  const activeIncident = activeDashboardEvent || latestWrongwayEvent;
+  const activeIncidentStage = Number(activeIncident?.stage || 0);
+  const hasActiveIncident = Boolean(activeIncident);
+  const incidentTone = activeIncidentStage >= 2 ? "red" : hasActiveIncident ? "amber" : "green";
+  const incidentStatusText = activeIncidentStage >= 2
+    ? "2차 차단 필요"
+    : hasActiveIncident
+      ? "1차 경고 감지"
+      : "감지 상황 없음";
+  const lastLidarText = lastLidarEvent?.timestamp ? formatEventTimestamp(lastLidarEvent.timestamp) : "수신 대기";
 
 
   return (
@@ -475,6 +560,42 @@ export default function DashboardPage({
       </div>
     )}
 
+      {pendingCommand && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-[420px] rounded-md bg-white p-5 shadow-2xl">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-gray-100 p-2">
+                <AlertTriangle className="h-5 w-5 text-gray-700" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-base font-black text-gray-900">{pendingCommand.title}</h2>
+                <p className="mt-2 text-sm leading-5 text-gray-600">{pendingCommand.description}</p>
+                <div className="mt-3 rounded border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-xs text-gray-600">
+                  {controlBoardMode} / {pendingCommand.commandType}
+                </div>
+              </div>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setPendingCommand(null)}
+                className="rounded-md border border-gray-200 bg-white px-4 py-3 text-sm font-black text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={confirmPendingCommand}
+                disabled={Boolean(controlBoardBusy)}
+                className={`rounded-md px-4 py-3 text-sm font-black text-white focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 ${pendingCommand.buttonClass}`}
+              >
+                전송
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 상단 헤더 */}
       <div className="flex justify-between items-center mb-8">
         <div>
@@ -531,7 +652,79 @@ export default function DashboardPage({
         </div>
 
 
+      </div>
+
+      <div
+        className={`rounded-lg border p-4 ${
+          incidentTone === "red"
+            ? "border-red-200 bg-red-50"
+            : incidentTone === "amber"
+              ? "border-amber-200 bg-amber-50"
+              : "border-emerald-200 bg-emerald-50"
+        }`}
+      >
+        <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr_1fr]">
+          <div className="flex items-start gap-3">
+            <div
+              className={`rounded-full p-2 ${
+                incidentTone === "red"
+                  ? "bg-red-100 text-red-700"
+                  : incidentTone === "amber"
+                    ? "bg-amber-100 text-amber-700"
+                    : "bg-emerald-100 text-emerald-700"
+              }`}
+            >
+              {hasActiveIncident ? <Siren className="h-5 w-5" /> : <Activity className="h-5 w-5" />}
             </div>
+            <div className="min-w-0">
+              <div className="text-xs font-black uppercase tracking-wider text-gray-500">Active situation</div>
+              <div className="mt-1 text-lg font-black text-gray-900">{incidentStatusText}</div>
+              <div className="mt-1 truncate text-sm text-gray-600">
+                {hasActiveIncident
+                  ? `${activeIncident.zone_id || "UNKNOWN"} / ${activeIncident.track_id || "track 미수신"}`
+                  : "라이다 이벤트 수신 대기 중"}
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded border border-white/70 bg-white/70 p-3">
+            <div className="text-xs font-black uppercase tracking-wider text-gray-500">Signal chain</div>
+            <div className="mt-2 grid grid-cols-3 gap-2 text-center text-[11px] font-black">
+              <span className={serverAlive ? "rounded bg-emerald-100 px-2 py-1 text-emerald-700" : "rounded bg-red-100 px-2 py-1 text-red-700"}>
+                API
+              </span>
+              <span className={wsStatus === "CONNECTED" ? "rounded bg-emerald-100 px-2 py-1 text-emerald-700" : "rounded bg-amber-100 px-2 py-1 text-amber-700"}>
+                WS
+              </span>
+              <span className={detectorAlive ? "rounded bg-emerald-100 px-2 py-1 text-emerald-700" : "rounded bg-red-100 px-2 py-1 text-red-700"}>
+                LIDAR
+              </span>
+            </div>
+            <div className="mt-2 truncate text-xs text-gray-500">Last lidar: {lastLidarText}</div>
+          </div>
+
+          <div className="rounded border border-white/70 bg-white/70 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-xs font-black uppercase tracking-wider text-gray-500">Control command</div>
+                <div className="mt-1 truncate text-sm font-black text-gray-900">
+                  {latestCommandSummary(latestControlCommand)}
+                </div>
+              </div>
+              <span
+                className={`shrink-0 rounded px-2 py-1 text-[11px] font-black ${
+                  controlBoardLive ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                }`}
+              >
+                {controlBoardMode}
+              </span>
+            </div>
+            <div className="mt-2 truncate font-mono text-xs text-gray-500">
+              {latestControlCommand?.packetHex || "No packet yet"}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* 시스템 알림 배너 + 토글 */}
       <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center justify-between">
