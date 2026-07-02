@@ -47,4 +47,18 @@ function assertBearer(operation, label) {
   assertBearer(assertPath(method, path), `${method.toUpperCase()} ${path}`);
 });
 
+const controlBoardMockPacket =
+  swaggerSpec.components?.schemas?.ControlBoardMockRequest?.properties?.packet?.oneOf?.[0]?.example;
+assert(
+  controlBoardMockPacket === "02 A1 20 01 01 02 00 CD 03 0D",
+  "ControlBoardMockRequest packet example must use the 10-byte control board response frame",
+);
+
+const controlBoardSerialPacket =
+  swaggerSpec.components?.schemas?.ControlBoardSerialTestRequest?.properties?.samplePacket?.example;
+assert(
+  controlBoardSerialPacket === "02 A1 20 01 01 02 00 CD 03 0D",
+  "ControlBoardSerialTestRequest samplePacket example must use the 10-byte control board response frame",
+);
+
 console.log("swagger contracts ok");

@@ -23,6 +23,16 @@ assert(
 );
 assert(nginxTemplate.includes("location /ws"), "Nginx template must route /ws to the backend");
 assert(
+  nginxTemplate.includes("limit_req_zone $binary_remote_addr zone=wrongway_ingest") &&
+    nginxTemplate.includes("location = /api/wrongway") &&
+    nginxTemplate.includes("limit_req zone=wrongway_ingest"),
+  "Nginx template must rate-limit the public /api/wrongway ingest endpoint",
+);
+assert(
+  nginxTemplate.includes("allow ${NGINX_SWAGGER_ALLOW}") && nginxTemplate.includes("deny all"),
+  "Nginx template must expose a Swagger allowlist control",
+);
+assert(
   nginxTemplate.includes("proxy_set_header Upgrade $http_upgrade") &&
     nginxTemplate.includes("proxy_set_header Connection $connection_upgrade"),
   "Nginx template must preserve WebSocket upgrade headers",
@@ -34,6 +44,12 @@ assert(
 assert(
   envExample.includes("VITE_WS_BASE_URL=ws://localhost:5000/ws"),
   ".env.example must document the direct backend WebSocket URL with /ws",
+);
+assert(
+  envExample.includes("NGINX_WRONGWAY_RATE_LIMIT=30r/s") &&
+    envExample.includes("NGINX_WRONGWAY_BURST=60") &&
+    envExample.includes("NGINX_SWAGGER_ALLOW=all"),
+  ".env.example must document Nginx wrongway rate limit and Swagger allowlist knobs",
 );
 
 console.log("delivery proxy contracts ok");

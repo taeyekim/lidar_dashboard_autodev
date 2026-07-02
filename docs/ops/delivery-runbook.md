@@ -9,6 +9,7 @@ This runbook describes the field rehearsal flow for the lidar wrong-way preventi
 - Set a long random `JWT_SECRET`.
 - Keep `CONTROL_BOARD_DRY_RUN=true` until the TCP host/port is confirmed with the hardware owner.
 - Confirm `CONTROL_BOARD_HOST`, `CONTROL_BOARD_PORT`, timeout, retry, and heartbeat values with the field network plan.
+- Confirm `NGINX_WRONGWAY_RATE_LIMIT`, `NGINX_WRONGWAY_BURST`, and `NGINX_SWAGGER_ALLOW` match the field network and Swagger exposure policy.
 
 ## 2. Build And Start
 

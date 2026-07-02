@@ -10,6 +10,8 @@ This checklist is for delivery rehearsals before connecting to the real control 
 - Confirm Nginx is the browser entrypoint: `http://<PUBLIC_HOST>:<NGINX_PORT>`.
 - Confirm `CORS_ORIGINS` contains only trusted operator UI origins.
 - Confirm `AUTH_RATE_LIMIT_*`, `MUTATION_RATE_LIMIT_*`, and `JSON_BODY_LIMIT` match the field network policy.
+- Confirm `NGINX_WRONGWAY_RATE_LIMIT` and `NGINX_WRONGWAY_BURST` match the lidar PC event rate.
+- Restrict `NGINX_SWAGGER_ALLOW` to the operator/internal network CIDR before delivery if Swagger must not be visible to all internal clients.
 
 ## Required Commands
 

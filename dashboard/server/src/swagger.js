@@ -1448,11 +1448,11 @@ const swaggerSpec = {
         properties: {
           packet: {
             oneOf: [
-              { type: "string", example: "02 10 01 3A 03" },
+              { type: "string", example: "02 A1 20 01 01 02 00 CD 03 0D" },
               {
                 type: "array",
                 items: { type: "integer" },
-                example: [2, 16, 1, 58, 3],
+                example: [2, 161, 32, 1, 1, 2, 0, 205, 3, 13],
               },
             ],
           },
@@ -1475,8 +1475,8 @@ const swaggerSpec = {
         properties: {
           port: { type: "string", example: "COM3" },
           baudRate: { type: "integer", example: 9600 },
-          samplePacket: { type: "string", example: "02 10 01 3A 03" },
-          command: { type: "string", example: "STAGE_1" },
+          samplePacket: { type: "string", example: "02 A1 20 01 01 02 00 CD 03 0D" },
+          command: { type: "string", example: "STAGE_1_ON" },
         },
       },
       ExternalIngestResponse: {
