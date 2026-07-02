@@ -399,6 +399,9 @@ const swaggerSpec = {
       post: {
         tags: ["Wrongway"],
         summary: "역주행 감지 이벤트 수신",
+        description:
+          "라이다 PC 공식 수신 endpoint입니다. DEVICE_INGEST_API_KEY가 설정된 환경에서는 X-Device-Key header가 필요합니다.",
+        security: [{ deviceKeyAuth: [] }, {}],
         requestBody: {
           required: false,
           content: {
@@ -605,7 +608,8 @@ const swaggerSpec = {
         tags: ["External Ingest"],
         summary: "라이다 PC HTTP 이벤트 수신 호환 경로",
         description:
-          "공식 현장 수신 endpoint는 /api/wrongway입니다. 이 경로는 기존 ingest/curl 테스트 호환을 위해 유지하며 내부적으로 같은 라이다 수신 service 흐름을 사용합니다.",
+          "공식 현장 수신 endpoint는 /api/wrongway입니다. 이 경로는 기존 ingest/curl 테스트 호환을 위해 유지하며 내부적으로 같은 라이다 수신 service 흐름을 사용합니다. DEVICE_INGEST_API_KEY가 설정된 환경에서는 X-Device-Key header가 필요합니다.",
+        security: [{ deviceKeyAuth: [] }, {}],
         requestBody: {
           required: false,
           content: {
@@ -631,7 +635,8 @@ const swaggerSpec = {
         tags: ["External Ingest"],
         summary: "라이다 PC mock HTTP 이벤트 수신",
         description:
-          "개발자 또는 Swagger/curl 테스트에서 라이다 수신 흐름을 확인하기 위한 mock API입니다. 실제 라이다 PC 연동 안내는 /api/wrongway를 기준으로 합니다.",
+          "개발자 또는 Swagger/curl 테스트에서 라이다 수신 흐름을 확인하기 위한 mock API입니다. 실제 라이다 PC 연동 안내는 /api/wrongway를 기준으로 합니다. DEVICE_INGEST_API_KEY가 설정된 환경에서는 X-Device-Key header가 필요합니다.",
+        security: [{ deviceKeyAuth: [] }, {}],
         requestBody: {
           required: false,
           content: {
@@ -657,7 +662,8 @@ const swaggerSpec = {
         tags: ["External Ingest"],
         summary: "통합 제어보드 실제 HTTP 패킷 수신",
         description:
-          "통합 제어보드 또는 중간 브릿지 프로그램이 실제 패킷을 HTTP JSON으로 넘길 때 사용하는 API입니다. RS-485 직접 연결이 확정되기 전까지 실제 수신 진입점으로 유지하고, 내부에서는 mock과 같은 parser/adapter 흐름을 사용합니다.",
+          "통합 제어보드 또는 중간 브릿지 프로그램이 실제 패킷을 HTTP JSON으로 넘길 때 사용하는 API입니다. RS-485 직접 연결이 확정되기 전까지 실제 수신 진입점으로 유지하고, 내부에서는 mock과 같은 parser/adapter 흐름을 사용합니다. DEVICE_INGEST_API_KEY가 설정된 환경에서는 X-Device-Key header가 필요합니다.",
+        security: [{ deviceKeyAuth: [] }, {}],
         requestBody: {
           required: false,
           content: {
@@ -682,7 +688,8 @@ const swaggerSpec = {
       post: {
         tags: ["External Ingest"],
         summary: "통합 제어보드 mock 패킷 수신",
-        description: "RS-485 10바이트 패킷 adapter 흐름을 HTTP로 먼저 테스트하기 위한 API입니다. packet이 있으면 Byte 1~6 기준 CRC-8/SMBUS를 계산해 Byte 7 값과 비교합니다.",
+        description: "RS-485 10바이트 패킷 adapter 흐름을 HTTP로 먼저 테스트하기 위한 API입니다. packet이 있으면 Byte 1~6 기준 CRC-8/SMBUS를 계산해 Byte 7 값과 비교합니다. DEVICE_INGEST_API_KEY가 설정된 환경에서는 X-Device-Key header가 필요합니다.",
+        security: [{ deviceKeyAuth: [] }, {}],
         requestBody: {
           required: false,
           content: {
@@ -707,7 +714,8 @@ const swaggerSpec = {
       post: {
         tags: ["External Ingest"],
         summary: "통합 제어보드 serial reader 테스트",
-        description: "실제 COM 포트를 열거나 serialport 의존성을 추가하지 않고, 현장 테스트에 필요한 포트/보드레이트/샘플 패킷 입력 형태만 확인합니다.",
+        description: "실제 COM 포트를 열거나 serialport 의존성을 추가하지 않고, 현장 테스트에 필요한 포트/보드레이트/샘플 패킷 입력 형태만 확인합니다. DEVICE_INGEST_API_KEY가 설정된 환경에서는 X-Device-Key header가 필요합니다.",
+        security: [{ deviceKeyAuth: [] }, {}],
         requestBody: {
           required: false,
           content: {
@@ -852,6 +860,13 @@ const swaggerSpec = {
         type: "http",
         scheme: "bearer",
         bearerFormat: "JWT",
+      },
+      deviceKeyAuth: {
+        type: "apiKey",
+        in: "header",
+        name: "X-Device-Key",
+        description:
+          "Optional device ingest key. Required only when DEVICE_INGEST_API_KEY is set in the backend environment.",
       },
     },
     schemas: {

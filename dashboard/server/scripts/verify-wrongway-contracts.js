@@ -17,6 +17,9 @@ function assertIncludes(content, token, label) {
 const service = readProjectFile("dashboard/server/src/domains/wrongway/wrongway.service.js");
 const controlBoardService = readProjectFile("dashboard/server/src/domains/control-board/controlBoard.service.js");
 const eventsService = readProjectFile("dashboard/server/src/domains/events/events.service.js");
+const securityMiddleware = readProjectFile("dashboard/server/src/middleware/security.js");
+const wrongwayRoutes = readProjectFile("dashboard/server/src/domains/wrongway/wrongway.routes.js");
+const externalIngestRoutes = readProjectFile("dashboard/server/src/domains/external-ingest/externalIngest.routes.js");
 const schema = readProjectFile("dashboard/server/prisma/schema.prisma");
 const payloadSpec = readProjectFile("docs/specs/lidar-dashboard-payload.md");
 const runbook = readProjectFile("docs/ops/delivery-runbook.md");
@@ -67,6 +70,14 @@ assertIncludes(
   "vehiclesPassed: vehicleTracks",
   "todayVehicleTracks",
 ].forEach((token) => assertIncludes(eventsService, token, "events service"));
+[
+  "DEVICE_INGEST_API_KEY",
+  "x-device-key",
+  "crypto.timingSafeEqual",
+  "requireDeviceIngestKey",
+].forEach((token) => assertIncludes(securityMiddleware, token, "security middleware"));
+assertIncludes(wrongwayRoutes, "requireDeviceIngestKey", "wrongway routes");
+assertIncludes(externalIngestRoutes, "requireDeviceIngestKey", "external ingest routes");
 assertIncludes(schema, "model VehicleTrack", "prisma schema");
 assertIncludes(schema, "trackId                      String         @unique", "prisma schema");
 assertIncludes(schema, "rawPayload               Json", "prisma schema");

@@ -23,6 +23,15 @@ function assertBearer(operation, label) {
   );
 }
 
+function assertOptionalDeviceKey(operation, label) {
+  const security = operation.security || [];
+  assert(
+    security.some((item) => Array.isArray(item.deviceKeyAuth)) &&
+      security.some((item) => Object.keys(item).length === 0),
+    `${label} must document optional deviceKeyAuth security`,
+  );
+}
+
 [
   ["/api/status", "get", "SystemStatusResponse"],
   ["/api/sites", "get", "SiteListResponse"],
@@ -46,6 +55,22 @@ function assertBearer(operation, label) {
 ].forEach(([path, method]) => {
   assertBearer(assertPath(method, path), `${method.toUpperCase()} ${path}`);
 });
+
+[
+  ["/api/wrongway", "post"],
+  ["/api/ingest/lidar", "post"],
+  ["/api/ingest/lidar/mock", "post"],
+  ["/api/ingest/control-board", "post"],
+  ["/api/ingest/control-board/mock", "post"],
+  ["/api/ingest/control-board/serial/test", "post"],
+].forEach(([path, method]) => {
+  assertOptionalDeviceKey(assertPath(method, path), `${method.toUpperCase()} ${path}`);
+});
+
+assert(
+  swaggerSpec.components?.securitySchemes?.deviceKeyAuth?.name === "X-Device-Key",
+  "Swagger must define X-Device-Key apiKey security scheme",
+);
 
 const controlBoardMockPacket =
   swaggerSpec.components?.schemas?.ControlBoardMockRequest?.properties?.packet?.oneOf?.[0]?.example;

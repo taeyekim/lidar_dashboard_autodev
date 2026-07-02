@@ -7,6 +7,7 @@ This runbook describes the field rehearsal flow for the lidar wrong-way preventi
 - Confirm the dashboard PC, lidar PC, and integrated control board are on the expected internal network.
 - Copy `.env.example` to `.env` and fill only local/field values in `.env`.
 - Set a long random `JWT_SECRET`.
+- Set `DEVICE_INGEST_API_KEY` if the lidar PC and control-board bridge can send the `X-Device-Key` header.
 - Keep `CONTROL_BOARD_DRY_RUN=true` until the TCP host/port is confirmed with the hardware owner.
 - Confirm `CONTROL_BOARD_HOST`, `CONTROL_BOARD_PORT`, timeout, retry, and heartbeat values with the field network plan.
 - Confirm `NGINX_WRONGWAY_RATE_LIMIT`, `NGINX_WRONGWAY_BURST`, and `NGINX_SWAGGER_ALLOW` match the field network and Swagger exposure policy.

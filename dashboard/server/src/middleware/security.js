@@ -1,4 +1,20 @@
+const crypto = require("crypto");
+
 const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+function timingSafeStringEqual(left, right) {
+  const leftBuffer = Buffer.from(String(left || ""));
+  const rightBuffer = Buffer.from(String(right || ""));
+  if (leftBuffer.length !== rightBuffer.length) return false;
+  return crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function deviceIngestKeys() {
+  return String(process.env.DEVICE_INGEST_API_KEY || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
 
 function securityHeaders(req, res, next) {
   res.setHeader("X-Content-Type-Options", "nosniff");
@@ -58,9 +74,26 @@ function requireJsonForMutations(req, res, next) {
   return next();
 }
 
+function requireDeviceIngestKey(req, res, next) {
+  const acceptedKeys = deviceIngestKeys();
+  if (acceptedKeys.length === 0) return next();
+
+  const providedKey = req.get("x-device-key") || "";
+  const matched = acceptedKeys.some((key) => timingSafeStringEqual(providedKey, key));
+  if (!matched) {
+    return res.status(401).json({
+      ok: false,
+      error: "Valid X-Device-Key header is required.",
+    });
+  }
+
+  return next();
+}
+
 module.exports = {
   createRateLimiter,
   onlyMutations,
+  requireDeviceIngestKey,
   requireJsonForMutations,
   securityHeaders,
 };
