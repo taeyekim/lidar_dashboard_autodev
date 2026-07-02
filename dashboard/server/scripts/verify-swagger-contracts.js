@@ -61,4 +61,14 @@ assert(
   "ControlBoardSerialTestRequest samplePacket example must use the 10-byte control board response frame",
 );
 
+const trafficEvent = swaggerSpec.components?.schemas?.TrafficEvent;
+assert(
+  trafficEvent?.properties?.controlCommands?.items?.$ref === "#/components/schemas/ControlBoardCommand",
+  "TrafficEvent schema must expose linked controlCommands",
+);
+assert(
+  trafficEvent?.properties?.eventLogs?.items?.$ref === "#/components/schemas/EventLog",
+  "TrafficEvent schema must expose linked eventLogs",
+);
+
 console.log("swagger contracts ok");

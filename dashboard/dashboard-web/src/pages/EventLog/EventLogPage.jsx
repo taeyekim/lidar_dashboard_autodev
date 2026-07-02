@@ -163,6 +163,74 @@ function RawPayloadBlock({ value }) {
   );
 }
 
+function commandStatusClass(status) {
+  if (status === "ACKNOWLEDGED" || status === "DRY_RUN") return "bg-green-50 text-green-700 border-green-200";
+  if (status === "FAILED") return "bg-red-50 text-red-700 border-red-200";
+  if (status === "SENT" || status === "PENDING") return "bg-amber-50 text-amber-700 border-amber-200";
+  return "bg-gray-50 text-gray-600 border-gray-200";
+}
+
+function ControlCommandTimeline({ commands = [] }) {
+  if (!commands.length) {
+    return (
+      <div className="rounded border border-gray-200 bg-gray-50 p-3 text-xs text-gray-500">
+        No control board command is linked to this event.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {commands.map((command) => (
+        <div key={command.id || command.commandCode} className="rounded border border-gray-200 bg-white p-3 text-xs">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="truncate font-black text-gray-800">{command.commandType || "CONTROL_COMMAND"}</div>
+              <div className="mt-1 text-gray-400">{formatEventTimestamp(command.requestedAt)}</div>
+            </div>
+            <span className={`shrink-0 rounded border px-2 py-0.5 font-black ${commandStatusClass(command.status)}`}>
+              {command.status || "-"}
+            </span>
+          </div>
+
+          <div className="mt-3 space-y-1 font-mono text-[11px] text-gray-600">
+            <div className="break-all">
+              <span className="font-bold text-gray-400">TX</span> {command.packetHex || "-"}
+            </div>
+            <div className="break-all">
+              <span className="font-bold text-gray-400">RX</span> {command.responseHex || "-"}
+            </div>
+            <div>
+              <span className="font-bold text-gray-400">CRC</span> {command.crcStatus || "-"}
+            </div>
+            {command.errorMessage && (
+              <div className="break-words text-red-600">
+                <span className="font-bold">ERR</span> {command.errorMessage}
+              </div>
+            )}
+          </div>
+
+          {Array.isArray(command.logs) && command.logs.length > 0 && (
+            <details className="mt-3 rounded border border-gray-100 bg-gray-50">
+              <summary className="cursor-pointer px-2 py-1 font-bold uppercase text-gray-400">
+                command logs
+              </summary>
+              <div className="space-y-1 border-t border-gray-100 p-2">
+                {command.logs.map((log) => (
+                  <div key={log.id} className="text-gray-600">
+                    <span className="font-bold text-gray-700">{log.action}</span>
+                    {log.message ? ` / ${log.message}` : ""}
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function upsertEvent(events, nextEvent) {
   if (!nextEvent?.id) return events;
   const index = events.findIndex((event) => event.id === nextEvent.id);
@@ -610,6 +678,11 @@ export default function EventLogPage() {
                     </div>
 
                     <RawPayloadBlock value={selectedEvent.rawPayload} />
+
+                    <div>
+                      <div className="mb-2 text-xs font-bold uppercase text-gray-400">Control commands</div>
+                      <ControlCommandTimeline commands={selectedEvent.raw?.controlCommands || []} />
+                    </div>
 
                     {eventLogs.length > 0 && (
                       <div>

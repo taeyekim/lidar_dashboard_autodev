@@ -1328,6 +1328,14 @@ const swaggerSpec = {
           isConfirmed: { type: "boolean", nullable: true },
           normalMovingVehicleCount: { type: "integer", nullable: true },
           rawPayload: { type: "object", additionalProperties: true },
+          eventLogs: {
+            type: "array",
+            items: { $ref: "#/components/schemas/EventLog" },
+          },
+          controlCommands: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ControlBoardCommand" },
+          },
         },
       },
       EventLog: {

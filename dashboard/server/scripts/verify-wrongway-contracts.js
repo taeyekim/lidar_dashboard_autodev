@@ -16,6 +16,7 @@ function assertIncludes(content, token, label) {
 
 const service = readProjectFile("dashboard/server/src/domains/wrongway/wrongway.service.js");
 const controlBoardService = readProjectFile("dashboard/server/src/domains/control-board/controlBoard.service.js");
+const eventsService = readProjectFile("dashboard/server/src/domains/events/events.service.js");
 const schema = readProjectFile("dashboard/server/prisma/schema.prisma");
 const payloadSpec = readProjectFile("docs/specs/lidar-dashboard-payload.md");
 const runbook = readProjectFile("docs/ops/delivery-runbook.md");
@@ -58,6 +59,11 @@ assertIncludes(
   "commandType",
   "control board command reused for wrongway event",
 ].forEach((token) => assertIncludes(controlBoardService, token, "control board service"));
+[
+  "controlCommands:",
+  "targetDevice: true",
+  "event.controlCommands.map(serializeCommand)",
+].forEach((token) => assertIncludes(eventsService, token, "events service"));
 assertIncludes(schema, "model VehicleTrack", "prisma schema");
 assertIncludes(schema, "trackId                      String         @unique", "prisma schema");
 assertIncludes(schema, "rawPayload               Json", "prisma schema");

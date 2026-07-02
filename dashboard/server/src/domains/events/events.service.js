@@ -39,6 +39,20 @@ function serializeLog(log) {
   };
 }
 
+function serializeCommand(command) {
+  if (!command) return null;
+  return {
+    ...command,
+    requestedAt: serializeDate(command.requestedAt),
+    sentAt: serializeDate(command.sentAt),
+    acknowledgedAt: serializeDate(command.acknowledgedAt),
+    completedAt: serializeDate(command.completedAt),
+    createdAt: serializeDate(command.createdAt),
+    updatedAt: serializeDate(command.updatedAt),
+    logs: command.logs?.map(serializeLog),
+  };
+}
+
 function eventInclude() {
   return {
     zone: true,
@@ -98,6 +112,14 @@ async function getEventById(id) {
     include: {
       ...eventInclude(),
       eventLogs: { orderBy: { createdAt: "desc" }, take: 20 },
+      controlCommands: {
+        orderBy: { requestedAt: "desc" },
+        take: 20,
+        include: {
+          logs: { orderBy: { createdAt: "asc" } },
+          targetDevice: true,
+        },
+      },
     },
   });
 
@@ -106,6 +128,7 @@ async function getEventById(id) {
   return {
     ...serializeEvent(event),
     eventLogs: event.eventLogs.map(serializeLog),
+    controlCommands: event.controlCommands.map(serializeCommand),
   };
 }
 
