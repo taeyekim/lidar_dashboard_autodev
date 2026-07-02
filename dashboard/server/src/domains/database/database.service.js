@@ -13,6 +13,9 @@ async function getDatabaseHealth() {
     vehicleTrackCount,
     eventCount,
     eventLogCount,
+    controlCommandCount,
+    controlCommandLogCount,
+    deviceStatusLogCount,
     userCount,
   ] = await Promise.all([
     prisma.site.count(),
@@ -21,6 +24,9 @@ async function getDatabaseHealth() {
     prisma.vehicleTrack.count(),
     prisma.trafficEvent.count(),
     prisma.eventLog.count(),
+    prisma.controlCommand.count(),
+    prisma.controlCommandLog.count(),
+    prisma.deviceStatusLog.count(),
     prisma.user.count(),
   ]);
 
@@ -36,6 +42,9 @@ async function getDatabaseHealth() {
       vehicleTracks: vehicleTrackCount,
       trafficEvents: eventCount,
       eventLogs: eventLogCount,
+      controlCommands: controlCommandCount,
+      controlCommandLogs: controlCommandLogCount,
+      deviceStatusLogs: deviceStatusLogCount,
     },
   };
 }

@@ -17,6 +17,7 @@ model User {
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
   eventLogs    EventLog[]
+  controlCommands ControlCommand[]
 
   @@map("users")
 }
@@ -66,6 +67,8 @@ model Device {
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
   zone              Zone      @relation(fields: [zoneId], references: [id])
+  controlCommands   ControlCommand[]
+  deviceStatusLogs  DeviceStatusLog[]
 
   @@index([zoneId])
   @@index([deviceType])
@@ -102,6 +105,7 @@ model TrafficEvent {
   zone                     Zone?         @relation(fields: [zoneId], references: [id])
   vehicleTrack             VehicleTrack? @relation(fields: [vehicleTrackId], references: [id], onDelete: SetNull)
   eventLogs                EventLog[]
+  controlCommands          ControlCommand[]
 
   @@index([zoneId])
   @@index([vehicleTrackId])
@@ -155,4 +159,73 @@ model EventLog {
   @@index([action])
   @@index([createdAt])
   @@map("event_logs")
+}
+
+model ControlCommand {
+  id                 String              @id @default(cuid())
+  commandCode        String              @unique @map("command_code")
+  commandType        String              @map("command_type")
+  status             String              @default("PENDING")
+  transport          String              @default("TCP")
+  targetDeviceId     String?             @map("target_device_id")
+  trafficEventId     String?             @map("traffic_event_id")
+  mode               String?
+  statusCode         String?             @map("status_code")
+  selectCode         String?             @map("select_code")
+  packetHex          String              @map("packet_hex")
+  responseHex        String?             @map("response_hex")
+  crcStatus          String?             @map("crc_status")
+  errorMessage       String?             @map("error_message")
+  requestedByUserId  String?             @map("requested_by_user_id")
+  requestedAt        DateTime            @default(now()) @map("requested_at")
+  sentAt             DateTime?           @map("sent_at")
+  acknowledgedAt     DateTime?           @map("acknowledged_at")
+  completedAt        DateTime?           @map("completed_at")
+  metadata           Json?
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  trafficEvent       TrafficEvent?       @relation(fields: [trafficEventId], references: [id], onDelete: SetNull)
+  targetDevice       Device?             @relation(fields: [targetDeviceId], references: [id], onDelete: SetNull)
+  requestedBy        User?               @relation(fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  logs               ControlCommandLog[]
+
+  @@index([status])
+  @@index([commandType])
+  @@index([trafficEventId])
+  @@index([targetDeviceId])
+  @@index([requestedAt])
+  @@map("control_commands")
+}
+
+model ControlCommandLog {
+  id               String         @id @default(cuid())
+  controlCommandId String         @map("control_command_id")
+  action           String
+  message          String?
+  metadata         Json?
+  createdAt        DateTime       @default(now()) @map("created_at")
+  controlCommand   ControlCommand @relation(fields: [controlCommandId], references: [id], onDelete: Cascade)
+
+  @@index([controlCommandId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("control_command_logs")
+}
+
+model DeviceStatusLog {
+  id        String   @id @default(cuid())
+  deviceId  String?  @map("device_id")
+  source    String   @default("CONTROL_BOARD")
+  status    String
+  health    String?  @map("health")
+  message   String?
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  device    Device?  @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+
+  @@index([deviceId])
+  @@index([source])
+  @@index([status])
+  @@index([createdAt])
+  @@map("device_status_logs")
 }

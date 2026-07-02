@@ -1,7 +1,7 @@
 const { logger } = require("../../utils/logger");
 const mockLidarService = require("../mock-lidar/mockLidar.service");
+const wrongwayService = require("../wrongway/wrongway.service");
 const { EXTERNAL_EVENT_SOURCE, EXTERNAL_EVENT_TYPE } = require("./externalEvent.model");
-const { adaptLidarHttpPayload } = require("./adapters/lidarHttp.adapter");
 const { adaptControlBoardPacket } = require("./adapters/controlBoardPacket.adapter");
 
 // 최근 수신 이벤트는 DB 저장 전까지 메모리에 최대 50건만 유지한다.
@@ -67,20 +67,28 @@ function applyDashboardEffects(event) {
 }
 
 // 실제 라이다 PC와 mock 라이다 테스트 API가 같은 변환/화면 반영 흐름을 타도록 공통 처리한다.
-function ingestLidar(payload, options = {}) {
-  const event = adaptLidarHttpPayload(payload);
+async function ingestLidar(payload, options = {}) {
   const mode = options.mode || "LIVE";
+  const result = await wrongwayService.ingestWrongwayPayload(payload, {
+    source: EXTERNAL_EVENT_SOURCE.LIDAR_PC,
+    mode,
+  });
+  const event = result.event;
 
   logger.info("external lidar ingest received", {
-    id: event.id,
+    id: result.eventId,
     mode,
-    zoneId: event.zoneId,
-    deviceId: event.deviceId,
+    zoneId: event.externalZoneId,
+    trackId: event.trackId,
   });
 
-  rememberEvent(event);
-  applyDashboardEffects(event);
-  return event;
+  rememberEvent({
+    ...event,
+    id: result.eventId || event.id,
+    source: EXTERNAL_EVENT_SOURCE.LIDAR_PC,
+    eventType: event.eventType || event.type,
+  });
+  return result;
 }
 
 // 실제 라이다 PC가 현장에서 호출할 HTTP/JSON 수신 진입점이다.

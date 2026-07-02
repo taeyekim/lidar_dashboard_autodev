@@ -14,6 +14,11 @@ const TYPE_LABEL = {
   0x20: "RESPONSE_LOG",
 };
 
+const TYPE_CODE = {
+  COMMAND: 0x10,
+  RESPONSE_LOG: 0x20,
+};
+
 // MODE는 역주행 경고 단계를 표현한다. 화면에서는 stage 값으로 다시 매핑된다.
 const MODE_LABEL = {
   0x00: "WAIT",
@@ -21,11 +26,23 @@ const MODE_LABEL = {
   0x02: "STAGE_2",
 };
 
+const MODE_CODE = {
+  WAIT: 0x00,
+  STAGE_1: 0x01,
+  STAGE_2: 0x02,
+};
+
 // STATUS는 장비 동작 상태를 표현한다. 0x02는 차단기 복귀/상승 상황으로 해석한다.
 const STATUS_LABEL = {
   0x00: "OFF",
   0x01: "ON",
   0x02: "BARRIER_RETURN",
+};
+
+const STATUS_CODE = {
+  OFF: 0x00,
+  ON: 0x01,
+  BARRIER_RETURN: 0x02,
 };
 
 // SELECT는 어떤 설비 묶음을 제어하는지 나타낸다. 현재는 진단 정보로만 보관한다.
@@ -36,6 +53,42 @@ const SELECT_LABEL = {
   0x10: "LED_ONLY",
   0x11: "SPEAKER_ONLY",
   0x12: "BARRIER_ONLY",
+};
+
+const SELECT_CODE = {
+  ALL: 0x01,
+  WARNING_SET: 0x02,
+  SAFETY_SET: 0x03,
+  LED_ONLY: 0x10,
+  SPEAKER_ONLY: 0x11,
+  BARRIER_ONLY: 0x12,
+};
+
+const COMMAND_DEFINITION = {
+  STAGE_1_ON: {
+    mode: MODE_CODE.STAGE_1,
+    status: STATUS_CODE.ON,
+    select: SELECT_CODE.WARNING_SET,
+    label: "Stage 1 warning on",
+  },
+  STAGE_2_ON: {
+    mode: MODE_CODE.STAGE_2,
+    status: STATUS_CODE.ON,
+    select: SELECT_CODE.WARNING_SET,
+    label: "Stage 2 warning on",
+  },
+  STAGE_2_RETURN: {
+    mode: MODE_CODE.STAGE_2,
+    status: STATUS_CODE.BARRIER_RETURN,
+    select: SELECT_CODE.WARNING_SET,
+    label: "Stage 2 barrier return",
+  },
+  SYSTEM_RESET: {
+    mode: MODE_CODE.WAIT,
+    status: STATUS_CODE.OFF,
+    select: SELECT_CODE.WARNING_SET,
+    label: "System reset",
+  },
 };
 
 function toHex(byte) {
@@ -110,6 +163,45 @@ function calculateCrc8Smbus(dataBytes) {
   }
 
   return crc;
+}
+
+function buildControlBoardCommandPacket(commandType) {
+  const definition = COMMAND_DEFINITION[commandType];
+  if (!definition) {
+    const error = new Error(`Unsupported control board command type: ${commandType}`);
+    error.status = 400;
+    throw error;
+  }
+
+  const bytes = [
+    STX,
+    DEVICE_ID,
+    TYPE_CODE.COMMAND,
+    definition.mode,
+    definition.status,
+    definition.select,
+    0x00,
+    0x00,
+    ETX,
+    EOF,
+  ];
+  bytes[7] = calculateCrc8Smbus(bytes.slice(1, 7));
+
+  return {
+    commandType,
+    label: definition.label,
+    bytes,
+    buffer: Buffer.from(bytes),
+    hex: bytes.map(toHex),
+    packetHex: bytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" "),
+    crc: bytes[7],
+    mode: MODE_LABEL[definition.mode],
+    status: STATUS_LABEL[definition.status],
+    select: SELECT_LABEL[definition.select],
+    modeCode: toHex(definition.mode),
+    statusCode: toHex(definition.status),
+    selectCode: toHex(definition.select),
+  };
 }
 
 function getProtocolCommand(parsed) {
@@ -214,6 +306,8 @@ function parseControlBoardPacket(packet) {
 }
 
 module.exports = {
+  COMMAND_DEFINITION,
+  buildControlBoardCommandPacket,
   calculateCrc8Smbus,
   parseControlBoardPacket,
 };
