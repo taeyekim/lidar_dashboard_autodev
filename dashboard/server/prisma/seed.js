@@ -1,10 +1,30 @@
 const { PrismaClient } = require("@prisma/client");
 const { PrismaPg } = require("@prisma/adapter-pg");
+const { hashPassword } = require("../src/domains/auth/password");
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
+  const adminUserId = process.env.SEED_ADMIN_USER_ID || "admin";
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "admin1234!";
+
+  await prisma.user.upsert({
+    where: { userId: adminUserId },
+    update: {
+      name: process.env.SEED_ADMIN_NAME || "System Administrator",
+      role: "SUPER_ADMIN",
+      isActive: true,
+    },
+    create: {
+      userId: adminUserId,
+      name: process.env.SEED_ADMIN_NAME || "System Administrator",
+      passwordHash: hashPassword(adminPassword),
+      role: "SUPER_ADMIN",
+      isActive: true,
+    },
+  });
+
   const site = await prisma.site.upsert({
     where: { id: "site-wolchulsan-rest-area" },
     update: {},

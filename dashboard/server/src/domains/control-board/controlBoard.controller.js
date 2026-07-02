@@ -30,7 +30,10 @@ async function listCommands(req, res) {
 
 async function sendTestCommand(req, res) {
   try {
-    const command = await controlBoardService.sendCommand(req.body?.commandType || "STAGE_1_ON");
+    const command = await controlBoardService.sendCommand(req.body?.commandType || "STAGE_1_ON", {
+      requestedByUserId: req.user?.id || null,
+      trigger: "MANUAL_TEST",
+    });
     res.json({ ok: true, command });
   } catch (error) {
     sendError(res, error, "Failed to send control board test command.");

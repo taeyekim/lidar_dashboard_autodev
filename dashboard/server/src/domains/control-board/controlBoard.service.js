@@ -72,6 +72,7 @@ async function createCommandRow(tx, commandType, packet, options = {}) {
       statusCode: packet.statusCode,
       selectCode: packet.selectCode,
       packetHex: packet.packetHex,
+      requestedByUserId: options.requestedByUserId || null,
       metadata: {
         dryRun: options.config?.dryRun ?? true,
         hostConfigured: Boolean(options.config?.host),

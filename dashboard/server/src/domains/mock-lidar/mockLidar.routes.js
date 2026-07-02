@@ -1,4 +1,5 @@
 const express = require("express");
+const { requireAuth } = require("../auth/auth.middleware");
 const controller = require("./mockLidar.controller");
 
 const router = express.Router();
@@ -7,9 +8,9 @@ router.get("/state", controller.getState);
 router.get("/control/status", controller.getControlStatus);
 router.get("/logs", controller.getLogs);
 
-router.post("/gate/open", controller.openGate);
-router.post("/gate/close", controller.closeGate);
-router.post("/vms", controller.setVms);
-router.post("/vehicle/pass", controller.passVehicle);
+router.post("/gate/open", requireAuth, controller.openGate);
+router.post("/gate/close", requireAuth, controller.closeGate);
+router.post("/vms", requireAuth, controller.setVms);
+router.post("/vehicle/pass", requireAuth, controller.passVehicle);
 
 module.exports = router;

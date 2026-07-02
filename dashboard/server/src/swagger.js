@@ -12,6 +12,7 @@ const swaggerSpec = {
     },
   ],
   tags: [
+    { name: "Auth", description: "Operator JWT authentication" },
     { name: "Health", description: "서버 상태 확인" },
     { name: "Database", description: "DB 연결과 기본 테이블 확인" },
     { name: "Dashboard", description: "대시보드 상태와 로그 조회" },
@@ -22,6 +23,63 @@ const swaggerSpec = {
     { name: "Demo", description: "감지 데모 제어" },
   ],
   paths: {
+    "/api/auth/login": {
+      post: {
+        tags: ["Auth"],
+        summary: "Operator login",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/AuthLoginRequest" },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "JWT login success",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/AuthLoginResponse" },
+              },
+            },
+          },
+          401: {
+            description: "Invalid credentials",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/auth/me": {
+      get: {
+        tags: ["Auth"],
+        summary: "Current operator profile",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Authenticated operator",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/AuthMeResponse" },
+              },
+            },
+          },
+          401: {
+            description: "Invalid or missing token",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
     "/api/health": {
       get: {
         tags: ["Health"],
@@ -687,7 +745,49 @@ const swaggerSpec = {
     },
   },
   components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+      },
+    },
     schemas: {
+      AuthLoginRequest: {
+        type: "object",
+        required: ["userId", "password"],
+        properties: {
+          userId: { type: "string", example: "admin" },
+          password: { type: "string", example: "admin1234!" },
+        },
+      },
+      AuthUser: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          userId: { type: "string", example: "admin" },
+          name: { type: "string", example: "System Administrator" },
+          role: { type: "string", example: "SUPER_ADMIN" },
+          isActive: { type: "boolean", example: true },
+          lastLoginAt: { type: "string", format: "date-time", nullable: true },
+        },
+      },
+      AuthLoginResponse: {
+        type: "object",
+        properties: {
+          ok: { type: "boolean", example: true },
+          token: { type: "string" },
+          tokenType: { type: "string", example: "Bearer" },
+          user: { $ref: "#/components/schemas/AuthUser" },
+        },
+      },
+      AuthMeResponse: {
+        type: "object",
+        properties: {
+          ok: { type: "boolean", example: true },
+          user: { $ref: "#/components/schemas/AuthUser" },
+        },
+      },
       HealthResponse: {
         type: "object",
         properties: {

@@ -1,30 +1,59 @@
-import { useAuth } from "../../context/AuthContext";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import { useLanguage } from "../../context/LanguageContext";
 
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const [userId, setUserId] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    // 지금은 그냥 로그인 성공 처리
-    login();
-    navigate("/");
+  const handleLogin = async (event) => {
+    event.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      await login(userId.trim(), password);
+      navigate("/");
+    } catch (err) {
+      setError(err.message || "Login failed.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div style={wrap}>
-      <div style={card}>
+      <form onSubmit={handleLogin} style={card}>
         <h2>{t("title.login")}</h2>
 
-        <input placeholder="ID" style={input} />
-        <input placeholder="Password" type="password" style={input} />
+        <input
+          autoComplete="username"
+          onChange={(event) => setUserId(event.target.value)}
+          placeholder="ID"
+          style={input}
+          value={userId}
+        />
+        <input
+          autoComplete="current-password"
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder="Password"
+          style={input}
+          type="password"
+          value={password}
+        />
 
-        <button onClick={handleLogin} style={btn}>
-          {t("title.loginbtn")}
+        {error && <div style={errorBox}>{error}</div>}
+
+        <button disabled={loading} style={{ ...btn, opacity: loading ? 0.65 : 1 }} type="submit">
+          {loading ? "Signing in..." : t("title.loginbtn")}
         </button>
-      </div>
+      </form>
     </div>
   );
 }
@@ -64,4 +93,13 @@ const btn = {
   border: "none",
   fontWeight: 700,
   cursor: "pointer",
+};
+
+const errorBox = {
+  padding: 10,
+  borderRadius: 8,
+  background: "rgba(239,68,68,0.16)",
+  border: "1px solid rgba(239,68,68,0.45)",
+  color: "#fecaca",
+  fontSize: 13,
 };

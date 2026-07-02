@@ -141,7 +141,7 @@ async function getSummary() {
   };
 }
 
-async function updateEventStatus(id, status, message) {
+async function updateEventStatus(id, status, message, userId = null) {
   const nextStatus = String(status || "").trim();
   if (!nextStatus) {
     const error = new Error("status is required.");
@@ -162,6 +162,7 @@ async function updateEventStatus(id, status, message) {
     await tx.eventLog.create({
       data: {
         eventId: id,
+        userId,
         action: "STATUS_CHANGED",
         message: message || `Status changed to ${nextStatus}`,
         metadata: {
@@ -175,7 +176,7 @@ async function updateEventStatus(id, status, message) {
   });
 }
 
-async function updateEventMemo(id, memo) {
+async function updateEventMemo(id, memo, userId = null) {
   const text = String(memo ?? "").trim();
   if (!text) {
     const error = new Error("memo is required.");
@@ -189,6 +190,7 @@ async function updateEventMemo(id, memo) {
   const log = await prisma.eventLog.create({
     data: {
       eventId: id,
+      userId,
       action: "MEMO_UPDATED",
       message: text,
       metadata: { memo: text },

@@ -55,6 +55,7 @@ async function updateEventStatus(req, res) {
       req.params.id,
       req.body?.status,
       req.body?.message,
+      req.user?.id || null,
     );
     if (!event) {
       res.status(404).json({ ok: false, error: "Event not found." });
@@ -68,7 +69,7 @@ async function updateEventStatus(req, res) {
 
 async function updateEventMemo(req, res) {
   try {
-    const log = await eventsService.updateEventMemo(req.params.id, req.body?.memo);
+    const log = await eventsService.updateEventMemo(req.params.id, req.body?.memo, req.user?.id || null);
     if (!log) {
       res.status(404).json({ ok: false, error: "Event not found." });
       return;
