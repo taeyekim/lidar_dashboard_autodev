@@ -115,10 +115,31 @@ Swagger:
 http://localhost:5000/api-docs
 ```
 
+라이다 PC 공식 수신 API:
+
+```txt
+POST http://localhost:5000/api/wrongway
+```
+
+최근 이벤트 API:
+
+```txt
+GET http://localhost:5000/api/events/recent?limit=10
+GET http://localhost:5000/api/events/summary
+```
+
 curl 확인:
 
 ```bash
 curl http://localhost:5000/api/database/health
+```
+
+라이다 수신 테스트:
+
+```bash
+curl -X POST http://localhost:5000/api/wrongway \
+  -H "Content-Type: application/json" \
+  -d "{\"type\":\"wrong-way-level-1\",\"warning_level\":1,\"timestamp\":\"2026-01-13T14:43:54.360258+09:00\",\"confidence\":0.95,\"zone_id\":\"Z327\",\"track_id\":\"81760000-0000-0000-0000-000000000000\",\"message\":\"역주행 1차 감지\",\"speed_ms\":2.83,\"speed_kmh\":10.2,\"object_class\":6,\"uuid\":\"81760000\",\"description\":\"Wrong-way driving detected\",\"consecutive_count\":3,\"is_confirmed\":true,\"normal_moving_vehicle_count\":2}"
 ```
 
 정상 응답 예시:

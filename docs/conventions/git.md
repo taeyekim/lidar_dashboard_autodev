@@ -10,12 +10,27 @@
 - 민감정보가 포함된 `.env`, token, password, key 파일은 커밋하지 않습니다.
 - 생성물, 빌드 결과물, `node_modules`는 커밋하지 않습니다.
 
+## Codex 무검증 브랜치 push 모드
+
+사용자가 명시적으로 무검증 브랜치 push 모드를 요청한 경우 Codex는 기능별 브랜치를 만들고, 변경사항을 커밋하고, 원격 저장소에 push할 수 있습니다.
+
+규칙:
+
+- 기능 또는 작업 묶음마다 별도 브랜치를 사용합니다.
+- Codex가 만드는 브랜치는 기본적으로 `codex/` 접두사를 사용합니다.
+- 검증을 실행하지 않고 push할 수 있지만, 커밋/PR 설명과 결과 보고에 `미검증`을 명확히 적습니다.
+- 검증을 생략한 이유는 `사용자 요청에 따른 무검증 push`로 기록합니다.
+- push 전에는 `git status --short`로 커밋 대상에 `.env`, 비밀값, 생성물, `node_modules`가 포함되지 않았는지 확인합니다.
+- force push, history rewrite, `git reset --hard`, 대량 삭제, 운영 배포는 무검증 push 모드에 포함하지 않습니다.
+- 이미 원격에 같은 브랜치가 있으면 일반 push를 우선하고, 충돌이 나면 멈추고 보고합니다.
+
 ## 브랜치 네이밍
 
 형식:
 
 ```text
 type/short-description
+codex/type-short-description
 ```
 
 예:
@@ -28,6 +43,8 @@ feature/mock-lidar-events
 fix/swagger-docs
 docs/conventions
 refactor/server-domains
+codex/wrongway-ingest-api
+codex/frontend-event-api
 ```
 
 권장 type:
@@ -86,6 +103,7 @@ PR에는 아래 내용을 포함합니다.
 ## 검증
 - 실행한 명령:
 - 결과:
+- 미검증 항목:
 
 ## 영향 범위
 - 
@@ -95,6 +113,8 @@ PR에는 아래 내용을 포함합니다.
 ```
 
 ## 검증 예시
+
+무검증 브랜치 push 모드에서는 아래 검증을 생략할 수 있습니다. 생략한 경우 PR 설명의 검증 항목에 `미검증 - 사용자 요청에 따른 무검증 push`라고 적습니다.
 
 CI 검증:
 

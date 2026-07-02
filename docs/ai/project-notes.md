@@ -9,20 +9,20 @@
 curl http://localhost:5000/api/health
 ```
 
-## 2. 라이다 실제 ingest 수신 테스트
+## 2. 라이다 공식 수신 테스트
+
+```bash
+curl -X POST http://localhost:5000/api/wrongway \
+  -H "Content-Type: application/json" \
+  -d "{\"type\":\"wrong-way-level-1\",\"warning_level\":1,\"timestamp\":\"2026-01-13T14:43:54.360258+09:00\",\"confidence\":0.95,\"zone_id\":\"Z327\",\"track_id\":\"81760000-0000-0000-0000-000000000000\",\"message\":\"역주행 1차 감지\",\"speed_ms\":2.83,\"speed_kmh\":10.2,\"object_class\":6,\"uuid\":\"81760000\",\"description\":\"Wrong-way driving detected\",\"consecutive_count\":3,\"is_confirmed\":true,\"normal_moving_vehicle_count\":2}"
+```
+
+## 3. 라이다 ingest 호환 경로 테스트
 
 ```bash
 curl -X POST http://localhost:5000/api/ingest/lidar \
   -H "Content-Type: application/json" \
-  -d "{\"zone_id\":\"ROUNDABOUT-01\",\"device_id\":\"LIDAR-01\",\"track_id\":\"track-001\",\"stage\":1,\"confidence\":0.92,\"message\":\"라이다 역주행 감지 테스트\"}"
-```
-
-## 3. 라이다 mock ingest 수신 테스트
-
-```bash
-curl -X POST http://localhost:5000/api/ingest/lidar/mock \
-  -H "Content-Type: application/json" \
-  -d "{\"zone_id\":\"ROUNDABOUT-01\",\"device_id\":\"LIDAR-MOCK-01\",\"track_id\":\"mock-track-001\",\"stage\":1,\"confidence\":0.95}"
+  -d "{\"type\":\"normal-driving\",\"warning_level\":0,\"zone_id\":\"Z261\",\"track_id\":\"track-normal-001\",\"confidence\":1.0,\"message\":\"정주행\",\"normal_moving_vehicle_count\":2}"
 ```
 
 ## 4. 통합 제어보드 실제 ingest 수신 테스트
@@ -49,16 +49,16 @@ curl -X POST http://localhost:5000/api/ingest/control-board/serial/test \
   -d "{\"port\":\"COM3\",\"baudRate\":9600,\"samplePacket\":\"02 A1 10 02 02 02 00 1C 03 0D\"}"
 ```
 
-## 7. 최근 수신 이벤트 확인
+## 7. 최근 이벤트 확인
 
 ```bash
-curl "http://localhost:5000/api/ingest/events/recent?limit=10"
+curl "http://localhost:5000/api/events/recent?limit=10"
 ```
 
-## 8. 외부 수신 상태 요약 확인
+## 8. 이벤트 요약 확인
 
 ```bash
-curl http://localhost:5000/api/ingest/status
+curl http://localhost:5000/api/events/summary
 ```
 
 ## 9. 제어 상태 확인
