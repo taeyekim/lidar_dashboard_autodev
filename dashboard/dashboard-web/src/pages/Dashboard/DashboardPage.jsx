@@ -395,6 +395,25 @@ export default function DashboardPage({
         }
       }
 
+      if (msg.type === "vehicle-track.updated" && msg.payload?.vehicleTrack) {
+        const track = msg.payload.vehicleTrack;
+        const timestamp = track.lastSeenAt || track.updatedAt || track.createdAt || new Date().toISOString();
+        setLastLidarEvent({
+          id: track.id || track.trackId,
+          type: track.lastEventType || "vehicle-track",
+          message: track.lastEventType === "normal-driving" ? "정주행 차량 수신" : "차량 track 갱신",
+          location: track.externalZoneId || track.zoneId || "-",
+          timestamp,
+        });
+
+        if (msg.payload.created) {
+          setKpi((prev) => ({
+            ...prev,
+            vehiclesPassed: Number(prev.vehiclesPassed || 0) + 1,
+          }));
+        }
+      }
+
       if (msg.type === "control-command.created" && msg.payload) {
         setControlBoardStatus((prev) => ({
           ...(prev || {}),
