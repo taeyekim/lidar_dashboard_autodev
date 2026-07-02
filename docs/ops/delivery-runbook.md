@@ -100,6 +100,16 @@ After first login, confirm:
 
 ## 5. Lidar PC Ingest Smoke
 
+If `DEVICE_INGEST_API_KEY` is set, include the first configured key in every
+ingest request:
+
+```bash
+-H "X-Device-Key: <device-ingest-key>"
+```
+
+`scripts/runtime-smoke.ps1` reads `DEVICE_INGEST_API_KEY` from the environment
+or `.env` and sends this header automatically.
+
 Normal-driving unique track smoke:
 
 ```bash

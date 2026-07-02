@@ -26,6 +26,7 @@ const dockerCompose = readProjectFile("docker-compose.yml");
 const deliveryRunbook = readProjectFile("docs/ops/delivery-runbook.md");
 const securityChecklist = readProjectFile("docs/ops/security-scan-checklist.md");
 const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
+const runtimeSmoke = readProjectFile("scripts/runtime-smoke.ps1");
 const env = parseEnvExample(envExample);
 
 const requiredEnvKeys = [
@@ -102,10 +103,14 @@ assert(
 [
   [deliveryRunbook, "CONTROL_BOARD_DRY_RUN=true", "delivery runbook"],
   [deliveryRunbook, "JWT_SECRET", "delivery runbook"],
+  [deliveryRunbook, "X-Device-Key", "delivery runbook"],
   [securityChecklist, "CONTROL_BOARD_DRY_RUN=true", "security checklist"],
   [securityChecklist, "JWT_SECRET", "security checklist"],
+  [securityChecklist, "DEVICE_INGEST_API_KEY", "security checklist"],
   [acceptanceChecklist, "CONTROL_BOARD_DRY_RUN=true", "acceptance checklist"],
   [acceptanceChecklist, "JWT_SECRET", "acceptance checklist"],
+  [runtimeSmoke, "DEVICE_INGEST_API_KEY", "runtime smoke script"],
+  [runtimeSmoke, "X-Device-Key", "runtime smoke script"],
 ].forEach(([content, token, label]) => {
   assert(content.includes(token), `${label} is missing ${token}`);
 });

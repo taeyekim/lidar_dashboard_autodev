@@ -45,12 +45,16 @@ function Invoke-CurlJson {
     [string]$Method = "GET",
     [string]$Url,
     [object]$Body = $null,
-    [string]$BearerToken = ""
+    [string]$BearerToken = "",
+    [string]$DeviceKey = ""
   )
 
   $curlArgs = @("-sS", "-f", "-X", $Method)
   if ($BearerToken) {
     $curlArgs += @("-H", "Authorization: Bearer $BearerToken")
+  }
+  if ($DeviceKey) {
+    $curlArgs += @("-H", "X-Device-Key: $DeviceKey")
   }
   if ($null -ne $Body) {
     $json = $Body | ConvertTo-Json -Depth 12 -Compress
@@ -99,12 +103,17 @@ try {
   $envValues = Read-DotEnv ".env"
   $adminUser = $env:SEED_ADMIN_USER_ID
   $adminPassword = $env:SEED_ADMIN_PASSWORD
+  $deviceIngestKey = $env:DEVICE_INGEST_API_KEY
   if (!$adminUser -and $envValues.ContainsKey("SEED_ADMIN_USER_ID")) {
     $adminUser = $envValues["SEED_ADMIN_USER_ID"]
   }
   if (!$adminPassword -and $envValues.ContainsKey("SEED_ADMIN_PASSWORD")) {
     $adminPassword = $envValues["SEED_ADMIN_PASSWORD"]
   }
+  if (!$deviceIngestKey -and $envValues.ContainsKey("DEVICE_INGEST_API_KEY")) {
+    $deviceIngestKey = $envValues["DEVICE_INGEST_API_KEY"]
+  }
+  $deviceIngestKey = [string]($deviceIngestKey -split "," | Select-Object -First 1).Trim()
 
   if ($adminUser -and $adminPassword) {
     $login = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/auth/login" -Body @{
@@ -165,7 +174,7 @@ try {
   )
 
   foreach ($payload in $payloads) {
-    $response = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -Body $payload
+    $response = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -Body $payload -DeviceKey $deviceIngestKey
     if (!$response.ok) { throw "Wrongway smoke payload failed for $($payload.type)" }
   }
 
