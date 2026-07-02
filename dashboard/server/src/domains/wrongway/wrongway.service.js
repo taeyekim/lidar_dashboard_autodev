@@ -12,6 +12,20 @@ const PAYLOAD_TYPES = {
 };
 
 const SUPPORTED_TYPES = new Set(Object.values(PAYLOAD_TYPES));
+const CLOSED_EVENT_STATUSES = [
+  "RESOLVED",
+  "resolved",
+  "DISMISSED",
+  "dismissed",
+  "IGNORED",
+  "ignored",
+  "CLOSED",
+  "closed",
+  "CLEARED",
+  "cleared",
+  "ENDED",
+  "ended",
+];
 
 function createBadRequest(message) {
   const error = new Error(message);
@@ -235,35 +249,114 @@ function trafficEventData(data, zone, vehicleTrackState) {
   };
 }
 
+function isWrongwayAlertType(type) {
+  return type === PAYLOAD_TYPES.WRONG_WAY_LEVEL_1 || type === PAYLOAD_TYPES.WRONG_WAY_LEVEL_2;
+}
+
 async function createOrUpdateTrafficEvent(tx, data, zone, vehicleTrackState) {
-  if (data.type === PAYLOAD_TYPES.NORMAL_DRIVING) return null;
+  if (data.type === PAYLOAD_TYPES.NORMAL_DRIVING) {
+    return { event: null, created: false, reused: false };
+  }
 
   const create = trafficEventData(data, zone, vehicleTrackState);
   if (!data.eventCode) {
-    return tx.trafficEvent.create({
+    if (data.trackId && isWrongwayAlertType(data.type)) {
+      const existing = await tx.trafficEvent.findFirst({
+        where: {
+          trackId: data.trackId,
+          eventType: data.type,
+          status: { notIn: CLOSED_EVENT_STATUSES },
+        },
+        orderBy: { receivedAt: "desc" },
+      });
+
+      if (existing) {
+        const update = trafficEventData(data, zone, vehicleTrackState);
+        delete update.eventCode;
+
+        const event = await tx.trafficEvent.update({
+          where: { id: existing.id },
+          data: update,
+          include: { zone: true, vehicleTrack: true },
+        });
+
+        return { event, created: false, reused: true };
+      }
+    }
+
+    const event = await tx.trafficEvent.create({
       data: create,
       include: { zone: true, vehicleTrack: true },
     });
+    return { event, created: true, reused: false };
   }
 
+  const existing = await tx.trafficEvent.findUnique({
+    where: { eventCode: data.eventCode },
+    select: { id: true },
+  });
   const update = trafficEventData(data, zone, vehicleTrackState);
   delete update.eventCode;
 
-  return tx.trafficEvent.upsert({
+  const event = await tx.trafficEvent.upsert({
     where: { eventCode: data.eventCode },
     create,
     update,
     include: { zone: true, vehicleTrack: true },
   });
+  return { event, created: !existing, reused: Boolean(existing) };
 }
 
-async function createEventLog(tx, data, event, vehicleTrackState, source) {
+async function resolveActiveWrongwayEventsForTrack(tx, data, closingEvent) {
+  if (data.type !== PAYLOAD_TYPES.SITUATION_ENDED || !data.trackId) return [];
+
+  const activeEvents = await tx.trafficEvent.findMany({
+    where: {
+      trackId: data.trackId,
+      eventType: { in: [PAYLOAD_TYPES.WRONG_WAY_LEVEL_1, PAYLOAD_TYPES.WRONG_WAY_LEVEL_2] },
+      status: { notIn: CLOSED_EVENT_STATUSES },
+      id: closingEvent?.id ? { not: closingEvent.id } : undefined,
+    },
+    select: { id: true, status: true },
+  });
+
+  if (activeEvents.length === 0) return [];
+
+  const ids = activeEvents.map((event) => event.id);
+  await tx.trafficEvent.updateMany({
+    where: { id: { in: ids } },
+    data: { status: "RESOLVED" },
+  });
+
+  await tx.eventLog.createMany({
+    data: activeEvents.map((event) => ({
+      eventId: event.id,
+      action: "SITUATION_ENDED_RESOLVED",
+      message: "Resolved by situation-ended payload.",
+      metadata: {
+        previousStatus: event.status,
+        nextStatus: "RESOLVED",
+        closingEventId: closingEvent?.id || null,
+        trackId: data.trackId,
+      },
+    })),
+  });
+
+  return tx.trafficEvent.findMany({
+    where: { id: { in: ids } },
+    include: { zone: true, vehicleTrack: true },
+  });
+}
+
+async function createEventLog(tx, data, event, vehicleTrackState, source, eventState = {}) {
   const vehicleTrack = vehicleTrackState?.track || vehicleTrackState;
   if (data.type === PAYLOAD_TYPES.NORMAL_DRIVING && !vehicleTrackState?.created) {
     return null;
   }
 
-  const action = data.type === PAYLOAD_TYPES.NORMAL_DRIVING ? "NORMAL_DRIVING_RECEIVED" : "TRAFFIC_EVENT_RECEIVED";
+  const action = data.type === PAYLOAD_TYPES.NORMAL_DRIVING
+    ? "NORMAL_DRIVING_RECEIVED"
+    : eventState.reused ? "TRAFFIC_EVENT_DEDUPED" : "TRAFFIC_EVENT_RECEIVED";
   return tx.eventLog.create({
     data: {
       eventId: event?.id || null,
@@ -276,6 +369,7 @@ async function createEventLog(tx, data, event, vehicleTrackState, source) {
         trackId: data.trackId,
         vehicleTrackId: vehicleTrack?.id || null,
         warningLevel: data.warningLevel,
+        eventReused: Boolean(eventState.reused),
       },
     },
   });
@@ -337,13 +431,17 @@ async function ingestWrongwayPayload(payload, options = {}) {
   const result = await prisma.$transaction(async (tx) => {
     const zone = await findZoneByExternalZoneId(tx, data.externalZoneId);
     const vehicleTrackState = await upsertVehicleTrack(tx, data, zone);
-    const event = await createOrUpdateTrafficEvent(tx, data, zone, vehicleTrackState);
-    await createEventLog(tx, data, event, vehicleTrackState, source);
+    const eventState = await createOrUpdateTrafficEvent(tx, data, zone, vehicleTrackState);
+    await createEventLog(tx, data, eventState.event, vehicleTrackState, source, eventState);
+    const resolvedEvents = await resolveActiveWrongwayEventsForTrack(tx, data, eventState.event);
     return {
       zone,
       vehicleTrack: vehicleTrackState?.track || null,
       vehicleTrackCreated: Boolean(vehicleTrackState?.created),
-      event,
+      event: eventState.event,
+      eventCreated: Boolean(eventState.created),
+      eventReused: Boolean(eventState.reused),
+      resolvedEvents,
     };
   });
 
@@ -361,6 +459,7 @@ async function ingestWrongwayPayload(payload, options = {}) {
   }
 
   const event = serializeTrafficEvent(result.event);
+  const resolvedEvents = result.resolvedEvents.map(serializeTrafficEvent);
   const vehicleTrack = serializeVehicleTrack(result.vehicleTrack);
 
   if (vehicleTrack) {
@@ -370,14 +469,20 @@ async function ingestWrongwayPayload(payload, options = {}) {
     });
   }
   if (event) {
-    broadcastRealtime("traffic-event.created", event);
+    broadcastRealtime(result.eventCreated ? "traffic-event.created" : "traffic-event.updated", event);
   }
+  resolvedEvents.forEach((resolvedEvent) => {
+    broadcastRealtime("traffic-event.updated", resolvedEvent);
+  });
 
   return {
     ok: true,
     eventId: event?.id || null,
     receivedAt: data.receivedAt.toISOString(),
     vehicleTrackCreated: result.vehicleTrackCreated,
+    eventCreated: result.eventCreated,
+    eventReused: result.eventReused,
+    resolvedEventIds: resolvedEvents.map((resolvedEvent) => resolvedEvent.id),
     controlCommand,
     event:
       event || {

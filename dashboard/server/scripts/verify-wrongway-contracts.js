@@ -38,13 +38,22 @@ const runbook = readProjectFile("docs/ops/delivery-runbook.md");
   "tx.vehicleTrack.upsert",
   "where: { trackId: data.trackId }",
   "created: !existing",
+  "CLOSED_EVENT_STATUSES",
+  "isWrongwayAlertType",
+  "TRAFFIC_EVENT_DEDUPED",
+  "SITUATION_ENDED_RESOLVED",
+  "resolveActiveWrongwayEventsForTrack",
+  "eventReused",
+  "resolvedEventIds",
+  "status: { notIn: CLOSED_EVENT_STATUSES }",
   "rawPayload: data.rawPayload",
   "vehicleTrackCreated",
+  'broadcastRealtime(result.eventCreated ? "traffic-event.created" : "traffic-event.updated"',
   'broadcastRealtime("vehicle-track.updated"',
 ].forEach((token) => assertIncludes(service, token, "wrongway service"));
 
 assert(
-  /if \(data\.type === PAYLOAD_TYPES\.NORMAL_DRIVING\) return null;/.test(service),
+  /if \(data\.type === PAYLOAD_TYPES\.NORMAL_DRIVING\) \{\s+return \{ event: null, created: false, reused: false \};\s+\}/.test(service),
   "normal-driving must not create a traffic event",
 );
 assert(
@@ -100,7 +109,7 @@ assert(wrongwayRequest, "WrongwayRequest schema is missing");
 
 const wrongwayResponse = swaggerSpec.components?.schemas?.WrongwayIngestResponse;
 assert(wrongwayResponse, "WrongwayIngestResponse schema is missing");
-["vehicleTrackCreated", "controlCommand", "event"].forEach((field) => {
+["vehicleTrackCreated", "eventCreated", "eventReused", "resolvedEventIds", "controlCommand", "event"].forEach((field) => {
   assert(wrongwayResponse.properties?.[field], `WrongwayIngestResponse is missing ${field}`);
 });
 

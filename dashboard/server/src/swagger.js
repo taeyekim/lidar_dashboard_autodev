@@ -1303,6 +1303,21 @@ const swaggerSpec = {
           eventId: { type: "string", nullable: true, example: "clx-event-id" },
           receivedAt: { type: "string", format: "date-time" },
           vehicleTrackCreated: { type: "boolean", example: true },
+          eventCreated: {
+            type: "boolean",
+            example: true,
+            description: "False when an existing active event was updated.",
+          },
+          eventReused: {
+            type: "boolean",
+            example: false,
+            description: "True when track_id + event type matched an unresolved existing event.",
+          },
+          resolvedEventIds: {
+            type: "array",
+            items: { type: "string" },
+            description: "Wrong-way event ids resolved by a situation-ended payload.",
+          },
           controlCommand: {
             nullable: true,
             oneOf: [{ $ref: "#/components/schemas/ControlBoardCommand" }],

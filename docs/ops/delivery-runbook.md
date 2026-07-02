@@ -157,6 +157,8 @@ curl -X POST http://localhost:8080/api/wrongway \
 Expected:
 
 - The first `normal-driving` request creates one `vehicle_tracks` row; the duplicate request updates the same row and does not create a duplicate `traffic_events` row.
+- Repeated wrong-way payloads with the same `track_id` and stage update the existing unresolved `traffic_events` row and reuse its linked control command.
+- `situation-ended` resolves active wrong-way events for the same `track_id` and records `SITUATION_ENDED_RESOLVED` event logs.
 - `traffic_events` stores wrong-way and situation-ended events.
 - `vehicle_tracks` stores one row per stable `track_id`.
 - `/api/events/summary` reports `vehiclesPassed` from the DB unique `vehicle_tracks` count, not from the lidar raw counter.

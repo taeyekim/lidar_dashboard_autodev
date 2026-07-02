@@ -162,28 +162,52 @@ try {
       warning_level = 2
       confidence = 0.97
       description = "Runtime smoke wrong-way stage 2"
-    },
-    @{
-      type = "situation-ended"
-      zone_id = "ROUNDABOUT-01"
-      track_id = $wrongTrackId
-      timestamp = "${timestampPrefix}Z"
-      warning_level = 0
-      description = "Runtime smoke situation ended"
     }
   )
 
   $wrongwayEventIds = @()
+  $stage1EventId = ""
   foreach ($payload in $payloads) {
     $response = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -Body $payload -DeviceKey $deviceIngestKey
     if (!$response.ok) { throw "Wrongway smoke payload failed for $($payload.type)" }
     if ($payload.type -like "wrong-way-*" -and $response.eventId) {
       $wrongwayEventIds += $response.eventId
     }
+    if ($payload.type -eq "wrong-way-level-1") {
+      $stage1EventId = $response.eventId
+    }
   }
 
   if ($wrongwayEventIds.Count -eq 0) {
     throw "Wrongway smoke did not return any traffic event id."
+  }
+
+  $duplicateStage1 = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -Body @{
+    type = "wrong-way-level-1"
+    zone_id = "ROUNDABOUT-01"
+    track_id = $wrongTrackId
+    timestamp = "${timestampPrefix}Z"
+    warning_level = 1
+    confidence = 0.96
+    description = "Runtime smoke duplicate wrong-way stage 1"
+  } -DeviceKey $deviceIngestKey
+  if (!$duplicateStage1.ok -or !$duplicateStage1.eventReused) {
+    throw "Duplicate wrong-way stage 1 did not report eventReused=true."
+  }
+  if ($stage1EventId -and $duplicateStage1.eventId -ne $stage1EventId) {
+    throw "Duplicate wrong-way stage 1 did not reuse the original event id."
+  }
+
+  $ended = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -Body @{
+    type = "situation-ended"
+    zone_id = "ROUNDABOUT-01"
+    track_id = $wrongTrackId
+    timestamp = "${timestampPrefix}Z"
+    warning_level = 0
+    description = "Runtime smoke situation ended"
+  } -DeviceKey $deviceIngestKey
+  if (!$ended.ok -or !$ended.resolvedEventIds -or $ended.resolvedEventIds.Count -lt 1) {
+    throw "Situation-ended smoke did not resolve any active wrong-way events."
   }
 
   foreach ($eventId in $wrongwayEventIds) {
