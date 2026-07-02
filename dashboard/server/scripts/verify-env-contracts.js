@@ -111,6 +111,10 @@ assert(
   [acceptanceChecklist, "JWT_SECRET", "acceptance checklist"],
   [runtimeSmoke, "DEVICE_INGEST_API_KEY", "runtime smoke script"],
   [runtimeSmoke, "X-Device-Key", "runtime smoke script"],
+  [runtimeSmoke, "controlCommands", "runtime smoke script"],
+  [runtimeSmoke, "packetHex", "runtime smoke script"],
+  [runtimeSmoke, "rawPayload", "runtime smoke script"],
+  [runtimeSmoke, "vehiclesPassed", "runtime smoke script"],
 ].forEach(([content, token, label]) => {
   assert(content.includes(token), `${label} is missing ${token}`);
 });

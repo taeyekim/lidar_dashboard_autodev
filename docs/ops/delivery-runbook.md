@@ -110,6 +110,10 @@ ingest request:
 `scripts/runtime-smoke.ps1` reads `DEVICE_INGEST_API_KEY` from the environment
 or `.env` and sends this header automatically.
 
+`scripts/runtime-smoke.ps1` also verifies wrong-way event detail, preserved
+`rawPayload`, linked `controlCommands`, command `packetHex`, and summary
+`vehiclesPassed`.
+
 Normal-driving unique track smoke:
 
 ```bash

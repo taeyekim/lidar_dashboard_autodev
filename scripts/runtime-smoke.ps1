@@ -173,12 +173,40 @@ try {
     }
   )
 
+  $wrongwayEventIds = @()
   foreach ($payload in $payloads) {
     $response = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -Body $payload -DeviceKey $deviceIngestKey
     if (!$response.ok) { throw "Wrongway smoke payload failed for $($payload.type)" }
+    if ($payload.type -like "wrong-way-*" -and $response.eventId) {
+      $wrongwayEventIds += $response.eventId
+    }
+  }
+
+  if ($wrongwayEventIds.Count -eq 0) {
+    throw "Wrongway smoke did not return any traffic event id."
+  }
+
+  foreach ($eventId in $wrongwayEventIds) {
+    $detail = Invoke-CurlJson -Url "$BaseUrl/api/events/$eventId"
+    if (!$detail.ok -or !$detail.event) {
+      throw "Event detail smoke failed for $eventId"
+    }
+    if (!$detail.event.rawPayload) {
+      throw "Event detail for $eventId did not include rawPayload"
+    }
+    if (!$detail.event.controlCommands -or $detail.event.controlCommands.Count -lt 1) {
+      throw "Event detail for $eventId did not include linked controlCommands"
+    }
+    if (!$detail.event.controlCommands[0].packetHex) {
+      throw "Linked control command for $eventId did not include packetHex"
+    }
   }
 
   Invoke-CurlJson -Url "$BaseUrl/api/events/recent?limit=5" | Out-Null
+  $summary = Invoke-CurlJson -Url "$BaseUrl/api/events/summary"
+  if ($null -eq $summary.vehiclesPassed) {
+    throw "Event summary did not include vehiclesPassed unique track count."
+  }
   Invoke-CurlJson -Url "$BaseUrl/api/control-board/status" | Out-Null
 
   Write-Host "runtime smoke ok"
