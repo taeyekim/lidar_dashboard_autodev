@@ -17,8 +17,9 @@
     "build:web": "npm --prefix dashboard/dashboard-web run build",
     "check:server": "node dashboard/server/scripts/check-syntax.js",
     "verify:control-board-protocol": "node dashboard/server/scripts/verify-control-board-protocol.js",
+    "verify:control-board-tcp": "node dashboard/server/scripts/verify-control-board-tcp-loopback.js",
     "verify:auth-crypto": "node dashboard/server/scripts/verify-auth-crypto.js",
-    "smoke": "npm run verify:control-board-protocol && npm run verify:auth-crypto && npm run check:server",
+    "smoke": "npm run verify:control-board-protocol && npm run verify:control-board-tcp && npm run verify:auth-crypto && npm run check:server",
     "ci": "npm run build:web && npm run check:server",
     "setup:demo": "python -m venv dashboard/demo-server/venv && \"dashboard\\demo-server\\venv\\Scripts\\python.exe\" -m pip install -r dashboard/demo-server/requirements.txt"
   }
