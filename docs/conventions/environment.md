@@ -41,7 +41,8 @@
 주의사항:
 
 - Vite에서 브라우저로 노출되는 값은 `VITE_` prefix가 필요합니다.
-- Docker Compose에서는 `PUBLIC_HOST`, `DASHBOARD_PORT`, `DETECTOR_PORT`를 조합해 `VITE_API_BASE_URL`, `VITE_WS_BASE_URL`, `VITE_DETECTOR_BASE_URL`을 자동 주입합니다.
+- Docker Compose에서는 `PUBLIC_HOST`, `DASHBOARD_PORT`, `DETECTOR_PORT`, `NGINX_PORT`를 조합해 `VITE_API_BASE_URL`, `VITE_WS_BASE_URL`, `VITE_DETECTOR_BASE_URL`을 자동 주입합니다.
+- Nginx를 브라우저 진입점으로 사용할 때 WebSocket은 `/ws` 경로를 사용합니다.
 - 프론트엔드 코드에 내부망 IP나 URL을 직접 하드코딩하지 않습니다.
 
 ## 백엔드

@@ -15,6 +15,7 @@ const frontendConfig = fs.readFileSync(
   path.join(root, "dashboard", "dashboard-web", "src", "shared", "api", "config.js"),
   "utf8",
 );
+const envExample = fs.readFileSync(path.join(root, ".env.example"), "utf8");
 
 assert(
   compose.includes("VITE_WS_BASE_URL: ws://${PUBLIC_HOST:-localhost}:${NGINX_PORT:-8080}/ws"),
@@ -29,6 +30,10 @@ assert(
 assert(
   frontendConfig.includes("`ws://${API_HOST}:${API_PORT}/ws`"),
   "frontend default WS_BASE must use /ws",
+);
+assert(
+  envExample.includes("VITE_WS_BASE_URL=ws://localhost:5000/ws"),
+  ".env.example must document the direct backend WebSocket URL with /ws",
 );
 
 console.log("delivery proxy contracts ok");

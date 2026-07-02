@@ -14,10 +14,15 @@ This checklist is for delivery rehearsals before connecting to the real control 
 ## Required Commands
 
 ```bash
-npm audit --workspaces
+npm run verify:audit-policy
 npm run ci
+npm --prefix dashboard/dashboard-web run lint
 docker compose config --quiet
 ```
+
+Keep the raw `npm audit --workspaces` output as evidence. The automated gate is
+`npm run verify:audit-policy`, which fails on any finding outside the documented
+Prisma development-tooling exception.
 
 ## Recommended Commands
 

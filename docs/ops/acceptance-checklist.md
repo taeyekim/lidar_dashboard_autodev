@@ -76,7 +76,8 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `npm run smoke` passes.
 - [ ] `npm run ci` passes.
 - [ ] `npm --prefix dashboard/dashboard-web run lint` passes.
-- [ ] `npm audit --workspaces` result is documented.
+- [ ] `npm run verify:audit-policy` passes.
+- [ ] Raw `npm audit --workspaces` result is documented.
 - [ ] Secret scan result is documented or marked 미검증 with reason.
 - [ ] Container scan result is documented or marked 미검증 with reason.
 - [ ] ZAP passive baseline result is documented or marked 미검증 with reason.

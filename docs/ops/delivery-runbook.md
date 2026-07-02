@@ -131,12 +131,13 @@ When moving to live TCP:
 Run:
 
 ```bash
-npm run smoke
-npm run ci
-npm --prefix dashboard/dashboard-web run lint
+npm run delivery:verify
 npm audit --workspaces
-docker compose config --quiet
 ```
+
+`npm audit --workspaces` is kept as raw evidence and may exit non-zero while the
+known Prisma development-tooling advisory remains unresolved. The pass/fail gate
+is `npm run verify:audit-policy`, which is included in `npm run delivery:verify`.
 
 Optional tools, if installed:
 
@@ -163,7 +164,8 @@ Evidence package:
 - `npm run smoke` result
 - `npm run ci` result
 - frontend lint result
-- `npm audit --workspaces` result
+- `npm run verify:audit-policy` result
+- raw `npm audit --workspaces` result
 - Swagger screenshots or exported API list
 - System/device status API responses
 - Lidar ingest curl request/response
