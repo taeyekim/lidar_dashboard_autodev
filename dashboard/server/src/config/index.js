@@ -2,7 +2,7 @@ const path = require("path");
 const fs = require("fs");
 
 // 환경변수는 프로젝트 루트 .env만 기준으로 사용한다.
-require("dotenv").config({ path: path.resolve(__dirname, "../../../../.env"), override: true });
+require("dotenv").config({ path: path.resolve(__dirname, "../../../../.env"), override: true, quiet: true });
 
 const serverRoot = path.resolve(__dirname, "../..");
 
