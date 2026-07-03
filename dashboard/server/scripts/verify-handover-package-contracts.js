@@ -109,6 +109,10 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "baseUrl",
   "--base-url",
   "Base URL",
+  "gitValue",
+  "Git commit",
+  "Git branch",
+  "Working tree clean",
   "Strict Gate",
   "failedCommandCount",
   "strictFailureReasons",
@@ -150,7 +154,9 @@ assert(
 assertIncludes(serverPackageJson, "verify-handover-package-contracts.js", "server verify chain");
 assertIncludes(runbook, "npm.cmd run handover:package", "delivery runbook");
 assertIncludes(runbook, "artifacts/handover-package/<timestamp>/manifest.json", "delivery runbook");
+assertIncludes(runbook, "Working tree clean", "delivery runbook");
 assertIncludes(checklist, "npm run handover:package", "acceptance checklist");
+assertIncludes(checklist, "Git commit", "acceptance checklist");
 assertIncludes(matrix, "npm run handover:package", "delivery evidence matrix");
 
 console.log("handover package contracts ok");

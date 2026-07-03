@@ -49,6 +49,15 @@ function runCommand(label, args) {
   };
 }
 
+function gitValue(args) {
+  const result = spawnSync("git", args, {
+    cwd: root,
+    encoding: "utf8",
+    shell: process.platform === "win32",
+  });
+  return result.stdout.trim();
+}
+
 function writeCommandLog(dir, item) {
   const fileName = `${item.label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}.log`;
   fs.writeFileSync(
@@ -290,6 +299,9 @@ function buildMarkdown(manifest) {
     `- Site name: ${manifest.siteName}`,
     `- Host name: ${manifest.hostName}`,
     `- Base URL: ${manifest.baseUrl}`,
+    `- Git commit: ${manifest.git.commit}`,
+    `- Git branch: ${manifest.git.branch}`,
+    `- Working tree clean: ${manifest.git.clean ? "yes" : "no"}`,
     "",
     "## Residual Field Gates",
     "",
@@ -461,6 +473,11 @@ function main() {
     siteName,
     hostName: os.hostname(),
     baseUrl,
+    git: {
+      branch: gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
+      commit: gitValue(["rev-parse", "HEAD"]),
+      clean: gitValue(["status", "--short"]) === "",
+    },
     strict,
     status: packageStatus,
     canMarkGoalComplete,
