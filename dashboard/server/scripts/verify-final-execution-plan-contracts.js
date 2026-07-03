@@ -51,10 +51,16 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "--require-scanners", "final execution plan generator"],
   [runbook, "npm.cmd run final:execution-plan", "delivery runbook"],
   [runbook, "field:gate-closure-map", "delivery runbook"],
+  [runbook, "completion:audit", "delivery runbook"],
+  [runbook, "handover:index", "delivery runbook"],
+  [runbook, "field:closure-plan", "delivery runbook"],
+  [runbook, "Field Action Artifact Actions", "delivery runbook"],
   [runbook, "artifacts/final-execution-plan/<timestamp>/manifest.json", "delivery runbook"],
   [checklist, "npm run final:execution-plan", "acceptance checklist"],
+  [checklist, "Field Action Artifact Actions", "acceptance checklist"],
   [checklist, "artifacts/final-execution-plan/<timestamp>/manifest.json", "acceptance checklist"],
   [matrix, "final:execution-plan", "delivery evidence matrix"],
+  [matrix, "strict `handover:package`", "delivery evidence matrix"],
   [matrix, "artifacts/final-execution-plan/<timestamp>/manifest.json", "delivery evidence matrix"],
 ].forEach(([content, token, label]) => assertIncludes(content, token, label));
 
