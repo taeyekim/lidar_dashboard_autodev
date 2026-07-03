@@ -4,6 +4,7 @@ map $http_upgrade $connection_upgrade {
 }
 
 limit_req_zone $binary_remote_addr zone=wrongway_ingest:10m rate=${NGINX_WRONGWAY_RATE_LIMIT};
+limit_req_status 429;
 
 upstream dashboard_backend {
   server ${BACKEND_UPSTREAM};

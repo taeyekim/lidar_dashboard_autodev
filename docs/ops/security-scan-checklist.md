@@ -82,6 +82,6 @@ The `artifacts/` directory is intentionally ignored by Git.
 
 - Do not run active DAST or fuzzing against the real integrated control board.
 - Swagger may remain enabled during internal test; restrict or remove external access before delivery if the network is not fully trusted.
-- API mutation endpoints should return `429` after rate-limit thresholds and `415` for non-JSON mutation requests.
+- API mutation endpoints should return `429` after rate-limit thresholds, including the Nginx `/api/wrongway` ingest limiter, and `415` for non-JSON mutation requests.
 - `npm run verify:security-runtime` checks Express security headers, non-JSON mutation rejection, and login rate limiting without touching the field DB or hardware.
 - Record all skipped checks with the reason, tool version, date, and operator.

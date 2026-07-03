@@ -25,9 +25,10 @@ assert(
 assert(nginxTemplate.includes("location /ws"), "Nginx template must route /ws to the backend");
 assert(
   nginxTemplate.includes("limit_req_zone $binary_remote_addr zone=wrongway_ingest") &&
+    nginxTemplate.includes("limit_req_status 429") &&
     nginxTemplate.includes("location = /api/wrongway") &&
     nginxTemplate.includes("limit_req zone=wrongway_ingest"),
-  "Nginx template must rate-limit the public /api/wrongway ingest endpoint",
+  "Nginx template must rate-limit the public /api/wrongway ingest endpoint with HTTP 429",
 );
 assert(
   nginxTemplate.includes("allow ${NGINX_SWAGGER_ALLOW}") && nginxTemplate.includes("deny all"),
