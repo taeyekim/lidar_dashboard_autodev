@@ -161,6 +161,34 @@ assert(
   "ControlBoardMockRequest packet example must use the 10-byte control board response frame",
 );
 
+const controlBoardHttpIngest = assertPath("post", "/api/ingest/control-board");
+assert(
+  controlBoardHttpIngest.summary === "통합 제어보드 HTTP 브릿지 패킷 수신",
+  "Control board HTTP ingest summary must describe bridge diagnostics, not the primary TCP command path",
+);
+assert(
+  controlBoardHttpIngest.description.includes("Ethernet/TCP raw 10바이트 프레임") &&
+    controlBoardHttpIngest.description.includes("TCP socket") &&
+    !controlBoardHttpIngest.description.includes("RS-485"),
+  "Control board HTTP ingest description must align with Ethernet/TCP raw frame policy",
+);
+
+const controlBoardMockIngest = assertPath("post", "/api/ingest/control-board/mock");
+assert(
+  controlBoardMockIngest.description.includes("Ethernet/TCP payload") &&
+    controlBoardMockIngest.description.includes("CRC-8/SMBUS") &&
+    !controlBoardMockIngest.description.includes("RS-485"),
+  "Control board mock ingest description must align with Ethernet/TCP packet diagnostics",
+);
+
+const controlBoardSerialAlias = assertPath("post", "/api/ingest/control-board/serial/test");
+assert(
+  controlBoardSerialAlias.summary === "통합 제어보드 legacy serial alias 테스트" &&
+    controlBoardSerialAlias.description.includes("하위 호환 alias") &&
+    controlBoardSerialAlias.description.includes("/api/ingest/control-board/tcp/test"),
+  "Control board serial test must be documented as a legacy alias with TCP test guidance",
+);
+
 const controlBoardSerialPacket =
   swaggerSpec.components?.schemas?.ControlBoardSerialTestRequest?.properties?.samplePacket?.example;
 assert(

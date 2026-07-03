@@ -161,7 +161,7 @@ function ingestLidarMock(payload) {
 // 통합 제어보드 mock 패킷 수신을 처리하는 service 진입점이다.
 async function ingestControlBoardMock(payload) {
   // 통합 제어보드 mock API의 핵심 흐름: 패킷 흉내 데이터 -> control-board adapter -> 내부 이벤트 -> 화면 반영.
-  // 실제 RS-485 수신 전에도 Swagger/curl로 제어보드 이벤트 흐름을 먼저 검증할 수 있다.
+  // 실제 TCP raw frame 연동 전에도 Swagger/curl로 제어보드 이벤트 흐름을 먼저 검증할 수 있다.
   const event = adaptControlBoardPacket(payload);
   logger.info("external control board mock packet received", {
     id: event.id,
@@ -178,8 +178,8 @@ async function ingestControlBoardMock(payload) {
 
 // 통합 제어보드 실제 HTTP 수신을 처리하는 service 진입점이다.
 async function ingestControlBoardLive(payload) {
-  // 현장에서는 RS-485 직접 연결, HTTP 브릿지, 테스트 프로그램 중 어떤 방식이 될지 아직 확정되지 않았다.
-  // 그래서 실제 수신용 URL은 먼저 열어두고, 내부 처리는 mock과 같은 parser/adapter 흐름을 재사용한다.
+  // 운영 명령 경로는 TCP socket 송신이 기준이고, 이 URL은 HTTP 브릿지/테스트 프로그램의 응답 수신용 진입점이다.
+  // 내부 처리는 mock과 같은 parser/adapter 흐름을 재사용해 브릿지와 raw frame 진단 결과를 비교할 수 있게 한다.
   const event = adaptControlBoardPacket(payload);
 
   logger.info("external control board packet received", {
@@ -196,7 +196,7 @@ async function ingestControlBoardLive(payload) {
   return event;
 }
 
-// 실제 COM 포트를 열기 전, serial reader 입력 형태만 검증하는 테스트 진입점이다.
+// 실제 장비 연결 전, TCP raw frame 테스트 입력 형태만 검증하는 진입점이다.
 async function createTcpFrameTest(payload = {}) {
   const tcp = {
     host: payload.host || "127.0.0.1",
@@ -231,8 +231,8 @@ async function createTcpFrameTest(payload = {}) {
 }
 
 async function createSerialTest(payload = {}) {
-  // serial reader 테스트는 아직 COM 포트를 열지 않는다.
-  // 지금은 현장에서 사용할 port/baudRate/samplePacket 입력 형태와 adapter 연결 흐름만 미리 맞춰둔다.
+  // serial reader 테스트는 초기 RS-485 검토 시기의 하위 호환 alias다.
+  // 신규 현장 검증은 TCP raw frame 테스트를 우선 사용하고, 여기서는 과거 입력 형태와 adapter 연결만 보존한다.
   const serial = {
     port: payload.port || "COM1",
     baudRate: Number(payload.baudRate) || 9600,

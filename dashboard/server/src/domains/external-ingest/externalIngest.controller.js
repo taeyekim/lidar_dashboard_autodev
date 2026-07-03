@@ -29,7 +29,7 @@ async function receiveLidarMock(req, res) {
 
 // 통합 제어보드 실제 HTTP ingest 요청을 받아 service로 넘긴다.
 async function receiveControlBoard(req, res) {
-  // RS-485 장비가 직접 HTTP를 호출하지 않더라도, 브릿지/테스트 프로그램이 같은 진입점을 사용할 수 있게 둔다.
+  // TCP raw frame 브릿지나 현장 테스트 프로그램이 같은 파서 진입점을 사용할 수 있게 둔다.
   try {
     const event = await externalIngestService.ingestControlBoardLive(req.body || {});
     res.json({ ok: true, eventId: event.id, receivedAt: event.receivedAt, event });
@@ -55,9 +55,9 @@ async function receiveControlBoardMock(req, res) {
   }
 }
 
-// serial reader 테스트 요청을 받아 실제 포트 연결 전 입력 형태와 변환 흐름을 확인한다.
+// legacy serial alias 요청을 받아 실제 포트 연결 없이 과거 입력 형태와 변환 흐름만 확인한다.
 async function testControlBoardSerial(req, res) {
-  // 실제 serialport 연결 없이 현장 입력값과 samplePacket 처리 흐름만 확인하는 테스트 엔드포인트다.
+  // 신규 현장 검증은 TCP frame 테스트를 우선 사용하고, 이 경로는 하위 호환용으로 유지한다.
   try {
     const result = await externalIngestService.createSerialTest(req.body || {});
     res.json({ ok: true, ...result });

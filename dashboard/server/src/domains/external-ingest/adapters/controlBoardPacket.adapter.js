@@ -35,8 +35,8 @@ function getCrcStatus(payload, packetResult) {
 }
 
 function adaptControlBoardPacket(payload = {}, options = {}) {
-  // 통합 제어보드는 실제 현장에서 RS-485 10바이트 패킷으로 신호를 줄 가능성이 높다.
-  // 이 adapter는 HTTP mock으로 받은 packet도 실제 패킷과 같은 방식으로 파싱해서 내부 이벤트로 바꾼다.
+  // 통합 제어보드는 Ethernet/TCP payload로 10바이트 raw frame을 주고받는 것을 기준으로 한다.
+  // 이 adapter는 HTTP mock/브릿지로 받은 packet도 실제 TCP payload와 같은 방식으로 파싱해서 내부 이벤트로 바꾼다.
   // packet이 없으면 기존 command/crcValid 기반 mock 흐름을 유지해 Swagger 테스트를 계속 사용할 수 있다.
   const packetResult = payload.packet ? parseControlBoardPacket(payload.packet) : null;
   const command = getParsedCommand(payload, packetResult);

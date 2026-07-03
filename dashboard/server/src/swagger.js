@@ -742,9 +742,9 @@ const swaggerSpec = {
     "/api/ingest/control-board": {
       post: {
         tags: ["External Ingest"],
-        summary: "통합 제어보드 실제 HTTP 패킷 수신",
+        summary: "통합 제어보드 HTTP 브릿지 패킷 수신",
         description:
-          "통합 제어보드 또는 중간 브릿지 프로그램이 실제 패킷을 HTTP JSON으로 넘길 때 사용하는 API입니다. RS-485 직접 연결이 확정되기 전까지 실제 수신 진입점으로 유지하고, 내부에서는 mock과 같은 parser/adapter 흐름을 사용합니다. DEVICE_INGEST_API_KEY가 설정된 환경에서는 X-Device-Key header가 필요합니다.",
+          "통합 제어보드 또는 중간 브릿지 프로그램이 Ethernet/TCP raw 10바이트 프레임을 HTTP JSON으로 전달할 때 사용하는 진단 API입니다. 실제 운영 명령 경로는 대시보드가 TCP socket으로 통합 제어보드에 raw frame을 송신하는 방식이며, 이 엔드포인트는 응답/상태 패킷 파서와 현장 브릿지 검증용으로 유지합니다. DEVICE_INGEST_API_KEY가 설정된 환경에서는 X-Device-Key header가 필요합니다.",
         security: [{ deviceKeyAuth: [] }, {}],
         requestBody: {
           required: false,
@@ -770,7 +770,7 @@ const swaggerSpec = {
       post: {
         tags: ["External Ingest"],
         summary: "통합 제어보드 mock 패킷 수신",
-        description: "RS-485 10바이트 패킷 adapter 흐름을 HTTP로 먼저 테스트하기 위한 API입니다. packet이 있으면 Byte 1~6 기준 CRC-8/SMBUS를 계산해 Byte 7 값과 비교합니다. DEVICE_INGEST_API_KEY가 설정된 환경에서는 X-Device-Key header가 필요합니다.",
+        description: "Ethernet/TCP payload로 오갈 10바이트 raw frame adapter 흐름을 HTTP로 먼저 테스트하기 위한 API입니다. packet이 있으면 Byte 1~6 기준 CRC-8/SMBUS를 계산해 Byte 7 값과 비교합니다. DEVICE_INGEST_API_KEY가 설정된 환경에서는 X-Device-Key header가 필요합니다.",
         security: [{ deviceKeyAuth: [] }, {}],
         requestBody: {
           required: false,
@@ -795,8 +795,8 @@ const swaggerSpec = {
     "/api/ingest/control-board/serial/test": {
       post: {
         tags: ["External Ingest"],
-        summary: "통합 제어보드 serial reader 테스트",
-        description: "실제 COM 포트를 열거나 serialport 의존성을 추가하지 않고, 현장 테스트에 필요한 포트/보드레이트/샘플 패킷 입력 형태만 확인합니다. DEVICE_INGEST_API_KEY가 설정된 환경에서는 X-Device-Key header가 필요합니다.",
+        summary: "통합 제어보드 legacy serial alias 테스트",
+        description: "초기 RS-485 검토 시기의 하위 호환 alias입니다. 실제 운영 기준은 Ethernet/TCP raw frame이며, 이 API는 COM 포트를 열거나 serialport 의존성을 추가하지 않고 과거 테스트 요청 형태와 샘플 패킷 파서 흐름만 확인합니다. 신규 현장 검증은 /api/ingest/control-board/tcp/test를 우선 사용합니다. DEVICE_INGEST_API_KEY가 설정된 환경에서는 X-Device-Key header가 필요합니다.",
         security: [{ deviceKeyAuth: [] }, {}],
         requestBody: {
           required: false,
