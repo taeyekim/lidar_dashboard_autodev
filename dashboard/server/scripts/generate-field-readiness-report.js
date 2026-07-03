@@ -61,8 +61,56 @@ function envValue(values, name) {
   return process.env[name] || values[name] || "";
 }
 
+function checkEvidenceCommand(name) {
+  const commands = {
+    ".env presence": "Inspect the delivery .env on the target host; do not attach secret values.",
+    "JWT secret": "Confirm JWT_SECRET is configured with a field-only value; record only configured/placeholder/missing.",
+    "seed admin password": "Confirm SEED_ADMIN_PASSWORD is non-example before seeding the intended field DB.",
+    "device ingest key": "Confirm DEVICE_INGEST_API_KEY is configured or attach the trusted-LAN exception note.",
+    "control-board TCP mode": "Confirm CONTROL_BOARD_DRY_RUN, CONTROL_BOARD_HOST, and CONTROL_BOARD_PORT in .env before live TCP rehearsal.",
+    "HTTPS cookie setting": "Confirm AUTH_COOKIE_SECURE=true in the HTTPS/TLS delivery topology.",
+    "Swagger allowlist": "Confirm NGINX_SWAGGER_ALLOW is restricted to the operator/internal CIDR.",
+    "Docker CLI": "docker --version",
+    "Docker daemon": "docker compose ps --format json",
+    "Docker compose config": "docker compose config --quiet",
+    "Nginx/API health": "curl -sS -f <base-url>/api/health",
+    "gitleaks availability": "gitleaks detect --source . --redact",
+    "trivy availability": "trivy fs --scanners vuln,secret,misconfig .",
+    "zap-baseline.py availability": "zap-baseline.py -t <base-url> -r zap-baseline.html",
+  };
+  return commands[name] || "Record the field evidence command or reviewer note used to close this check.";
+}
+
+function checkDoneWhen(name) {
+  const doneWhen = {
+    ".env presence": ".env exists on the delivery host and contains every required .env.example key.",
+    "JWT secret": "JWT_SECRET is present and is not the example placeholder.",
+    "seed admin password": "SEED_ADMIN_PASSWORD is present and is not the example password.",
+    "device ingest key": "DEVICE_INGEST_API_KEY is configured, or a signed trusted-LAN exception is attached.",
+    "control-board TCP mode": "Dry-run is explicitly accepted or live TCP host/port are configured with hardware approval.",
+    "HTTPS cookie setting": "AUTH_COOKIE_SECURE=true for the HTTPS/TLS delivery route.",
+    "Swagger allowlist": "NGINX_SWAGGER_ALLOW is restricted to the approved operator/internal CIDR.",
+    "Docker CLI": "Docker CLI version command exits successfully on the delivery host.",
+    "Docker daemon": "Docker daemon responds and compose service state can be listed.",
+    "Docker compose config": "Docker compose config validates without errors.",
+    "Nginx/API health": "The Nginx entrypoint returns a successful /api/health response.",
+    "gitleaks availability": "Gitleaks is installed and secret scan evidence is attached or intentionally accepted as skipped.",
+    "trivy availability": "Trivy is installed and filesystem/image scan evidence is attached or intentionally accepted as skipped.",
+    "zap-baseline.py availability": "OWASP ZAP baseline is installed and report evidence is attached or intentionally accepted as skipped.",
+  };
+  return doneWhen[name] || "The check no longer reports REVIEW or SKIPPED in the field readiness manifest.";
+}
+
 function buildCheck(name, status, severity, message, nextAction = "") {
-  return { name, status, severity, message, nextAction };
+  return {
+    name,
+    status,
+    severity,
+    message,
+    nextAction,
+    evidenceCommand: checkEvidenceCommand(name),
+    doneWhen: checkDoneWhen(name),
+  };
 }
 
 function valueState(value, placeholder = "") {
@@ -247,9 +295,9 @@ function buildMarkdown(manifest) {
     "",
     "## Checks",
     "",
-    "| Status | Severity | Check | Message | Next Action |",
-    "| --- | --- | --- | --- | --- |",
-    ...manifest.checks.map((check) => `| ${check.status} | ${check.severity} | ${tableValue(check.name)} | ${tableValue(check.message)} | ${tableValue(check.nextAction)} |`),
+    "| Status | Severity | Check | Message | Next Action | Evidence Command | Done When |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+    ...manifest.checks.map((check) => `| ${check.status} | ${check.severity} | ${tableValue(check.name)} | ${tableValue(check.message)} | ${tableValue(check.nextAction)} | ${tableValue(check.evidenceCommand)} | ${tableValue(check.doneWhen)} |`),
     "",
     "## Environment Keys",
     "",

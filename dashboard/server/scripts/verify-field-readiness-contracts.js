@@ -38,9 +38,17 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "requiredFieldValues",
   "Required Field Values",
   "completionGate",
+  "checkEvidenceCommand",
+  "checkDoneWhen",
+  "evidenceCommand",
+  "doneWhen",
+  "| Status | Severity | Check | Message | Next Action | Evidence Command | Done When |",
   "redacted",
   "missing-or-trusted-lan-exception-required",
   "Blocks live control-board TCP evidence",
+  "docker compose config --quiet",
+  "gitleaks detect --source . --redact",
+  "The Nginx entrypoint returns a successful /api/health response.",
 ].forEach((token) => assertIncludes(generator, token, "field readiness generator"));
 
 [
