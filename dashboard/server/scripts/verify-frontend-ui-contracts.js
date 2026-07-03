@@ -13,6 +13,7 @@ const card = readProjectFile("dashboard/dashboard-web/src/shared/components/Card
 const devicesPage = readProjectFile("dashboard/dashboard-web/src/pages/Devices/DevicesPage.jsx");
 const dashboardPage = readProjectFile("dashboard/dashboard-web/src/pages/Dashboard/DashboardPage.jsx");
 const eventLogPage = readProjectFile("dashboard/dashboard-web/src/pages/EventLog/EventLogPage.jsx");
+const wrongwayLogPage = readProjectFile("dashboard/dashboard-web/src/pages/Dashboard/WrongwayLogPage.jsx");
 const appRouter = readProjectFile("dashboard/dashboard-web/src/app/router.jsx");
 const todaysEventsPath = path.join(
   __dirname,
@@ -113,6 +114,34 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
   "No control board command is linked to this event.",
 ].forEach((token) => {
   assert(!eventLogPage.includes(token), `Event log page must not expose generic/sample copy: ${token}`);
+});
+
+[
+  "역주행 이벤트 이력",
+  "이벤트 API 기준, 신규",
+  "리포트 내보내기",
+  "handleExportReport",
+  "wrongway-events-",
+  "감지 이벤트",
+  "조건에 맞는 역주행 이벤트가 없습니다.",
+  "증거 payload",
+  "원본 payload JSON",
+].forEach((token) => {
+  assert(wrongwayLogPage.includes(token), `Wrongway log page must include operations token: ${token}`);
+});
+
+[
+  "Wrong-way event log",
+  "Back to dashboard",
+  "Export report",
+  "Search id, location, status",
+  "Loading wrong-way events",
+  "No wrong-way events found",
+  "Event information",
+  "Evidence payload",
+  "Select an event to view detail",
+].forEach((token) => {
+  assert(!wrongwayLogPage.includes(token), `Wrongway log page must not expose generic copy: ${token}`);
 });
 
 assert(!dashboardPage.includes("추후 구현"), "Dashboard page must not expose unfinished action comments");
