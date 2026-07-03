@@ -92,6 +92,7 @@ readyEvidence.handoverPackage = {
       completionAudit: readyEvidence.completionAudit.path,
       fieldReadiness: readyEvidence.fieldReadiness.path,
       securityEvidence: readyEvidence.securityEvidence.path,
+      manualEvidenceReadiness: readyEvidence.manualEvidenceReadiness.path,
       handoverIndex: readyEvidence.handoverIndex.path,
       fieldClosurePlan: readyEvidence.fieldClosurePlan.path,
     },

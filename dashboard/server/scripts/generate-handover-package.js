@@ -93,6 +93,7 @@ function latestEvidenceRefs() {
     controlBoardFieldRehearsal: readLatestJsonManifest("artifacts/field-control-board-rehearsal")?.path || null,
     runtimeEvidence: readLatestJsonManifest("artifacts/runtime")?.path || null,
     securityEvidence: readLatestJsonManifest("artifacts/security")?.path || null,
+    manualEvidenceReadiness: readLatestJsonManifest("artifacts/manual-evidence-readiness")?.path || null,
   };
 }
 
@@ -331,6 +332,7 @@ function buildMarkdown(manifest) {
     `- Control-board field rehearsal: ${manifest.evidenceRefs.controlBoardFieldRehearsal || "missing"}`,
     `- Runtime evidence: ${manifest.evidenceRefs.runtimeEvidence || "missing"}`,
     `- Security evidence: ${manifest.evidenceRefs.securityEvidence || "missing"}`,
+    `- Manual evidence readiness: ${manifest.evidenceRefs.manualEvidenceReadiness || "missing"}`,
     "",
     "## Manual Evidence References",
     "",
@@ -407,7 +409,7 @@ function buildMarkdown(manifest) {
     "",
     "## Package Notes",
     "",
-    "- This command refreshes the final evidence chain in order: delivery evidence, field readiness, completion audit, field closure plan, then handover index.",
+    "- This command refreshes the final evidence chain in order: delivery evidence, manual evidence readiness, field readiness, completion audit, field closure plan, then handover index.",
     "- Attach this manifest together with the referenced evidence folders.",
     "- `canMarkGoalComplete=false` means field/runtime/hardware evidence is still open.",
     "- Strict security acceptance should attach `npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners --target-url=<delivery-url>` output so skipped scanners become blocking evidence.",
@@ -427,6 +429,7 @@ function main() {
 
   const commands = [
     ["delivery evidence", ["run", "delivery:evidence"]],
+    ["manual evidence readiness", ["run", "manual:evidence-readiness", "--", `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["field readiness", ["run", "field:readiness", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["completion audit", ["run", "completion:audit"]],
     ["field closure plan", ["run", "field:closure-plan", "--", `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],

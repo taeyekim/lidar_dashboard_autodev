@@ -89,6 +89,7 @@ const latestCompletion = readLatestJsonManifest("artifacts/completion-audit");
 const latestPackage = readLatestJsonManifest("artifacts/handover-package");
 const latestReadiness = readLatestJsonManifest("artifacts/field-readiness");
 const latestSecurity = readLatestJsonManifest("artifacts/security");
+const latestManualReadiness = readLatestJsonManifest("artifacts/manual-evidence-readiness");
 const latestDelivery = readLatestJsonManifest("artifacts/delivery");
 const latestIndex = readLatestJsonManifest("artifacts/handover-index");
 const latestClosurePlan = readLatestJsonManifest("artifacts/field-closure-plan");
@@ -211,6 +212,11 @@ if (latestPackage) {
     assert(data.evidenceRefs?.fieldReadiness === latestReadiness?.path, "READY package must reference latest field readiness");
     assert(latestSecurity, "READY package requires latest security evidence");
     assert(data.evidenceRefs?.securityEvidence === latestSecurity.path, "READY package must reference latest security evidence");
+    assert(latestManualReadiness, "READY package requires latest manual evidence readiness");
+    assert(
+      data.evidenceRefs?.manualEvidenceReadiness === latestManualReadiness.path,
+      "READY package must reference latest manual evidence readiness",
+    );
     assert(data.evidenceRefs?.handoverIndex === latestIndex?.path, "READY package must reference latest handover index");
     assert(data.evidenceRefs?.fieldClosurePlan === latestClosurePlan?.path, "READY package must reference latest field closure plan");
     assert(data.residualFieldGates.length === 0, "READY handover package must have no residual field gates");

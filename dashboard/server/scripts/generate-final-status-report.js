@@ -158,6 +158,7 @@ function refsAreFresh(handoverPackage, evidenceRefs) {
     completionAudit: evidencePath(evidenceRefs.completionAudit),
     fieldReadiness: evidencePath(evidenceRefs.fieldReadiness),
     securityEvidence: evidencePath(evidenceRefs.securityEvidence),
+    manualEvidenceReadiness: evidencePath(evidenceRefs.manualEvidenceReadiness),
     handoverIndex: evidencePath(evidenceRefs.handoverIndex),
     fieldClosurePlan: evidencePath(evidenceRefs.fieldClosurePlan),
   };
