@@ -85,7 +85,10 @@ safety validation, and field rehearsal evidence.
   track and event stage.
 - `wrong-way-level-1` creates/reuses the stage-1 control command path only.
 - `wrong-way-level-2` creates/reuses the stage-2 control command path only.
-- `situation-ended` resolves active wrong-way events for the same stable track.
+- `situation-ended` creates a closing traffic event, resolves active stage-1
+  and stage-2 wrong-way events for the same stable track to `RESOLVED`, writes
+  `SITUATION_ENDED_RESOLVED` audit logs, and creates/reuses the
+  `STAGE_2_RETURN` control-board command path.
 - `/api/events/summary` reports vehicle counts from DB unique vehicle tracks,
   not from the raw LiDAR count field.
 

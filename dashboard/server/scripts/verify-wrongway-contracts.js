@@ -84,6 +84,11 @@ assertIncludes(
   "resolvedEventCount: result.resolvedEvents.length",
 ].forEach((token) => assertIncludes(service, token, "wrongway situation-ended command metadata"));
 [
+  "STAGE_2_RETURN",
+  "SITUATION_ENDED_RESOLVED",
+  "RESOLVED",
+].forEach((token) => assertIncludes(payloadSpec, token, "lidar payload spec situation-ended lifecycle"));
+[
   "prisma.controlCommand.findFirst",
   "trafficEventId: trafficEvent.id",
   "commandType",
@@ -94,11 +99,16 @@ assertIncludes(
 [
   "\"wrong-way-level-1\": \"STAGE_1_ON\"",
   "\"wrong-way-level-2\": \"STAGE_2_ON\"",
+  "\"situation-ended\": \"STAGE_2_RETURN\"",
 ].forEach((token) => assertIncludes(controlBoardService, token, "control board wrong-way command map"));
 [
   "level-1 wrong-way payloads must create or reuse only stage-1 control commands",
   "level-1 wrong-way payloads must not auto-escalate to stage-2 control commands",
   "stage-2 control command must be created only after an explicit level-2 payload",
+  "situation-ended must resolve both active stage-1 and stage-2 events for the track",
+  "situation-ended must mark active wrong-way events RESOLVED",
+  "situation-ended must create a return command for the control board",
+  "situation-ended return command must link to the closing event",
   "camelCase objectId payload must reuse the stable vehicle track",
   "stableObjectId wrong-way payload must create a traffic event",
   "stableObjectId must normalize to event trackId",

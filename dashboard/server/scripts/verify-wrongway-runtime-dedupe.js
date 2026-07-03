@@ -99,11 +99,22 @@ function createMockPrisma() {
         }
         return tx.trafficEvent.create({ data: create });
       },
-      async findMany() {
-        return [];
+      async findMany({ where } = {}) {
+        return state.trafficEvents.filter((event) => {
+          if (where?.id?.in && !where.id.in.includes(event.id)) return false;
+          if (where?.id?.not && event.id === where.id.not) return false;
+          if (where?.trackId && event.trackId !== where.trackId) return false;
+          if (where?.eventType?.in && !where.eventType.in.includes(event.eventType)) return false;
+          if (where?.status?.notIn?.includes(event.status)) return false;
+          return true;
+        });
       },
-      async updateMany() {
-        return { count: 0 };
+      async updateMany({ where, data }) {
+        const events = await tx.trafficEvent.findMany({ where });
+        events.forEach((event) => {
+          Object.assign(event, data, { updatedAt: new Date("2026-07-03T00:00:03.000Z") });
+        });
+        return { count: events.length };
       },
     },
     eventLog: {
@@ -256,6 +267,37 @@ async function main() {
   assert(explicitLevel2.eventCreated, "explicit wrong-way level 2 payload must create the stage-2 traffic event");
   assertEqual(commandCalls.filter((call) => call.commandType === "STAGE_2_ON").length, 1, "stage-2 control command must be created only after an explicit level-2 payload");
 
+  const situationEnded = await ingestWrongwayPayload({
+    type: "situation-ended",
+    zone_id: "Z-DEDUPE",
+    track_id: "stable-track-001",
+    timestamp: "2026-07-03T00:00:04.500Z",
+    message: "wrong-way situation ended",
+  }, { receivedAt: "2026-07-03T00:00:04.500Z" });
+
+  assert(situationEnded.eventCreated, "situation-ended payload must create a closing traffic event");
+  assertEqual(situationEnded.resolvedEventIds.length, 2, "situation-ended must resolve both active stage-1 and stage-2 events for the track");
+  assertEqual(
+    prisma.__state.trafficEvents.filter(
+      (event) =>
+        event.trackId === "stable-track-001" &&
+        ["wrong-way-level-1", "wrong-way-level-2"].includes(event.eventType) &&
+        event.status === "RESOLVED",
+    ).length,
+    2,
+    "situation-ended must mark active wrong-way events RESOLVED",
+  );
+  assert(
+    prisma.__state.eventLogs.filter((log) => log.action === "SITUATION_ENDED_RESOLVED" && log.metadata?.closingEventId === situationEnded.eventId).length === 2,
+    "situation-ended must create resolution event logs for audit evidence",
+  );
+  assertEqual(commandCalls.filter((call) => call.commandType === "STAGE_2_RETURN").length, 1, "situation-ended must create a return command for the control board");
+  assertEqual(
+    commandCalls.find((call) => call.commandType === "STAGE_2_RETURN").trafficEventId,
+    situationEnded.eventId,
+    "situation-ended return command must link to the closing event",
+  );
+
   const stableObjectLevel1 = await ingestWrongwayPayload({
     type: "wrong-way-level-1",
     zoneId: "Z-DEDUPE",
@@ -269,7 +311,11 @@ async function main() {
   assertEqual(stableObjectLevel1.event.trackId, "field-stable-object-002", "stableObjectId must normalize to event trackId");
 
   const vehicleTrackRealtime = realtimeMessages.filter((message) => message.type === "vehicle-track.updated");
-  assertEqual(vehicleTrackRealtime.length, 7, "every ingest must publish vehicle-track.updated for operators");
+  assertEqual(vehicleTrackRealtime.length, 8, "every ingest must publish vehicle-track.updated for operators");
+  assert(
+    realtimeMessages.filter((message) => message.type === "traffic-event.updated").length >= 3,
+    "situation-ended must publish updates for the closing event and resolved active events",
+  );
 
   console.log("wrongway runtime dedupe ok");
 }
