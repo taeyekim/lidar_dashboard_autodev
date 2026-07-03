@@ -166,6 +166,22 @@ function commandCatalog(baseUrl) {
       doneWhen: "Completion audit is COMPLETE with canMarkGoalComplete=true.",
     },
     {
+      id: "handover-index",
+      phase: "Package Refresh",
+      actionTypes: ["AUTOMATED_REFRESH_AVAILABLE", "FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED", "REVIEW_REQUIRED"],
+      command: `npm.cmd run handover:index -- --generated-by="field-reviewer-name" --site-name="delivery-site-name"`,
+      purpose: "Index latest evidence, field action artifacts, manual evidence, and closure links before package assembly.",
+      doneWhen: "Handover index is READY or explicitly lists missing, stale, review, and open field action artifact areas.",
+    },
+    {
+      id: "field-closure-plan",
+      phase: "Package Refresh",
+      actionTypes: ["AUTOMATED_REFRESH_AVAILABLE", "FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED", "REVIEW_REQUIRED"],
+      command: `npm.cmd run field:closure-plan -- --generated-by="field-reviewer-name" --site-name="delivery-site-name"`,
+      purpose: "Generate the ordered field closure plan, including Field Action Artifact Actions from completion audit.",
+      doneWhen: "Field closure plan is READY or lists the remaining closure actions and done-when criteria.",
+    },
+    {
       id: "handover-package",
       phase: "Package Refresh",
       actionTypes: ["AUTOMATED_REFRESH_AVAILABLE", "FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED", "REVIEW_REQUIRED"],

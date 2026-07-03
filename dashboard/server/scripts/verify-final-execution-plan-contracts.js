@@ -40,7 +40,10 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "This execution plan does not prove field completion", "final execution plan generator"],
   [generator, "npm.cmd run final:status", "final execution plan generator"],
   [generator, "npm.cmd run handover:package", "final execution plan generator"],
+  [generator, "npm.cmd run handover:index", "final execution plan generator"],
+  [generator, "npm.cmd run field:closure-plan", "final execution plan generator"],
   [generator, "npm.cmd run field:gate-closure-map", "final execution plan generator"],
+  [generator, "Field Action Artifact Actions", "final execution plan generator"],
   [generator, "execution phase", "final execution plan generator"],
   [generator, "scripts/control-board-field-rehearsal.ps1", "final execution plan generator"],
   [generator, "scripts/lidar-ingest-rehearsal.ps1", "final execution plan generator"],
@@ -93,6 +96,17 @@ assert(openPlan.orderedCommands.some((item) => item.id === "control-board-field-
 assert(openPlan.orderedCommands.some((item) => item.id === "security-evidence"), "security gate should include strict security evidence command");
 assert(openPlan.gatesByActionType.SECURITY_REVIEW_REQUIRED.some((gate) => gate.status === "DELIVERY_FIX_REQUIRED"), "security delivery-fix status should be preserved in gate groups");
 assert(openPlan.orderedCommands.some((item) => item.id === "field-gate-closure-map"), "open plan should include field gate closure map refresh command");
+assert(openPlan.orderedCommands.some((item) => item.id === "handover-index"), "open plan should include handover index refresh command");
+assert(openPlan.orderedCommands.some((item) => item.id === "field-closure-plan"), "open plan should include field closure plan refresh command");
+assert(
+  openPlan.orderedCommands.findIndex((item) => item.id === "completion-audit") <
+    openPlan.orderedCommands.findIndex((item) => item.id === "handover-index") &&
+    openPlan.orderedCommands.findIndex((item) => item.id === "handover-index") <
+    openPlan.orderedCommands.findIndex((item) => item.id === "field-closure-plan") &&
+    openPlan.orderedCommands.findIndex((item) => item.id === "field-closure-plan") <
+    openPlan.orderedCommands.findIndex((item) => item.id === "handover-package"),
+  "open plan should refresh completion audit, handover index, closure plan, then handover package in order",
+);
 assert(openPlan.orderedCommands.some((item) => item.command.includes("http://field.local:8080")), "commands should use the requested base URL");
 assert(openPlan.sourceFieldGateClosureMap.includes("artifacts/field-gate-closure-map"), "execution plan should reference gate closure map");
 
@@ -138,6 +152,14 @@ assert(
 assert(
   automatedRefreshCommands.some((item) => item.id === "field-owner-briefs"),
   "automated refresh gates should include field owner briefs refresh",
+);
+assert(
+  automatedRefreshCommands.some((item) => item.id === "handover-index"),
+  "automated refresh gates should include handover index refresh",
+);
+assert(
+  automatedRefreshCommands.some((item) => item.id === "field-closure-plan"),
+  "automated refresh gates should include field closure plan refresh",
 );
 assert(buildOrderedCommands([{ actionType: "REVIEW_REQUIRED" }], "http://localhost:8080").some((item) => item.id === "final-status"), "review gates should still include final status refresh");
 assert(buildOrderedCommands([{ actionType: "REVIEW_REQUIRED" }], "http://localhost:8080").some((item) => item.id === "field-gate-closure-map"), "review gates should include gate closure map refresh");
