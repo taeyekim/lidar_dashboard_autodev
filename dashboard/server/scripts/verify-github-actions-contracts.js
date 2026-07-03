@@ -21,6 +21,10 @@ assert(!workflow.includes('"codex/**"'), "CI workflow must not trigger on codex 
 assert(!workflow.includes('"feature/**"'), "CI workflow must not trigger on feature branches");
 assertIncludes("postgres:16-alpine");
 assertIncludes("DATABASE_URL: postgresql://lidar_dashboard_ci:lidar_dashboard_ci@localhost:5432/lidar_dashboard_ci?schema=public");
+assertIncludes("JWT_SECRET: ci-only-jwt-secret-change-in-field");
+assertIncludes("SEED_ADMIN_USER_ID: admin");
+assertIncludes("SEED_ADMIN_PASSWORD: ci-only-randomized-admin-password");
+assert(!workflow.includes("SEED_ADMIN_PASSWORD: admin1234!"), "CI workflow must not use the example seed admin password");
 assertIncludes("CONTROL_BOARD_DRY_RUN: \"true\"");
 assertIncludes("npm run smoke");
 assertIncludes("npm run server:test");

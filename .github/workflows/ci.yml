@@ -28,7 +28,7 @@ jobs:
       DATABASE_URL: postgresql://lidar_dashboard_ci:lidar_dashboard_ci@localhost:5432/lidar_dashboard_ci?schema=public
       JWT_SECRET: ci-only-jwt-secret-change-in-field
       SEED_ADMIN_USER_ID: admin
-      SEED_ADMIN_PASSWORD: admin1234!
+      SEED_ADMIN_PASSWORD: ci-only-randomized-admin-password
       SEED_ADMIN_NAME: CI Administrator
       CONTROL_BOARD_DRY_RUN: "true"
 
