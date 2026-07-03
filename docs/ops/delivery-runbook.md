@@ -33,6 +33,7 @@ Windows PowerShell rehearsal:
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/delivery-verify.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/runtime-smoke.ps1 -StartCompose -StopCompose
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-field-rehearsal.ps1 -BaseUrl http://localhost:8080
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl http://localhost:8080
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080
 npm.cmd run runtime:evidence -- --run-smoke
@@ -75,6 +76,18 @@ curl http://localhost:8080/api/database/health
 curl http://localhost:8080/api/status
 curl http://localhost:8080/api/devices/status
 ```
+
+Focused DB/Prisma field evidence:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-field-rehearsal.ps1 -BaseUrl http://localhost:8080
+```
+
+Use `-RunDeploy` and `-RunSeed` only when the field PostgreSQL target is
+confirmed for migration/seed rehearsal. The script always records `db:status`,
+`/api/database/health`, `/api/status`, `/api/devices/status`, and configured
+site/zone/device API results under
+`artifacts/field-db-rehearsal/<timestamp>/manifest.json` plus `manifest.md`.
 
 Field topology verification:
 
@@ -319,6 +332,7 @@ Evidence package:
 - `npm.cmd run verify:audit-policy` or `npm run verify:audit-policy` result
 - `npm.cmd run security:evidence` manifest under `artifacts/security/<timestamp>/`
 - `scripts/runtime-smoke.ps1` result when Docker runtime smoke is available
+- `artifacts/field-db-rehearsal/<timestamp>/manifest.json` and `manifest.md` from `scripts/db-field-rehearsal.ps1`
 - `artifacts/field-lidar-rehearsal/<timestamp>/manifest.json` and `manifest.md` from `scripts/lidar-ingest-rehearsal.ps1`
 - `artifacts/field-control-board-rehearsal/<timestamp>/manifest.json` and `manifest.md` from `scripts/control-board-field-rehearsal.ps1`
 - raw `npm audit --workspaces` result

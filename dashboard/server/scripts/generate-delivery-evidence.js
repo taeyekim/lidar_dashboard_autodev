@@ -505,6 +505,7 @@ function main() {
     },
   };
   const fieldRehearsalEvidence = {
+    database: { outputRoot: "artifacts/field-db-rehearsal" },
     lidar: { outputRoot: "artifacts/field-lidar-rehearsal" },
     controlBoard: { outputRoot: "artifacts/field-control-board-rehearsal" },
   };
@@ -525,6 +526,7 @@ function main() {
     summarizeCompanionEvidence("Security", companionEvidence.security.outputRoot),
   ];
   fieldRehearsalEvidence.summaries = [
+    summarizeFieldRehearsal("DB And Prisma", fieldRehearsalEvidence.database.outputRoot),
     summarizeFieldRehearsal("Lidar Ingest", fieldRehearsalEvidence.lidar.outputRoot),
     summarizeFieldRehearsal("Control Board TCP", fieldRehearsalEvidence.controlBoard.outputRoot),
   ];
