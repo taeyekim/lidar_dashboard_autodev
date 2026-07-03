@@ -211,6 +211,22 @@ const authLogin = swaggerSpec.components?.schemas?.AuthLoginResponse;
 assert(authLogin?.properties?.authMode?.example === "httpOnlyCookie", "AuthLoginResponse must expose httpOnlyCookie mode");
 assert(!authLogin?.properties?.token, "AuthLoginResponse must not expose the JWT token body field");
 
+const wrongwayIngest = assertPath("post", "/api/wrongway");
+assert(
+  wrongwayIngest.description.includes("wrong-way-level-1") &&
+    wrongwayIngest.description.includes("wrong-way-level-2") &&
+    wrongwayIngest.description.includes("현장 측량 기준") &&
+    wrongwayIngest.description.includes("자동으로") &&
+    wrongwayIngest.description.includes("승격하지 않습니다"),
+  "POST /api/wrongway description must state that dashboard-side level-2 auto escalation is not active before field measurement criteria are approved",
+);
+const wrongwayRequestType = swaggerSpec.components?.schemas?.WrongwayRequest?.properties?.type;
+assert(
+  wrongwayRequestType?.description?.includes("자동 승격하지 않으며") &&
+    wrongwayRequestType?.description?.includes("현장 측량 기준"),
+  "WrongwayRequest.type must document explicit payload type handling and pending field-measurement escalation criteria",
+);
+
 const controlBoardMockPacket =
   swaggerSpec.components?.schemas?.ControlBoardMockRequest?.properties?.packet?.oneOf?.[0]?.example;
 assert(

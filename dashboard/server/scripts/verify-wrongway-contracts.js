@@ -191,4 +191,12 @@ assert(wrongwayResponse, "WrongwayIngestResponse schema is missing");
   "Situation-ended smoke",
 ].forEach((heading) => assertIncludes(runbook, heading, "delivery runbook"));
 
+[
+  "wrong-way-level-1",
+  "wrong-way-level-2",
+  "자동으로 `wrong-way-level-2`로 승격하지 않습니다",
+  "측량/현장 기준이 확정된 뒤",
+  "현장 rehearsal 증적",
+].forEach((token) => assertIncludes(payloadSpec, token, "lidar payload spec level-2 escalation boundary"));
+
 console.log("wrongway contracts ok");
