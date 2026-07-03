@@ -107,6 +107,41 @@ function manualEvidenceRefs() {
   }));
 }
 
+function knownFieldLimitations() {
+  return [
+    {
+      area: "Control Board TCP",
+      limitation: "Live integrated control-board TCP test requires field IP/port and hardware approval.",
+      source: "docs/ops/delivery-evidence-matrix.md",
+      closeWhen: "CONTROL_BOARD_HOST/PORT are configured, hardware owner approves live TCP, and control-board field rehearsal records command/ACK evidence.",
+    },
+    {
+      area: "Level-2 Escalation",
+      limitation: "Dashboard-side wrong-way-level-2 escalation threshold remains field-measurement dependent.",
+      source: "docs/ai/field-system-requirements.md",
+      closeWhen: "Field measurement criteria are approved and automated escalation logic plus rehearsal evidence are added.",
+    },
+    {
+      area: "Traffic KPI Wording",
+      limitation: "Daily, weekly, monthly, and yearly KPI labels require field acceptance of operational wording.",
+      source: "docs/ops/delivery-evidence-matrix.md",
+      closeWhen: "Operator UI walkthrough records accepted statistics wording and display resolution.",
+    },
+    {
+      area: "Security Scanner Evidence",
+      limitation: "gitleaks, Trivy, and OWASP ZAP evidence depends on tool installation or explicit reviewer risk acceptance.",
+      source: "docs/ops/security-scan-checklist.md",
+      closeWhen: "Security evidence is run with --require-scanners, or field-risk acceptance records reviewer, owner, and recheck date.",
+    },
+    {
+      area: "Device Ingest Key",
+      limitation: "If the LiDAR PC or bridge cannot send X-Device-Key, ingest hardening depends on an accepted trusted-LAN exception.",
+      source: "docs/ops/field-risk-acceptance-template.md",
+      closeWhen: "DEVICE_INGEST_API_KEY is configured end to end, or field-risk acceptance documents compensating controls.",
+    },
+  ];
+}
+
 function latestControlBoardSafetyStatus() {
   return (
     readLatestJsonManifest("artifacts/field-readiness")?.data?.env?.controlBoardSafetyStatus ||
@@ -240,6 +275,15 @@ function buildMarkdown(manifest) {
         `| ${markdownCell(item.type)} | ${markdownCell(item.status)} | \`${markdownCell(item.path)}\` | \`${markdownCell(item.template)}\` | ${markdownCell(item.requiredWhen)} |`,
     ),
     "",
+    "## Known Field Limitations",
+    "",
+    "| Area | Limitation | Source | Close When |",
+    "| --- | --- | --- | --- |",
+    ...manifest.knownFieldLimitations.map(
+      (item) =>
+        `| ${markdownCell(item.area)} | ${markdownCell(item.limitation)} | \`${markdownCell(item.source)}\` | ${markdownCell(item.closeWhen)} |`,
+    ),
+    "",
     "## Field Evidence Summary",
     "",
     "| Type | Manifest | PASS | REVIEW | SKIPPED |",
@@ -354,6 +398,7 @@ function main() {
     })),
     evidenceRefs,
     manualEvidenceRefs: manualEvidenceRefs(),
+    knownFieldLimitations: knownFieldLimitations(),
     fieldEvidenceSummary,
     fieldEvidenceOpenItems,
     fieldEvidenceCommandRunbook,
