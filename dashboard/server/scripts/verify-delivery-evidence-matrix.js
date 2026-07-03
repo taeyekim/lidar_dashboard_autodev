@@ -35,6 +35,7 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
 
 [
   "npm run verify:swagger-contracts",
+  "npm run verify:prisma-contracts",
   "npm run ci:db",
   "npm run verify:wrongway-contracts",
   "npm run verify:control-board-protocol",
