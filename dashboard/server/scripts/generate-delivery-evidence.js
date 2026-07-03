@@ -295,6 +295,27 @@ function summarizeFieldPreflight(type, outputRoot) {
   };
 }
 
+function manualEvidenceRefs() {
+  const refs = [
+    {
+      type: "Operator UI Walkthrough",
+      path: "artifacts/manual/operator-ui-walkthrough.md",
+      template: "docs/ops/operator-ui-walkthrough-template.md",
+      requiredWhen: "Field acceptance requires browser walkthrough evidence.",
+    },
+    {
+      type: "Field Risk Acceptance",
+      path: "artifacts/manual/field-risk-acceptance.md",
+      template: "docs/ops/field-risk-acceptance-template.md",
+      requiredWhen: "Field readiness, scanner, trusted-LAN, Swagger, HTTPS cookie, dry-run, or unavailable-hardware risk is accepted instead of resolved.",
+    },
+  ];
+  return refs.map((item) => ({
+    ...item,
+    status: fs.existsSync(path.join(root, item.path)) ? "PRESENT" : "MISSING",
+  }));
+}
+
 function buildAutomatedEvidenceCoverage(rows, commands) {
   const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
   const scripts = packageJson.scripts || {};
@@ -790,6 +811,18 @@ function buildMarkdown(manifest) {
 
   lines.push(
     "",
+    "## Manual Evidence References",
+    "",
+    "| Type | Status | Path | Template | Required When |",
+    "| --- | --- | --- | --- | --- |",
+    ...manifest.manualEvidenceRefs.map(
+      (item) =>
+        `| ${item.type} | ${item.status} | \`${item.path}\` | \`${item.template}\` | ${item.requiredWhen} |`,
+    ),
+  );
+
+  lines.push(
+    "",
     "Additional field gates:",
     "",
     "- Optional external tools such as gitleaks, Trivy, and OWASP ZAP are captured by `npm run security:evidence` or `scripts/security-scan.ps1` when installed.",
@@ -899,6 +932,7 @@ function main() {
     fieldRehearsalEvidence,
     fieldAcceptanceEvidence,
     fieldPreflightEvidence,
+    manualEvidenceRefs: manualEvidenceRefs(),
     automatedEvidenceCoverage,
     handoverSummary,
     fieldVerificationStillRequired: matrixRows.map((row) => ({
@@ -932,6 +966,7 @@ module.exports = {
   summarizeFieldRehearsal,
   summarizeFieldAcceptance,
   summarizeFieldPreflight,
+  manualEvidenceRefs,
   statusLabel,
   timestampForPath,
   unique,

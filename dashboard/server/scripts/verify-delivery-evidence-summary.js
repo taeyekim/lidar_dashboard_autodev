@@ -7,6 +7,7 @@ const {
   summarizeFieldRehearsal,
   summarizeFieldAcceptance,
   summarizeFieldPreflight,
+  manualEvidenceRefs,
 } = require("./generate-delivery-evidence");
 const fs = require("fs");
 const path = require("path");
@@ -102,6 +103,7 @@ const fieldPreflightReviewSummary = buildHandoverSummary(rows, commands.slice(0,
 ]);
 const missingFieldAcceptance = summarizeFieldAcceptance("Field Acceptance", "artifacts/missing-field-acceptance-vector");
 const missingFieldPreflight = summarizeFieldPreflight("Field Preflight", "artifacts/missing-field-preflight-vector");
+const manualEvidence = manualEvidenceRefs();
 const fieldRehearsalMetadataRoot = path.join(
   __dirname,
   "..",
@@ -445,6 +447,24 @@ assert(
 assert(
   missingFieldPreflight.reviewItems.includes("Field Preflight: field preflight manifest not found"),
   "missing field preflight manifest should be review-visible",
+);
+assert(
+  manualEvidence.some(
+    (item) =>
+      item.type === "Operator UI Walkthrough" &&
+      item.path === "artifacts/manual/operator-ui-walkthrough.md" &&
+      item.template === "docs/ops/operator-ui-walkthrough-template.md",
+  ),
+  "manual evidence refs should expose operator UI walkthrough evidence",
+);
+assert(
+  manualEvidence.some(
+    (item) =>
+      item.type === "Field Risk Acceptance" &&
+      item.path === "artifacts/manual/field-risk-acceptance.md" &&
+      item.template === "docs/ops/field-risk-acceptance-template.md",
+  ),
+  "manual evidence refs should expose field risk acceptance evidence",
 );
 assert(bomManifest.data.checks.length === 0, "latest manifest reader should tolerate UTF-8 BOM");
 
