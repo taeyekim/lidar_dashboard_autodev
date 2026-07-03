@@ -560,7 +560,10 @@ try {
     throw "Control-board status latestCommand did not expose responseDurationMs."
   }
 
-  Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/auth/logout" -Body @{} -CookieJar $cookieJar -CsrfToken $csrfToken | Out-Null
+  $logoutStatus = Invoke-CurlStatus -Method "POST" -Url "$BaseUrl/api/auth/logout" -Body @{} -CookieJar $cookieJar -CsrfToken $csrfToken
+  Assert-HttpStatus -Response $logoutStatus -Expected 200 -Label "cookie-auth logout smoke"
+  $afterLogoutMe = Invoke-CurlStatus -Url "$BaseUrl/api/auth/me" -CookieJar $cookieJar
+  Assert-HttpStatus -Response $afterLogoutMe -Expected 401 -Label "logout clears cookie smoke"
   if (Test-Path $cookieJar) {
     Remove-Item -LiteralPath $cookieJar -Force
   }

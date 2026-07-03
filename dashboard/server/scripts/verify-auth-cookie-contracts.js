@@ -46,6 +46,7 @@ const authContext = readProjectFile("dashboard/dashboard-web/src/context/AuthCon
 const authApi = readProjectFile("dashboard/dashboard-web/src/features/auth/authApi.js");
 const loginPage = readProjectFile("dashboard/dashboard-web/src/pages/Login/LoginPage.jsx");
 const envExample = readProjectFile(".env.example");
+const runtimeSmoke = readProjectFile("scripts/runtime-smoke.ps1");
 
 [
   "credentials: true",
@@ -184,5 +185,8 @@ assert(
     "#/components/schemas/OkResponse",
   "Swagger logout response must use OkResponse",
 );
+assert(runtimeSmoke.includes("cookie-auth logout smoke"), "runtime smoke must assert logout returns 200");
+assert(runtimeSmoke.includes("logout clears cookie smoke"), "runtime smoke must assert logout invalidates the cookie-authenticated session");
+assert(runtimeSmoke.includes('$BaseUrl/api/auth/me" -CookieJar $cookieJar'), "runtime smoke must recheck /api/auth/me with the same cookie jar after logout");
 
 console.log("auth cookie contracts ok");
