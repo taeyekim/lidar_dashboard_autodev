@@ -308,8 +308,13 @@ assert(
   ready.sourceRevisionFreshness.some((item) => item.key === "handoverPackage" && item.fresh === true && item.clean === true),
   "complete fixture should verify handover package source revision freshness",
 );
+assert(
+  ready.sourceRevisionFreshness.every((item) => item.branch === "dev" && item.branchOk === true),
+  "complete fixture should verify Git-bearing evidence was generated from dev",
+);
 assert(buildMarkdown(ready).includes("READY_TO_CLOSE"), "markdown should include READY_TO_CLOSE");
 assert(buildMarkdown(ready).includes("Source Revision Freshness"), "markdown should include source revision freshness");
+assert(buildMarkdown(ready).includes("| Evidence | Path | Branch | Evidence Commit | Final Status Commit | Clean | Fresh |"), "markdown should include source revision branch");
 assert(buildMarkdown(ready).includes("Delivery Entrypoint Consistency"), "markdown should include delivery entrypoint consistency");
 assert(buildMarkdown(ready).includes("Field Acceptance"), "markdown should include field acceptance summary");
 assert(buildMarkdown(ready).includes("Git pushed to origin/dev: yes"), "markdown should include git push state");
@@ -384,6 +389,31 @@ assert(
     (item) => item.category !== "Evidence Source Revision" || item.actionType === "AUTOMATED_REFRESH_AVAILABLE",
   ),
   "stale source revision gates should be automated refresh actions",
+);
+
+const wrongEvidenceBranch = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    handoverPackage: {
+      ...readyEvidence.handoverPackage,
+      data: {
+        ...readyEvidence.handoverPackage.data,
+        git: { branch: "feature/local-delivery", commit: "fixture", clean: true },
+      },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
+  git: readyGit,
+});
+
+assert(wrongEvidenceBranch.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "wrong evidence branch fixture should require review");
+assert(
+  wrongEvidenceBranch.remainingGates.some(
+    (item) => item.category === "Evidence Source Revision" && item.message.includes("evidence branch feature/local-delivery is not dev"),
+  ),
+  "wrong evidence branch fixture should expose non-dev evidence branch",
 );
 
 const blockedSecurity = buildFinalStatusReport({
