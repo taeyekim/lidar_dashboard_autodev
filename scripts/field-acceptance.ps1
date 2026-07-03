@@ -151,8 +151,10 @@ function New-AcceptanceManifest {
   $stepList = ConvertTo-StepList -Steps $Steps
   $reviewSteps = @(Get-StepsByStatus -Steps $stepList -Status "REVIEW")
   $skippedSteps = @(Get-StepsByStatus -Steps $stepList -Status "SKIPPED")
-  $readyForHandover = $Status -eq "PASS"
-  $requiresFieldReview = $Status -eq "REVIEW" -or $Status -eq "IN_PROGRESS" -or $skippedSteps.Count -gt 0
+  $hasReviewer = ![string]::IsNullOrWhiteSpace($Reviewer)
+  $hasSiteName = ![string]::IsNullOrWhiteSpace($SiteName)
+  $readyForHandover = $Status -eq "PASS" -and $hasReviewer -and $hasSiteName
+  $requiresFieldReview = $Status -eq "REVIEW" -or $Status -eq "IN_PROGRESS" -or $skippedSteps.Count -gt 0 -or !$hasReviewer -or !$hasSiteName
   $nextActions = @()
   if ($Status -eq "IN_PROGRESS") {
     $nextActions += "Wait for the field acceptance orchestrator to complete and confirm the final manifest status."
@@ -163,10 +165,10 @@ function New-AcceptanceManifest {
   if ($skippedSteps.Count -gt 0) {
     $nextActions += "Confirm each skipped step is accepted by the field reviewer or rerun without skip switches."
   }
-  if (!$Reviewer) {
+  if (!$hasReviewer) {
     $nextActions += "Record the field reviewer name with -Reviewer before attaching the evidence package."
   }
-  if (!$SiteName) {
+  if (!$hasSiteName) {
     $nextActions += "Record the delivery site name with -SiteName before final handover."
   }
   if ($nextActions.Count -eq 0) {

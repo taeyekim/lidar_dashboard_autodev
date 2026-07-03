@@ -30,6 +30,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `npm run handover:package` refreshes delivery evidence, field readiness, completion audit, handover index, and field closure plan in order, then writes `artifacts/handover-package/<timestamp>/manifest.json` plus `manifest.md`; strict completion uses `npm run handover:package -- --strict`.
 - [ ] `npm run field:acceptance` or `scripts/field-acceptance.ps1` runs the field acceptance orchestrator and creates `artifacts/field-acceptance/<timestamp>/manifest.json` plus `manifest.md`.
 - [ ] Field acceptance manifest records the field reviewer, site name, handover readiness, skipped/review step counts, and next actions.
+- [ ] Field acceptance `readyForHandover=true` is allowed only when the status is `PASS` and both reviewer and site name are recorded.
 - [ ] `docker compose up --build` starts DB, backend, frontend, and reverse proxy.
 - [ ] `curl http://localhost:8080/healthz` returns `ok`.
 - [ ] `curl http://localhost:8080/api/health` returns `ok: true`.

@@ -57,6 +57,9 @@ const deliveryEvidence = readProjectFile("dashboard/server/scripts/generate-deli
   "PASS_WITH_SKIPS",
   "readyForHandover",
   "requiresFieldReview",
+  "IsNullOrWhiteSpace($Reviewer)",
+  "IsNullOrWhiteSpace($SiteName)",
+  "$Status -eq \"PASS\" -and $hasReviewer -and $hasSiteName",
   "nextActions",
   "Field Acceptance Decision",
   "Field Acceptance Orchestrator",
@@ -87,6 +90,7 @@ assert(
   "-Reviewer",
   "-SiteName",
   "artifacts/field-acceptance",
+  "Handover readiness is true",
 ].forEach((token) => assertIncludes(runbook, token, "delivery runbook"));
 
 [
@@ -100,6 +104,7 @@ assert(
   "scripts/field-acceptance.ps1",
   "field acceptance orchestrator",
   "field reviewer",
+  "readyForHandover=true",
   "artifacts/field-acceptance",
 ].forEach((token) => assertIncludes(acceptance, token, "acceptance checklist"));
 
