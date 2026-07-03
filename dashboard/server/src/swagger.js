@@ -89,6 +89,29 @@ const swaggerSpec = {
         },
       },
     },
+    "/api/auth/logout": {
+      post: {
+        tags: ["Auth"],
+        summary: "Operator logout",
+        description: "Clears the HttpOnly access cookie and readable CSRF cookie.",
+        responses: {
+          200: {
+            description: "Logout success",
+            headers: {
+              "Set-Cookie": {
+                description: "Expired auth and CSRF cookies.",
+                schema: { type: "string", example: "lidar_dashboard_access=; Max-Age=0; Path=/" },
+              },
+            },
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/OkResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
     "/api/health": {
       get: {
         tags: ["Health"],
@@ -423,6 +446,27 @@ const swaggerSpec = {
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/WrongwayIngestResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/wrongway/history": {
+      get: {
+        tags: ["Wrongway"],
+        summary: "Recent wrong-way dashboard history",
+        description:
+          "Returns the recent in-memory dashboard history used by the legacy wrong-way view. DB-backed event detail should use /api/events/{id}.",
+        responses: {
+          200: {
+            description: "Recent wrong-way dashboard history",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: { $ref: "#/components/schemas/WrongwayHistoryItem" },
+                },
               },
             },
           },
@@ -1407,6 +1451,23 @@ const swaggerSpec = {
               },
             ],
           },
+        },
+      },
+      WrongwayHistoryItem: {
+        type: "object",
+        additionalProperties: true,
+        description: "Legacy in-memory dashboard event used by the wrong-way history screen.",
+        properties: {
+          id: { type: "string", example: "wrong-way-20260703-001" },
+          type: { type: "string", example: "wrong-way" },
+          stage: { type: "integer", example: 1 },
+          message: { type: "string", example: "Wrong-way driving detected" },
+          subMessage: { type: "string", example: "Zone: ROUNDABOUT-01" },
+          timestamp: { type: "string", example: "2026. 7. 3. 14:30:00" },
+          zone_id: { type: "string", example: "ROUNDABOUT-01" },
+          track_id: { type: "string", example: "track-wrong-001" },
+          confidence: { type: "number", nullable: true, example: 0.95 },
+          status: { type: "string", example: "NEW" },
         },
       },
       TrafficEvent: {

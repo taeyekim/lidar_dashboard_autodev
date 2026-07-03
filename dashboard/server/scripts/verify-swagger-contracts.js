@@ -15,6 +15,27 @@ function assertSchema(name) {
   assert(swaggerSpec.components?.schemas?.[name], `Schema ${name} is missing from Swagger`);
 }
 
+function responseJsonSchema(operation, label, status = 200) {
+  const schema = operation.responses?.[status]?.content?.["application/json"]?.schema;
+  assert(schema, `${label} must declare a ${status} application/json response schema`);
+  return schema;
+}
+
+function schemaContainsRef(schema, ref) {
+  if (!schema || typeof schema !== "object") return false;
+  if (schema.$ref === ref) return true;
+  return Object.values(schema).some((value) => {
+    if (Array.isArray(value)) return value.some((item) => schemaContainsRef(item, ref));
+    return schemaContainsRef(value, ref);
+  });
+}
+
+function assertResponseSchema(operation, schemaName, label) {
+  const schema = responseJsonSchema(operation, label);
+  const ref = `#/components/schemas/${schemaName}`;
+  assert(schemaContainsRef(schema, ref), `${label} must use ${schemaName} as its 200 response schema`);
+}
+
 function assertOperatorAuth(operation, label) {
   const security = operation.security || [];
   assert(
@@ -37,15 +58,27 @@ function assertOptionalDeviceKey(operation, label) {
 }
 
 [
+  ["/api/auth/me", "get", "AuthMeResponse"],
+  ["/api/auth/logout", "post", "OkResponse"],
   ["/api/status", "get", "SystemStatusResponse"],
   ["/api/sites", "get", "SiteListResponse"],
   ["/api/zones", "get", "ZoneListResponse"],
   ["/api/devices", "get", "DeviceListResponse"],
   ["/api/devices/status", "get", "DeviceStatusSummaryResponse"],
+  ["/api/control-board/status", "get", "ControlBoardStatusResponse"],
+  ["/api/control-board/commands", "get", "ControlBoardCommandListResponse"],
+  ["/api/events", "get", "EventListResponse"],
+  ["/api/events/recent", "get", "EventListResponse"],
+  ["/api/events/summary", "get", "EventSummaryResponse"],
+  ["/api/events/{id}", "get", "TrafficEvent"],
+  ["/api/events/{id}/logs", "get", "EventLog"],
   ["/api/statistics/traffic", "get", "TrafficStatisticsResponse"],
+  ["/api/ingest/status", "get", "IngestStatusResponse"],
+  ["/api/wrongway/history", "get", "WrongwayHistoryItem"],
 ].forEach(([path, method, schema]) => {
-  assertPath(method, path);
+  const operation = assertPath(method, path);
   assertSchema(schema);
+  assertResponseSchema(operation, schema, `${method.toUpperCase()} ${path}`);
 });
 
 [
