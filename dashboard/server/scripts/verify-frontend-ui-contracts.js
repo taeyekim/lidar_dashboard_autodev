@@ -112,6 +112,7 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
   "Search id, type, status, location",
   "Add operator memo",
   "No control board command is linked to this event.",
+  "Select an event.",
 ].forEach((token) => {
   assert(!eventLogPage.includes(token), `Event log page must not expose generic/sample copy: ${token}`);
 });

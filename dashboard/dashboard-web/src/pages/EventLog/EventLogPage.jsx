@@ -726,7 +726,7 @@ export default function EventLogPage() {
                 ) : (
                   <div className="flex h-48 flex-col items-center justify-center text-gray-400">
                     <Info className="mb-2 h-8 w-8 opacity-20" />
-                    <p className="text-xs">Select an event.</p>
+                    <p className="text-xs">이벤트를 선택하면 상세 정보가 표시됩니다.</p>
                   </div>
                 )}
               </Card>
