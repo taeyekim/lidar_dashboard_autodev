@@ -8,6 +8,7 @@ const {
   summarizeFieldAcceptance,
   summarizeFieldPreflight,
   manualEvidenceRefs,
+  validateManualEvidence,
 } = require("./generate-delivery-evidence");
 const fs = require("fs");
 const path = require("path");
@@ -104,6 +105,28 @@ const fieldPreflightReviewSummary = buildHandoverSummary(rows, commands.slice(0,
 const missingFieldAcceptance = summarizeFieldAcceptance("Field Acceptance", "artifacts/missing-field-acceptance-vector");
 const missingFieldPreflight = summarizeFieldPreflight("Field Preflight", "artifacts/missing-field-preflight-vector");
 const manualEvidence = manualEvidenceRefs();
+const invalidRiskAcceptanceReason = validateManualEvidence(
+  "Field Risk Acceptance",
+  fs.readFileSync(path.join(__dirname, "..", "..", "..", "docs/ops/field-risk-acceptance-template.md"), "utf8"),
+);
+const validRiskAcceptanceReason = validateManualEvidence(
+  "Field Risk Acceptance",
+  `
+## Accepted Items
+| Status | Area | Risk Accepted | Compensating Control | Evidence Reference | Expiry Or Recheck |
+| --- | --- | --- | --- | --- | --- |
+| ACCEPTED | Security scanners | ZAP skipped on field PC. | Internal-only network and audit policy evidence. | artifacts/security/example/manifest.json | 2026-08-01 |
+
+## Reviewer Decision
+| Item | Value |
+| --- | --- |
+| Decision | ACCEPTED |
+| Required follow-up | Install approved scanner package. |
+| Follow-up owner | field-owner |
+| Target recheck date | 2026-08-01 |
+| Reviewer signature/name | reviewer |
+`,
+);
 const manualEvidenceMissingSummary = buildHandoverSummary(rows, commands.slice(0, 3), coverage, [], [], [], [], [
   {
     type: "Operator UI Walkthrough",
@@ -495,6 +518,11 @@ assert(
   manualEvidenceMissingSummary.notes.some((note) => note.includes("Manual evidence references")),
   "summary should explain manual evidence visibility",
 );
+assert(
+  invalidRiskAcceptanceReason.includes("TODO accepted-item rows"),
+  "risk acceptance template should be invalid until accepted rows are completed",
+);
+assert(validRiskAcceptanceReason === "", "completed risk acceptance evidence should validate");
 assert(bomManifest.data.checks.length === 0, "latest manifest reader should tolerate UTF-8 BOM");
 
 console.log("delivery evidence summary vectors ok");

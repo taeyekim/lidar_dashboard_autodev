@@ -310,10 +310,71 @@ function manualEvidenceRefs() {
       requiredWhen: "Field readiness, scanner, trusted-LAN, Swagger, HTTPS cookie, dry-run, or unavailable-hardware risk is accepted instead of resolved.",
     },
   ];
-  return refs.map((item) => ({
-    ...item,
-    status: fs.existsSync(path.join(root, item.path)) ? "PRESENT" : "MISSING",
-  }));
+  return refs.map((item) => {
+    const absolutePath = path.join(root, item.path);
+    if (!fs.existsSync(absolutePath)) {
+      return { ...item, status: "MISSING", validationReason: "Evidence file does not exist." };
+    }
+    const content = fs.readFileSync(absolutePath, "utf8");
+    const validationReason = validateManualEvidence(item.type, content);
+    return {
+      ...item,
+      status: validationReason ? "INVALID" : "PRESENT",
+      validationReason,
+    };
+  });
+}
+
+function validateManualEvidence(type, content) {
+  if (type === "Operator UI Walkthrough") {
+    const requiredTokens = [
+      "## Required Screens",
+      "Login",
+      "Dashboard",
+      "Control-board mode",
+      "Event detail",
+      "Devices",
+      "Event Log",
+      "Statistics",
+      "Swagger",
+      "## Reviewer Decision",
+      "Walkthrough result",
+    ];
+    const missingTokens = requiredTokens.filter((token) => !content.includes(token));
+    if (missingTokens.length > 0) return `Missing required token(s): ${missingTokens.join(", ")}.`;
+    if (/\|\s*TODO\s*\|/.test(content)) return "Evidence still contains TODO screen rows.";
+    if (!/\|\s*Walkthrough result\s*\|\s*PASS\s*\|/.test(content)) {
+      return "Evidence must record '| Walkthrough result | PASS |'.";
+    }
+  }
+
+  if (type === "Field Risk Acceptance") {
+    const requiredTokens = [
+      "## Accepted Items",
+      "Risk Accepted",
+      "Compensating Control",
+      "Evidence Reference",
+      "Expiry Or Recheck",
+      "## Reviewer Decision",
+      "Decision",
+      "Follow-up owner",
+      "Target recheck date",
+      "Reviewer signature/name",
+    ];
+    const missingTokens = requiredTokens.filter((token) => !content.includes(token));
+    if (missingTokens.length > 0) return `Missing required token(s): ${missingTokens.join(", ")}.`;
+    if (/\|\s*TODO\s*\|/.test(content)) return "Evidence still contains TODO accepted-item rows.";
+    if (!/\|\s*Decision\s*\|\s*(ACCEPTED|RECHECK_REQUIRED)\s*\|/.test(content)) {
+      return "Evidence must record a reviewer decision of ACCEPTED or RECHECK_REQUIRED.";
+    }
+    const emptyField = ["Follow-up owner", "Target recheck date", "Reviewer signature/name"].find((field) => {
+      const pattern = new RegExp(`\\|\\s*${field}\\s*\\|\\s*\\|`);
+      return pattern.test(content);
+    });
+    if (emptyField) return `Evidence has an empty '${emptyField}' value.`;
+  }
+
+  return "";
 }
 
 function buildAutomatedEvidenceCoverage(rows, commands) {
@@ -556,8 +617,8 @@ function buildHandoverSummary(
   const fieldPreflightReviewItems = fieldPreflightSummaries.flatMap((item) => item.reviewItems || []);
   const fieldPreflightSkippedItems = fieldPreflightSummaries.flatMap((item) => item.skippedItems || []);
   const manualEvidenceMissingItems = manualEvidence
-    .filter((item) => item.status === "MISSING")
-    .map((item) => `${item.type}: ${item.path}`);
+    .filter((item) => item.status !== "PRESENT")
+    .map((item) => `${item.type}: ${item.path}${item.validationReason ? ` (${item.validationReason})` : ""}`);
   const coverageCounts = automatedEvidenceCoverage.reduce((accumulator, item) => {
     accumulator[item.coverage] = (accumulator[item.coverage] || 0) + 1;
     return accumulator;
@@ -830,11 +891,11 @@ function buildMarkdown(manifest) {
     "",
     "## Manual Evidence References",
     "",
-    "| Type | Status | Path | Template | Required When |",
-    "| --- | --- | --- | --- | --- |",
+    "| Type | Status | Path | Template | Required When | Validation |",
+    "| --- | --- | --- | --- | --- | --- |",
     ...manifest.manualEvidenceRefs.map(
       (item) =>
-        `| ${item.type} | ${item.status} | \`${item.path}\` | \`${item.template}\` | ${item.requiredWhen} |`,
+        `| ${item.type} | ${item.status} | \`${item.path}\` | \`${item.template}\` | ${item.requiredWhen} | ${item.validationReason || "ok"} |`,
     ),
   );
 
@@ -986,6 +1047,7 @@ module.exports = {
   summarizeFieldAcceptance,
   summarizeFieldPreflight,
   manualEvidenceRefs,
+  validateManualEvidence,
   statusLabel,
   timestampForPath,
   unique,
