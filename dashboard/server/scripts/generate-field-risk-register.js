@@ -45,7 +45,11 @@ function riskAreaForFieldValue(name) {
   const mapping = {
     DEVICE_INGEST_API_KEY: "DEVICE_INGEST_API_KEY trusted-LAN exception",
     AUTH_COOKIE_SECURE: "HTTPS cookie posture",
+    AUTH_COOKIE_SAMESITE: "Cookie SameSite posture",
     NGINX_SWAGGER_ALLOW: "Swagger exposure",
+    NGINX_WRONGWAY_RATE_LIMIT: "Nginx wrong-way rate limit",
+    NGINX_WRONGWAY_BURST: "Nginx wrong-way rate limit",
+    NGINX_CONTENT_SECURITY_POLICY: "Nginx content security policy",
     CONTROL_BOARD_DRY_RUN: "Control-board live TCP",
     CONTROL_BOARD_HOST: "Control-board live TCP",
     CONTROL_BOARD_PORT: "Control-board live TCP",
@@ -106,6 +110,9 @@ function riskAreaForGate(gate) {
   const text = `${gate.category || ""} ${gate.message || ""}`.toLowerCase();
   if (text.includes("security") || text.includes("scanner") || text.includes("zap") || text.includes("trivy") || text.includes("gitleaks")) return "Security scanners";
   if (text.includes("swagger")) return "Swagger exposure";
+  if (text.includes("rate limit") || text.includes("burst")) return "Nginx wrong-way rate limit";
+  if (text.includes("content security") || text.includes("csp")) return "Nginx content security policy";
+  if (text.includes("samesite")) return "Cookie SameSite posture";
   if (text.includes("cookie") || text.includes("https")) return "HTTPS cookie posture";
   if (text.includes("device") || text.includes("ingest")) return "DEVICE_INGEST_API_KEY trusted-LAN exception";
   if (text.includes("control") || text.includes("tcp") || text.includes("live")) return "Control-board live TCP";

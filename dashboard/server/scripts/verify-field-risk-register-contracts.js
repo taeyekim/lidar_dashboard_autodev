@@ -42,6 +42,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "DEVICE_INGEST_API_KEY trusted-LAN exception",
   "Swagger exposure",
   "HTTPS cookie posture",
+  "Cookie SameSite posture",
+  "Nginx wrong-way rate limit",
+  "Nginx content security policy",
   "Control-board live TCP",
   "Control-board live approval",
   "Operator UI walkthrough",
@@ -88,6 +91,17 @@ const fieldReadiness = {
           ],
         },
         {
+          owner: "Auth/Security",
+          items: [
+            {
+              name: "AUTH_COOKIE_SAMESITE",
+              state: "missing",
+              priority: "REVIEW",
+              nextAction: "Set AUTH_COOKIE_SAMESITE.",
+            },
+          ],
+        },
+        {
           owner: "Control-board TCP",
           items: [
             {
@@ -95,6 +109,23 @@ const fieldReadiness = {
               state: "missing",
               priority: "BLOCKING",
               nextAction: "Fill CONTROL_BOARD_HOST.",
+            },
+          ],
+        },
+        {
+          owner: "Nginx Delivery",
+          items: [
+            {
+              name: "NGINX_WRONGWAY_RATE_LIMIT",
+              state: "missing",
+              priority: "REVIEW",
+              nextAction: "Set NGINX_WRONGWAY_RATE_LIMIT.",
+            },
+            {
+              name: "NGINX_CONTENT_SECURITY_POLICY",
+              state: "missing",
+              priority: "REVIEW",
+              nextAction: "Set NGINX_CONTENT_SECURITY_POLICY.",
             },
           ],
         },
@@ -146,7 +177,19 @@ const finalStatus = {
   },
 };
 
-assert(buildFieldValueRisks(fieldReadiness).length === 2, "field value risks should include open field values");
+assert(buildFieldValueRisks(fieldReadiness).length === 5, "field value risks should include open field values");
+assert(
+  buildFieldValueRisks(fieldReadiness).some((item) => item.area === "Cookie SameSite posture"),
+  "field value risks should map AUTH_COOKIE_SAMESITE to Cookie SameSite posture",
+);
+assert(
+  buildFieldValueRisks(fieldReadiness).some((item) => item.area === "Nginx wrong-way rate limit"),
+  "field value risks should map Nginx rate limit to a reviewer-readable area",
+);
+assert(
+  buildFieldValueRisks(fieldReadiness).some((item) => item.area === "Nginx content security policy"),
+  "field value risks should map Nginx CSP to a reviewer-readable area",
+);
 assert(buildSecurityRisks(security).length === 1, "security risks should include blocking scanner checks");
 assert(buildFinalStatusRisks(finalStatus).length === 2, "final status risks should include actionable gates");
 assert(groupRiskItems([{ area: "Security scanners", owner: "Auth/Security", requiresReviewerDecision: true, copyToRiskAcceptance: true }])[0].copyToRiskAcceptanceCount === 1, "risk grouping should count acceptance rows");
