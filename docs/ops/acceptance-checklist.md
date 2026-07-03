@@ -33,6 +33,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `curl http://localhost:8080/api/status` returns server, database, ingest, websocket, devices, and control board sections.
 - [ ] `curl http://localhost:8080/api/devices/status` returns configured device counts.
 - [ ] `scripts/db-field-rehearsal.ps1` records DB/Prisma field evidence; `-RunDeploy` and `-RunSeed` are used only after the field PostgreSQL target is confirmed.
+- [ ] If the delivery runtime or field hardware is unavailable, `npm run field:rehearsal-unavailable` records `FIELD_REHEARSAL_UNAVAILABLE` REVIEW manifests instead of leaving field rehearsal evidence missing.
 - [ ] Re-running Prisma seed refreshes the default 월출산휴게소 site, `ROUNDABOUT-01/02`, lidar PC, and control board names.
 - [ ] Browser WebSocket URL uses `ws://<host>:<NGINX_PORT>/ws` through Nginx.
 - [ ] `/assets/` responses include immutable cache headers, while SPA entry routes include `Cache-Control: no-store`.

@@ -39,6 +39,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-fi
 npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080
 npm.cmd run runtime:evidence -- --run-smoke
 npm.cmd run runtime:evidence -- --run-smoke --use-existing-stack --base-url=http://localhost:8080
+npm.cmd run field:rehearsal-unavailable -- --reason="Docker runtime or field hardware is unavailable on this workstation"
 npm.cmd run delivery:evidence
 npm.cmd run completion:audit
 ```
@@ -75,6 +76,15 @@ Use `-RunDbDeploy` and `-RunDbSeed` only after the field PostgreSQL target is
 confirmed. Use `-AllowLiveTcp` only after hardware approval. Use
 `-IncludeContainerImages`, `-IncludeZap`, and `-RequireScanners` for strict
 security acceptance when those scanners are installed.
+
+When the delivery Docker stack, lidar PC, field network, or control-board
+hardware is not available on the current workstation, run
+`npm.cmd run field:rehearsal-unavailable`. It writes
+`FIELD_REHEARSAL_UNAVAILABLE` REVIEW manifests under
+`artifacts/field-db-rehearsal/`, `artifacts/field-lidar-rehearsal/`, and
+`artifacts/field-control-board-rehearsal/` so the handover package records why
+field rehearsal is still open and which command must replace the placeholder
+with a PASS manifest.
 
 Strict field acceptance example after the delivery stack is already running:
 
@@ -387,6 +397,7 @@ Evidence package:
 - `artifacts/field-db-rehearsal/<timestamp>/manifest.json` and `manifest.md` from `scripts/db-field-rehearsal.ps1`
 - `artifacts/field-lidar-rehearsal/<timestamp>/manifest.json` and `manifest.md` from `scripts/lidar-ingest-rehearsal.ps1`
 - `artifacts/field-control-board-rehearsal/<timestamp>/manifest.json` and `manifest.md` from `scripts/control-board-field-rehearsal.ps1`
+- `FIELD_REHEARSAL_UNAVAILABLE` REVIEW manifests from `npm run field:rehearsal-unavailable` when the Docker/runtime/hardware environment is unavailable
 - raw `npm audit --workspaces` result
 - `artifacts/security/**` security scan evidence, with skipped checks explained
 - Swagger screenshots or exported API list
