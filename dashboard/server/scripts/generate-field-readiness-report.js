@@ -251,9 +251,9 @@ function buildEnvChecks() {
   const retryCountState = numericState(retryCount, { minimum: 0 });
   const heartbeatIntervalState = numericState(heartbeatInterval);
   const tcpTimingReady = [connectTimeoutState, responseTimeoutState, retryCountState, heartbeatIntervalState].every((state) => state === "configured");
-  const liveReady = dryRun === "false" && liveApproved && host && port;
+  const liveReady = dryRun === "false" && liveApproved && host && port && tcpTimingReady;
   const safetyStatus = dryRun === "false" ? (liveReady ? "LIVE_TCP_READY" : "LIVE_TCP_REVIEW") : "DRY_RUN_SAFE";
-  checks.push(buildCheck("control-board TCP mode", liveReady ? "PASS" : "REVIEW", "critical", `${safetyStatus}: ${liveReady ? "LIVE_TCP values are configured." : "Control-board is dry-run or live TCP values are incomplete."}`, "Set CONTROL_BOARD_DRY_RUN=false only after field IP/port and hardware approval are confirmed."));
+  checks.push(buildCheck("control-board TCP mode", liveReady ? "PASS" : "REVIEW", "critical", `${safetyStatus}: ${liveReady ? "LIVE_TCP host, port, approval, and timing values are configured." : "Control-board is dry-run or live TCP host, port, approval, or timing values are incomplete."}`, "Set CONTROL_BOARD_DRY_RUN=false only after field IP/port, timing values, and hardware approval are confirmed."));
   checks.push(buildCheck("control-board live approval", liveApproved ? "PASS" : "REVIEW", "critical", liveApproved ? "CONTROL_BOARD_LIVE_APPROVED=true." : "CONTROL_BOARD_LIVE_APPROVED is not true.", "Set CONTROL_BOARD_LIVE_APPROVED=true only after hardware owner approval is recorded."));
   checks.push(buildCheck("control-board TCP timing", tcpTimingReady ? "PASS" : "REVIEW", "warning", tcpTimingReady ? "Control-board TCP timing values are numeric and configured." : "Control-board TCP timing values are missing or invalid.", "Set CONTROL_BOARD_CONNECT_TIMEOUT_MS, CONTROL_BOARD_RESPONSE_TIMEOUT_MS, CONTROL_BOARD_RETRY_COUNT, and CONTROL_BOARD_HEARTBEAT_INTERVAL_MS for the field board."));
 

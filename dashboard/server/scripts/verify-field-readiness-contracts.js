@@ -90,6 +90,9 @@ const riskAcceptanceTemplate = readProjectFile("docs/ops/field-risk-acceptance-t
   "The Nginx entrypoint returns a successful /api/health response.",
   "numericState",
   "Control-board TCP timing values are missing or invalid.",
+  "liveApproved && host && port && tcpTimingReady",
+  "LIVE_TCP host, port, approval, and timing values are configured.",
+  "live TCP host, port, approval, or timing values are incomplete.",
 ].forEach((token) => assertIncludes(generator, token, "field readiness generator"));
 
 [
