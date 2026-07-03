@@ -347,7 +347,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-fi
 
 The script logs in with the seeded operator credentials, sends `STAGE_1_ON`,
 `STAGE_2_ON`, and `STAGE_2_RETURN` through `/api/control-board/commands/test`,
-checks `packetHex`, `DRY_RUN` status, `averageResponseMs`, and
+checks `safetyStatus`, `liveTcpReady`, 10-byte `packetHex`, `DRY_RUN` status,
+`DRY_RUN_SKIPPED_SEND` log evidence, `averageResponseMs`, and
 `responseSampleCount`, and writes
 `artifacts/field-control-board-rehearsal/<timestamp>/manifest.json` plus
 `manifest.md`.

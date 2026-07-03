@@ -85,6 +85,59 @@ function Add-Result {
   }
 }
 
+function Assert-ControlBoardSafetyStatus {
+  param(
+    [object]$Status,
+    [bool]$AllowLiveTcp
+  )
+
+  if ($null -eq $Status.PSObject.Properties["liveTcpReady"]) {
+    throw "Control-board status did not expose liveTcpReady."
+  }
+  if ($null -eq $Status.PSObject.Properties["safetyStatus"]) {
+    throw "Control-board status did not expose safetyStatus."
+  }
+  if ($Status.safetyStatus -notin @("DRY_RUN_SAFE", "LIVE_TCP_READY", "LIVE_TCP_REVIEW")) {
+    throw "Control-board status safetyStatus must be DRY_RUN_SAFE, LIVE_TCP_READY, or LIVE_TCP_REVIEW."
+  }
+  if ($Status.mode -eq "DRY_RUN" -and $Status.safetyStatus -ne "DRY_RUN_SAFE") {
+    throw "DRY_RUN mode must report DRY_RUN_SAFE."
+  }
+  if ($Status.mode -eq "LIVE_TCP" -and !$AllowLiveTcp) {
+    throw "Control board is LIVE_TCP. Re-run with -AllowLiveTcp only after field hardware approval."
+  }
+  if ($Status.mode -eq "LIVE_TCP" -and $Status.liveTcpReady -and $Status.safetyStatus -ne "LIVE_TCP_READY") {
+    throw "LIVE_TCP ready state must report LIVE_TCP_READY."
+  }
+  if ($Status.mode -eq "LIVE_TCP" -and !$Status.liveTcpReady -and $Status.safetyStatus -ne "LIVE_TCP_REVIEW") {
+    throw "LIVE_TCP without host/port readiness must report LIVE_TCP_REVIEW."
+  }
+}
+
+function Assert-CommandEvidence {
+  param(
+    [object]$Command,
+    [string]$CommandType,
+    [string]$Mode
+  )
+
+  if ($Command.commandType -ne $CommandType) {
+    throw "$CommandType rehearsal returned commandType $($Command.commandType)."
+  }
+  if (!$Command.packetHex -or $Command.packetHex.Length -ne 20) {
+    throw "$CommandType rehearsal packetHex must be a 10-byte binary frame encoded as 20 hex characters."
+  }
+  if ($Mode -ne "LIVE_TCP") {
+    if ($Command.status -ne "DRY_RUN") {
+      throw "$CommandType rehearsal expected DRY_RUN status, got $($Command.status)."
+    }
+    $dryRunLogs = @($Command.logs | Where-Object { $_.action -eq "DRY_RUN_SKIPPED_SEND" })
+    if ($dryRunLogs.Count -lt 1) {
+      throw "$CommandType rehearsal did not include DRY_RUN_SKIPPED_SEND log evidence."
+    }
+  }
+}
+
 $envValues = Read-DotEnv ".env"
 if (!$UserId -and $env:SEED_ADMIN_USER_ID) { $UserId = $env:SEED_ADMIN_USER_ID }
 if (!$Password -and $env:SEED_ADMIN_PASSWORD) { $Password = $env:SEED_ADMIN_PASSWORD }
@@ -108,6 +161,7 @@ $results = @()
 
 try {
   $initialStatus = Invoke-CurlJson -Url "$BaseUrl/api/control-board/status"
+  Assert-ControlBoardSafetyStatus -Status $initialStatus -AllowLiveTcp ([bool]$AllowLiveTcp)
   $mode = [string]$initialStatus.mode
   if ($mode -eq "LIVE_TCP" -and !$AllowLiveTcp) {
     throw "Control board is LIVE_TCP. Re-run with -AllowLiveTcp only after field hardware approval."
@@ -138,13 +192,12 @@ try {
     if (!$response.command.packetHex) {
       throw "$commandType rehearsal did not expose packetHex."
     }
-    if ($mode -ne "LIVE_TCP" -and $response.command.status -ne "DRY_RUN") {
-      throw "$commandType rehearsal expected DRY_RUN status, got $($response.command.status)."
-    }
+    Assert-CommandEvidence -Command $response.command -CommandType $commandType -Mode $mode
     $results = Add-Result -Results $results -Name "$commandType command rehearsal" -Status "PASS" -Response $response
   }
 
   $finalStatus = Invoke-CurlJson -Url "$BaseUrl/api/control-board/status"
+  Assert-ControlBoardSafetyStatus -Status $finalStatus -AllowLiveTcp ([bool]$AllowLiveTcp)
   if ($null -eq $finalStatus.PSObject.Properties["responseSampleCount"]) {
     throw "Control-board status did not expose responseSampleCount."
   }
@@ -159,6 +212,8 @@ try {
     allowLiveTcp = [bool]$AllowLiveTcp
     initialMode = $mode
     finalMode = $finalStatus.mode
+    safetyStatus = $finalStatus.safetyStatus
+    liveTcpReady = $finalStatus.liveTcpReady
     results = $results
   }
 
@@ -171,6 +226,8 @@ try {
     "- Allow LIVE_TCP: $($manifest.allowLiveTcp)",
     "- Initial mode: $($manifest.initialMode)",
     "- Final mode: $($manifest.finalMode)",
+    "- Safety status: $($manifest.safetyStatus)",
+    "- Live TCP ready: $($manifest.liveTcpReady)",
     "",
     "## Results",
     "",

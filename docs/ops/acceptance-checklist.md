@@ -78,6 +78,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Dry-run command does not open a TCP socket.
 - [ ] `scripts/control-board-field-rehearsal.ps1` records `DRY_RUN` command lifecycle evidence before live hardware approval.
 - [ ] `scripts/control-board-field-rehearsal.ps1 -AllowLiveTcp` is used only after live `CONTROL_BOARD_HOST`/`PORT` and hardware approval are confirmed.
+- [ ] Control-board rehearsal confirms `safetyStatus`, `liveTcpReady`, 10-byte `packetHex`, and `DRY_RUN_SKIPPED_SEND` evidence while dry-run is enabled.
 - [ ] Live TCP command records response hex and CRC status.
 - [ ] Connect timeout and response timeout are distinguishable in error messages.
 - [ ] Timeout/failure records `FAILED` status, final error message, and per-attempt retry logs.
