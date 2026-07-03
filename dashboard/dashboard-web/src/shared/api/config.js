@@ -1,6 +1,6 @@
 const trimTrailingSlash = (value) => String(value || "").replace(/\/+$/, "");
 
-// 프론트에서 사용하는 백엔드, WebSocket, 감지 서버 주소를 환경변수 기준으로 관리한다.
+// Environment-driven endpoints for the API, WebSocket, and detector services.
 const API_HOST = import.meta.env.VITE_API_HOST || "localhost";
 const API_PORT = import.meta.env.VITE_API_PORT || "5000";
 const DETECTOR_HOST = import.meta.env.VITE_DETECTOR_HOST || API_HOST;
@@ -19,7 +19,7 @@ export const DETECTOR_BASE = trimTrailingSlash(
   import.meta.env.VITE_DETECTOR_BASE_URL || `http://${DETECTOR_HOST}:${DETECTOR_PORT}`,
 );
 
-// baseUrl 끝과 path 앞의 슬래시 중복/누락을 정리해 안전한 URL을 만든다.
+// Joins base URLs and paths while removing duplicate or missing slashes.
 export function joinUrl(baseUrl, path) {
   const normalizedPath = String(path || "");
   return `${trimTrailingSlash(baseUrl)}${normalizedPath.startsWith("/") ? normalizedPath : `/${normalizedPath}`}`;

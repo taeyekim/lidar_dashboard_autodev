@@ -23,6 +23,10 @@ function assertIncludes(content, token, label) {
   assert(content.includes(token), `${label} is missing ${token}`);
 }
 
+function assertAscii(content, label) {
+  assert(/^[\x00-\x7F]*$/.test(content), `${label} must not contain mojibake or non-ASCII copy`);
+}
+
 const app = readProjectFile("dashboard/server/src/app.js");
 const controller = readProjectFile("dashboard/server/src/domains/auth/auth.controller.js");
 const middleware = readProjectFile("dashboard/server/src/domains/auth/auth.middleware.js");
@@ -70,6 +74,8 @@ assert(authContext.includes("logoutOperator"), "AuthContext must call the logout
 assert(authApi.includes('postJson("/api/auth/logout", {})'), "frontend auth API must call POST /api/auth/logout");
 assert(!http.includes("Authorization: `Bearer"), "frontend http client must not attach Bearer tokens");
 assert(!http.includes("localStorage"), "frontend http client must not read or write auth tokens in localStorage");
+assertAscii(http, "frontend http client");
+assertAscii(frontendConfig, "frontend API config");
 
 const cookie = buildAuthCookie("jwt-token");
 assert(cookie.includes("HttpOnly"), "auth cookie must be HttpOnly");
