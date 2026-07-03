@@ -130,7 +130,10 @@ For the final attachment refresh, run `npm.cmd run handover:package`. It runs
 `delivery:evidence`, `field:readiness`, `completion:audit`,
 `handover:index`, and `field:closure-plan` in order, then writes
 `artifacts/handover-package/<timestamp>/manifest.json` plus `manifest.md` with
-the refreshed evidence references and command logs. Use
+the refreshed evidence references, command logs, and latest control-board safety
+status. The completion audit, handover index, closure plan, and handover package
+all surface this status so `DRY_RUN_SAFE` or `LIVE_TCP_REVIEW` cannot be
+mistaken for field-ready TCP operation. Use
 `npm.cmd run handover:package -- --strict` when the command should fail unless
 the package status is `READY` and `canMarkGoalComplete=true`.
 

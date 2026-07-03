@@ -59,6 +59,7 @@ function actionForEntry(entry) {
 function buildClosurePlan(options = {}) {
   const handover = readLatestJsonManifest("artifacts/handover-index");
   const completion = readLatestJsonManifest("artifacts/completion-audit");
+  const fieldReadiness = readLatestJsonManifest("artifacts/field-readiness");
   const entries = handover?.data?.entries || [];
   const openEntries = entries.filter((entry) =>
     ["MISSING", "STALE", "REVIEW", "AUTOMATED_CHECKS_REVIEW", "FIELD_VERIFICATION_REQUIRED", "PASS_WITH_SKIPS"].includes(entry.status),
@@ -76,6 +77,11 @@ function buildClosurePlan(options = {}) {
     sourceCompletionAudit: completion?.path || null,
     status: actions.length > 0 ? "OPEN" : "READY",
     canMarkGoalComplete: Boolean(completion?.data?.canMarkGoalComplete),
+    controlBoardSafetyStatus:
+      fieldReadiness?.data?.env?.controlBoardSafetyStatus ||
+      completion?.data?.controlBoardSafetyStatus ||
+      handover?.data?.controlBoardSafetyStatus ||
+      "UNKNOWN",
     counts: {
       openActionCount: actions.length,
       completionBlockerCount: completionBlockers.length,
@@ -98,6 +104,7 @@ function buildMarkdown(manifest) {
     "",
     `- Status: ${manifest.status}`,
     `- Can mark goal complete: ${manifest.canMarkGoalComplete}`,
+    `- Control-board safety status: ${manifest.controlBoardSafetyStatus}`,
     `- Source handover index: ${manifest.sourceHandoverIndex || "missing"}`,
     `- Source completion audit: ${manifest.sourceCompletionAudit || "missing"}`,
     `- Generated at: ${manifest.generatedAt}`,

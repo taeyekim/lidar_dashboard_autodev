@@ -42,6 +42,7 @@ function buildReadinessSignals(fieldReadinessManifest) {
   const status = data.status || "UNKNOWN";
   const reviewCount = normalizeNumber(data.reviewCount);
   const skippedCount = normalizeNumber(data.skippedCount);
+  const controlBoardSafetyStatus = data.env?.controlBoardSafetyStatus || "UNKNOWN";
   const blockerMessages = [];
 
   if (status === "REVIEW" || status === "MISSING" || status === "UNKNOWN") {
@@ -53,11 +54,15 @@ function buildReadinessSignals(fieldReadinessManifest) {
   if (skippedCount > 0 || status === "PASS_WITH_SKIPS") {
     blockerMessages.push(`${skippedCount} field readiness scanner/tool check(s) were skipped.`);
   }
+  if (controlBoardSafetyStatus !== "LIVE_TCP_READY") {
+    blockerMessages.push(`Control-board safety status is ${controlBoardSafetyStatus}.`);
+  }
 
   return {
     status,
     reviewCount,
     skippedCount,
+    controlBoardSafetyStatus,
     blockerMessages,
   };
 }
@@ -178,6 +183,7 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest) {
       fieldBlockerCount: fieldBlockers.length,
     },
     fieldReadinessStatus: readinessSignals.status,
+    controlBoardSafetyStatus: readinessSignals.controlBoardSafetyStatus,
     fieldVerificationRequiredAreas: Array.isArray(summary.fieldVerificationRequiredAreas)
       ? summary.fieldVerificationRequiredAreas
       : [],
@@ -197,6 +203,7 @@ function buildMarkdown(manifest) {
     `- Source field readiness manifest: ${manifest.sourceFieldReadinessManifest || "missing"}`,
     `- Delivery handover status: ${manifest.handoverSummaryStatus || "missing"}`,
     `- Field readiness status: ${manifest.fieldReadinessStatus || "missing"}`,
+    `- Control-board safety status: ${manifest.controlBoardSafetyStatus || "missing"}`,
     "",
     "## Counts",
     "",

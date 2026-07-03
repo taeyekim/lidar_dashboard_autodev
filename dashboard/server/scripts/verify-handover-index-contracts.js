@@ -40,6 +40,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "staleEntryCount",
   "STALE",
   "canMarkGoalComplete",
+  "controlBoardSafetyStatus",
+  "Control-board safety status",
 ].forEach((token) => assertIncludes(generator, token, "handover index generator"));
 
 [

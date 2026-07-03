@@ -25,6 +25,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "sourceHandoverIndex",
   "sourceCompletionAudit",
   "completionBlockers",
+  "controlBoardSafetyStatus",
+  "Control-board safety status",
   "finalCommands",
   "Field Readiness",
   "DB And Prisma Field Rehearsal",

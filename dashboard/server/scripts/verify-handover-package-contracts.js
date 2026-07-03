@@ -29,6 +29,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "field:readiness",
   "evidenceRefs",
   "canMarkGoalComplete",
+  "controlBoardSafetyStatus",
+  "Control-board safety status",
   "failedCommandCount",
   "strictFailureReasons",
   "--strict",
