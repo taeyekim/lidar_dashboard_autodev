@@ -223,6 +223,7 @@ When moving to live TCP:
 Run:
 
 ```bash
+npm run verify:statistics-metrics
 npm run delivery:verify
 npm --prefix dashboard/server test
 npm audit --workspaces
@@ -231,6 +232,7 @@ npm audit --workspaces
 On Windows PowerShell:
 
 ```powershell
+npm.cmd run verify:statistics-metrics
 npm.cmd run delivery:verify
 npm.cmd --prefix dashboard/server test
 npm.cmd audit --workspaces

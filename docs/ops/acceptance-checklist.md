@@ -98,6 +98,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 ## Security
 
 - [ ] `npm run smoke` passes.
+- [ ] `npm run verify:statistics-metrics` passes and confirms unique track counts, wrong-way rate, command success rate, and average TCP ACK response vectors.
 - [ ] `npm --prefix dashboard/server test` passes for backend protocol and contract checks.
 - [ ] `npm run ci` passes.
 - [ ] `npm --prefix dashboard/dashboard-web run lint` passes.
