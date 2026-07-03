@@ -14,6 +14,7 @@ function assertIncludes(content, token, label) {
 }
 
 const generator = readProjectFile("dashboard/server/scripts/generate-handover-package.js");
+const deliveryEvidence = readProjectFile("dashboard/server/scripts/generate-delivery-evidence.js");
 const manualEvidence = readProjectFile("dashboard/server/scripts/manual-evidence.js");
 const packageJson = readProjectFile("package.json");
 const serverPackageJson = readProjectFile("dashboard/server/package.json");
@@ -128,6 +129,17 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "--strict",
   "handover package strict gate failed",
 ].forEach((token) => assertIncludes(generator, token, "handover package generator"));
+
+[
+  "summarizeFieldRehearsal",
+  "FIELD_REHEARSAL_PASS",
+  "PASS rehearsal manifest missing",
+  "baseUrl",
+  "reviewer",
+  "siteName",
+  "hostName",
+  "reviewItems.push",
+].forEach((token) => assertIncludes(deliveryEvidence, token, "delivery evidence rehearsal summary"));
 
 [
   "Operator UI Walkthrough",
