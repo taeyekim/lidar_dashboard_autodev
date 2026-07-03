@@ -149,6 +149,21 @@ function buildFieldEvidenceOpenItems(fieldEvidenceSummary) {
   ]);
 }
 
+function buildFieldEvidenceCommandRunbook(fieldEvidenceOpenItems) {
+  const seen = new Set();
+  return fieldEvidenceOpenItems
+    .filter((item) => item.nextAction)
+    .filter((item) => {
+      if (seen.has(item.nextAction)) return false;
+      seen.add(item.nextAction);
+      return true;
+    })
+    .map((item) => ({
+      type: item.type,
+      command: item.nextAction,
+    }));
+}
+
 function markdownCell(value) {
   return String(value ?? "").replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
 }
@@ -201,6 +216,14 @@ function buildMarkdown(manifest) {
         )
       : ["| none | PASS | No field evidence review/skipped items. | - | - |"]),
     "",
+    "## Field Evidence Command Runbook",
+    "",
+    "| Type | Command |",
+    "| --- | --- |",
+    ...(manifest.fieldEvidenceCommandRunbook.length > 0
+      ? manifest.fieldEvidenceCommandRunbook.map((item) => `| ${markdownCell(item.type)} | ${markdownCell(item.command)} |`)
+      : ["| none | No field evidence commands required. |"]),
+    "",
     "## Commands",
     "",
     "| Status | Command | Log |",
@@ -252,6 +275,7 @@ function main() {
   const controlBoardSafetyStatus = latestControlBoardSafetyStatus();
   const fieldEvidenceSummary = buildFieldEvidenceSummary();
   const fieldEvidenceOpenItems = buildFieldEvidenceOpenItems(fieldEvidenceSummary);
+  const fieldEvidenceCommandRunbook = buildFieldEvidenceCommandRunbook(fieldEvidenceOpenItems);
   const strictFailureReasons = [];
   if (failedCommands.length > 0) {
     strictFailureReasons.push(`${failedCommands.length} package command(s) failed.`);
@@ -285,6 +309,7 @@ function main() {
     evidenceRefs,
     fieldEvidenceSummary,
     fieldEvidenceOpenItems,
+    fieldEvidenceCommandRunbook,
     failedCommandCount: failedCommands.length,
     strictFailureReasons,
   };
