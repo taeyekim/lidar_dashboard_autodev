@@ -82,10 +82,15 @@ assertIncludes(api, "const source = response || {}", "statistics api empty respo
 assertIncludes(api, "const sourceMetric = metric || {}", "statistics api empty metric fallback");
 assertIncludes(api, "Array.isArray(source.buckets)", "statistics api bucket fallback");
 assertIncludes(api, "Array.isArray(source.zones)", "statistics api zone fallback");
-assertIncludes(fieldRequirements, "GET /api/statistics/traffic?range=daily|weekly|monthly|yearly", "field requirements statistics endpoint");
+assertIncludes(
+  fieldRequirements,
+  "GET /api/statistics/traffic?range=daily|weekly|monthly|yearly",
+  "field requirements statistics endpoint",
+);
 assertIncludes(fieldRequirements, "totals", "field requirements statistics response");
 assertIncludes(fieldRequirements, "buckets", "field requirements statistics response");
 assertIncludes(fieldRequirements, "zones", "field requirements statistics response");
+
 [
   "/api/statistics/wrongway-rate",
   "/api/statistics/control-commands",
@@ -107,6 +112,10 @@ assertIncludes(fieldRequirements, "zones", "field requirements statistics respon
   "구역별 위험도",
   "상위 구역",
   "집계된 구역 데이터가 없습니다.",
+  "getRiskTone",
+  "위험",
+  "주의",
+  "정상",
   "normalVehicles",
   "wrongwayVehicles",
   "wrongwayRate",
@@ -118,7 +127,7 @@ assertIncludes(fieldRequirements, "zones", "field requirements statistics respon
   "TCP ACK",
 ].forEach((token) => assertIncludes(panel, token, "traffic statistics panel"));
 
-["Traffic operations", "Top zones", "援먰넻", "?뺤＜", "??＜", "吏묎퀎"].forEach((token) => {
+["Traffic operations", "Top zones", "援먰넻", "吏묎퀎", "??＜", "?뺤＜"].forEach((token) => {
   assert(!panel.includes(token), `traffic statistics panel must not expose placeholder or mojibake copy: ${token}`);
 });
 

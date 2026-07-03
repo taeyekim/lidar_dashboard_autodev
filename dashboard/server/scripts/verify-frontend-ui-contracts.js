@@ -138,7 +138,12 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
   "역주행 차량",
   "역주행률",
   "구역별 위험도",
+  "상위 구역",
   "집계된 구역 데이터가 없습니다.",
+  "getRiskTone",
+  "위험",
+  "주의",
+  "정상",
 ].forEach((token) => assertIncludes(trafficStatisticsPanel, token, "Traffic statistics panel copy"));
 
 [

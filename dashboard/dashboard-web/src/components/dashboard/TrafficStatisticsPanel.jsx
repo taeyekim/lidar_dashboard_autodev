@@ -40,6 +40,13 @@ function formatPeriod(data) {
   return `${new Date(data.period.start).toLocaleString()} - ${new Date(data.period.end).toLocaleString()}`;
 }
 
+function getRiskTone(rate) {
+  const value = Number(rate || 0);
+  if (value >= 5) return { label: "위험", className: "bg-red-100 text-red-700" };
+  if (value >= 1) return { label: "주의", className: "bg-amber-100 text-amber-700" };
+  return { label: "정상", className: "bg-emerald-100 text-emerald-700" };
+}
+
 function MetricTile({ icon, label, value, subLabel, tone = "slate" }) {
   const TileIcon = icon;
   const toneClass = {
@@ -226,32 +233,38 @@ export function TrafficStatisticsPanel() {
                 집계된 구역 데이터가 없습니다.
               </div>
             )}
-            {topZones.map((zone) => (
-              <div key={zone.zoneCode || zone.name} className="rounded border border-gray-200 bg-white p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-black text-gray-900">{zone.name}</div>
-                    <div className="mt-0.5 truncate text-xs font-semibold text-gray-400">
-                      {zone.zoneCode || "UNKNOWN"}
+            {topZones.map((zone) => {
+              const risk = getRiskTone(zone.wrongwayRate);
+              return (
+                <div key={zone.zoneCode || zone.name} className="rounded border border-gray-200 bg-white p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-black text-gray-900">{zone.name}</div>
+                      <div className="mt-0.5 truncate text-xs font-semibold text-gray-400">
+                        {zone.zoneCode || "UNKNOWN"}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <span className={`rounded px-2 py-1 text-[11px] font-black ${risk.className}`}>
+                        {risk.label}
+                      </span>
+                      <div className="mt-1 text-sm font-black text-red-600">{formatRate(zone.wrongwayRate)}</div>
+                      <div className="text-[11px] font-semibold text-gray-400">역주행률</div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm font-black text-red-600">{formatRate(zone.wrongwayRate)}</div>
-                    <div className="text-[11px] font-semibold text-gray-400">역주행률</div>
+                  <div className="mt-3 h-2 overflow-hidden rounded bg-gray-100">
+                    <div
+                      className="h-full rounded bg-red-500"
+                      style={{ width: `${Math.min(100, Number(zone.wrongwayRate || 0))}%` }}
+                    />
+                  </div>
+                  <div className="mt-2 flex justify-between text-xs font-semibold text-gray-500">
+                    <span>정주행 {formatNumber(zone.normalVehicles)}</span>
+                    <span>역주행 {formatNumber(zone.wrongwayVehicles)}</span>
                   </div>
                 </div>
-                <div className="mt-3 h-2 overflow-hidden rounded bg-gray-100">
-                  <div
-                    className="h-full rounded bg-red-500"
-                    style={{ width: `${Math.min(100, Number(zone.wrongwayRate || 0))}%` }}
-                  />
-                </div>
-                <div className="mt-2 flex justify-between text-xs font-semibold text-gray-500">
-                  <span>정주행 {formatNumber(zone.normalVehicles)}</span>
-                  <span>역주행 {formatNumber(zone.wrongwayVehicles)}</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
