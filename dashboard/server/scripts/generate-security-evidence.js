@@ -118,6 +118,69 @@ function statusLabel(item) {
   return item.exitCode === 0 ? "PASS" : "REVIEW";
 }
 
+function securityDisposition(item, requireScanners) {
+  if (item.status === "policy_accepted") {
+    return {
+      code: "RISK_ACCEPTED",
+      labelKo: "위험 수용",
+      reason: item.reason || "Finding is accepted by the documented audit policy.",
+      blocksStrictAcceptance: false,
+    };
+  }
+  if (requiredScannerFailure(item, requireScanners)) {
+    return {
+      code: "BLOCKING",
+      labelKo: "차단",
+      reason: `${item.label} is required for strict security acceptance but was skipped.`,
+      blocksStrictAcceptance: true,
+    };
+  }
+  if (item.status === "skipped") {
+    return {
+      code: "UNVERIFIED",
+      labelKo: "미검증",
+      reason: item.reason || "Security check was not executed.",
+      blocksStrictAcceptance: false,
+    };
+  }
+  if (item.exitCode === 0) {
+    return {
+      code: "PASS",
+      labelKo: "통과",
+      reason: "Command completed successfully.",
+      blocksStrictAcceptance: false,
+    };
+  }
+  return {
+    code: item.label === "npm audit policy gate" ? "BLOCKING" : "DELIVERY_FIX",
+    labelKo: item.label === "npm audit policy gate" ? "차단" : "납품 전 수정",
+    reason: item.error || `${item.label} exited with code ${item.exitCode}.`,
+    blocksStrictAcceptance: item.label === "npm audit policy gate",
+  };
+}
+
+function summarizeDispositions(checks) {
+  const counts = {
+    pass: 0,
+    blocking: 0,
+    deliveryFix: 0,
+    riskAccepted: 0,
+    unverified: 0,
+  };
+  checks.forEach((item) => {
+    if (item.disposition.code === "PASS") counts.pass += 1;
+    if (item.disposition.code === "BLOCKING") counts.blocking += 1;
+    if (item.disposition.code === "DELIVERY_FIX") counts.deliveryFix += 1;
+    if (item.disposition.code === "RISK_ACCEPTED") counts.riskAccepted += 1;
+    if (item.disposition.code === "UNVERIFIED") counts.unverified += 1;
+  });
+  return counts;
+}
+
+function tableValue(value) {
+  return String(value ?? "").replace(/\|/g, "\\|").replace(/\r?\n/g, "<br>");
+}
+
 function buildMarkdown(manifest) {
   const lines = [
     "# Security Evidence Manifest",
@@ -130,6 +193,15 @@ function buildMarkdown(manifest) {
     `- Include container images: ${manifest.options.includeContainerImages ? "yes" : "no"}`,
     `- Include ZAP baseline: ${manifest.options.includeZap ? "yes" : "no"}`,
     `- Require scanners: ${manifest.options.requireScanners ? "yes" : "no"}`,
+    `- Strict acceptance blocked: ${manifest.strictAcceptanceBlocked ? "yes" : "no"}`,
+    "",
+    "## Security Disposition Summary",
+    "",
+    `- Pass: ${manifest.dispositionSummary.pass}`,
+    `- Blocking: ${manifest.dispositionSummary.blocking}`,
+    `- Delivery fix: ${manifest.dispositionSummary.deliveryFix}`,
+    `- Risk accepted: ${manifest.dispositionSummary.riskAccepted}`,
+    `- Unverified: ${manifest.dispositionSummary.unverified}`,
     "",
     "## Tool Inventory",
     "",
@@ -139,7 +211,7 @@ function buildMarkdown(manifest) {
 
   manifest.toolInventory.forEach((item) => {
     lines.push(
-      `| ${item.command} | ${item.available ? "yes" : "no"} | \`${item.versionCommand}\` | ${item.available ? item.version : item.error} |`,
+      `| ${tableValue(item.command)} | ${item.available ? "yes" : "no"} | \`${tableValue(item.versionCommand)}\` | ${tableValue(item.available ? item.version : item.error)} |`,
     );
   });
 
@@ -154,7 +226,21 @@ function buildMarkdown(manifest) {
   manifest.checks.forEach((item) => {
     const commandOrReason = item.status === "skipped" ? item.reason : `\`${item.command}\``;
     const log = item.logFile ? `\`${item.logFile}\`` : "";
-    lines.push(`| ${statusLabel(item)} | ${item.label} | ${commandOrReason} | ${log} |`);
+    lines.push(`| ${statusLabel(item)} | ${tableValue(item.label)} | ${tableValue(commandOrReason)} | ${log} |`);
+  });
+
+  lines.push(
+    "",
+    "## Acceptance Classification",
+    "",
+    "| Classification | Korean Label | Check | Blocks Strict Acceptance | Reason |",
+    "| --- | --- | --- | --- | --- |",
+  );
+
+  manifest.checks.forEach((item) => {
+    lines.push(
+      `| ${item.disposition.code} | ${item.disposition.labelKo} | ${tableValue(item.label)} | ${item.disposition.blocksStrictAcceptance ? "yes" : "no"} | ${tableValue(item.disposition.reason)} |`,
+    );
   });
 
   lines.push(
@@ -164,7 +250,8 @@ function buildMarkdown(manifest) {
     "- `npm audit raw json` is captured as evidence and may report the documented Prisma development-tooling exception.",
     "- `npm audit policy gate` is the required automated pass/fail gate for dependency audit findings.",
     "- Optional tools are recorded as `SKIPPED` when not installed or when image/ZAP switches are not provided.",
-    "- `--require-scanners` treats skipped gitleaks, Trivy, and OWASP ZAP checks as required failures for field acceptance.",
+    "- Acceptance classification maps results to PASS, BLOCKING, DELIVERY_FIX, RISK_ACCEPTED, or UNVERIFIED for delivery review.",
+    "- `--require-scanners` treats skipped gitleaks, Trivy, and OWASP ZAP checks as required BLOCKING failures for field acceptance.",
     "- Do not run active scans against the real integrated control board.",
     "",
   );
@@ -288,6 +375,26 @@ function main() {
     checks.push(skipped("OWASP ZAP baseline", "Run with --include-zap against the delivery Nginx entrypoint"));
   }
 
+  const mappedChecks = checks.map((item) => {
+    const logFile = item.status === "skipped" ? null : writeCommandLog(outputDir, item);
+    const check = {
+      label: item.label,
+      status: item.status || "executed",
+      command: item.command,
+      reason: item.reason || null,
+      startedAt: item.startedAt,
+      finishedAt: item.finishedAt,
+      exitCode: item.exitCode,
+      error: item.error,
+      logFile,
+    };
+    check.disposition = securityDisposition(check, requireScanners);
+    return check;
+  });
+
+  const dispositionSummary = summarizeDispositions(mappedChecks);
+  const strictAcceptanceBlocked = mappedChecks.some((item) => item.disposition.blocksStrictAcceptance);
+
   const manifest = {
     generatedAt: new Date().toISOString(),
     operator: process.env.SECURITY_EVIDENCE_OPERATOR || process.env.USERNAME || process.env.USER || "unknown",
@@ -300,20 +407,9 @@ function main() {
       requireScanners,
     },
     toolInventory,
-    checks: checks.map((item) => {
-      const logFile = item.status === "skipped" ? null : writeCommandLog(outputDir, item);
-      return {
-        label: item.label,
-        status: item.status || "executed",
-        command: item.command,
-        reason: item.reason || null,
-        startedAt: item.startedAt,
-        finishedAt: item.finishedAt,
-        exitCode: item.exitCode,
-        error: item.error,
-        logFile,
-      };
-    }),
+    dispositionSummary,
+    strictAcceptanceBlocked,
+    checks: mappedChecks,
   };
 
   fs.writeFileSync(path.join(outputDir, "manifest.json"), JSON.stringify(manifest, null, 2));

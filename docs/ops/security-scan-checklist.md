@@ -62,7 +62,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/security-scan.ps
 
 The Node evidence script is the preferred cross-platform path. It writes
 `manifest.md`, `manifest.json`, operator/host metadata, optional scanner tool
-inventory, raw command logs, and skipped-check reasons under
+inventory, raw command logs, skipped-check reasons, and acceptance
+classifications (`통과`, `차단`, `납품 전 수정`, `위험 수용`, `미검증`) under
 `artifacts/security/`. Set `SECURITY_EVIDENCE_OPERATOR` before running it when
 the handover package must show the field reviewer name. The PowerShell script
 remains available for Windows field rehearsals.
