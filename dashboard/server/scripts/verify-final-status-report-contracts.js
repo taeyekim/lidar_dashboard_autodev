@@ -42,6 +42,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "requireScanners", "final status report generator"],
   [generator, "strictAcceptanceBlocked", "final status report generator"],
   [generator, "referenceFreshness", "final status report generator"],
+  [generator, "fieldRiskRegister", "final status report generator"],
+  [generator, "artifacts/field-risk-register", "final status report generator"],
   [generator, "manualEvidence", "final status report generator"],
   [generator, "Do not mark the Codex goal complete", "final status report generator"],
   [finalStatusContracts, "final:status", "final status verifier"],
@@ -51,6 +53,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [acceptanceChecklist, "npm run final:status", "acceptance checklist"],
   [acceptanceChecklist, "artifacts/final-status", "acceptance checklist"],
   [matrix, "artifacts/final-status", "delivery evidence matrix"],
+  [matrix, "artifacts/field-risk-register", "delivery evidence matrix"],
 ].forEach(([content, token, label]) => assertIncludes(content, token, label));
 
 const manualPresent = [
@@ -78,6 +81,10 @@ const readyEvidence = {
     path: "artifacts/manual-evidence-readiness/20260101-000000/manifest.json",
     data: { status: "READY", readyForFinalClose: true, missingCount: 0, invalidCount: 0 },
   },
+  fieldRiskRegister: {
+    path: "artifacts/field-risk-register/20260101-000000/manifest.json",
+    data: { status: "NO_OPEN_RISKS", openRiskCount: 0, copyToRiskAcceptanceCount: 0 },
+  },
 };
 
 readyEvidence.handoverPackage = {
@@ -93,6 +100,7 @@ readyEvidence.handoverPackage = {
       fieldReadiness: readyEvidence.fieldReadiness.path,
       securityEvidence: readyEvidence.securityEvidence.path,
       manualEvidenceReadiness: readyEvidence.manualEvidenceReadiness.path,
+      fieldRiskRegister: readyEvidence.fieldRiskRegister.path,
       handoverIndex: readyEvidence.handoverIndex.path,
       fieldClosurePlan: readyEvidence.fieldClosurePlan.path,
     },
@@ -110,6 +118,10 @@ assert(ready.status === "READY_TO_CLOSE", "complete fixture should be READY_TO_C
 assert(ready.canMarkGoalComplete === true, "READY_TO_CLOSE should allow goal completion");
 assert(ready.remainingGates.length === 0, "complete fixture should have no remaining gates");
 assert(ready.gateSummary.total === 0, "complete fixture should have zero gate summary total");
+assert(
+  ready.referenceFreshness.some((item) => item.key === "fieldRiskRegister" && item.fresh === true),
+  "complete fixture should verify fresh field risk register reference",
+);
 assert(buildMarkdown(ready).includes("READY_TO_CLOSE"), "markdown should include READY_TO_CLOSE");
 
 const missing = buildFinalStatusReport({
@@ -184,6 +196,31 @@ assert(stalePackage.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "stale packa
 assert(
   stalePackage.remainingGates.some((item) => item.category === "Evidence Freshness" && item.message.includes("securityEvidence")),
   "stale package fixture should expose stale security evidence reference",
+);
+
+const staleRiskRegister = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    handoverPackage: {
+      ...readyEvidence.handoverPackage,
+      data: {
+        ...readyEvidence.handoverPackage.data,
+        evidenceRefs: {
+          ...readyEvidence.handoverPackage.data.evidenceRefs,
+          fieldRiskRegister: "artifacts/field-risk-register/old/manifest.json",
+        },
+      },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  git: { branch: "dev", commit: "fixture", clean: true },
+});
+
+assert(staleRiskRegister.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "stale risk register fixture should require review");
+assert(
+  staleRiskRegister.remainingGates.some((item) => item.category === "Evidence Freshness" && item.message.includes("fieldRiskRegister")),
+  "stale risk register fixture should expose stale field risk register reference",
 );
 
 const objectBlocker = buildFinalStatusReport({

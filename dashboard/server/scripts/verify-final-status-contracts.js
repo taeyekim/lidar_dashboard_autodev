@@ -56,7 +56,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [finalStatusReport, "remainingGates", "final status report generator"],
   [finalStatusReport, "artifacts/final-status", "final status report generator"],
   [finalStatusReport, "manualEvidenceReadiness", "final status report generator"],
+  [finalStatusReport, "fieldRiskRegister", "final status report generator"],
   [finalStatusReport, "artifacts/manual-evidence-readiness", "final status report generator"],
+  [finalStatusReport, "artifacts/field-risk-register", "final status report generator"],
   [finalStatusReport, "Do not mark the Codex goal complete", "final status report generator"],
   [handoverIndex, "canMarkGoalComplete", "handover index generator"],
   [fieldClosurePlan, "canMarkGoalComplete", "field closure plan generator"],
@@ -81,6 +83,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [handoverIndex, "strictAcceptanceBlocked", "handover index generator"],
   [matrix, "manual evidence", "delivery evidence matrix"],
   [matrix, "latest referenced artifacts", "delivery evidence matrix"],
+  [matrix, "field risk register", "delivery evidence matrix"],
   [matrix, "no residual field gates", "delivery evidence matrix"],
   [matrix, "Final Status", "delivery evidence matrix"],
   [matrix, "artifacts/final-status", "delivery evidence matrix"],
@@ -91,6 +94,7 @@ const latestPackage = readLatestJsonManifest("artifacts/handover-package");
 const latestReadiness = readLatestJsonManifest("artifacts/field-readiness");
 const latestSecurity = readLatestJsonManifest("artifacts/security");
 const latestManualReadiness = readLatestJsonManifest("artifacts/manual-evidence-readiness");
+const latestRiskRegister = readLatestJsonManifest("artifacts/field-risk-register");
 const latestDelivery = readLatestJsonManifest("artifacts/delivery");
 const latestIndex = readLatestJsonManifest("artifacts/handover-index");
 const latestClosurePlan = readLatestJsonManifest("artifacts/field-closure-plan");
@@ -221,6 +225,11 @@ if (latestPackage) {
     assert(
       data.evidenceRefs?.manualEvidenceReadiness === latestManualReadiness.path,
       "READY package must reference latest manual evidence readiness",
+    );
+    assert(latestRiskRegister, "READY package requires latest field risk register");
+    assert(
+      data.evidenceRefs?.fieldRiskRegister === latestRiskRegister.path,
+      "READY package must reference latest field risk register",
     );
     assert(data.evidenceRefs?.handoverIndex === latestIndex?.path, "READY package must reference latest handover index");
     assert(data.evidenceRefs?.fieldClosurePlan === latestClosurePlan?.path, "READY package must reference latest field closure plan");
