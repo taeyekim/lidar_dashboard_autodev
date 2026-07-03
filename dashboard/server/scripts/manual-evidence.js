@@ -63,6 +63,10 @@ function markdownRowsAfterHeader(content, headerToken) {
   return rows;
 }
 
+function isPlaceholderMarkdownCell(value) {
+  return /^(?:-|n\/a|na|none|null|tbd|todo|pending|unknown)$/i.test(String(value || "").trim());
+}
+
 function validateManualEvidence(type, content) {
   if (type === "Operator UI Walkthrough") {
     const requiredTokens = [
@@ -140,6 +144,10 @@ function validateManualEvidence(type, content) {
     if (emptyAcceptedCell) {
       return "Accepted risk item rows must include area, risk, compensating control, evidence reference, and expiry/recheck.";
     }
+    const placeholderAcceptedCell = acceptedRows.find((row) => row.slice(1, 6).some(isPlaceholderMarkdownCell));
+    if (placeholderAcceptedCell) {
+      return "Accepted risk item rows must not use placeholder values such as TBD, N/A, none, pending, or unknown.";
+    }
     if (/\|\s*Decision\s*\|\s*RECHECK_REQUIRED\s*\|/.test(content)) {
       return "Evidence decision is RECHECK_REQUIRED; close the recheck or keep the risk evidence invalid before final completion.";
     }
@@ -153,6 +161,13 @@ function validateManualEvidence(type, content) {
       "Reviewer signature/name",
     ]);
     if (emptyField) return `Evidence has an empty '${emptyField}' value.`;
+    const placeholderDecisionField = [
+      "Required follow-up",
+      "Follow-up owner",
+      "Target recheck date",
+      "Reviewer signature/name",
+    ].find((field) => isPlaceholderMarkdownCell(markdownTableValue(content, field)));
+    if (placeholderDecisionField) return `Evidence has a placeholder '${placeholderDecisionField}' value.`;
   }
 
   return "";
@@ -176,6 +191,7 @@ function manualEvidenceRefs() {
 
 module.exports = {
   firstEmptyMarkdownField,
+  isPlaceholderMarkdownCell,
   markdownRowsAfterHeader,
   manualEvidenceDefinitions,
   manualEvidenceRefs,

@@ -152,11 +152,28 @@ assert(
   "risk acceptance evidence must reject accepted rows without evidence reference",
 );
 
+const placeholderRiskEvidence = validRiskEvidence.replace(
+  "| ACCEPTED | Security scanners | ZAP skipped on field PC. | Internal-only network and audit policy evidence. | artifacts/security/example/manifest.json | 2026-08-01 |",
+  "| ACCEPTED | Security scanners | ZAP skipped on field PC. | Internal-only network and audit policy evidence. | TBD | 2026-08-01 |",
+);
+assert(
+  validateManualEvidence("Field Risk Acceptance", placeholderRiskEvidence).includes("placeholder values"),
+  "risk acceptance evidence must reject placeholder evidence references",
+);
+
+const placeholderFollowUpRiskEvidence = validRiskEvidence.replace("| Follow-up owner | field-owner |", "| Follow-up owner | TBD |");
+assert(
+  validateManualEvidence("Field Risk Acceptance", placeholderFollowUpRiskEvidence).includes("placeholder 'Follow-up owner'"),
+  "risk acceptance evidence must reject placeholder reviewer follow-up values",
+);
+
 const recheckRiskEvidence = validRiskEvidence.replace("| Decision | ACCEPTED |", "| Decision | RECHECK_REQUIRED |");
 assert(
   validateManualEvidence("Field Risk Acceptance", recheckRiskEvidence).includes("RECHECK_REQUIRED"),
   "risk acceptance evidence must stay invalid while reviewer decision is RECHECK_REQUIRED",
 );
+
+assertIncludes(riskTemplate, "Placeholder values", "field risk acceptance template");
 
 const manualEvidence = manualEvidenceRefs();
 assert(manualEvidence.length === manualEvidenceDefinitions.length, "manual evidence refs should mirror definitions");
