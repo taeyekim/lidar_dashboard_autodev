@@ -30,6 +30,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "Field Acceptance",
   "Field Readiness",
   "Manual Evidence Readiness",
+  "Manual Evidence Drafts",
   "Field Closure Plan",
   "DB And Prisma Field Rehearsal",
   "Lidar Ingest Field Rehearsal",
@@ -100,6 +101,7 @@ assertIncludes(runbook, "artifacts/handover-index/<timestamp>/manifest.json", "d
 assertIncludes(checklist, "npm run handover:index", "acceptance checklist");
 assertIncludes(matrix, "npm run handover:index", "delivery evidence matrix");
 assertIncludes(matrix, "manual evidence readiness", "delivery evidence matrix");
+assertIncludes(matrix, "manual evidence drafts", "delivery evidence matrix");
 
 const vectorManifest = buildIndexManifest({ generatedBy: "contract-vector", siteName: "contract-vector" });
 if (vectorManifest.counts.missingManualEvidenceCount > 0) {

@@ -131,6 +131,13 @@ function buildIndexManifest(options = {}) {
       notes: "Preparation checklist for required reviewer-filled manual evidence files and validation failures.",
     },
     {
+      area: "Manual Evidence Drafts",
+      required: true,
+      outputRoot: "artifacts/manual-evidence-drafts",
+      command: "npm run manual:evidence-drafts",
+      notes: "Reviewer-fillable draft files for required manual evidence; existing evidence is preserved unless --force is used.",
+    },
+    {
       area: "Field Closure Plan",
       required: true,
       outputRoot: "artifacts/field-closure-plan",

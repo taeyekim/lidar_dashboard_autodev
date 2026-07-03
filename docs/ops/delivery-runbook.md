@@ -186,12 +186,12 @@ safety status is recorded as `DRY_RUN_SAFE`, `LIVE_TCP_READY`, or
 For the final attachment refresh, run
 `npm.cmd run handover:package -- --base-url=http://localhost:8080`. Replace
 the base URL with the delivery Nginx entrypoint when it is not localhost. It
-runs `delivery:evidence`, `manual:evidence-readiness`, `field:readiness`, `completion:audit`,
+runs `delivery:evidence`, `manual:evidence-drafts`, `manual:evidence-readiness`, `field:readiness`, `completion:audit`,
 `field:closure-plan`, and `handover:index` in order, passing the same base URL
-into the refreshed readiness report and indexing the refreshed closure plan, then writes
+into the refreshed manual draft report and readiness report and indexing the refreshed closure plan, then writes
 `artifacts/handover-package/<timestamp>/manifest.json` plus `manifest.md` with
 the refreshed evidence references, command logs, base URL, strict gate reasons,
-manual evidence readiness reference, and latest control-board safety status. The completion audit, handover index,
+manual evidence draft/readiness references, and latest control-board safety status. The completion audit, handover index,
 closure plan, and handover package all surface this status so `DRY_RUN_SAFE` or
 `LIVE_TCP_REVIEW` cannot be mistaken for field-ready TCP operation. Use
 `npm.cmd run handover:package -- --base-url=http://localhost:8080 --strict`
