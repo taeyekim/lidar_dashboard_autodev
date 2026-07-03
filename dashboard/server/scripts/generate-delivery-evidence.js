@@ -100,6 +100,10 @@ function unique(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
+function toOutputRootArg(dir) {
+  return path.relative(root, dir).replace(/\\/g, "/");
+}
+
 function buildAutomatedEvidenceCoverage(rows, commands) {
   const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
   const scripts = packageJson.scripts || {};
@@ -147,6 +151,53 @@ function buildAutomatedEvidenceCoverage(rows, commands) {
           evidence: token,
           coverage: "DELIVERY_VERIFY",
           coveredBy: "npm run delivery:verify",
+        };
+      }
+
+      if (normalizedToken === "npm run delivery:evidence") {
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: "SELF",
+          coveredBy: "this delivery evidence manifest",
+        };
+      }
+
+      if (["npm run runtime:evidence", "npm run security:evidence"].includes(normalizedToken)) {
+        const directCompanionIndex = normalizedExecutedCommands.findIndex((command) => command.includes(normalizedToken));
+        const companionCommand = directCompanionIndex >= 0 ? executedCommands[directCompanionIndex] : null;
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: companionCommand ? "COMPANION_EVIDENCE" : "DOCUMENTED",
+          coveredBy: companionCommand || "run as companion evidence before handover",
+        };
+      }
+
+      if (normalizedToken.includes("artifacts/delivery/<timestamp>/runtime/")) {
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: "COMPANION_EVIDENCE",
+          coveredBy: "manifest.companionEvidence.runtime.outputRoot",
+        };
+      }
+
+      if (normalizedToken.includes("artifacts/delivery/<timestamp>/security/")) {
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: "COMPANION_EVIDENCE",
+          coveredBy: "manifest.companionEvidence.security.outputRoot",
+        };
+      }
+
+      if (normalizedToken === "scripts/security-scan.ps1") {
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: "OPTIONAL_SECURITY_FIELD",
+          coveredBy: "run when Windows security scan rehearsal is required",
         };
       }
 
@@ -232,6 +283,16 @@ function buildMarkdown(manifest) {
 
   lines.push(
     "",
+    "## Companion Evidence",
+    "",
+    "| Type | Output Root |",
+    "| --- | --- |",
+    `| Runtime | \`${manifest.companionEvidence.runtime.outputRoot}\` |`,
+    `| Security | \`${manifest.companionEvidence.security.outputRoot}\` |`,
+  );
+
+  lines.push(
+    "",
     "Additional field gates:",
     "",
     "- Optional external tools such as gitleaks, Trivy, and OWASP ZAP are captured by `npm run security:evidence` or `scripts/security-scan.ps1` when installed.",
@@ -254,6 +315,14 @@ function main() {
   const outputRoot = outputRootArg ? outputRootArg.slice("--output-root=".length) : "artifacts/delivery";
   const outputDir = path.join(root, outputRoot, timestampForPath());
   ensureDir(outputDir);
+  const companionEvidence = {
+    runtime: {
+      outputRoot: toOutputRootArg(path.join(outputDir, "runtime")),
+    },
+    security: {
+      outputRoot: toOutputRootArg(path.join(outputDir, "security")),
+    },
+  };
 
   const commands = [
     ["smoke", npmCommand, ["run", "smoke"]],
@@ -262,6 +331,8 @@ function main() {
     ["ci", npmCommand, ["run", "ci"]],
     ["audit policy", npmCommand, ["run", "verify:audit-policy"]],
     ["docker compose config", "docker", ["compose", "config", "--quiet"]],
+    ["runtime evidence", npmCommand, ["run", "runtime:evidence", "--", `--output-root=${companionEvidence.runtime.outputRoot}`]],
+    ["security evidence", npmCommand, ["run", "security:evidence", "--", `--output-root=${companionEvidence.security.outputRoot}`]],
   ].map(([label, command, args]) => runCommand(label, command, args));
 
   const evidenceMatrix = readDeliveryEvidenceMatrix();
@@ -289,6 +360,7 @@ function main() {
       requirementAreas,
       rows: matrixRows,
     },
+    companionEvidence,
     automatedEvidenceCoverage: buildAutomatedEvidenceCoverage(matrixRows, commands),
     fieldVerificationStillRequired: matrixRows.map((row) => ({
       area: row.area,
