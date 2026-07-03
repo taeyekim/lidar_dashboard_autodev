@@ -4,6 +4,7 @@ const {
   parseEvidenceMatrix,
   readLatestJsonManifest,
   summarizeFieldAcceptance,
+  summarizeFieldPreflight,
 } = require("./generate-delivery-evidence");
 const fs = require("fs");
 const path = require("path");
@@ -21,7 +22,7 @@ const matrix = `
 | --- | --- | --- | --- |
 | Control Board TCP | Sends raw command frames. | \`npm run verify:control-board-protocol\`, \`GET /api/control-board/status\` | Live integrated control-board TCP test |
 | Traffic Statistics | KPI vectors remain executable. | \`npm run verify:statistics-metrics\`, \`scripts/runtime-smoke.ps1\` | Field acceptance of period labels |
-| Delivery Evidence | Manifest packaging remains reproducible. | \`npm run delivery:evidence\`, \`artifacts/delivery/<timestamp>/runtime/\`, \`artifacts/field-acceptance/<timestamp>/manifest.json\` | none |
+| Delivery Evidence | Manifest packaging remains reproducible. | \`npm run delivery:evidence\`, \`artifacts/delivery/<timestamp>/runtime/\`, \`artifacts/field-acceptance/<timestamp>/manifest.json\`, \`artifacts/field-preflight/<timestamp>/manifest.json\` | none |
 `;
 
 const commands = [
@@ -82,7 +83,15 @@ const fieldAcceptanceReviewSummary = buildHandoverSummary(rows, commands.slice(0
     skippedItems: ["Field Acceptance: security evidence"],
   },
 ]);
+const fieldPreflightReviewSummary = buildHandoverSummary(rows, commands.slice(0, 3), coverage, [], [], [], [
+  {
+    type: "Field Preflight",
+    reviewItems: ["Field Preflight: JWT secret placeholder"],
+    skippedItems: ["Field Preflight: Swagger allowlist"],
+  },
+]);
 const missingFieldAcceptance = summarizeFieldAcceptance("Field Acceptance", "artifacts/missing-field-acceptance-vector");
+const missingFieldPreflight = summarizeFieldPreflight("Field Preflight", "artifacts/missing-field-preflight-vector");
 const bomVectorRoot = path.join(__dirname, "..", "..", "..", "artifacts", "delivery-summary-vector-bom");
 const bomVectorDir = path.join(bomVectorRoot, "20260703-000000");
 fs.mkdirSync(bomVectorDir, { recursive: true });
@@ -179,6 +188,14 @@ assert(
   "coverage should classify field acceptance manifest output",
 );
 assert(
+  coverage.some(
+    (item) =>
+      item.evidence === "artifacts/field-preflight/<timestamp>/manifest.json" &&
+      item.coverage === "FIELD_PREFLIGHT_EVIDENCE",
+  ),
+  "coverage should classify field preflight manifest output",
+);
+assert(
   fieldAcceptanceReviewSummary.status === "AUTOMATED_CHECKS_REVIEW",
   "field acceptance REVIEW items should force handover summary review status",
 );
@@ -207,6 +224,20 @@ assert(
 assert(
   missingFieldAcceptance.reviewItems.includes("Field Acceptance: field acceptance manifest not found"),
   "missing field acceptance manifest should be review-visible",
+);
+assert(
+  fieldPreflightReviewSummary.status === "AUTOMATED_CHECKS_REVIEW",
+  "field preflight REVIEW items should force handover summary review status",
+);
+assert(fieldPreflightReviewSummary.fieldPreflightReviewCount === 1, "summary should count field preflight REVIEW items");
+assert(fieldPreflightReviewSummary.fieldPreflightSkippedCount === 1, "summary should count field preflight SKIPPED items");
+assert(
+  fieldPreflightReviewSummary.notes.some((note) => note.includes("Field preflight evidence")),
+  "summary should explain field preflight evidence visibility",
+);
+assert(
+  missingFieldPreflight.reviewItems.includes("Field Preflight: field preflight manifest not found"),
+  "missing field preflight manifest should be review-visible",
 );
 assert(bomManifest.data.checks.length === 0, "latest manifest reader should tolerate UTF-8 BOM");
 

@@ -221,6 +221,42 @@ function summarizeFieldAcceptance(type, outputRoot) {
   };
 }
 
+function summarizeFieldPreflight(type, outputRoot) {
+  const manifest = readLatestJsonManifest(outputRoot);
+  if (!manifest) {
+    return {
+      type,
+      outputRoot,
+      manifestPath: null,
+      reviewCount: 1,
+      skippedCount: 0,
+      passCount: 0,
+      reviewItems: [`${type}: field preflight manifest not found`],
+      skippedItems: [],
+    };
+  }
+
+  const checks = Array.isArray(manifest.data.checks) ? manifest.data.checks : [];
+  const reviewItems = checks
+    .filter((item) => item.status === "REVIEW")
+    .map((item) => `${type}: ${item.name || "unnamed check"}`);
+  const skippedItems = checks
+    .filter((item) => item.status === "SKIPPED")
+    .map((item) => `${type}: ${item.name || "unnamed check"}`);
+
+  return {
+    type,
+    outputRoot,
+    manifestPath: manifest.path,
+    status: manifest.data.status || null,
+    reviewCount: reviewItems.length,
+    skippedCount: skippedItems.length,
+    passCount: checks.filter((item) => item.status === "PASS").length,
+    reviewItems,
+    skippedItems,
+  };
+}
+
 function buildAutomatedEvidenceCoverage(rows, commands) {
   const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
   const scripts = packageJson.scripts || {};
@@ -318,6 +354,15 @@ function buildAutomatedEvidenceCoverage(rows, commands) {
         };
       }
 
+      if (normalizedToken.includes("artifacts/field-preflight/<timestamp>/")) {
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: "FIELD_PREFLIGHT_EVIDENCE",
+          coveredBy: "manifest.fieldPreflightEvidence.outputRoot",
+        };
+      }
+
       if (normalizedToken === "scripts/security-scan.ps1") {
         return {
           area: row.area,
@@ -362,6 +407,7 @@ function buildHandoverSummary(
   companionSummaries = [],
   fieldRehearsalSummaries = [],
   fieldAcceptanceSummaries = [],
+  fieldPreflightSummaries = [],
 ) {
   const failedCommands = commands.filter((item) => item.exitCode !== 0);
   const companionReviewItems = companionSummaries.flatMap((item) => item.reviewItems || []);
@@ -369,6 +415,8 @@ function buildHandoverSummary(
   const fieldRehearsalReviewItems = fieldRehearsalSummaries.flatMap((item) => item.reviewItems || []);
   const fieldAcceptanceReviewItems = fieldAcceptanceSummaries.flatMap((item) => item.reviewItems || []);
   const fieldAcceptanceSkippedItems = fieldAcceptanceSummaries.flatMap((item) => item.skippedItems || []);
+  const fieldPreflightReviewItems = fieldPreflightSummaries.flatMap((item) => item.reviewItems || []);
+  const fieldPreflightSkippedItems = fieldPreflightSummaries.flatMap((item) => item.skippedItems || []);
   const coverageCounts = automatedEvidenceCoverage.reduce((accumulator, item) => {
     accumulator[item.coverage] = (accumulator[item.coverage] || 0) + 1;
     return accumulator;
@@ -384,7 +432,8 @@ function buildHandoverSummary(
       companionReviewItems.length === 0 &&
       companionSkippedItems.length === 0 &&
       fieldRehearsalReviewItems.length === 0 &&
-      fieldAcceptanceReviewItems.length === 0
+      fieldAcceptanceReviewItems.length === 0 &&
+      fieldPreflightReviewItems.length === 0
         ? "AUTOMATED_CHECKS_PASS"
         : "AUTOMATED_CHECKS_REVIEW",
     failedCommandCount: failedCommands.length,
@@ -399,6 +448,10 @@ function buildHandoverSummary(
     fieldAcceptanceReviewItems,
     fieldAcceptanceSkippedCount: fieldAcceptanceSkippedItems.length,
     fieldAcceptanceSkippedItems,
+    fieldPreflightReviewCount: fieldPreflightReviewItems.length,
+    fieldPreflightReviewItems,
+    fieldPreflightSkippedCount: fieldPreflightSkippedItems.length,
+    fieldPreflightSkippedItems,
     requirementAreaCount: matrixRows.length,
     automatedEvidenceItemCount: automatedEvidenceCoverage.length,
     coverageCounts,
@@ -410,6 +463,7 @@ function buildHandoverSummary(
       "Companion runtime/security evidence is summarized here so REVIEW/SKIPPED items are not hidden inside nested manifests.",
       "Field rehearsal evidence is summarized here so missing or failing field manifests remain visible in the handover.",
       "Field acceptance orchestrator evidence is summarized here so the ordered on-site acceptance pass is visible in the delivery package.",
+      "Field preflight evidence is summarized here so risky environment settings are visible before runtime/hardware checks.",
     ],
   };
 }
@@ -432,6 +486,8 @@ function buildMarkdown(manifest) {
     `- Field rehearsal review items: ${manifest.handoverSummary.fieldRehearsalReviewCount}`,
     `- Field acceptance review items: ${manifest.handoverSummary.fieldAcceptanceReviewCount}`,
     `- Field acceptance skipped items: ${manifest.handoverSummary.fieldAcceptanceSkippedCount}`,
+    `- Field preflight review items: ${manifest.handoverSummary.fieldPreflightReviewCount}`,
+    `- Field preflight skipped items: ${manifest.handoverSummary.fieldPreflightSkippedCount}`,
     `- Requirement areas: ${manifest.handoverSummary.requirementAreaCount}`,
     `- Automated evidence items: ${manifest.handoverSummary.automatedEvidenceItemCount}`,
     `- Field verification required areas: ${manifest.handoverSummary.fieldVerificationRequiredCount}`,
@@ -478,6 +534,18 @@ function buildMarkdown(manifest) {
     "",
     ...(manifest.handoverSummary.fieldAcceptanceSkippedItems.length > 0
       ? manifest.handoverSummary.fieldAcceptanceSkippedItems.map((item) => `- ${item}`)
+      : ["- none"]),
+    "",
+    "Field preflight review items:",
+    "",
+    ...(manifest.handoverSummary.fieldPreflightReviewItems.length > 0
+      ? manifest.handoverSummary.fieldPreflightReviewItems.map((item) => `- ${item}`)
+      : ["- none"]),
+    "",
+    "Field preflight skipped items:",
+    "",
+    ...(manifest.handoverSummary.fieldPreflightSkippedItems.length > 0
+      ? manifest.handoverSummary.fieldPreflightSkippedItems.map((item) => `- ${item}`)
       : ["- none"]),
     "",
     "## Verification Commands",
@@ -561,6 +629,18 @@ function buildMarkdown(manifest) {
 
   lines.push(
     "",
+    "## Field Preflight Evidence",
+    "",
+    "| Type | Output Root | Manifest | PASS | Review | Skipped |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ...manifest.fieldPreflightEvidence.summaries.map(
+      (item) =>
+        `| ${item.type} | \`${item.outputRoot}\` | ${item.manifestPath ? `\`${item.manifestPath}\`` : "missing"} | ${item.passCount} | ${item.reviewCount} | ${item.skippedCount} |`,
+    ),
+  );
+
+  lines.push(
+    "",
     "Additional field gates:",
     "",
     "- Optional external tools such as gitleaks, Trivy, and OWASP ZAP are captured by `npm run security:evidence` or `scripts/security-scan.ps1` when installed.",
@@ -599,6 +679,9 @@ function main() {
   const fieldAcceptanceEvidence = {
     outputRoot: "artifacts/field-acceptance",
   };
+  const fieldPreflightEvidence = {
+    outputRoot: "artifacts/field-preflight",
+  };
 
   const commands = [
     ["smoke", npmCommand, ["run", "smoke"]],
@@ -623,6 +706,9 @@ function main() {
   fieldAcceptanceEvidence.summaries = [
     summarizeFieldAcceptance("Field Acceptance", fieldAcceptanceEvidence.outputRoot),
   ];
+  fieldPreflightEvidence.summaries = [
+    summarizeFieldPreflight("Field Preflight", fieldPreflightEvidence.outputRoot),
+  ];
 
   const evidenceMatrix = readDeliveryEvidenceMatrix();
   const matrixRows = parseEvidenceMatrix(evidenceMatrix);
@@ -635,6 +721,7 @@ function main() {
     companionEvidence.summaries,
     fieldRehearsalEvidence.summaries,
     fieldAcceptanceEvidence.summaries,
+    fieldPreflightEvidence.summaries,
   );
 
   const manifest = {
@@ -661,6 +748,7 @@ function main() {
     companionEvidence,
     fieldRehearsalEvidence,
     fieldAcceptanceEvidence,
+    fieldPreflightEvidence,
     automatedEvidenceCoverage,
     handoverSummary,
     fieldVerificationStillRequired: matrixRows.map((row) => ({
@@ -692,6 +780,7 @@ module.exports = {
   readLatestJsonManifest,
   summarizeCompanionEvidence,
   summarizeFieldAcceptance,
+  summarizeFieldPreflight,
   statusLabel,
   timestampForPath,
   unique,

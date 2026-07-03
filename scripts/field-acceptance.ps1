@@ -15,6 +15,10 @@ param(
   [switch]$IncludeContainerImages,
   [switch]$IncludeZap,
   [switch]$RequireScanners,
+  [switch]$RequireDeviceKey,
+  [switch]$RequireHttpsCookies,
+  [switch]$RequireSwaggerAllowlist,
+  [switch]$StrictPreflight,
   [switch]$StartCompose,
   [switch]$StopCompose
 )
@@ -193,6 +197,10 @@ function New-AcceptanceManifest {
       includeContainerImages = [bool]$IncludeContainerImages
       includeZap = [bool]$IncludeZap
       requireScanners = [bool]$RequireScanners
+      requireDeviceKey = [bool]$RequireDeviceKey
+      requireHttpsCookies = [bool]$RequireHttpsCookies
+      requireSwaggerAllowlist = [bool]$RequireSwaggerAllowlist
+      strictPreflight = [bool]$StrictPreflight
       startCompose = [bool]$StartCompose
       stopCompose = [bool]$StopCompose
     }
@@ -253,6 +261,10 @@ function Write-AcceptanceManifest {
     "| IncludeContainerImages | $([bool]$IncludeContainerImages) |",
     "| IncludeZap | $([bool]$IncludeZap) |",
     "| RequireScanners | $([bool]$RequireScanners) |",
+    "| RequireDeviceKey | $([bool]$RequireDeviceKey) |",
+    "| RequireHttpsCookies | $([bool]$RequireHttpsCookies) |",
+    "| RequireSwaggerAllowlist | $([bool]$RequireSwaggerAllowlist) |",
+    "| StrictPreflight | $([bool]$StrictPreflight) |",
     "| StartCompose | $([bool]$StartCompose) |",
     "| StopCompose | $([bool]$StopCompose) |",
     "",
@@ -282,6 +294,22 @@ function Write-AcceptanceManifest {
 
 $outputDir = New-AcceptanceDirectory
 $steps = @()
+
+$preflightArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/field-preflight.ps1", "-BaseUrl", $BaseUrl, "-Reviewer", $Reviewer, "-SiteName", $SiteName)
+$preflightCommandParts = @("powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/field-preflight.ps1", "-BaseUrl", $BaseUrl, "-Reviewer", $Reviewer, "-SiteName", $SiteName)
+$preflightArgs = Add-ArgumentIf -Arguments $preflightArgs -Condition ([bool]$AllowLiveTcp) -Argument "-AllowLiveTcp"
+$preflightArgs = Add-ArgumentIf -Arguments $preflightArgs -Condition ([bool]$RequireDeviceKey) -Argument "-RequireDeviceKey"
+$preflightArgs = Add-ArgumentIf -Arguments $preflightArgs -Condition ([bool]$RequireHttpsCookies) -Argument "-RequireHttpsCookies"
+$preflightArgs = Add-ArgumentIf -Arguments $preflightArgs -Condition ([bool]$RequireSwaggerAllowlist) -Argument "-RequireSwaggerAllowlist"
+$preflightArgs = Add-ArgumentIf -Arguments $preflightArgs -Condition ([bool]$StrictPreflight) -Argument "-Strict"
+$preflightCommandParts = Add-ArgumentIf -Arguments $preflightCommandParts -Condition ([bool]$AllowLiveTcp) -Argument "-AllowLiveTcp"
+$preflightCommandParts = Add-ArgumentIf -Arguments $preflightCommandParts -Condition ([bool]$RequireDeviceKey) -Argument "-RequireDeviceKey"
+$preflightCommandParts = Add-ArgumentIf -Arguments $preflightCommandParts -Condition ([bool]$RequireHttpsCookies) -Argument "-RequireHttpsCookies"
+$preflightCommandParts = Add-ArgumentIf -Arguments $preflightCommandParts -Condition ([bool]$RequireSwaggerAllowlist) -Argument "-RequireSwaggerAllowlist"
+$preflightCommandParts = Add-ArgumentIf -Arguments $preflightCommandParts -Condition ([bool]$StrictPreflight) -Argument "-Strict"
+$steps += Invoke-AcceptanceStep -Name "field preflight" -Command ($preflightCommandParts -join " ") -LogFile (Join-Path $outputDir "00-field-preflight.log") -Script {
+  powershell.exe @preflightArgs
+}
 
 $steps += Invoke-AcceptanceStep -Name "delivery verify gate" -Command "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/delivery-verify.ps1" -LogFile (Join-Path $outputDir "01-delivery-verify.log") -Script {
   powershell.exe -NoProfile -ExecutionPolicy Bypass -File "scripts/delivery-verify.ps1"

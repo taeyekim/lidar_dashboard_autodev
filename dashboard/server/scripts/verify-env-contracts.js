@@ -33,6 +33,7 @@ const evidenceScript = readProjectFile("dashboard/server/scripts/generate-delive
 const securityEvidenceScript = readProjectFile("dashboard/server/scripts/generate-security-evidence.js");
 const runtimeEvidenceScript = readProjectFile("dashboard/server/scripts/generate-runtime-evidence.js");
 const securityScanScript = readProjectFile("scripts/security-scan.ps1");
+const fieldPreflightScript = readProjectFile("scripts/field-preflight.ps1");
 const fieldAcceptanceScript = readProjectFile("scripts/field-acceptance.ps1");
 const env = parseEnvExample(envExample);
 
@@ -170,6 +171,7 @@ assert(
   [securityChecklist, "-RequireScanners", "security checklist"],
   [packageJson, "runtime:evidence", "package scripts"],
   [packageJson, "security:evidence", "package scripts"],
+  [packageJson, "field:preflight", "package scripts"],
   [packageJson, "field:acceptance", "package scripts"],
   [packageJson, "delivery:evidence", "package scripts"],
   [evidenceScript, "artifacts/delivery", "delivery evidence script"],
@@ -190,7 +192,13 @@ assert(
   [securityEvidenceScript, "requireScanners", "security evidence script"],
   [securityEvidenceScript, "--require-scanners", "security evidence script"],
   [securityScanScript, "RequireScanners", "security scan powershell script"],
+  [fieldPreflightScript, "JWT_SECRET", "field preflight script"],
+  [fieldPreflightScript, "DEVICE_INGEST_API_KEY", "field preflight script"],
+  [fieldPreflightScript, "CONTROL_BOARD_DRY_RUN", "field preflight script"],
+  [fieldPreflightScript, "NGINX_SWAGGER_ALLOW", "field preflight script"],
+  [fieldPreflightScript, "AUTH_COOKIE_SECURE", "field preflight script"],
   [fieldAcceptanceScript, "scripts/field-acceptance.ps1", "field acceptance script"],
+  [fieldAcceptanceScript, "scripts/field-preflight.ps1", "field acceptance script"],
   [fieldAcceptanceScript, "scripts/runtime-smoke.ps1", "field acceptance script"],
   [fieldAcceptanceScript, "scripts/db-field-rehearsal.ps1", "field acceptance script"],
   [fieldAcceptanceScript, "scripts/lidar-ingest-rehearsal.ps1", "field acceptance script"],

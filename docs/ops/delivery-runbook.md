@@ -48,11 +48,21 @@ policy blocks `npm.ps1` or aliases `curl`.
 For a single ordered field acceptance pass, use the orchestrator:
 
 ```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/field-preflight.ps1 -BaseUrl http://localhost:8080 -Reviewer "field-reviewer-name" -SiteName "delivery-site-name"
+npm.cmd run field:preflight -- -BaseUrl http://localhost:8080 -Reviewer "field-reviewer-name" -SiteName "delivery-site-name"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/field-acceptance.ps1 -BaseUrl http://localhost:8080
 npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -Reviewer "field-reviewer-name" -SiteName "delivery-site-name"
 ```
 
-The orchestrator runs `scripts/delivery-verify.ps1`, `scripts/runtime-smoke.ps1`,
+The preflight records `.env` readiness, `JWT_SECRET`, seed admin password,
+`DEVICE_INGEST_API_KEY`, `CONTROL_BOARD_DRY_RUN`, live TCP host/port,
+`AUTH_COOKIE_SECURE`, `AUTH_COOKIE_SAMESITE`, and `NGINX_SWAGGER_ALLOW` under
+`artifacts/field-preflight/<timestamp>/manifest.json` plus `manifest.md`.
+Use `-RequireDeviceKey`, `-RequireHttpsCookies`, `-RequireSwaggerAllowlist`,
+and `-StrictPreflight` when those checks should fail instead of being recorded
+as review/skipped items.
+
+The orchestrator runs `scripts/field-preflight.ps1`, `scripts/delivery-verify.ps1`, `scripts/runtime-smoke.ps1`,
 `scripts/db-field-rehearsal.ps1`, `scripts/lidar-ingest-rehearsal.ps1`,
 `scripts/control-board-field-rehearsal.ps1`, `npm.cmd run security:evidence`,
 and `npm.cmd run delivery:evidence` in order, then records
@@ -68,7 +78,7 @@ security acceptance when those scanners are installed.
 Strict field acceptance example after the delivery stack is already running:
 
 ```powershell
-npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -IncludeContainerImages -IncludeZap -RequireScanners
+npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -StrictPreflight -IncludeContainerImages -IncludeZap -RequireScanners
 ```
 
 Default URLs:
@@ -362,6 +372,7 @@ Evidence package:
 - frontend lint result
 - `npm.cmd run verify:audit-policy` or `npm run verify:audit-policy` result
 - `artifacts/field-acceptance/<timestamp>/manifest.json` and `manifest.md` from `scripts/field-acceptance.ps1`
+- `artifacts/field-preflight/<timestamp>/manifest.json` and `manifest.md` from `scripts/field-preflight.ps1`
 - `npm.cmd run security:evidence` manifest under `artifacts/security/<timestamp>/`
 - `scripts/runtime-smoke.ps1` result when Docker runtime smoke is available
 - `artifacts/field-db-rehearsal/<timestamp>/manifest.json` and `manifest.md` from `scripts/db-field-rehearsal.ps1`
