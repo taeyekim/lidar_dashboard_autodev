@@ -193,6 +193,7 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   [deliveryEvidence, "Companion Evidence", "delivery evidence generator"],
   [deliveryEvidence, "Field Rehearsal Evidence", "delivery evidence generator"],
   [deliveryEvidence, "FIELD_REHEARSAL_PASS", "delivery evidence generator"],
+  [deliveryEvidence, "PASS rehearsal manifest missing", "delivery evidence generator"],
   [deliveryEvidence, "Field Acceptance Evidence", "delivery evidence generator"],
   [deliveryEvidence, "Field Preflight Evidence", "delivery evidence generator"],
   [deliveryEvidence, "Manual Evidence References", "delivery evidence generator"],

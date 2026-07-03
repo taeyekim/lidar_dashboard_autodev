@@ -177,6 +177,31 @@ const fieldRehearsalMetadataSummary = summarizeFieldRehearsal(
   "Lidar Ingest",
   "artifacts/delivery-summary-field-rehearsal-metadata",
 );
+const fieldRehearsalMissingMetadataRoot = path.join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "artifacts",
+  "delivery-summary-field-rehearsal-missing-metadata",
+);
+const fieldRehearsalMissingMetadataDir = path.join(fieldRehearsalMissingMetadataRoot, "20260703-000000");
+fs.mkdirSync(fieldRehearsalMissingMetadataDir, { recursive: true });
+fs.writeFileSync(
+  path.join(fieldRehearsalMissingMetadataDir, "manifest.json"),
+  JSON.stringify({
+    results: [
+      {
+        name: "pass without required metadata",
+        status: "PASS",
+      },
+    ],
+  }),
+);
+const fieldRehearsalMissingMetadataSummary = summarizeFieldRehearsal(
+  "DB And Prisma",
+  "artifacts/delivery-summary-field-rehearsal-missing-metadata",
+);
 const bomVectorRoot = path.join(__dirname, "..", "..", "..", "artifacts", "delivery-summary-vector-bom");
 const bomVectorDir = path.join(bomVectorRoot, "20260703-000000");
 fs.mkdirSync(bomVectorDir, { recursive: true });
@@ -410,6 +435,22 @@ assert(
 assert(
   fieldRehearsalMetadataSummary.metadata.unavailableAcceptance.recheckStatus === "SCHEDULED",
   "field rehearsal summary should expose unavailable recheck status",
+);
+assert(
+  fieldRehearsalMissingMetadataSummary.reviewItems.some((item) => item.includes("FIELD_REHEARSAL_PASS")),
+  "field rehearsal PASS summary should require FIELD_REHEARSAL_PASS evidence type metadata",
+);
+assert(
+  fieldRehearsalMissingMetadataSummary.reviewItems.some((item) => item.includes("baseUrl")),
+  "field rehearsal PASS summary should require base URL metadata",
+);
+assert(
+  fieldRehearsalMissingMetadataSummary.reviewItems.some((item) => item.includes("reviewer")),
+  "field rehearsal PASS summary should require reviewer metadata",
+);
+assert(
+  fieldRehearsalMissingMetadataSummary.reviewCount >= 5,
+  "field rehearsal PASS summary should count missing execution metadata as review items",
 );
 assert(
   coverage.some(

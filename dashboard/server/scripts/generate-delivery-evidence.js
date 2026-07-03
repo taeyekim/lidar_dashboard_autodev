@@ -209,6 +209,21 @@ function summarizeFieldRehearsal(type, outputRoot) {
   const reviewItems = results
     .filter((item) => item.status !== "PASS")
     .map((item) => `${type}: ${item.name || "unnamed check"}`);
+  const passCount = results.filter((item) => item.status === "PASS").length;
+  if (passCount > 0) {
+    [
+      ["evidenceType", "FIELD_REHEARSAL_PASS"],
+      ["baseUrl"],
+      ["reviewer"],
+      ["siteName"],
+      ["hostName"],
+    ].forEach(([field, expected]) => {
+      const value = manifest.data[field];
+      if (expected ? value !== expected : !value) {
+        reviewItems.push(`${type}: PASS rehearsal manifest missing ${expected || field} metadata`);
+      }
+    });
+  }
 
   return {
     type,
@@ -223,7 +238,7 @@ function summarizeFieldRehearsal(type, outputRoot) {
       unavailableAcceptance: manifest.data.unavailableAcceptance || null,
     },
     reviewCount: reviewItems.length,
-    passCount: results.filter((item) => item.status === "PASS").length,
+    passCount,
     reviewItems,
   };
 }
