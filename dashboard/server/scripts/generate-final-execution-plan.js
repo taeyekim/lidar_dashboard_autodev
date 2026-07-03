@@ -4,6 +4,7 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 
 const { readLatestJsonManifest, timestampForPath } = require("./generate-delivery-evidence");
+const { isPlaceholderFieldText } = require("./generate-final-status-report");
 const { manualEvidenceRefs } = require("./manual-evidence");
 
 const root = path.join(__dirname, "..", "..", "..");
@@ -43,7 +44,7 @@ function commandCatalog(baseUrl) {
       id: "manual-evidence-readiness",
       phase: "Manual Evidence",
       actionTypes: ["MANUAL_EVIDENCE_REQUIRED"],
-      command: "npm.cmd run manual:evidence-readiness",
+      command: `npm.cmd run manual:evidence-readiness -- --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg}`,
       purpose: "Validate reviewer-filled manual evidence targets before final close.",
       doneWhen: "Manual evidence readiness is READY and required manual evidence files are PRESENT.",
     },
@@ -195,7 +196,7 @@ function commandCatalog(baseUrl) {
       id: "handover-package",
       phase: "Package Refresh",
       actionTypes: ["AUTOMATED_REFRESH_AVAILABLE", "FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED", "REVIEW_REQUIRED"],
-      command: `npm.cmd run handover:package -- --base-url=${baseUrl} --strict`,
+      command: `npm.cmd run handover:package -- --base-url=${baseUrl} --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg} --strict`,
       purpose: "Regenerate the strict handover package with fresh references.",
       doneWhen: "Handover package status is READY with no residual field gates.",
     },
@@ -203,7 +204,7 @@ function commandCatalog(baseUrl) {
       id: "final-status",
       phase: "Final Decision",
       actionTypes: ["AUTOMATED_REFRESH_AVAILABLE", "FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED", "REVIEW_REQUIRED"],
-      command: `npm.cmd run final:status -- --base-url=${baseUrl}`,
+      command: `npm.cmd run final:status -- --base-url=${baseUrl} --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg}`,
       purpose: "Write the final close/no-close decision after all evidence is refreshed.",
       doneWhen: "Final status is READY_TO_CLOSE and canMarkGoalComplete=true.",
     },
@@ -273,8 +274,24 @@ function buildFinalExecutionPlan(input = {}) {
   const handoverPackage = hasInput("handoverPackage") ? input.handoverPackage : readLatestJsonManifest("artifacts/handover-package");
   const baseUrl = input.baseUrl || finalStatus?.data?.baseUrl || "http://localhost:8080";
   const remainingGates = finalStatus?.data?.remainingGates || [];
+  const generatedBy = input.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
+  const siteName = input.siteName || finalStatus?.data?.siteName || "unspecified";
+  const metadataReview = [
+    isPlaceholderFieldText(generatedBy) ? "Generated-by reviewer metadata is missing or placeholder." : "",
+    isPlaceholderFieldText(siteName) ? "Site name metadata is missing or placeholder." : "",
+  ].filter(Boolean);
   const planningGates = finalStatus
-    ? remainingGates
+    ? [
+        ...metadataReview.map((message) => ({
+          actionType: "FIELD_ACTION_REQUIRED",
+          category: "Final Execution Plan Metadata",
+          status: "PLACEHOLDER_METADATA",
+          message,
+          closeWhen: "Rerun npm.cmd run final:execution-plan with concrete --generated-by=<field-reviewer> and --site-name=<delivery-site> values.",
+          evidence: finalStatus?.path || null,
+        })),
+        ...remainingGates,
+      ]
     : [
         {
           actionType: "AUTOMATED_REFRESH_AVAILABLE",
@@ -290,14 +307,14 @@ function buildFinalExecutionPlan(input = {}) {
   const gatesByActionType = groupGatesByActionType(planningGates);
   const status = !finalStatus
     ? "FINAL_STATUS_MISSING"
-    : finalStatus.data?.status === "READY_TO_CLOSE" && remainingGates.length === 0
+    : finalStatus.data?.status === "READY_TO_CLOSE" && remainingGates.length === 0 && metadataReview.length === 0
       ? "READY_TO_CLOSE"
       : "OPEN";
 
   return {
     generatedAt: input.generatedAt || new Date().toISOString(),
-    generatedBy: input.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
-    siteName: input.siteName || finalStatus?.data?.siteName || "unspecified",
+    generatedBy,
+    siteName,
     hostName: input.hostName || os.hostname(),
     baseUrl,
     git: input.git || {
@@ -312,6 +329,7 @@ function buildFinalExecutionPlan(input = {}) {
     sourceFieldGateClosureMap: gateClosureMap?.path || null,
     sourceHandoverPackage: handoverPackage?.path || null,
     remainingGateCount: planningGates.length,
+    metadataReview,
     gatesByActionType,
     manualEvidenceTargets: buildManualEvidenceTargets(input.manualEvidence),
     orderedCommands,
@@ -336,6 +354,7 @@ function buildMarkdown(manifest) {
     `- Status: ${manifest.status}`,
     `- Can mark goal complete: ${manifest.canMarkGoalComplete}`,
     `- Remaining gate count: ${manifest.remainingGateCount}`,
+    `- Metadata review items: ${manifest.metadataReview?.length || 0}`,
     `- Generated at: ${manifest.generatedAt}`,
     `- Generated by: ${manifest.generatedBy}`,
     `- Site name: ${manifest.siteName}`,

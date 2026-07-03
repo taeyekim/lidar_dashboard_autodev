@@ -44,6 +44,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "git push origin dev", "final execution plan generator"],
   [generator, "HEAD matches origin/dev", "final execution plan generator"],
   [generator, "manualEvidenceTargets", "final execution plan generator"],
+  [generator, "isPlaceholderFieldText", "final execution plan generator"],
+  [generator, "Final Execution Plan Metadata", "final execution plan generator"],
+  [generator, "manual:evidence-readiness -- --generated-by", "final execution plan generator"],
   [generator, "This execution plan does not prove field completion", "final execution plan generator"],
   [generator, "npm.cmd run final:status", "final execution plan generator"],
   [generator, "npm.cmd run handover:package", "final execution plan generator"],
@@ -85,6 +88,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
 
 const openPlan = buildFinalExecutionPlan({
   generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "reviewer-a",
+  siteName: "delivery-site",
   baseUrl: "http://field.local:8080",
   git: { branch: "dev", commit: "fixture", clean: true },
   finalStatus: {
@@ -137,6 +142,12 @@ assert(
   "manual evidence readiness coverage should expose manual evidence gates",
 );
 assert(openPlan.orderedCommands.some((item) => item.id === "manual-evidence-readiness"), "manual gate should include manual evidence readiness command");
+assert(
+  openPlan.orderedCommands.some(
+    (item) => item.id === "manual-evidence-readiness" && item.command.includes("--generated-by=") && item.command.includes("--site-name="),
+  ),
+  "manual evidence readiness command should pass concrete reviewer/site metadata args",
+);
 assert(openPlan.orderedCommands.some((item) => item.id === "control-board-field-rehearsal"), "field gate should include control-board rehearsal command");
 assert(openPlan.orderedCommands.some((item) => item.id === "security-evidence"), "security gate should include strict security evidence command");
 assert(openPlan.gatesByActionType.SECURITY_REVIEW_REQUIRED.some((gate) => gate.status === "DELIVERY_FIX_REQUIRED"), "security delivery-fix status should be preserved in gate groups");
@@ -168,11 +179,14 @@ assert(openMarkdown.includes("Command Gate Coverage"), "markdown should include 
 
 const readyPlan = buildFinalExecutionPlan({
   generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "reviewer-a",
+  siteName: "delivery-site",
   git: { branch: "dev", commit: "fixture", clean: true },
   finalStatus: {
     path: "artifacts/final-status/20260101-000000/manifest.json",
     data: {
       status: "READY_TO_CLOSE",
+      siteName: "delivery-site",
       remainingGates: [],
     },
   },
@@ -183,8 +197,32 @@ assert(readyPlan.status === "READY_TO_CLOSE", "ready final status should produce
 assert(readyPlan.canMarkGoalComplete === true, "ready execution plan should allow close");
 assert(readyPlan.orderedCommands.length === 0, "ready execution plan should not invent commands");
 assert(readyPlan.commandGateCoverage.length === 0, "ready execution plan should not invent command coverage");
+const placeholderMetadataPlan = buildFinalExecutionPlan({
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "field-reviewer",
+  siteName: "field-site",
+  git: { branch: "dev", commit: "fixture", clean: true },
+  finalStatus: {
+    path: "artifacts/final-status/20260101-000000/manifest.json",
+    data: {
+      status: "READY_TO_CLOSE",
+      siteName: "field-site",
+      remainingGates: [],
+    },
+  },
+  manualEvidence: [],
+});
+assert(placeholderMetadataPlan.status === "OPEN", "placeholder execution-plan metadata should keep the plan open");
+assert(placeholderMetadataPlan.canMarkGoalComplete === false, "placeholder execution-plan metadata must block goal completion");
+assert(placeholderMetadataPlan.remainingGateCount === 2, "placeholder execution-plan metadata should add reviewer and site gates");
+assert(
+  placeholderMetadataPlan.gatesByActionType.FIELD_ACTION_REQUIRED.every((gate) => gate.status === "PLACEHOLDER_METADATA"),
+  "placeholder execution-plan metadata should expose placeholder metadata gates",
+);
 const missingFinalStatusPlan = buildFinalExecutionPlan({
   generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "reviewer-a",
+  siteName: "delivery-site",
   git: { branch: "dev", commit: "fixture", clean: true },
   finalStatus: null,
   manualEvidence: [],
