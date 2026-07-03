@@ -99,6 +99,10 @@ assertIncludes(
   "level-1 wrong-way payloads must create or reuse only stage-1 control commands",
   "level-1 wrong-way payloads must not auto-escalate to stage-2 control commands",
   "stage-2 control command must be created only after an explicit level-2 payload",
+  "camelCase objectId payload must reuse the stable vehicle track",
+  "stableObjectId wrong-way payload must create a traffic event",
+  "stableObjectId must normalize to event trackId",
+  "vehicle track must preserve camelCase objectId raw payload evidence",
 ].forEach((token) => assertIncludes(wrongwayRuntimeDedupe, token, "wrongway runtime command escalation guard"));
 [
   "controlCommands:",
@@ -135,6 +139,7 @@ assertIncludes(externalIngestRoutes, "/ingest/control-board/tcp/test", "external
   "payload.objectId",
   "payload.uuid",
   "payload.stable_object_id",
+  "payload.stableObjectId",
   "LiDAR wrong-way event received",
 ].forEach((token) => assertIncludes(lidarHttpAdapter, token, "lidar HTTP adapter"));
 const stableIdEvent = adaptLidarHttpPayload({
@@ -153,15 +158,8 @@ const knownMojibakeChars = [0xf9e4, 0xb97c, 0xbcf4, 0xae38].map((code) => String
   assert(!externalEventModel.includes(token), `external event model must not contain mojibake token: ${token}`);
   assert(!lidarHttpAdapter.includes(token), `lidar HTTP adapter must not contain mojibake token: ${token}`);
 });
-[
-  "?쇱",
-  "?ㅼ",
-  "?듯",
-  "?놁",
-  "諛",
-  "媛",
-  "理",
-].forEach((token) => {
+const knownMojibakeFragments = [0x7344, 0x63f6, 0x7b4c].map((code) => String.fromCharCode(code));
+knownMojibakeFragments.forEach((token) => {
   assert(!externalIngestRoutes.includes(token), `external ingest routes must not contain mojibake fragment: ${token}`);
   assert(!externalIngestController.includes(token), `external ingest controller must not contain mojibake fragment: ${token}`);
 });
@@ -204,9 +202,11 @@ assert(wrongwayResponse, "WrongwayIngestResponse schema is missing");
 [
   "wrong-way-level-1",
   "wrong-way-level-2",
-  "자동으로 `wrong-way-level-2`로 승격하지 않습니다",
-  "측량/현장 기준이 확정된 뒤",
-  "현장 rehearsal 증적",
+  "objectId",
+  "stableObjectId",
+  "primary DB de-duplication key",
+  "does not automatically escalate",
+  "field rehearsal evidence",
 ].forEach((token) => assertIncludes(payloadSpec, token, "lidar payload spec level-2 escalation boundary"));
 
 console.log("wrongway contracts ok");

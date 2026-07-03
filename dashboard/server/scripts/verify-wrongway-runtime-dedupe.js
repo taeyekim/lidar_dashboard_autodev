@@ -192,19 +192,34 @@ async function main() {
     sequence: 2,
   }, { receivedAt: "2026-07-03T00:00:01.000Z" });
 
+  const camelCaseNormal = await ingestWrongwayPayload({
+    type: "normal-driving",
+    zoneId: "Z-DEDUPE",
+    objectId: "stable-track-001",
+    occurredAt: "2026-07-03T00:00:01.500Z",
+    normalMovingVehicleCount: 5,
+    sequence: 3,
+  }, { receivedAt: "2026-07-03T00:00:01.500Z" });
+
   assert(firstNormal.ok, "first normal-driving ingest must succeed");
   assert(secondNormal.ok, "second normal-driving ingest must succeed");
+  assert(camelCaseNormal.ok, "camelCase normal-driving ingest must succeed");
   assert(firstNormal.vehicleTrackCreated, "first normal-driving payload must create the unique vehicle track");
   assert(!secondNormal.vehicleTrackCreated, "repeated normal-driving payload must reuse the vehicle track");
-  assert(!firstNormal.eventCreated && !secondNormal.eventCreated, "normal-driving must not create traffic events");
+  assert(!camelCaseNormal.vehicleTrackCreated, "camelCase objectId payload must reuse the stable vehicle track");
+  assert(
+    !firstNormal.eventCreated && !secondNormal.eventCreated && !camelCaseNormal.eventCreated,
+    "normal-driving must not create traffic events",
+  );
   assertEqual(prisma.__state.vehicleTracks.size, 1, "normal-driving duplicates must leave one vehicle track");
   assertEqual(prisma.__state.trafficEvents.length, 0, "normal-driving duplicates must leave zero traffic events");
   assertEqual(prisma.__state.eventLogs.length, 1, "repeated normal-driving track must not create duplicate event logs");
   assertEqual(dashboardEffects.vehiclesPassed, 1, "dashboard vehicle counter must increment only for the first unique track");
 
   const track = Array.from(prisma.__state.vehicleTracks.values())[0];
-  assertEqual(track.lastNormalMovingVehicleCount, 4, "vehicle track must keep the latest raw LiDAR normal count");
-  assertEqual(track.rawPayload.sequence, 2, "vehicle track must keep the latest raw normal-driving payload");
+  assertEqual(track.lastNormalMovingVehicleCount, 5, "vehicle track must keep the latest raw LiDAR normal count");
+  assertEqual(track.rawPayload.sequence, 3, "vehicle track must keep the latest raw normal-driving payload");
+  assertEqual(track.rawPayload.objectId, "stable-track-001", "vehicle track must preserve camelCase objectId raw payload evidence");
 
   const firstWrongway = await ingestWrongwayPayload({
     type: "wrong-way-level-1",
@@ -241,8 +256,20 @@ async function main() {
   assert(explicitLevel2.eventCreated, "explicit wrong-way level 2 payload must create the stage-2 traffic event");
   assertEqual(commandCalls.filter((call) => call.commandType === "STAGE_2_ON").length, 1, "stage-2 control command must be created only after an explicit level-2 payload");
 
+  const stableObjectLevel1 = await ingestWrongwayPayload({
+    type: "wrong-way-level-1",
+    zoneId: "Z-DEDUPE",
+    stableObjectId: "field-stable-object-002",
+    occurredAt: "2026-07-03T00:00:05.000Z",
+    confidence: 0.91,
+  }, { receivedAt: "2026-07-03T00:00:05.000Z" });
+
+  assert(stableObjectLevel1.eventCreated, "stableObjectId wrong-way payload must create a traffic event");
+  assertEqual(prisma.__state.vehicleTracks.size, 2, "stableObjectId payload must create a second unique vehicle track");
+  assertEqual(stableObjectLevel1.event.trackId, "field-stable-object-002", "stableObjectId must normalize to event trackId");
+
   const vehicleTrackRealtime = realtimeMessages.filter((message) => message.type === "vehicle-track.updated");
-  assertEqual(vehicleTrackRealtime.length, 5, "every ingest must publish vehicle-track.updated for operators");
+  assertEqual(vehicleTrackRealtime.length, 7, "every ingest must publish vehicle-track.updated for operators");
 
   console.log("wrongway runtime dedupe ok");
 }
