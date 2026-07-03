@@ -392,12 +392,90 @@ function buildAutomatedEvidenceCoverage(rows, commands) {
         };
       }
 
+      if (normalizedToken === "npm run field:acceptance") {
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: "FIELD_ACCEPTANCE_EVIDENCE",
+          coveredBy: "manifest.fieldAcceptanceEvidence.outputRoot",
+        };
+      }
+
       if (normalizedToken.includes("artifacts/field-preflight/<timestamp>/")) {
         return {
           area: row.area,
           evidence: token,
           coverage: "FIELD_PREFLIGHT_EVIDENCE",
           coveredBy: "manifest.fieldPreflightEvidence.outputRoot",
+        };
+      }
+
+      if (normalizedToken === "npm run field:preflight") {
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: "FIELD_PREFLIGHT_EVIDENCE",
+          coveredBy: "manifest.fieldPreflightEvidence.outputRoot",
+        };
+      }
+
+      if (
+        normalizedToken === "npm run completion:audit" ||
+        normalizedToken.includes("artifacts/completion-audit/<timestamp>/")
+      ) {
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: "COMPLETION_AUDIT_EVIDENCE",
+          coveredBy: "manifest.handoverSummary and artifacts/completion-audit",
+        };
+      }
+
+      if (
+        normalizedToken === "npm run handover:index" ||
+        normalizedToken.includes("artifacts/handover-index/<timestamp>/")
+      ) {
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: "HANDOVER_INDEX_EVIDENCE",
+          coveredBy: "artifacts/handover-index",
+        };
+      }
+
+      if (
+        normalizedToken === "npm run field:closure-plan" ||
+        normalizedToken.includes("artifacts/field-closure-plan/<timestamp>/")
+      ) {
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: "FIELD_CLOSURE_EVIDENCE",
+          coveredBy: "artifacts/field-closure-plan",
+        };
+      }
+
+      if (
+        normalizedToken === "npm run field:readiness" ||
+        normalizedToken.includes("artifacts/field-readiness/<timestamp>/")
+      ) {
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: "FIELD_READINESS_EVIDENCE",
+          coveredBy: "artifacts/field-readiness",
+        };
+      }
+
+      if (
+        normalizedToken === "npm run handover:package" ||
+        normalizedToken.includes("artifacts/handover-package/<timestamp>/")
+      ) {
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: "HANDOVER_PACKAGE_EVIDENCE",
+          coveredBy: "artifacts/handover-package",
         };
       }
 

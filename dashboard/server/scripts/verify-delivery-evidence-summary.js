@@ -24,7 +24,7 @@ const matrix = `
 | --- | --- | --- | --- |
 | Control Board TCP | Sends raw command frames. | \`npm run verify:control-board-protocol\`, \`GET /api/control-board/status\` | Live integrated control-board TCP test |
 | Traffic Statistics | KPI vectors remain executable. | \`npm run verify:statistics-metrics\`, \`scripts/runtime-smoke.ps1\` | Field acceptance of period labels |
-| Delivery Evidence | Manifest packaging remains reproducible. | \`npm run delivery:evidence\`, \`artifacts/delivery/<timestamp>/runtime/\`, \`artifacts/field-acceptance/<timestamp>/manifest.json\`, \`artifacts/field-preflight/<timestamp>/manifest.json\` | none |
+| Delivery Evidence | Manifest packaging remains reproducible. | \`npm run delivery:evidence\`, \`npm run field:preflight\`, \`npm run field:acceptance\`, \`npm run completion:audit\`, \`npm run handover:index\`, \`npm run field:closure-plan\`, \`npm run field:readiness\`, \`npm run handover:package\`, \`artifacts/delivery/<timestamp>/runtime/\`, \`artifacts/field-acceptance/<timestamp>/manifest.json\`, \`artifacts/field-preflight/<timestamp>/manifest.json\`, \`artifacts/completion-audit/<timestamp>/manifest.json\`, \`artifacts/handover-index/<timestamp>/manifest.json\`, \`artifacts/field-closure-plan/<timestamp>/manifest.json\`, \`artifacts/field-readiness/<timestamp>/manifest.json\`, \`artifacts/handover-package/<timestamp>/manifest.json\` | none |
 `;
 
 const commands = [
@@ -359,6 +359,34 @@ assert(
       item.coverage === "FIELD_PREFLIGHT_EVIDENCE",
   ),
   "coverage should classify field preflight manifest output",
+);
+assert(
+  coverage.some((item) => item.evidence === "npm run field:preflight" && item.coverage === "FIELD_PREFLIGHT_EVIDENCE"),
+  "coverage should classify field preflight command",
+);
+assert(
+  coverage.some((item) => item.evidence === "npm run field:acceptance" && item.coverage === "FIELD_ACCEPTANCE_EVIDENCE"),
+  "coverage should classify field acceptance command",
+);
+assert(
+  coverage.some((item) => item.evidence === "npm run completion:audit" && item.coverage === "COMPLETION_AUDIT_EVIDENCE"),
+  "coverage should classify completion audit command",
+);
+assert(
+  coverage.some((item) => item.evidence === "npm run handover:index" && item.coverage === "HANDOVER_INDEX_EVIDENCE"),
+  "coverage should classify handover index command",
+);
+assert(
+  coverage.some((item) => item.evidence === "npm run field:closure-plan" && item.coverage === "FIELD_CLOSURE_EVIDENCE"),
+  "coverage should classify field closure command",
+);
+assert(
+  coverage.some((item) => item.evidence === "npm run field:readiness" && item.coverage === "FIELD_READINESS_EVIDENCE"),
+  "coverage should classify field readiness command",
+);
+assert(
+  coverage.some((item) => item.evidence === "npm run handover:package" && item.coverage === "HANDOVER_PACKAGE_EVIDENCE"),
+  "coverage should classify handover package command",
 );
 assert(
   fieldAcceptanceReviewSummary.status === "AUTOMATED_CHECKS_REVIEW",
