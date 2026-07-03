@@ -38,6 +38,7 @@ function assertOptionalDeviceKey(operation, label) {
   ["/api/zones", "get", "ZoneListResponse"],
   ["/api/devices", "get", "DeviceListResponse"],
   ["/api/devices/status", "get", "DeviceStatusSummaryResponse"],
+  ["/api/statistics/traffic", "get", "TrafficStatisticsResponse"],
 ].forEach(([path, method, schema]) => {
   assertPath(method, path);
   assertSchema(schema);
@@ -99,6 +100,25 @@ assert(
 const eventSummary = swaggerSpec.components?.schemas?.EventSummaryResponse;
 ["vehiclesPassed", "vehicleTracks", "todayVehicleTracks", "newEvents"].forEach((field) => {
   assert(eventSummary?.properties?.[field]?.type === "integer", `EventSummaryResponse must expose ${field}`);
+});
+
+const trafficStatistics = swaggerSpec.components?.schemas?.TrafficStatisticsResponse;
+["totals", "buckets", "zones"].forEach((field) => {
+  assert(trafficStatistics?.properties?.[field], `TrafficStatisticsResponse must expose ${field}`);
+});
+const trafficStatisticsMetrics = swaggerSpec.components?.schemas?.TrafficStatisticsMetrics;
+[
+  "vehiclesTotal",
+  "normalVehicles",
+  "wrongwayVehicles",
+  "wrongwayEvents",
+  "wrongwayRate",
+  "controlCommands",
+  "dryRunCommands",
+  "liveCommands",
+  "commandSuccessRate",
+].forEach((field) => {
+  assert(trafficStatisticsMetrics?.properties?.[field], `TrafficStatisticsMetrics must expose ${field}`);
 });
 
 console.log("swagger contracts ok");

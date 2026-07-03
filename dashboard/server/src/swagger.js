@@ -21,6 +21,7 @@ const swaggerSpec = {
     { name: "Control", description: "차단기와 전광판 제어" },
     { name: "Wrongway", description: "역주행 감지 이벤트" },
     { name: "Events", description: "저장된 교통 이벤트 조회와 상태 관리" },
+    { name: "Statistics", description: "정주행/역주행 운영 통계와 제어 성공률" },
     { name: "External Ingest", description: "라이다 PC와 통합 제어보드 외부 이벤트 수신" },
     { name: "Demo", description: "감지 데모 제어" },
   ],
@@ -472,6 +473,36 @@ const swaggerSpec = {
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/EventSummaryResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/statistics/traffic": {
+      get: {
+        tags: ["Statistics"],
+        summary: "교통 운영 통계 조회",
+        description:
+          "vehicle_tracks의 unique track 기준 차량 수, wrong-way 이벤트 기준 역주행 수, 통합 제어보드 명령 성공률을 기간별로 집계합니다.",
+        parameters: [
+          {
+            name: "range",
+            in: "query",
+            required: false,
+            schema: { type: "string", enum: ["daily", "weekly", "monthly", "yearly"], default: "daily" },
+          },
+          { name: "from", in: "query", required: false, schema: { type: "string", format: "date-time" } },
+          { name: "to", in: "query", required: false, schema: { type: "string", format: "date-time" } },
+          { name: "zoneId", in: "query", required: false, schema: { type: "string" } },
+          { name: "externalZoneId", in: "query", required: false, schema: { type: "string" } },
+        ],
+        responses: {
+          200: {
+            description: "교통 운영 통계",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/TrafficStatisticsResponse" },
               },
             },
           },
@@ -1407,6 +1438,75 @@ const swaggerSpec = {
           byEventType: { type: "object", additionalProperties: { type: "integer" } },
           lastEventId: { type: "string", nullable: true },
           lastReceivedAt: { type: "string", format: "date-time", nullable: true },
+        },
+      },
+      TrafficStatisticsMetrics: {
+        type: "object",
+        properties: {
+          vehiclesTotal: { type: "integer", example: 12842 },
+          normalVehicles: { type: "integer", example: 12821 },
+          wrongwayVehicles: { type: "integer", example: 21 },
+          wrongwayEvents: { type: "integer", example: 24 },
+          wrongwayRate: { type: "number", example: 0.16 },
+          stage1Events: { type: "integer", example: 19 },
+          stage2Events: { type: "integer", example: 5 },
+          controlCommands: { type: "integer", example: 24 },
+          dryRunCommands: { type: "integer", example: 20 },
+          liveCommands: { type: "integer", example: 4 },
+          acknowledgedCommands: { type: "integer", example: 3 },
+          failedCommands: { type: "integer", example: 1 },
+          commandSuccessRate: { type: "number", nullable: true, example: 75 },
+        },
+      },
+      TrafficStatisticsBucket: {
+        allOf: [
+          { $ref: "#/components/schemas/TrafficStatisticsMetrics" },
+          {
+            type: "object",
+            properties: {
+              key: { type: "string", example: "hour-8" },
+              label: { type: "string", example: "08:00" },
+              start: { type: "string", format: "date-time" },
+              end: { type: "string", format: "date-time" },
+            },
+          },
+        ],
+      },
+      TrafficStatisticsZone: {
+        allOf: [
+          { $ref: "#/components/schemas/TrafficStatisticsMetrics" },
+          {
+            type: "object",
+            properties: {
+              zoneCode: { type: "string", nullable: true, example: "ROUNDABOUT-01" },
+              name: { type: "string", example: "Roundabout entrance" },
+            },
+          },
+        ],
+      },
+      TrafficStatisticsResponse: {
+        type: "object",
+        properties: {
+          ok: { type: "boolean", example: true },
+          range: { type: "string", example: "daily" },
+          bucketUnit: { type: "string", example: "hour" },
+          generatedAt: { type: "string", format: "date-time" },
+          period: {
+            type: "object",
+            properties: {
+              start: { type: "string", format: "date-time" },
+              end: { type: "string", format: "date-time" },
+            },
+          },
+          totals: { $ref: "#/components/schemas/TrafficStatisticsMetrics" },
+          buckets: {
+            type: "array",
+            items: { $ref: "#/components/schemas/TrafficStatisticsBucket" },
+          },
+          zones: {
+            type: "array",
+            items: { $ref: "#/components/schemas/TrafficStatisticsZone" },
+          },
         },
       },
       ExternalEvent: {

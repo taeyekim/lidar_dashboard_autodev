@@ -1,6 +1,7 @@
 // /src/pages/Dashboard/Dashboard.jsx
 import { useState, useEffect, useRef } from "react";
 import { Card } from "../../shared/components/Card";
+import { TrafficStatisticsPanel } from "../../components/dashboard/TrafficStatisticsPanel";
 import { apiUrl, detectorUrl, WS_BASE } from "../../shared/api/config";
 import { postJson } from "../../shared/api/http";
 import {
@@ -951,6 +952,8 @@ export default function DashboardPage({
           </div>
         </Card>
       </div>
+
+      <TrafficStatisticsPanel />
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
         {/* 메인 모니터링 */}

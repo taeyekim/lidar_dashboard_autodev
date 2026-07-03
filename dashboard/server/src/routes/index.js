@@ -7,6 +7,7 @@ const eventRoutes = require("../domains/events/events.routes");
 const externalIngestRoutes = require("../domains/external-ingest/externalIngest.routes");
 const mockLidarRoutes = require("../domains/mock-lidar/mockLidar.routes");
 const sitesRoutes = require("../domains/sites/sites.routes");
+const statisticsRoutes = require("../domains/statistics/statistics.routes");
 const systemRoutes = require("../domains/system/system.routes");
 const wrongwayRoutes = require("../domains/wrongway/wrongway.routes");
 
@@ -24,6 +25,7 @@ router.use(eventRoutes);
 router.use(externalIngestRoutes);
 router.use(mockLidarRoutes);
 router.use(sitesRoutes);
+router.use(statisticsRoutes);
 router.use(systemRoutes);
 router.use(wrongwayRoutes);
 
