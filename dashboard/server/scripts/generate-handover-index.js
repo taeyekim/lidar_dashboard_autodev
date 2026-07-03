@@ -21,6 +21,7 @@ function argValue(name, fallback) {
 
 function manifestStatus(entry, manifest) {
   if (!manifest) return "MISSING";
+  if (entry.stale) return "STALE";
   const data = manifest.data || {};
   if (data.status) return data.status;
   if (data.handoverSummary?.status) return data.handoverSummary.status;
@@ -43,6 +44,7 @@ function indexEntry(entry) {
     generatedAt: manifest?.data?.generatedAt || null,
     attach: Boolean(manifest?.path),
     notes: entry.notes,
+    sourceDeliveryManifest: manifest?.data?.sourceDeliveryManifest || null,
   };
 }
 
@@ -113,7 +115,21 @@ function buildIndexManifest(options = {}) {
     },
   ].map(indexEntry);
 
+  const deliveryEntry = entries.find((entry) => entry.area === "Delivery Evidence");
+  const completionEntry = entries.find((entry) => entry.area === "Completion Audit");
+  const consistencyIssues = [];
+
+  if (deliveryEntry?.manifestPath && completionEntry?.manifestPath) {
+    if (completionEntry.sourceDeliveryManifest !== deliveryEntry.manifestPath) {
+      completionEntry.status = "STALE";
+      consistencyIssues.push(
+        `Completion Audit sourceDeliveryManifest (${completionEntry.sourceDeliveryManifest || "missing"}) does not match latest Delivery Evidence (${deliveryEntry.manifestPath}). Run npm run completion:audit again.`,
+      );
+    }
+  }
+
   const missingRequired = entries.filter((entry) => entry.required && !entry.manifestPath);
+  const staleEntries = entries.filter((entry) => entry.status === "STALE");
   const reviewEntries = entries.filter((entry) => ["REVIEW", "AUTOMATED_CHECKS_REVIEW", "FIELD_VERIFICATION_REQUIRED", "PASS_WITH_SKIPS"].includes(entry.status));
   const completion = entries.find((entry) => entry.area === "Completion Audit");
   const completionManifest = completion?.manifestPath ? readLatestJsonManifest("artifacts/completion-audit") : null;
@@ -123,17 +139,20 @@ function buildIndexManifest(options = {}) {
     generatedBy: options.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
     siteName: options.siteName || "unspecified",
     hostName: os.hostname(),
-    status: missingRequired.length > 0 ? "INCOMPLETE" : reviewEntries.length > 0 ? "REVIEW" : "READY",
+    status: missingRequired.length > 0 ? "INCOMPLETE" : staleEntries.length > 0 ? "STALE" : reviewEntries.length > 0 ? "REVIEW" : "READY",
     canMarkGoalComplete: Boolean(completionManifest?.data?.canMarkGoalComplete),
     counts: {
       totalEntries: entries.length,
       missingRequiredCount: missingRequired.length,
+      staleEntryCount: staleEntries.length,
       reviewEntryCount: reviewEntries.length,
       attachableManifestCount: entries.filter((entry) => entry.attach).length,
     },
     entries,
     missingRequiredAreas: missingRequired.map((entry) => entry.area),
+    staleAreas: staleEntries.map((entry) => entry.area),
     reviewAreas: reviewEntries.map((entry) => entry.area),
+    consistencyIssues,
   };
 }
 
@@ -153,6 +172,7 @@ function buildMarkdown(manifest) {
     `- Total entries: ${manifest.counts.totalEntries}`,
     `- Attachable manifests: ${manifest.counts.attachableManifestCount}`,
     `- Missing required entries: ${manifest.counts.missingRequiredCount}`,
+    `- Stale entries: ${manifest.counts.staleEntryCount}`,
     `- Review entries: ${manifest.counts.reviewEntryCount}`,
     "",
     "## Evidence Entries",
@@ -167,9 +187,17 @@ function buildMarkdown(manifest) {
     "",
     ...(manifest.missingRequiredAreas.length > 0 ? manifest.missingRequiredAreas.map((area) => `- ${area}`) : ["- none"]),
     "",
+    "## Stale Areas",
+    "",
+    ...(manifest.staleAreas.length > 0 ? manifest.staleAreas.map((area) => `- ${area}`) : ["- none"]),
+    "",
     "## Review Areas",
     "",
     ...(manifest.reviewAreas.length > 0 ? manifest.reviewAreas.map((area) => `- ${area}`) : ["- none"]),
+    "",
+    "## Consistency Issues",
+    "",
+    ...(manifest.consistencyIssues.length > 0 ? manifest.consistencyIssues.map((issue) => `- ${issue}`) : ["- none"]),
     "",
   ].join("\n");
 }

@@ -32,7 +32,12 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "Runtime Evidence",
   "Security Evidence",
   "missingRequiredAreas",
+  "staleAreas",
   "reviewAreas",
+  "consistencyIssues",
+  "sourceDeliveryManifest",
+  "staleEntryCount",
+  "STALE",
   "canMarkGoalComplete",
 ].forEach((token) => assertIncludes(generator, token, "handover index generator"));
 

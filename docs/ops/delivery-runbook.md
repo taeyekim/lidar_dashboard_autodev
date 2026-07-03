@@ -104,7 +104,10 @@ After `npm.cmd run completion:audit`, run `npm.cmd run handover:index`.
 The index writes `artifacts/handover-index/<timestamp>/manifest.json` and
 `artifacts/handover-index/<timestamp>/manifest.md`, listing the latest required
 delivery, completion, preflight, acceptance, field rehearsal, runtime, and
-security manifests that should be attached to the handover package.
+security manifests that should be attached to the handover package. If the
+completion audit does not reference the latest delivery evidence manifest, the
+index reports `STALE`; run `npm.cmd run completion:audit` and
+`npm.cmd run handover:index` again.
 
 Default URLs:
 
