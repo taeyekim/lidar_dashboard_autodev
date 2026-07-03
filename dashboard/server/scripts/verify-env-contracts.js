@@ -33,6 +33,7 @@ const evidenceScript = readProjectFile("dashboard/server/scripts/generate-delive
 const securityEvidenceScript = readProjectFile("dashboard/server/scripts/generate-security-evidence.js");
 const runtimeEvidenceScript = readProjectFile("dashboard/server/scripts/generate-runtime-evidence.js");
 const securityScanScript = readProjectFile("scripts/security-scan.ps1");
+const fieldAcceptanceScript = readProjectFile("scripts/field-acceptance.ps1");
 const env = parseEnvExample(envExample);
 
 const requiredEnvKeys = [
@@ -169,6 +170,7 @@ assert(
   [securityChecklist, "-RequireScanners", "security checklist"],
   [packageJson, "runtime:evidence", "package scripts"],
   [packageJson, "security:evidence", "package scripts"],
+  [packageJson, "field:acceptance", "package scripts"],
   [packageJson, "delivery:evidence", "package scripts"],
   [evidenceScript, "artifacts/delivery", "delivery evidence script"],
   [evidenceScript, "manifest.md", "delivery evidence script"],
@@ -188,6 +190,14 @@ assert(
   [securityEvidenceScript, "requireScanners", "security evidence script"],
   [securityEvidenceScript, "--require-scanners", "security evidence script"],
   [securityScanScript, "RequireScanners", "security scan powershell script"],
+  [fieldAcceptanceScript, "scripts/field-acceptance.ps1", "field acceptance script"],
+  [fieldAcceptanceScript, "scripts/runtime-smoke.ps1", "field acceptance script"],
+  [fieldAcceptanceScript, "scripts/db-field-rehearsal.ps1", "field acceptance script"],
+  [fieldAcceptanceScript, "scripts/lidar-ingest-rehearsal.ps1", "field acceptance script"],
+  [fieldAcceptanceScript, "scripts/control-board-field-rehearsal.ps1", "field acceptance script"],
+  [fieldAcceptanceScript, "security:evidence", "field acceptance script"],
+  [fieldAcceptanceScript, "delivery:evidence", "field acceptance script"],
+  [fieldAcceptanceScript, "artifacts/field-acceptance", "field acceptance script"],
   [runtimeEvidenceScript, "artifacts/runtime", "runtime evidence script"],
   [runtimeEvidenceScript, "manifest.md", "runtime evidence script"],
   [runtimeEvidenceScript, "manifest.json", "runtime evidence script"],
