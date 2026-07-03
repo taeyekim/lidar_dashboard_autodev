@@ -28,6 +28,32 @@ function gitValue(args) {
   return result.stdout.trim();
 }
 
+function buildGitState(inputGit = null) {
+  if (inputGit) {
+    const upstreamCommit = inputGit.upstreamCommit ?? inputGit.remoteCommit ?? null;
+    return {
+      branch: inputGit.branch,
+      commit: inputGit.commit,
+      clean: inputGit.clean,
+      upstream: inputGit.upstream || null,
+      upstreamCommit,
+      pushed: inputGit.pushed ?? Boolean(inputGit.commit && upstreamCommit && inputGit.commit === upstreamCommit),
+    };
+  }
+
+  const upstream = gitValue(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]);
+  const upstreamCommit = upstream ? gitValue(["rev-parse", "@{u}"]) : "";
+  const commit = gitValue(["rev-parse", "HEAD"]);
+  return {
+    branch: gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
+    commit,
+    clean: gitValue(["status", "--short"]) === "",
+    upstream: upstream || null,
+    upstreamCommit: upstreamCommit || null,
+    pushed: Boolean(commit && upstreamCommit && commit === upstreamCommit),
+  };
+}
+
 function evidencePath(manifest) {
   return manifest?.path || null;
 }
@@ -266,11 +292,7 @@ function buildManifest(options = {}) {
     sourceFieldReadiness: evidencePath(fieldReadiness),
     sourceSecurityEvidence: evidencePath(security),
     sourceManualEvidenceReadiness: evidencePath(manualReadiness),
-    git: {
-      branch: options.git?.branch || gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
-      commit: options.git?.commit || gitValue(["rev-parse", "HEAD"]),
-      clean: options.git?.clean ?? gitValue(["status", "--short"]) === "",
-    },
+    git: buildGitState(options.git),
     riskGroups: groups,
     riskItems,
     guardrails: [

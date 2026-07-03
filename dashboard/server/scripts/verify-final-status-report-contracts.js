@@ -280,7 +280,7 @@ const readyEvidence = {
   },
   fieldRiskRegister: {
     path: "artifacts/field-risk-register/20260101-000000/manifest.json",
-    data: { status: "NO_OPEN_RISKS", openRiskCount: 0, copyToRiskAcceptanceCount: 0 },
+    data: { status: "NO_OPEN_RISKS", openRiskCount: 0, copyToRiskAcceptanceCount: 0, git: readyEvidenceGit },
   },
   fieldActionBoard: {
     path: "artifacts/field-action-board/20260101-000000/manifest.json",
@@ -379,6 +379,14 @@ assert(
 assert(
   ready.sourceRevisionFreshness.some((item) => item.key === "handoverPackage" && item.fresh === true && item.clean === true),
   "complete fixture should verify handover package source revision freshness",
+);
+assert(
+  ready.sourceRevisionFreshness.some((item) => item.key === "fieldRiskRegister" && item.fresh === true && item.pushed === true),
+  "complete fixture should verify field risk register source revision freshness",
+);
+assert(
+  ready.sourceRevisionFreshness.some((item) => item.key === "manualEvidenceReadiness" && item.fresh === true && item.pushed === true),
+  "complete fixture should verify manual evidence readiness source revision freshness",
 );
 assert(
   ready.sourceRevisionFreshness.every((item) => item.branch === "dev" && item.branchOk === true),

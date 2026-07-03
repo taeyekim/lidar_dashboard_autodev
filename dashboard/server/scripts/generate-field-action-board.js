@@ -29,6 +29,32 @@ function gitValue(args) {
   return result.stdout.trim();
 }
 
+function buildGitState(inputGit = null) {
+  if (inputGit) {
+    const upstreamCommit = inputGit.upstreamCommit ?? inputGit.remoteCommit ?? null;
+    return {
+      branch: inputGit.branch,
+      commit: inputGit.commit,
+      clean: inputGit.clean,
+      upstream: inputGit.upstream || null,
+      upstreamCommit,
+      pushed: inputGit.pushed ?? Boolean(inputGit.commit && upstreamCommit && inputGit.commit === upstreamCommit),
+    };
+  }
+
+  const upstream = gitValue(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]);
+  const upstreamCommit = upstream ? gitValue(["rev-parse", "@{u}"]) : "";
+  const commit = gitValue(["rev-parse", "HEAD"]);
+  return {
+    branch: gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
+    commit,
+    clean: gitValue(["status", "--short"]) === "",
+    upstream: upstream || null,
+    upstreamCommit: upstreamCommit || null,
+    pushed: Boolean(commit && upstreamCommit && commit === upstreamCommit),
+  };
+}
+
 function ownerForGate(gate) {
   const text = `${gate.category || ""} ${gate.message || ""} ${gate.closeWhen || ""}`.toLowerCase();
   if (text.includes("security") || text.includes("scanner") || text.includes("cookie") || text.includes("jwt") || text.includes("password") || text.includes("cors")) return "Auth/Security";
@@ -218,11 +244,7 @@ function buildManifest(input = {}) {
     status: finalStatus ? (items.length > 0 ? "OPEN" : "READY_TO_CLOSE") : "FINAL_STATUS_MISSING",
     openActionCount: items.length,
     sourceFinalStatus: finalStatus?.path || null,
-    git: {
-      branch: input.git?.branch || gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
-      commit: input.git?.commit || gitValue(["rev-parse", "HEAD"]),
-      clean: input.git?.clean ?? gitValue(["status", "--short"]) === "",
-    },
+    git: buildGitState(input.git),
     ownerGroups: groupByOwner(items),
     phaseGroups: groupByPhase(items),
     actionItems: items,

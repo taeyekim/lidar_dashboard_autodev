@@ -27,6 +27,32 @@ function gitValue(args) {
   return result.stdout.trim();
 }
 
+function buildGitState(inputGit = null) {
+  if (inputGit) {
+    const upstreamCommit = inputGit.upstreamCommit ?? inputGit.remoteCommit ?? null;
+    return {
+      branch: inputGit.branch,
+      commit: inputGit.commit,
+      clean: inputGit.clean,
+      upstream: inputGit.upstream || null,
+      upstreamCommit,
+      pushed: inputGit.pushed ?? Boolean(inputGit.commit && upstreamCommit && inputGit.commit === upstreamCommit),
+    };
+  }
+
+  const upstream = gitValue(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]);
+  const upstreamCommit = upstream ? gitValue(["rev-parse", "@{u}"]) : "";
+  const commit = gitValue(["rev-parse", "HEAD"]);
+  return {
+    branch: gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
+    commit,
+    clean: gitValue(["status", "--short"]) === "",
+    upstream: upstream || null,
+    upstreamCommit: upstreamCommit || null,
+    pushed: Boolean(commit && upstreamCommit && commit === upstreamCommit),
+  };
+}
+
 function slug(value) {
   return String(value || "unknown")
     .toLowerCase()
@@ -152,11 +178,7 @@ function buildManifest(input = {}) {
     ownerCount: briefs.length,
     openItemCount: briefs.reduce((sum, item) => sum + item.openItemCount, 0),
     briefs,
-    git: {
-      branch: input.git?.branch || gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
-      commit: input.git?.commit || gitValue(["rev-parse", "HEAD"]),
-      clean: input.git?.clean ?? gitValue(["status", "--short"]) === "",
-    },
+    git: buildGitState(input.git),
     guardrails: [
       "Owner briefs split the latest field action board for field execution.",
       "They do not replace manual evidence, scanner evidence, runtime evidence, or hardware rehearsal evidence.",

@@ -12,6 +12,11 @@ const REQUIRED_SOURCE_REVISION_EVIDENCE_KEYS = [
   "fieldReadiness",
   "fieldAcceptance",
   "securityEvidence",
+  "manualEvidenceReadiness",
+  "fieldRiskRegister",
+  "fieldActionBoard",
+  "fieldGateClosureMap",
+  "fieldOwnerBriefs",
   "handoverPackage",
 ];
 

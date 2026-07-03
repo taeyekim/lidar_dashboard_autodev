@@ -28,6 +28,32 @@ function gitValue(args) {
   return result.stdout.trim();
 }
 
+function buildGitState(inputGit = null) {
+  if (inputGit) {
+    const upstreamCommit = inputGit.upstreamCommit ?? inputGit.remoteCommit ?? null;
+    return {
+      branch: inputGit.branch,
+      commit: inputGit.commit,
+      clean: inputGit.clean,
+      upstream: inputGit.upstream || null,
+      upstreamCommit,
+      pushed: inputGit.pushed ?? Boolean(inputGit.commit && upstreamCommit && inputGit.commit === upstreamCommit),
+    };
+  }
+
+  const upstream = gitValue(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]);
+  const upstreamCommit = upstream ? gitValue(["rev-parse", "@{u}"]) : "";
+  const commit = gitValue(["rev-parse", "HEAD"]);
+  return {
+    branch: gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
+    commit,
+    clean: gitValue(["status", "--short"]) === "",
+    upstream: upstream || null,
+    upstreamCommit: upstreamCommit || null,
+    pushed: Boolean(commit && upstreamCommit && commit === upstreamCommit),
+  };
+}
+
 function fileExists(relativePath) {
   return fs.existsSync(path.join(root, relativePath));
 }
@@ -92,11 +118,7 @@ function buildManualEvidenceReadiness(input = {}) {
     generatedBy,
     siteName,
     hostName: input.hostName || os.hostname(),
-    git: input.git || {
-      branch: gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
-      commit: gitValue(["rev-parse", "HEAD"]),
-      clean: gitValue(["status", "--short"]) === "",
-    },
+    git: buildGitState(input.git),
     status,
     readyForFinalClose: metadataReview.length === 0 && items.every((item) => item.status === "PRESENT"),
     missingCount: items.filter((item) => item.status === "MISSING").length,

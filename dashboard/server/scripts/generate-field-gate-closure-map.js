@@ -27,6 +27,32 @@ function gitValue(args) {
   return result.stdout.trim();
 }
 
+function buildGitState(inputGit = null) {
+  if (inputGit) {
+    const upstreamCommit = inputGit.upstreamCommit ?? inputGit.remoteCommit ?? null;
+    return {
+      branch: inputGit.branch,
+      commit: inputGit.commit,
+      clean: inputGit.clean,
+      upstream: inputGit.upstream || null,
+      upstreamCommit,
+      pushed: inputGit.pushed ?? Boolean(inputGit.commit && upstreamCommit && inputGit.commit === upstreamCommit),
+    };
+  }
+
+  const upstream = gitValue(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]);
+  const upstreamCommit = upstream ? gitValue(["rev-parse", "@{u}"]) : "";
+  const commit = gitValue(["rev-parse", "HEAD"]);
+  return {
+    branch: gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
+    commit,
+    clean: gitValue(["status", "--short"]) === "",
+    upstream: upstream || null,
+    upstreamCommit: upstreamCommit || null,
+    pushed: Boolean(commit && upstreamCommit && commit === upstreamCommit),
+  };
+}
+
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
 }
@@ -128,11 +154,7 @@ function buildManifest(input = {}) {
     commandCount: commandGroups.length,
     openGateCount: commandGroups.reduce((sum, group) => sum + group.gateCount, 0),
     commandGroups,
-    git: {
-      branch: input.git?.branch || gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
-      commit: input.git?.commit || gitValue(["rev-parse", "HEAD"]),
-      clean: input.git?.clean ?? gitValue(["status", "--short"]) === "",
-    },
+    git: buildGitState(input.git),
     guardrails: [
       "This map shows which final-status gates each field command is expected to close.",
       "It is an execution aid only; actual closure requires regenerated PASS/READY evidence.",
