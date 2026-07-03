@@ -38,6 +38,10 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "FIELD_ACTION_REQUIRED", "final status report generator"],
   [generator, "AUTOMATED_REFRESH_AVAILABLE", "final status report generator"],
   [generator, "Control Board TCP", "final status report generator"],
+  [generator, "Control Board Field Rehearsal", "final status report generator"],
+  [generator, "acknowledgedCommandCount", "final status report generator"],
+  [generator, "ACKNOWLEDGED", "final status report generator"],
+  [generator, "approved LIVE_TCP ACK evidence", "final status report generator"],
   [generator, "Field Acceptance", "final status report generator"],
   [generator, "buildFieldAcceptanceSummary", "final status report generator"],
   [generator, "readyForHandover", "final status report generator"],
@@ -170,6 +174,26 @@ const readyEvidence = {
       steps: [{ name: "operator UI browser walkthrough", status: "PASS" }],
     },
   },
+  controlBoardFieldRehearsal: {
+    path: "artifacts/field-control-board-rehearsal/20260101-000000/manifest.json",
+    data: {
+      evidenceType: "FIELD_REHEARSAL_PASS",
+      allowLiveTcp: true,
+      liveApproved: true,
+      initialMode: "LIVE_TCP",
+      finalMode: "LIVE_TCP",
+      safetyStatus: "LIVE_TCP_READY",
+      liveTcpReady: true,
+      results: [
+        { name: "operator cookie auth login", status: "PASS", response: { statusCode: 200 } },
+        { name: "initial control-board status", status: "PASS", response: { mode: "LIVE_TCP", safetyStatus: "LIVE_TCP_READY" } },
+        { name: "STAGE_1_ON command rehearsal", status: "PASS", response: { command: { status: "ACKNOWLEDGED" } } },
+        { name: "STAGE_2_ON command rehearsal", status: "PASS", response: { command: { status: "ACKNOWLEDGED" } } },
+        { name: "STAGE_2_RETURN command rehearsal", status: "PASS", response: { command: { status: "ACKNOWLEDGED" } } },
+        { name: "final control-board status metrics", status: "PASS", response: { responseSampleCount: 3 } },
+      ],
+    },
+  },
   securityEvidence: {
     path: "artifacts/security/20260101-000000/manifest.json",
     data: {
@@ -300,6 +324,11 @@ assert(
 assert(ready.fieldAcceptance.readyForHandover === true, "complete fixture should expose field acceptance handover readiness");
 assert(ready.fieldAcceptance.reviewerReady === true, "complete fixture should expose concrete field acceptance reviewer");
 assert(ready.fieldAcceptance.siteNameReady === true, "complete fixture should expose concrete field acceptance site name");
+assert(ready.controlBoardFieldRehearsal.allowLiveTcp === true, "complete fixture should expose approved live TCP rehearsal");
+assert(
+  ready.controlBoardFieldRehearsal.acknowledgedCommandCount === 3,
+  "complete fixture should expose three acknowledged control-board commands",
+);
 assert(isPlaceholderFieldText("field-reviewer-name") === true, "field reviewer placeholder should be recognized");
 assert(isPlaceholderFieldText("delivery-site-name") === true, "delivery site placeholder should be recognized");
 assert(isPlaceholderFieldText("field-reviewer") === true, "field reviewer shorthand placeholder should be recognized");
@@ -333,6 +362,7 @@ assert(
 );
 assert(buildMarkdown(ready).includes("Delivery Entrypoint Consistency"), "markdown should include delivery entrypoint consistency");
 assert(buildMarkdown(ready).includes("Field Acceptance"), "markdown should include field acceptance summary");
+assert(buildMarkdown(ready).includes("Control Board Field Rehearsal"), "markdown should include control-board rehearsal summary");
 assert(buildMarkdown(ready).includes("Git pushed to origin/dev: yes"), "markdown should include git push state");
 
 const missing = buildFinalStatusReport({
@@ -356,6 +386,10 @@ assert(
 assert(
   missing.remainingGates.some((item) => item.category === "Manual Evidence Readiness" && item.status === "MISSING"),
   "missing fixture should expose missing manual evidence readiness",
+);
+assert(
+  missing.remainingGates.some((item) => item.category === "Control Board Field Rehearsal" && item.status === "MISSING"),
+  "missing fixture should expose missing control-board field rehearsal",
 );
 assert(
   missing.gateActionRunbook.some((item) => item.actionType === "AUTOMATED_REFRESH_AVAILABLE"),
@@ -974,6 +1008,44 @@ assert(
 assert(
   mismatchedEntrypoint.gateActionRunbook.some((item) => item.actionType === "FIELD_ACTION_REQUIRED"),
   "mismatched delivery entrypoint should route to field action",
+);
+
+const dryRunControlBoardRehearsal = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    controlBoardFieldRehearsal: {
+      ...readyEvidence.controlBoardFieldRehearsal,
+      data: {
+        ...readyEvidence.controlBoardFieldRehearsal.data,
+        allowLiveTcp: false,
+        liveApproved: false,
+        initialMode: "DRY_RUN",
+        finalMode: "DRY_RUN",
+        safetyStatus: "DRY_RUN_SAFE",
+        liveTcpReady: false,
+        results: readyEvidence.controlBoardFieldRehearsal.data.results.map((item) =>
+          String(item.name || "").includes("command rehearsal")
+            ? { ...item, response: { command: { status: "DRY_RUN" } } }
+            : item,
+        ),
+      },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
+  git: readyGit,
+});
+
+assert(
+  dryRunControlBoardRehearsal.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED",
+  "DRY_RUN control-board rehearsal must not allow final close",
+);
+assert(
+  dryRunControlBoardRehearsal.remainingGates.some(
+    (item) => item.category === "Control Board Field Rehearsal" && item.message.includes("approved LIVE_TCP ACK evidence"),
+  ),
+  "DRY_RUN control-board rehearsal should expose approved LIVE_TCP ACK evidence gate",
 );
 
 console.log("final status report contracts ok");

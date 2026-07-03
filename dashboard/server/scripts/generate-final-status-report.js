@@ -306,6 +306,30 @@ function buildFieldAcceptanceSummary(fieldAcceptance) {
   };
 }
 
+function buildControlBoardFieldRehearsalSummary(controlBoardFieldRehearsal) {
+  const data = controlBoardFieldRehearsal?.data || {};
+  const results = Array.isArray(data.results) ? data.results : [];
+  const commandResults = results.filter((item) => String(item.name || "").includes("command rehearsal"));
+  const failedResults = results.filter((item) => item.status !== "PASS");
+  const acknowledgedCommands = commandResults.filter((item) => item.response?.command?.status === "ACKNOWLEDGED");
+
+  return {
+    path: evidencePath(controlBoardFieldRehearsal),
+    exists: Boolean(controlBoardFieldRehearsal),
+    evidenceType: data.evidenceType || "MISSING",
+    allowLiveTcp: data.allowLiveTcp === true,
+    liveApproved: data.liveApproved === true,
+    initialMode: data.initialMode || "MISSING",
+    finalMode: data.finalMode || "MISSING",
+    safetyStatus: data.safetyStatus || "MISSING",
+    liveTcpReady: data.liveTcpReady === true,
+    resultCount: results.length,
+    failedResultCount: failedResults.length,
+    commandResultCount: commandResults.length,
+    acknowledgedCommandCount: acknowledgedCommands.length,
+  };
+}
+
 function buildFinalStatusReport(input = {}) {
   const evidenceRefs = input.evidenceRefs || latestEvidenceRefs();
   const manualEvidence = input.manualEvidence || manualEvidenceRefs();
@@ -315,6 +339,7 @@ function buildFinalStatusReport(input = {}) {
   const fieldAcceptance = evidenceRefs.fieldAcceptance;
   const security = evidenceRefs.securityEvidence;
   const handoverPackage = evidenceRefs.handoverPackage;
+  const controlBoardFieldRehearsal = evidenceRefs.controlBoardFieldRehearsal;
   const fieldRiskRegister = evidenceRefs.fieldRiskRegister;
   const fieldActionBoard = evidenceRefs.fieldActionBoard;
   const fieldGateClosureMap = evidenceRefs.fieldGateClosureMap;
@@ -330,6 +355,7 @@ function buildFinalStatusReport(input = {}) {
   const manualReadinessData = manualReadiness?.data || {};
   const securitySummary = buildSecuritySummary(security);
   const fieldAcceptanceSummary = buildFieldAcceptanceSummary(fieldAcceptance);
+  const controlBoardFieldRehearsalSummary = buildControlBoardFieldRehearsalSummary(controlBoardFieldRehearsal);
   const manualEvidenceSummary = buildManualEvidenceSummary(manualEvidence);
   const referenceFreshness = refsAreFresh(handoverPackage, evidenceRefs);
   const git = buildGitState(input.git);
@@ -410,6 +436,40 @@ function buildFinalStatusReport(input = {}) {
     }
     if (readinessData.env?.controlBoardSafetyStatus !== "LIVE_TCP_READY") {
       addGate(gates, "Control Board TCP", readinessData.env?.controlBoardSafetyStatus || "UNKNOWN", "Control-board safety is not LIVE_TCP_READY.", "Configure field host/port, record CONTROL_BOARD_LIVE_APPROVED=true, and capture live TCP rehearsal evidence.", evidencePath(readiness));
+    }
+  }
+
+  if (!controlBoardFieldRehearsal) {
+    addGate(
+      gates,
+      "Control Board Field Rehearsal",
+      "MISSING",
+      "Latest control-board field rehearsal manifest is missing.",
+      "Run scripts/control-board-field-rehearsal.ps1 with -AllowLiveTcp after field IP/port and hardware approval are confirmed.",
+      null,
+    );
+  } else {
+    const liveReadyRehearsal =
+      controlBoardFieldRehearsalSummary.evidenceType === "FIELD_REHEARSAL_PASS" &&
+      controlBoardFieldRehearsalSummary.allowLiveTcp === true &&
+      controlBoardFieldRehearsalSummary.liveApproved === true &&
+      controlBoardFieldRehearsalSummary.initialMode === "LIVE_TCP" &&
+      controlBoardFieldRehearsalSummary.finalMode === "LIVE_TCP" &&
+      controlBoardFieldRehearsalSummary.safetyStatus === "LIVE_TCP_READY" &&
+      controlBoardFieldRehearsalSummary.liveTcpReady === true &&
+      controlBoardFieldRehearsalSummary.failedResultCount === 0 &&
+      controlBoardFieldRehearsalSummary.commandResultCount >= 3 &&
+      controlBoardFieldRehearsalSummary.acknowledgedCommandCount >= 3;
+
+    if (!liveReadyRehearsal) {
+      addGate(
+        gates,
+        "Control Board Field Rehearsal",
+        controlBoardFieldRehearsalSummary.safetyStatus || "REVIEW",
+        `Control-board field rehearsal is not approved LIVE_TCP ACK evidence: allowLiveTcp=${controlBoardFieldRehearsalSummary.allowLiveTcp}, liveApproved=${controlBoardFieldRehearsalSummary.liveApproved}, initialMode=${controlBoardFieldRehearsalSummary.initialMode}, finalMode=${controlBoardFieldRehearsalSummary.finalMode}, acknowledgedCommands=${controlBoardFieldRehearsalSummary.acknowledgedCommandCount}/${controlBoardFieldRehearsalSummary.commandResultCount}.`,
+        "Run the control-board field rehearsal with -AllowLiveTcp against the approved integrated control board and confirm all command rehearsals are ACKNOWLEDGED.",
+        evidencePath(controlBoardFieldRehearsal),
+      );
     }
   }
 
@@ -674,6 +734,7 @@ function buildFinalStatusReport(input = {}) {
       controlBoardSafetyStatus: readinessData.env?.controlBoardSafetyStatus || "UNKNOWN",
     },
     fieldAcceptance: fieldAcceptanceSummary,
+    controlBoardFieldRehearsal: controlBoardFieldRehearsalSummary,
     securityEvidence: securitySummary,
     manualEvidenceReadiness: {
       path: evidencePath(manualReadiness),
@@ -729,6 +790,7 @@ function buildMarkdown(manifest) {
     `- Field acceptance: ${manifest.fieldAcceptance.status} (${manifest.fieldAcceptance.path || "missing"})`,
     `- Field acceptance ready for handover: ${manifest.fieldAcceptance.readyForHandover}`,
     `- Control-board safety: ${manifest.fieldReadiness.controlBoardSafetyStatus}`,
+    `- Control-board field rehearsal: ${manifest.controlBoardFieldRehearsal.safetyStatus} (${manifest.controlBoardFieldRehearsal.path || "missing"})`,
     `- Security evidence: ${manifest.securityEvidence.exists ? "present" : "missing"} (${manifest.securityEvidence.path || "missing"})`,
     `- Security scanner closeout open: ${manifest.securityEvidence.scannerCloseoutSummary.open}/${manifest.securityEvidence.scannerCloseoutSummary.total}`,
     `- Manual evidence readiness: ${manifest.manualEvidenceReadiness.status} (${manifest.manualEvidenceReadiness.path || "missing"})`,
@@ -783,6 +845,21 @@ function buildMarkdown(manifest) {
     `| Skipped steps | ${manifest.fieldAcceptance.skippedStepCount} |`,
     `| Operator UI walkthrough | ${markdownCell(manifest.fieldAcceptance.operatorUiWalkthroughStatus)} |`,
     `| Operator UI evidence | ${manifest.fieldAcceptance.operatorUiWalkthroughEvidence ? `\`${markdownCell(manifest.fieldAcceptance.operatorUiWalkthroughEvidence)}\`` : "missing"} |`,
+    "",
+    "## Control Board Field Rehearsal",
+    "",
+    "| Item | Value |",
+    "| --- | --- |",
+    `| Manifest | ${manifest.controlBoardFieldRehearsal.path ? `\`${markdownCell(manifest.controlBoardFieldRehearsal.path)}\`` : "missing"} |`,
+    `| Evidence type | ${markdownCell(manifest.controlBoardFieldRehearsal.evidenceType)} |`,
+    `| Allow LIVE_TCP | ${manifest.controlBoardFieldRehearsal.allowLiveTcp ? "yes" : "no"} |`,
+    `| Live approved | ${manifest.controlBoardFieldRehearsal.liveApproved ? "yes" : "no"} |`,
+    `| Initial mode | ${markdownCell(manifest.controlBoardFieldRehearsal.initialMode)} |`,
+    `| Final mode | ${markdownCell(manifest.controlBoardFieldRehearsal.finalMode)} |`,
+    `| Safety status | ${markdownCell(manifest.controlBoardFieldRehearsal.safetyStatus)} |`,
+    `| Live TCP ready | ${manifest.controlBoardFieldRehearsal.liveTcpReady ? "yes" : "no"} |`,
+    `| Failed result count | ${manifest.controlBoardFieldRehearsal.failedResultCount} |`,
+    `| Acknowledged commands | ${manifest.controlBoardFieldRehearsal.acknowledgedCommandCount}/${manifest.controlBoardFieldRehearsal.commandResultCount} |`,
     "",
     "## Evidence References",
     "",
