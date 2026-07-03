@@ -18,6 +18,7 @@ const packageJson = readProjectFile("package.json");
 const serverPackageJson = readProjectFile("dashboard/server/package.json");
 const completionAudit = readProjectFile("dashboard/server/scripts/generate-completion-audit.js");
 const handoverPackage = readProjectFile("dashboard/server/scripts/generate-handover-package.js");
+const finalStatusReport = readProjectFile("dashboard/server/scripts/generate-final-status-report.js");
 const handoverIndex = readProjectFile("dashboard/server/scripts/generate-handover-index.js");
 const fieldClosurePlan = readProjectFile("dashboard/server/scripts/generate-field-closure-plan.js");
 const deliveryRunbook = readProjectFile("docs/ops/delivery-runbook.md");
@@ -26,8 +27,12 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
 
 [
   [packageJson, "verify:final-status", "root package scripts"],
+  [packageJson, "final:status", "root package scripts"],
+  [packageJson, "verify:final-status-report", "root package scripts"],
   [packageJson, "verify-final-status-contracts.js", "root smoke chain"],
+  [packageJson, "verify-final-status-report-contracts.js", "root smoke chain"],
   [serverPackageJson, "verify-final-status-contracts.js", "server verify chain"],
+  [serverPackageJson, "verify-final-status-report-contracts.js", "server verify chain"],
   [completionAudit, "canMarkGoalComplete", "completion audit generator"],
   [completionAudit, "FIELD_VERIFICATION_REQUIRED", "completion audit generator"],
   [completionAudit, "goal remains active", "completion audit generator"],
@@ -41,15 +46,24 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [handoverPackage, "residualFieldGates", "handover package generator"],
   [handoverPackage, "evidenceRefs", "handover package generator"],
   [handoverPackage, "canMarkGoalComplete=false", "handover package generator"],
+  [finalStatusReport, "READY_TO_CLOSE", "final status report generator"],
+  [finalStatusReport, "FIELD_OR_SECURITY_REVIEW_REQUIRED", "final status report generator"],
+  [finalStatusReport, "remainingGates", "final status report generator"],
+  [finalStatusReport, "artifacts/final-status", "final status report generator"],
+  [finalStatusReport, "Do not mark the Codex goal complete", "final status report generator"],
   [handoverIndex, "canMarkGoalComplete", "handover index generator"],
   [fieldClosurePlan, "canMarkGoalComplete", "field closure plan generator"],
   [deliveryRunbook, "canMarkGoalComplete", "delivery runbook"],
   [deliveryRunbook, "Residual Field Gates", "delivery runbook"],
   [deliveryRunbook, "verify:final-status", "delivery runbook"],
+  [deliveryRunbook, "npm.cmd run final:status", "delivery runbook"],
+  [deliveryRunbook, "artifacts/final-status", "delivery runbook"],
   [deliveryRunbook, "delivery/readiness/security/index/closure references", "delivery runbook"],
   [deliveryRunbook, "a security evidence manifest", "delivery runbook"],
   [acceptanceChecklist, "canMarkGoalComplete=false", "acceptance checklist"],
   [acceptanceChecklist, "npm run verify:final-status", "acceptance checklist"],
+  [acceptanceChecklist, "npm run final:status", "acceptance checklist"],
+  [acceptanceChecklist, "artifacts/final-status", "acceptance checklist"],
   [acceptanceChecklist, "fresh referenced artifacts", "acceptance checklist"],
   [acceptanceChecklist, "a security evidence manifest", "acceptance checklist"],
   [matrix, "canMarkGoalComplete", "delivery evidence matrix"],
@@ -62,6 +76,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [matrix, "latest referenced artifacts", "delivery evidence matrix"],
   [matrix, "no residual field gates", "delivery evidence matrix"],
   [matrix, "Final Status", "delivery evidence matrix"],
+  [matrix, "artifacts/final-status", "delivery evidence matrix"],
 ].forEach(([content, token, label]) => assertIncludes(content, token, label));
 
 const latestCompletion = readLatestJsonManifest("artifacts/completion-audit");
