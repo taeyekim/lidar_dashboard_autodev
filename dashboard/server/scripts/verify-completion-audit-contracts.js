@@ -111,6 +111,8 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "redacted",
   "artifacts/field-readiness",
   "npm run field:readiness",
+  "--generated-by=<field-reviewer>",
+  "--site-name=<delivery-site>",
   "npm run field:preflight",
   "npm run field:acceptance",
   "--require-scanners",

@@ -128,6 +128,14 @@ assert(phaseForGate(gates[3]) === "Field Preflight", "CORS/CSP gate should map t
 assert(commandForGate(gates[1], "http://field.local:8080").includes("control-board-field-rehearsal.ps1"), "control-board gate should map to control-board rehearsal command");
 assert(commandForGate(gates[0], "http://field.local:8080").includes("security:evidence"), "delivery-fix security gate should map to security evidence command");
 assert(commandForGate(gates[3], "http://field.local:8080").includes("field:preflight"), "CORS/CSP gate should map to field preflight command");
+assert(
+  commandForGate(gates[2], "http://field.local:8080").includes("manual:evidence-readiness -- --generated-by="),
+  "manual evidence gate should pass reviewer/site metadata args to readiness",
+);
+assert(
+  commandForGate({ category: "Handover Package", message: "handover package needs refresh" }, "http://field.local:8080").includes("--generated-by="),
+  "handover gate should pass reviewer/site metadata args to package refresh",
+);
 
 const actionItems = buildActionItems({ data: { remainingGates: gates } }, "http://field.local:8080");
 assert(actionItems.length === 4, "action items should preserve gate count");

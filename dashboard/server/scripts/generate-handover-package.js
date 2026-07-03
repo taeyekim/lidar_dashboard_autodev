@@ -241,7 +241,7 @@ function fieldEvidenceNextAction(type) {
     "Control Board TCP":
       `Run powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} after control-board dry-run or approved live TCP conditions are confirmed.`,
   };
-  return actions[type] || "Refresh the related field evidence manifest and rerun npm.cmd run handover:package.";
+  return actions[type] || "Refresh the related field evidence manifest and rerun npm.cmd run handover:package -- --generated-by=<field-reviewer> --site-name=<delivery-site>.";
 }
 
 function fieldEvidenceDoneWhen(type) {
@@ -324,7 +324,7 @@ function buildResidualFieldGates({
       category: "Strict Gate",
       status: "OPEN",
       message: reason,
-      closeWhen: "Resolve the strict gate reason and rerun npm.cmd run handover:package -- --strict.",
+      closeWhen: "Resolve the strict gate reason and rerun npm.cmd run handover:package -- --generated-by=<field-reviewer> --site-name=<delivery-site> --strict.",
     })),
     ...openManualEvidence.map((item) => ({
       category: "Manual Evidence",

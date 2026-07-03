@@ -48,7 +48,7 @@ function addBlocker(blockers, category, message, nextAction = "") {
 function blockerNextAction(kind) {
   const actions = {
     missingDelivery: "Run npm run delivery:evidence, then rerun npm run completion:audit.",
-    deliveryStatus: "Review the latest delivery manifest Handover Summary and rerun npm run handover:package after evidence refresh.",
+    deliveryStatus: "Review the latest delivery manifest Handover Summary and rerun npm run handover:package -- --generated-by=<field-reviewer> --site-name=<delivery-site> after evidence refresh.",
     failedCommands: "Open the failed command logs in the delivery evidence folder, fix failures, then rerun npm run delivery:evidence.",
     companionReview: "Review companion runtime/security manifests and resolve REVIEW items before rerunning delivery evidence.",
     companionSkipped: "Run runtime/security evidence with the required field switches, including --run-smoke and --require-scanners when applicable.",
@@ -57,9 +57,9 @@ function blockerNextAction(kind) {
     fieldPreflight: "Run npm run field:preflight after .env, cookie, Swagger allowlist, device key, and control-board settings are updated.",
     fieldVerification: "Complete the listed field verification areas and attach PASS manifests to the handover package.",
     fieldActionArtifacts: "Close field risk/action/gate/owner items, refresh field:risk-register, field:action-board, field:gate-closure-map, and field:owner-briefs, then rerun npm run completion:audit.",
-    readiness: "Run npm run field:readiness after filling required field values and starting the delivery Nginx/API entrypoint.",
+    readiness: "Run npm run field:readiness -- --base-url=<delivery-url> --generated-by=<field-reviewer> --site-name=<delivery-site> after filling required field values and starting the delivery Nginx/API entrypoint.",
     controlBoard: "Set CONTROL_BOARD_HOST/PORT and use LIVE TCP only after hardware approval, then rerun readiness and control-board rehearsal.",
-    manualReadiness: "Run npm run manual:evidence-readiness after filling required manual evidence, then rerun npm run completion:audit.",
+    manualReadiness: "Run npm run manual:evidence-readiness -- --generated-by=<field-reviewer> --site-name=<delivery-site> after filling required manual evidence, then rerun npm run completion:audit.",
   };
   return actions[kind] || "Refresh the related evidence manifest and rerun npm run completion:audit.";
 }
@@ -70,7 +70,7 @@ function buildReadinessSignals(fieldReadinessManifest) {
       status: "MISSING",
       reviewCount: 1,
       skippedCount: 0,
-      blockerMessages: ["Field readiness manifest is missing. Run npm run field:readiness before completion:audit."],
+      blockerMessages: ["Field readiness manifest is missing. Run npm run field:readiness -- --base-url=<delivery-url> --generated-by=<field-reviewer> --site-name=<delivery-site> before completion:audit."],
     };
   }
 

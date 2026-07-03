@@ -152,7 +152,7 @@ function gateSummary(gates) {
 function gateActionRunbook(gates) {
   const runbooks = {
     AUTOMATED_REFRESH_AVAILABLE:
-      "Refresh generated evidence with npm.cmd run delivery:evidence, npm.cmd run completion:audit, npm.cmd run handover:package, then rerun npm.cmd run final:status.",
+      "Refresh generated evidence with npm.cmd run delivery:evidence, npm.cmd run completion:audit, npm.cmd run handover:package -- --generated-by=<field-reviewer> --site-name=<delivery-site>, then rerun npm.cmd run final:status -- --generated-by=<field-reviewer> --site-name=<delivery-site>.",
     FIELD_ACTION_REQUIRED:
       "Run the field preflight, runtime smoke, DB/LiDAR/control-board rehearsals, field readiness, and field acceptance commands against the delivery Nginx entrypoint and approved hardware/network.",
     MANUAL_EVIDENCE_REQUIRED:
@@ -387,7 +387,7 @@ function buildFinalStatusReport(input = {}) {
   }
 
   if (!readiness) {
-    addGate(gates, "Field Readiness", "MISSING", "Latest field readiness manifest is missing.", "Run npm.cmd run field:readiness -- --base-url=<delivery-url>.", null);
+    addGate(gates, "Field Readiness", "MISSING", "Latest field readiness manifest is missing.", "Run npm.cmd run field:readiness -- --base-url=<delivery-url> --generated-by=<field-reviewer> --site-name=<delivery-site>.", null);
   } else {
     if (readinessData.status !== "PASS") {
       addGate(gates, "Field Readiness", readinessData.status || "REVIEW", "Field readiness is not PASS.", "Resolve readiness REVIEW/SKIPPED checks and rerun field:readiness.", evidencePath(readiness));
@@ -528,13 +528,13 @@ function buildFinalStatusReport(input = {}) {
   }
 
   if (!handoverPackage) {
-    addGate(gates, "Handover Package", "MISSING", "Latest handover package manifest is missing.", "Run npm.cmd run handover:package -- --base-url=<delivery-url>.", null);
+    addGate(gates, "Handover Package", "MISSING", "Latest handover package manifest is missing.", "Run npm.cmd run handover:package -- --base-url=<delivery-url> --generated-by=<field-reviewer> --site-name=<delivery-site>.", null);
   } else {
     if (packageData.status !== "READY" || packageData.canMarkGoalComplete !== true) {
       const reasons = Array.isArray(packageData.strictFailureReasons) && packageData.strictFailureReasons.length > 0
         ? packageData.strictFailureReasons.join("; ")
         : "handover package is not READY.";
-      addGate(gates, "Handover Package", packageData.status || "REVIEW", reasons, "Resolve strictFailureReasons and rerun handover:package -- --strict.", evidencePath(handoverPackage));
+      addGate(gates, "Handover Package", packageData.status || "REVIEW", reasons, "Resolve strictFailureReasons and rerun handover:package -- --generated-by=<field-reviewer> --site-name=<delivery-site> --strict.", evidencePath(handoverPackage));
     }
     if (Array.isArray(packageData.residualFieldGates) && packageData.residualFieldGates.length > 0) {
       packageData.residualFieldGates.forEach((item) => {

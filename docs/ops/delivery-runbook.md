@@ -47,20 +47,20 @@ npm.cmd run runtime:evidence -- --run-smoke --use-existing-stack --base-url=http
 npm.cmd run field:rehearsal-unavailable -- --reason="Docker runtime or field hardware is unavailable on this workstation" --replacement-owner="field-owner" --target-recheck-date="2026-08-01" --approval-note="temporary local workstation evidence"
 npm.cmd run delivery:evidence
 npm.cmd run completion:audit
-npm.cmd run handover:index
-npm.cmd run field:closure-plan
 $env:FIELD_REVIEWER="<actual reviewer name>"
 $env:FIELD_SITE_NAME="<actual delivery site name>"
 npm.cmd run manual:evidence-drafts -- --base-url=http://localhost:8080 --site-name="$env:FIELD_SITE_NAME" --reviewer="$env:FIELD_REVIEWER"
-npm.cmd run manual:evidence-readiness
-npm.cmd run field:readiness -- --base-url=http://localhost:8080
-npm.cmd run field:risk-register -- --base-url=http://localhost:8080
-npm.cmd run field:action-board -- --base-url=http://localhost:8080
-npm.cmd run field:gate-closure-map -- --base-url=http://localhost:8080
-npm.cmd run field:owner-briefs -- --base-url=http://localhost:8080
-npm.cmd run handover:package
-npm.cmd run final:status -- --base-url=http://localhost:8080
-npm.cmd run final:execution-plan -- --base-url=http://localhost:8080
+npm.cmd run manual:evidence-readiness -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run field:readiness -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run field:risk-register -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run field:action-board -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run field:gate-closure-map -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run field:owner-briefs -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run handover:index -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run field:closure-plan -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run handover:package -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run final:status -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run final:execution-plan -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
 ```
 
 Use `npm.cmd` and `curl.exe` on Windows when the local PowerShell execution
@@ -156,21 +156,24 @@ When `FIELD_REHEARSAL_UNAVAILABLE` manifests are present, confirm the audit's
 date, owner status, recheck status, reason, and source rehearsal manifest for
 each DB, LiDAR, and control-board rehearsal item.
 
-After `npm.cmd run completion:audit`, run `npm.cmd run handover:index`.
+After `npm.cmd run completion:audit`, run
+`npm.cmd run handover:index -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`.
 The index writes `artifacts/handover-index/<timestamp>/manifest.json` and
 `artifacts/handover-index/<timestamp>/manifest.md`, listing the latest required
 delivery, completion, preflight, acceptance, field rehearsal, runtime, and
 security manifests that should be attached to the handover package. If the
 completion audit does not reference the latest delivery evidence manifest, the
 index reports `STALE`; run `npm.cmd run completion:audit` and
-`npm.cmd run handover:index` again. If the field closure plan does not reference
+`npm.cmd run handover:index -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"` again. If the field closure plan does not reference
 the latest completion audit, the index also reports `STALE`; run
-`npm.cmd run field:closure-plan` and `npm.cmd run handover:index` again.
+`npm.cmd run field:closure-plan -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"` and
+`npm.cmd run handover:index -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"` again.
 When unavailable rehearsal evidence is used, the index's
 `Field Rehearsal Follow-ups` table must point to both the source rehearsal
 manifest and the current field closure plan manifest.
 
-After `npm.cmd run handover:index`, run `npm.cmd run field:closure-plan`.
+After `npm.cmd run handover:index -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`, run
+`npm.cmd run field:closure-plan -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`.
 The closure plan writes `artifacts/field-closure-plan/<timestamp>/manifest.json`
 and `manifest.md`, translating REVIEW, STALE, MISSING, and PASS_WITH_SKIPS
 areas into ordered field commands, redacted required field value states, and
@@ -188,7 +191,8 @@ drafts and writes `artifacts/manual-evidence-drafts/<timestamp>/manifest.json`
 plus `manifest.md`. Existing manual evidence files are preserved unless
 `--force` is used after backing up reviewer content.
 
-Then run `npm.cmd run manual:evidence-readiness`.
+Then run
+`npm.cmd run manual:evidence-readiness -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`.
 It writes `artifacts/manual-evidence-readiness/<timestamp>/manifest.json` plus
 `manifest.md`, summarizing the required manual evidence target files, template
 paths, validation failures, and next actions. This report is a preparation
@@ -196,7 +200,8 @@ checklist only; it never substitutes for the reviewer-filled
 `artifacts/manual/operator-ui-walkthrough.md` or
 `artifacts/manual/field-risk-acceptance.md` files.
 
-Before strict completion, run `npm.cmd run field:readiness -- --base-url=http://localhost:8080`.
+Before strict completion, run
+`npm.cmd run field:readiness -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`.
 The readiness report writes `artifacts/field-readiness/<timestamp>/manifest.json`
 and `manifest.md`, checking Docker daemon reachability, Nginx/API health,
 required `.env` posture, control-board TCP mode, Swagger exposure, and optional
@@ -208,7 +213,7 @@ and Nginx delivery owners can close blocking `.env` values without exposing
 secret values.
 
 After field readiness and security evidence exist, run
-`npm.cmd run field:risk-register -- --base-url=http://localhost:8080`.
+`npm.cmd run field:risk-register -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`.
 It writes `artifacts/field-risk-register/<timestamp>/manifest.json` plus
 `manifest.md`, collecting open field values, strict scanner skips/failures,
 remaining final-status gates, and required manual evidence into reviewer-facing
@@ -218,7 +223,7 @@ evidence only; accepted risk still requires the reviewer-filled
 values.
 
 After final status exists, run
-`npm.cmd run field:action-board -- --base-url=http://localhost:8080`.
+`npm.cmd run field:action-board -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`.
 It writes `artifacts/field-action-board/<timestamp>/manifest.json` plus
 `manifest.md`, grouping remaining final-status gates by owner, priority,
 execution phase, mapped command, evidence path, and done-when criteria. This
@@ -226,21 +231,21 @@ board is an execution aid for field owners; it does not replace final field
 evidence.
 
 After the action board exists, run
-`npm.cmd run field:gate-closure-map -- --base-url=http://localhost:8080`.
+`npm.cmd run field:gate-closure-map -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`.
 It writes `artifacts/field-gate-closure-map/<timestamp>/manifest.json` plus
 `manifest.md`, grouping the latest action board by command so reviewers can see
 which final-status gates, owners, phases, evidence paths, and close criteria
 each field command is expected to resolve.
 
 After the action board exists, run
-`npm.cmd run field:owner-briefs -- --base-url=http://localhost:8080`.
+`npm.cmd run field:owner-briefs -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`.
 It writes `artifacts/field-owner-briefs/<timestamp>/manifest.json`,
 `manifest.md`, and one markdown file per owner. These briefs split the latest
 action board into owner-specific commands, evidence paths, and close criteria
 for field handoff; they do not replace reviewer-filled evidence.
 
 For the final attachment refresh, run
-`npm.cmd run handover:package -- --base-url=http://localhost:8080`. Replace
+`npm.cmd run handover:package -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`. Replace
 the base URL with the delivery Nginx entrypoint when it is not localhost. It
 runs `delivery:evidence`, `manual:evidence-drafts`, `manual:evidence-readiness`, `field:readiness`, `field:risk-register`, `field:action-board`, `field:gate-closure-map`, `field:owner-briefs`, `completion:audit`,
 `field:closure-plan`, and `handover:index` in order, passing the same base URL
@@ -250,7 +255,7 @@ the refreshed evidence references, command logs, base URL, strict gate reasons,
 manual evidence draft/readiness/risk-register/action-board/gate-closure-map/owner-brief references, and latest control-board safety status. The completion audit, handover index,
 closure plan, and handover package all surface this status so `DRY_RUN_SAFE` or
 `LIVE_TCP_REVIEW` cannot be mistaken for field-ready TCP operation. Use
-`npm.cmd run handover:package -- --base-url=http://localhost:8080 --strict`
+`npm.cmd run handover:package -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME" --strict`
 when the command should fail unless the package status is `READY` and
 `canMarkGoalComplete=true`.
 The handover index marks completion audit evidence as `STALE` if it does not
@@ -271,7 +276,8 @@ Before the final report is shared, commit or intentionally clear local changes
 and regenerate the handover/final evidence from the delivery revision. The final
 status report includes `Source Revision Freshness`; any dirty working tree or
 Git-bearing evidence generated from an older commit remains a no-close gate.
-Then run `npm.cmd run final:status -- --base-url=http://localhost:8080` to
+Then run
+`npm.cmd run final:status -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"` to
 write `artifacts/final-status/<timestamp>/manifest.json` plus `manifest.md`.
 Use the same delivery Nginx base URL that was used for field readiness,
 security evidence, runtime evidence, and the handover package; the report's
@@ -290,7 +296,7 @@ and `SECURITY_REVIEW_REQUIRED` need field runtime, reviewer evidence, or scanner
 evidence before final close.
 
 After the final status report, run
-`npm.cmd run final:execution-plan -- --base-url=http://localhost:8080`.
+`npm.cmd run final:execution-plan -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`.
 It writes `artifacts/final-execution-plan/<timestamp>/manifest.json` plus
 `manifest.md`, grouping the latest `remainingGates` by action type and turning
 them into an ordered command list for manual evidence readiness, action board,

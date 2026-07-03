@@ -63,7 +63,7 @@ function phaseForGate(gate) {
 function commandForGate(gate, baseUrl) {
   const text = `${gate.category || ""} ${gate.message || ""} ${gate.closeWhen || ""}`.toLowerCase();
   if (text.includes("manual evidence") || text.includes("operator ui walkthrough") || text.includes("field risk acceptance")) {
-    return "npm.cmd run manual:evidence-readiness";
+    return `npm.cmd run manual:evidence-readiness -- --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg}`;
   }
   if (text.includes("preflight") || text.includes("jwt") || text.includes("cookie") || text.includes("cors") || text.includes("swagger") || text.includes("rate limit") || text.includes("burst") || text.includes("content security") || text.includes("csp")) {
     return `npm.cmd run field:preflight -- -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -StrictPreflight`;
@@ -86,7 +86,7 @@ function commandForGate(gate, baseUrl) {
   if (text.includes("field acceptance")) {
     return `npm.cmd run field:acceptance -- -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} -OperatorUiWalkthroughEvidence artifacts/manual/operator-ui-walkthrough.md -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -StrictPreflight -IncludeContainerImages -IncludeZap -RequireScanners`;
   }
-  if (text.includes("handover")) return `npm.cmd run handover:package -- --base-url=${baseUrl} --strict`;
+  if (text.includes("handover")) return `npm.cmd run handover:package -- --base-url=${baseUrl} --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg} --strict`;
   if (text.includes("completion")) return "npm.cmd run completion:audit";
   return `npm.cmd run final:execution-plan -- --base-url=${baseUrl}`;
 }
