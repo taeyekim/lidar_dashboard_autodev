@@ -64,13 +64,28 @@ function incrementCount(counts, key) {
 
 function buildCommandGroups(actionBoard) {
   const items = actionBoard?.data?.actionItems || [];
+  const executionQueueOrder = new Map(
+    (actionBoard?.data?.executionQueue || []).map((item) => [
+      `${item.phase}::${item.command}`,
+      {
+        executionOrder: item.order,
+        executionPriority: item.priority,
+        executionGateCount: item.gateCount,
+      },
+    ]),
+  );
   return Object.values(
     items.reduce((acc, item) => {
       const command = item.command || "manual-review";
-      if (!acc[command]) {
-        acc[command] = {
+      const groupKey = `${item.phase}::${command}`;
+      if (!acc[groupKey]) {
+        const queueItem = executionQueueOrder.get(groupKey) || {};
+        acc[groupKey] = {
           commandId: `CMD-${String(Object.keys(acc).length + 1).padStart(3, "0")}`,
           command,
+          executionOrder: queueItem.executionOrder || null,
+          executionPriority: queueItem.executionPriority || item.priority,
+          executionGateCount: queueItem.executionGateCount || null,
           gateCount: 0,
           gateIds: [],
           owners: [],
@@ -83,7 +98,7 @@ function buildCommandGroups(actionBoard) {
           closeCriteria: [],
         };
       }
-      const group = acc[command];
+      const group = acc[groupKey];
       group.gateCount += 1;
       group.gateIds.push(item.id);
       group.owners = unique([...group.owners, item.owner]);
@@ -96,7 +111,16 @@ function buildCommandGroups(actionBoard) {
       group.closeCriteria = unique([...group.closeCriteria, item.closeWhen]);
       return acc;
     }, {}),
-  ).sort((a, b) => b.gateCount - a.gateCount || a.command.localeCompare(b.command));
+  )
+    .sort((a, b) => {
+      const aOrder = a.executionOrder ?? Number.MAX_SAFE_INTEGER;
+      const bOrder = b.executionOrder ?? Number.MAX_SAFE_INTEGER;
+      return aOrder - bOrder || b.gateCount - a.gateCount || a.command.localeCompare(b.command);
+    })
+    .map((group, index) => ({
+      ...group,
+      commandId: `CMD-${String(index + 1).padStart(3, "0")}`,
+    }));
 }
 
 function buildMetadataCommandGroups(generatedBy, siteName, baseUrl) {
@@ -198,6 +222,17 @@ function buildMarkdown(manifest) {
             `| ${group.commandId} | ${group.gateCount} | ${markdownCell(group.owners.join(", "))} | ${markdownCell(group.phases.join(", "))} | ${markdownCell(JSON.stringify(group.priorityCounts))} | ${markdownCell(JSON.stringify(group.actionTypeCounts))} | ${markdownCell(JSON.stringify(group.categoryCounts))} | ${markdownCell(JSON.stringify(group.statusCounts))} |`,
         )
       : ["| none | 0 | - | - | {} | {} | {} | {} |"]),
+    "",
+    "## Execution Queue Linkage",
+    "",
+    "| Queue Order | Command ID | Queue Priority | Queue Gate Count | Closure Gate Count | Command |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ...(manifest.commandGroups.length > 0
+      ? manifest.commandGroups.map(
+          (group) =>
+            `| ${group.executionOrder || "-"} | ${group.commandId} | ${markdownCell(group.executionPriority || "-")} | ${group.executionGateCount || "-"} | ${group.gateCount} | \`${markdownCell(group.command)}\` |`,
+        )
+      : ["| - | none | - | - | 0 | No commands required. |"]),
     "",
     "## Closure Map",
     "",

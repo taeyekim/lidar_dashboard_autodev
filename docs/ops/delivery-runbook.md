@@ -246,7 +246,9 @@ After the action board exists, run
 It writes `artifacts/field-gate-closure-map/<timestamp>/manifest.json` plus
 `manifest.md`, grouping the latest action board by command so reviewers can see
 which final-status gates, owners, phases, evidence paths, and close criteria
-each field command is expected to resolve.
+each field command is expected to resolve. The `Execution Queue Linkage` table
+preserves the action board queue order so execution and closure tracking use
+the same command sequence.
 
 After the action board exists, run
 `npm.cmd run field:owner-briefs -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`.

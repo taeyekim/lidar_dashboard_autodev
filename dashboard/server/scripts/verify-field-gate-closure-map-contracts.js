@@ -32,8 +32,10 @@ const checklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "Field Gate Closure Map",
   "Command Summary",
   "Closure Map",
+  "Execution Queue Linkage",
   "sourceFieldActionBoard",
   "commandGroups",
+  "executionOrder",
   "openGateCount",
   "categoryCounts",
   "statusCounts",
@@ -52,13 +54,31 @@ assertIncludes(handoverPackage, "fieldGateClosureMap", "handover package generat
 assertIncludes(handoverIndex, "Field Gate Closure Map", "handover index generator");
 assertIncludes(runbook, "npm.cmd run field:gate-closure-map", "delivery runbook");
 assertIncludes(runbook, "artifacts/field-gate-closure-map/<timestamp>/manifest.json", "delivery runbook");
+assertIncludes(runbook, "Execution Queue Linkage", "delivery runbook");
 assertIncludes(checklist, "npm run field:gate-closure-map", "acceptance checklist");
+assertIncludes(checklist, "Execution Queue Linkage", "acceptance checklist");
 
 const actionBoard = {
   path: "artifacts/field-action-board/20260101-000000/manifest.json",
   data: {
     siteName: "delivery-site-a",
     baseUrl: "http://field.local:8080",
+    executionQueue: [
+      {
+        order: 1,
+        phase: "Security Evidence",
+        priority: "P0",
+        gateCount: 2,
+        command: "npm.cmd run security:evidence -- --require-scanners",
+      },
+      {
+        order: 2,
+        phase: "Field Rehearsal",
+        priority: "P0",
+        gateCount: 1,
+        command: "powershell.exe -File scripts/control-board-field-rehearsal.ps1",
+      },
+    ],
     actionItems: [
       {
         id: "GATE-001",
@@ -102,6 +122,10 @@ const actionBoard = {
 
 const groups = buildCommandGroups(actionBoard);
 assert(groups.length === 2, "command groups should group repeated commands");
+assert(groups[0].commandId === "CMD-001" && groups[1].commandId === "CMD-002", "command ids should be renumbered after execution-order sorting");
+assert(groups[0].executionOrder === 1, "command groups should preserve execution queue order");
+assert(groups[0].executionPriority === "P0", "command groups should preserve execution queue priority");
+assert(groups[0].executionGateCount === 2, "command groups should preserve execution queue gate count");
 assert(groups[0].gateCount === 2, "largest command group should preserve gate count");
 assert(groups[0].gateIds.includes("GATE-001") && groups[0].gateIds.includes("GATE-002"), "group should preserve gate ids");
 assert(groups[0].owners.includes("Auth/Security"), "group should preserve owners");
@@ -131,6 +155,7 @@ assert(manifest.sourceFieldActionBoard === actionBoard.path, "manifest should re
 const markdown = buildMarkdown(manifest);
 assert(markdown.includes("Field Gate Closure Map"), "markdown should include title");
 assert(markdown.includes("Command Summary"), "markdown should include command summary");
+assert(markdown.includes("Execution Queue Linkage"), "markdown should include execution queue linkage");
 assert(markdown.includes("Closure Map"), "markdown should include closure map");
 assert(markdown.includes("DELIVERY_FIX_REQUIRED"), "markdown should include delivery-fix status");
 assert(markdown.includes("GATE-001, GATE-002"), "markdown should include grouped gate ids");
