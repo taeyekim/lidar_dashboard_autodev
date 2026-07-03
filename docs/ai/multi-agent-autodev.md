@@ -16,6 +16,14 @@
 
 Codex는 기본적으로 하나의 모델이 작업을 수행하지만, 멀티에이전트 운영에서는 같은 모델이 여러 전문가 역할의 관점, 체크리스트, 산출물 기준을 분리해서 순차 또는 병렬로 검토한다. 즉, 여러 개의 독립 AI 법인이 자동으로 의사결정하는 구조가 아니라, 메인 에이전트가 PM/Tech Lead/Backend/Frontend/QA/Security/Hardware 같은 역할별 사고 프레임을 명시적으로 호출하고 충돌을 조정하는 방식이다.
 
+실제 개발 가능 범위:
+
+- Codex는 이 문서의 역할 분담을 기준으로 요구사항 분석, 코드 구현, 테스트 작성, 문서 갱신, 커밋, `dev` 직접 push까지 수행할 수 있다.
+- 역할별 에이전트는 독립 인력이 아니라 같은 프로젝트 목표를 다른 전문 관점으로 검토하는 작업 모드다.
+- 멀티에이전트 도구가 사용 가능한 환경에서는 PM, Backend, Frontend, QA, Security, Hardware 같은 하위 작업자로 조사/검토를 나눌 수 있다.
+- 멀티에이전트 도구가 없거나 적합하지 않은 경우에도 메인 Codex가 역할별 체크리스트를 순서대로 적용해 동일한 검수 루프를 수행한다.
+- 따라서 "에이전트가 나뉘어 개발한다"는 의미는 최종 책임 없는 자동 분산이 아니라, 역할별 산출물 기준을 강제하고 교차검수를 반복하는 에이전틱 엔지니어링 방식이다.
+
 운영 원칙:
 
 - 각 역할은 담당 분야의 리스크와 완료 기준을 먼저 제시한다.
@@ -24,6 +32,16 @@ Codex는 기본적으로 하나의 모델이 작업을 수행하지만, 멀티�
 - 실제 파일 수정, 커밋, push 책임은 항상 현재 세션의 메인 에이전트가 가진다.
 - 필요한 경우 Codex의 멀티에이전트 도구나 별도 하위 작업자를 사용할 수 있지만, 최종 판단과 보고는 메인 에이전트가 수렴한다.
 - 서로 다른 역할의 검토 결과는 코드, Swagger, Prisma, UI, 테스트, 문서 중 하나 이상의 검증 가능한 산출물로 남긴다.
+
+역할별 검수 산출물은 다음 기준 중 하나 이상으로 남긴다.
+
+- Backend/DB: Prisma schema, migration, seed, service test, API response contract
+- Frontend/UI/UX: 실제 관제 화면, 상태/오류/빈 데이터 화면, 반응형 검증 결과
+- LiDAR Domain: payload mapping, dedupe 기준, raw payload 보존 여부
+- Hardware/Field Control: TCP raw frame, CRC-8 벡터, dry-run/live 구분, timeout/retry 로그
+- Infrastructure/DevOps: Docker compose, Nginx config, `.env.example`, runtime evidence
+- Security/Safety: JWT/HttpOnly cookie, device ingest key, CORS/header/rate limit, secret scan
+- QA/Delivery: smoke script, acceptance checklist, runbook, 미검증 항목
 
 ## 공통 목표
 
