@@ -57,6 +57,11 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "distinct connect/response timeout handling",
   "TCP_SEND_ATTEMPT_FAILED",
   "CONTROL_BOARD_DRY_RUN=false",
+  "GET /api/control-board/status",
+  "GET /api/statistics/traffic?range=daily",
+  "averageResponseMs",
+  "responseSampleCount",
+  "responseDurationMs",
 ].forEach((token) => {
   assert(matrix.includes(token), `delivery evidence matrix is missing token: ${token}`);
 });

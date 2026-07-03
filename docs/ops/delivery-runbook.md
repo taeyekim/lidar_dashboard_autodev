@@ -126,6 +126,11 @@ or `.env` and sends this header automatically.
 `rawPayload`, linked `controlCommands`, command `packetHex`, and summary
 `vehiclesPassed`.
 
+The runtime smoke also verifies `GET /api/statistics/traffic?range=daily`
+response shape, normal/wrong-way counters, `averageResponseMs`, and
+`GET /api/control-board/status` latency fields including `responseSampleCount`
+and latest-command `responseDurationMs`.
+
 The same runtime smoke checks baseline delivery security behavior:
 
 - Nginx/security headers include `X-Content-Type-Options: nosniff` and `X-Frame-Options: SAMEORIGIN`.
