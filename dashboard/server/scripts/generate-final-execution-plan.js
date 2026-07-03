@@ -56,7 +56,7 @@ function commandCatalog(baseUrl) {
     {
       id: "field-action-board",
       phase: "Field Runtime",
-      actionTypes: ["FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED", "REVIEW_REQUIRED"],
+      actionTypes: ["FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED", "REVIEW_REQUIRED", "AUTOMATED_REFRESH_AVAILABLE"],
       command: `npm.cmd run field:action-board -- --base-url=${baseUrl} --site-name="delivery-site-name" --generated-by="field-reviewer-name"`,
       purpose: "Group remaining final-status gates by owner, priority, execution phase, command, evidence, and close criteria.",
       doneWhen: "The board shows owner-ready commands for every remaining final-status gate.",
@@ -64,7 +64,7 @@ function commandCatalog(baseUrl) {
     {
       id: "field-gate-closure-map",
       phase: "Field Runtime",
-      actionTypes: ["FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED", "REVIEW_REQUIRED"],
+      actionTypes: ["FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED", "REVIEW_REQUIRED", "AUTOMATED_REFRESH_AVAILABLE"],
       command: `npm.cmd run field:gate-closure-map -- --base-url=${baseUrl} --site-name="delivery-site-name" --generated-by="field-reviewer-name"`,
       purpose: "Map field commands back to the gates, owners, phases, evidence paths, and close criteria they are expected to resolve.",
       doneWhen: "The closure map shows command-centered coverage for every remaining final-status gate.",
@@ -72,7 +72,7 @@ function commandCatalog(baseUrl) {
     {
       id: "field-owner-briefs",
       phase: "Field Runtime",
-      actionTypes: ["FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED", "REVIEW_REQUIRED"],
+      actionTypes: ["FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED", "REVIEW_REQUIRED", "AUTOMATED_REFRESH_AVAILABLE"],
       command: `npm.cmd run field:owner-briefs -- --base-url=${baseUrl} --site-name="delivery-site-name" --generated-by="field-reviewer-name"`,
       purpose: "Split the latest action board into per-owner field execution briefs.",
       doneWhen: "Each owner has a brief file with commands, evidence paths, and close criteria for their gates.",

@@ -125,6 +125,19 @@ const missingFinalStatusPlan = buildFinalExecutionPlan({
 assert(missingFinalStatusPlan.status === "FINAL_STATUS_MISSING", "missing final status should be explicit");
 assert(missingFinalStatusPlan.remainingGateCount === 1, "missing final status should create one planning gate");
 assert(missingFinalStatusPlan.orderedCommands.some((item) => item.id === "final-status"), "missing final status should include final status command");
+const automatedRefreshCommands = buildOrderedCommands([{ actionType: "AUTOMATED_REFRESH_AVAILABLE" }], "http://localhost:8080");
+assert(
+  automatedRefreshCommands.some((item) => item.id === "field-action-board"),
+  "automated refresh gates should include field action board refresh",
+);
+assert(
+  automatedRefreshCommands.some((item) => item.id === "field-gate-closure-map"),
+  "automated refresh gates should include field gate closure map refresh",
+);
+assert(
+  automatedRefreshCommands.some((item) => item.id === "field-owner-briefs"),
+  "automated refresh gates should include field owner briefs refresh",
+);
 assert(buildOrderedCommands([{ actionType: "REVIEW_REQUIRED" }], "http://localhost:8080").some((item) => item.id === "final-status"), "review gates should still include final status refresh");
 assert(buildOrderedCommands([{ actionType: "REVIEW_REQUIRED" }], "http://localhost:8080").some((item) => item.id === "field-gate-closure-map"), "review gates should include gate closure map refresh");
 assert(commandCatalog("http://localhost:8080").some((item) => item.id === "field-acceptance" && item.command.includes("-RequireScanners")), "catalog should include strict field acceptance command");
