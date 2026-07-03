@@ -187,6 +187,22 @@ function Assert-ResponseHeaderContains {
   }
 }
 
+function Assert-SecurityHeaders {
+  param(
+    [hashtable]$Response,
+    [string]$Label
+  )
+
+  Assert-ResponseHeader -Response $Response -Name "X-Content-Type-Options" -Expected "nosniff" -Label $Label
+  Assert-ResponseHeader -Response $Response -Name "X-Frame-Options" -Expected "SAMEORIGIN" -Label $Label
+  Assert-ResponseHeader -Response $Response -Name "Referrer-Policy" -Expected "strict-origin-when-cross-origin" -Label $Label
+  Assert-ResponseHeader -Response $Response -Name "X-Permitted-Cross-Domain-Policies" -Expected "none" -Label $Label
+  $cspHeader = $Response.headers["content-security-policy"]
+  if (!$cspHeader -or !$cspHeader.Contains("default-src 'self'") -or !$cspHeader.Contains("object-src 'none'")) {
+    throw "$Label expected Content-Security-Policy with default-src 'self' and object-src 'none'."
+  }
+}
+
 function Assert-NumberProperty {
   param(
     [object]$Object,
@@ -263,15 +279,11 @@ try {
 
   $healthHeaders = Invoke-CurlStatus -Url "$BaseUrl/healthz"
   Assert-HttpStatus -Response $healthHeaders -Expected 200 -Label "healthz header smoke"
-  Assert-ResponseHeader -Response $healthHeaders -Name "X-Content-Type-Options" -Expected "nosniff" -Label "healthz security header smoke"
-  Assert-ResponseHeader -Response $healthHeaders -Name "X-Frame-Options" -Expected "SAMEORIGIN" -Label "healthz security header smoke"
-  $cspHeader = $healthHeaders.headers["content-security-policy"]
-  if (!$cspHeader -or !$cspHeader.Contains("default-src 'self'") -or !$cspHeader.Contains("object-src 'none'")) {
-    throw "healthz security header smoke expected Content-Security-Policy with default-src 'self' and object-src 'none'."
-  }
+  Assert-SecurityHeaders -Response $healthHeaders -Label "healthz security header smoke"
 
   $spaHeaders = Invoke-CurlStatus -Url "$BaseUrl/"
   Assert-HttpStatus -Response $spaHeaders -Expected 200 -Label "SPA cache header smoke"
+  Assert-SecurityHeaders -Response $spaHeaders -Label "SPA security header smoke"
   Assert-ResponseHeader -Response $spaHeaders -Name "Cache-Control" -Expected "no-store" -Label "SPA cache header smoke"
 
   $indexHtml = & curl.exe -sS -f "$BaseUrl/"
@@ -284,6 +296,7 @@ try {
   }
   $assetHeaders = Invoke-CurlStatus -Url "$BaseUrl$($assetMatch.Groups["path"].Value)"
   Assert-HttpStatus -Response $assetHeaders -Expected 200 -Label "frontend asset cache header smoke"
+  Assert-SecurityHeaders -Response $assetHeaders -Label "frontend asset security header smoke"
   Assert-ResponseHeaderContains -Response $assetHeaders -Name "Cache-Control" -ExpectedPart "public" -Label "frontend asset cache header smoke"
   Assert-ResponseHeaderContains -Response $assetHeaders -Name "Cache-Control" -ExpectedPart "max-age=2592000" -Label "frontend asset cache header smoke"
   Assert-ResponseHeaderContains -Response $assetHeaders -Name "Cache-Control" -ExpectedPart "immutable" -Label "frontend asset cache header smoke"

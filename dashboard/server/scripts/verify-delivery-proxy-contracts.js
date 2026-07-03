@@ -46,6 +46,11 @@ assert(
   "Nginx template must emit delivery security headers for CSP and cross-domain policy",
 );
 assert(
+  (nginxTemplate.match(/add_header Content-Security-Policy "\$\{NGINX_CONTENT_SECURITY_POLICY\}" always/g) || []).length >= 3 &&
+    (nginxTemplate.match(/add_header X-Content-Type-Options "nosniff" always/g) || []).length >= 3,
+  "Nginx template must repeat security headers in cache-specific locations because add_header is not inherited there",
+);
+assert(
   nginxTemplate.includes("proxy_set_header Upgrade $http_upgrade") &&
     nginxTemplate.includes("proxy_set_header Connection $connection_upgrade"),
   "Nginx template must preserve WebSocket upgrade headers",
@@ -62,7 +67,10 @@ assert(
 );
 assert(
   runtimeSmoke.includes("SPA cache header smoke") &&
+    runtimeSmoke.includes("SPA security header smoke") &&
     runtimeSmoke.includes("frontend asset cache header smoke") &&
+    runtimeSmoke.includes("frontend asset security header smoke") &&
+    runtimeSmoke.includes("Assert-SecurityHeaders") &&
     runtimeSmoke.includes("Swagger UI path smoke") &&
     runtimeSmoke.includes("max-age=2592000") &&
     runtimeSmoke.includes("immutable"),
