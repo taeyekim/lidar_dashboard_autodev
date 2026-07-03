@@ -99,6 +99,28 @@ function Add-SkippedStep {
   return New-StepResult -Name $Name -Status "SKIPPED" -Command "" -LogPath "" -ExitCode 0 -StartedAt $now -FinishedAt $now -Reason $Reason
 }
 
+function Test-PlaceholderFieldText {
+  param([string]$Value)
+
+  return [regex]::IsMatch(
+    [string]$Value,
+    "^(?:-|n/a|na|none|null|tbd|todo|pending|unknown|unspecified|field-reviewer|field-reviewer-name|field-site|delivery-site-name)$",
+    [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+  )
+}
+
+function Get-MarkdownTableValue {
+  param(
+    [string]$Content,
+    [string]$Field
+  )
+
+  $escapedField = [regex]::Escape($Field)
+  $match = [regex]::Match($Content, "\|\s*$escapedField\s*\|\s*([^|\r\n]+?)\s*\|")
+  if (!$match.Success) { return "" }
+  return $match.Groups[1].Value.Trim()
+}
+
 function Add-OperatorUiWalkthroughGate {
   $now = (Get-Date).ToUniversalTime().ToString("o")
   if ($SkipOperatorUiWalkthrough) {
@@ -145,9 +167,12 @@ function Add-OperatorUiWalkthroughGate {
     "Captured at"
   )
   foreach ($field in $requiredSessionFields) {
-    $escapedField = [regex]::Escape($field)
-    if ($evidence -notmatch "\|\s*$escapedField\s*\|\s*[^|\r\n]+\s*\|") {
+    $value = Get-MarkdownTableValue -Content $evidence -Field $field
+    if ([string]::IsNullOrWhiteSpace($value)) {
       return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "validate $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence has an empty '$field' session value."
+    }
+    if (Test-PlaceholderFieldText -Value $value) {
+      return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "validate $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence has a placeholder '$field' session value."
     }
   }
 
@@ -164,9 +189,12 @@ function Add-OperatorUiWalkthroughGate {
     "Decision timestamp"
   )
   foreach ($field in $requiredDecisionFields) {
-    $escapedField = [regex]::Escape($field)
-    if ($evidence -notmatch "\|\s*$escapedField\s*\|\s*[^|\r\n]+\s*\|") {
+    $value = Get-MarkdownTableValue -Content $evidence -Field $field
+    if ([string]::IsNullOrWhiteSpace($value)) {
       return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "validate $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence has an empty '$field' decision value."
+    }
+    if (Test-PlaceholderFieldText -Value $value) {
+      return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "validate $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence has a placeholder '$field' decision value."
     }
   }
 
@@ -267,8 +295,8 @@ function New-AcceptanceManifest {
   $stepList = ConvertTo-StepList -Steps $Steps
   $reviewSteps = @(Get-StepsByStatus -Steps $stepList -Status "REVIEW")
   $skippedSteps = @(Get-StepsByStatus -Steps $stepList -Status "SKIPPED")
-  $hasReviewer = ![string]::IsNullOrWhiteSpace($Reviewer)
-  $hasSiteName = ![string]::IsNullOrWhiteSpace($SiteName)
+  $hasReviewer = ![string]::IsNullOrWhiteSpace($Reviewer) -and !(Test-PlaceholderFieldText -Value $Reviewer)
+  $hasSiteName = ![string]::IsNullOrWhiteSpace($SiteName) -and !(Test-PlaceholderFieldText -Value $SiteName)
   $latestPreflightManifest = Get-LatestManifest -Root "artifacts/field-preflight"
   $latestPreflightStatus = if ($null -eq $latestPreflightManifest) { "MISSING" } else { $latestPreflightManifest.status }
   $latestPreflightPassed = $latestPreflightStatus -eq "PASS"
