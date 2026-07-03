@@ -177,11 +177,19 @@ function commandCatalog(baseUrl) {
       doneWhen: "Docs text quality contracts pass.",
     },
     {
+      id: "ci-closeout",
+      phase: "Package Refresh",
+      actionTypes: ["AUTOMATED_REFRESH_AVAILABLE", "REVIEW_REQUIRED"],
+      command: `npm.cmd run ci:closeout -- --dispatch --generated-by=${fieldReviewerArg}`,
+      purpose: "Intentionally dispatch GitHub Actions if needed, wait for the final dev commit run, and regenerate CI status evidence.",
+      doneWhen: "CI closeout completes and CI status evidence is PASS for the final pushed dev commit.",
+    },
+    {
       id: "ci-status",
       phase: "Package Refresh",
       actionTypes: ["AUTOMATED_REFRESH_AVAILABLE", "REVIEW_REQUIRED"],
       command: `npm.cmd run ci:status -- --generated-by=${fieldReviewerArg}`,
-      purpose: "Record the latest GitHub Actions CI result for the final dev commit.",
+      purpose: "Record or refresh the latest GitHub Actions CI result for the final dev commit.",
       doneWhen: "CI status evidence is PASS and matches the final pushed dev commit.",
     },
     {
