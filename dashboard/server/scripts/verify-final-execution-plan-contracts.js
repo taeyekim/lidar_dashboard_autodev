@@ -40,6 +40,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "commandGateCoverage", "final execution plan generator"],
   [generator, "Command Gate Coverage", "final execution plan generator"],
   [generator, "gateCount", "final execution plan generator"],
+  [generator, "source-revision-closeout", "final execution plan generator"],
+  [generator, "git push origin dev", "final execution plan generator"],
+  [generator, "HEAD matches origin/dev", "final execution plan generator"],
   [generator, "manualEvidenceTargets", "final execution plan generator"],
   [generator, "This execution plan does not prove field completion", "final execution plan generator"],
   [generator, "npm.cmd run final:status", "final execution plan generator"],
@@ -54,6 +57,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "scripts/db-field-rehearsal.ps1", "final execution plan generator"],
   [generator, "--require-scanners", "final execution plan generator"],
   [runbook, "npm.cmd run final:execution-plan", "delivery runbook"],
+  [runbook, "source revision closeout", "delivery runbook"],
+  [runbook, "git push origin dev", "delivery runbook"],
   [runbook, "field:gate-closure-map", "delivery runbook"],
   [runbook, "completion:audit", "delivery runbook"],
   [runbook, "handover:index", "delivery runbook"],
@@ -61,10 +66,14 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [runbook, "Field Action Artifact Actions", "delivery runbook"],
   [runbook, "artifacts/final-execution-plan/<timestamp>/manifest.json", "delivery runbook"],
   [checklist, "npm run final:execution-plan", "acceptance checklist"],
+  [checklist, "source revision closeout", "acceptance checklist"],
+  [checklist, "git push origin dev", "acceptance checklist"],
   [checklist, "Field Action Artifact Actions", "acceptance checklist"],
   [checklist, "Command Gate Coverage", "acceptance checklist"],
   [checklist, "artifacts/final-execution-plan/<timestamp>/manifest.json", "acceptance checklist"],
   [matrix, "final:execution-plan", "delivery evidence matrix"],
+  [matrix, "source-revision-closeout", "delivery evidence matrix"],
+  [matrix, "git push origin dev", "delivery evidence matrix"],
   [matrix, "Command Gate Coverage", "delivery evidence matrix"],
   [matrix, "strict `handover:package`", "delivery evidence matrix"],
   [matrix, "artifacts/final-execution-plan/<timestamp>/manifest.json", "delivery evidence matrix"],
@@ -83,6 +92,7 @@ const openPlan = buildFinalExecutionPlan({
         { actionType: "MANUAL_EVIDENCE_REQUIRED", category: "Manual Evidence", status: "MISSING", message: "Operator walkthrough missing.", closeWhen: "Attach evidence." },
         { actionType: "FIELD_ACTION_REQUIRED", category: "Control Board TCP", status: "DRY_RUN_SAFE", message: "Live TCP missing.", closeWhen: "Run rehearsal." },
         { actionType: "SECURITY_REVIEW_REQUIRED", category: "Security Evidence", status: "DELIVERY_FIX_REQUIRED", message: "Security delivery fix required.", closeWhen: "Fix findings and rerun scanners." },
+        { actionType: "AUTOMATED_REFRESH_AVAILABLE", category: "Source Code State", status: "UNPUSHED", message: "Source revision needs push and evidence refresh.", closeWhen: "Push dev and regenerate final evidence." },
       ],
     },
   },
@@ -102,7 +112,7 @@ const openPlan = buildFinalExecutionPlan({
 });
 
 assert(openPlan.status === "OPEN", "open final status should produce OPEN execution plan");
-assert(openPlan.remainingGateCount === 3, "execution plan should preserve remaining gate count");
+assert(openPlan.remainingGateCount === 4, "execution plan should preserve remaining gate count");
 assert(openPlan.commandGateCoverage.some((item) => item.id === "security-evidence" && item.gateCount === 1), "security command coverage should count matching security gates");
 assert(
   openPlan.commandGateCoverage.some(
@@ -129,6 +139,11 @@ assert(
     openPlan.orderedCommands.findIndex((item) => item.id === "field-closure-plan") <
     openPlan.orderedCommands.findIndex((item) => item.id === "handover-package"),
   "open plan should refresh completion audit, handover index, closure plan, then handover package in order",
+);
+assert(
+  openPlan.orderedCommands.findIndex((item) => item.id === "source-revision-closeout") <
+    openPlan.orderedCommands.findIndex((item) => item.id === "completion-audit"),
+  "open plan should close source revision and push dev before Git-bearing evidence refresh commands",
 );
 assert(openPlan.orderedCommands.some((item) => item.command.includes("http://field.local:8080")), "commands should use the requested base URL");
 assert(openPlan.sourceFieldGateClosureMap.includes("artifacts/field-gate-closure-map"), "execution plan should reference gate closure map");
@@ -177,6 +192,10 @@ assert(
 assert(
   automatedRefreshCommands.some((item) => item.id === "field-owner-briefs"),
   "automated refresh gates should include field owner briefs refresh",
+);
+assert(
+  automatedRefreshCommands.some((item) => item.id === "source-revision-closeout"),
+  "automated refresh gates should include source revision closeout",
 );
 assert(
   automatedRefreshCommands.some((item) => item.id === "handover-index"),

@@ -287,12 +287,14 @@ It writes `artifacts/final-execution-plan/<timestamp>/manifest.json` plus
 them into an ordered command list for manual evidence readiness, action board,
 field gate closure map, owner briefs, preflight, runtime smoke,
 DB/LiDAR/control-board rehearsals, strict security evidence, field readiness,
-field acceptance, `completion:audit`, `handover:index`, `field:closure-plan`,
-strict `handover:package`, and final status refresh. The final package refresh
-section intentionally lists both the standalone index/closure commands and the
-strict handover package command so reviewers can refresh the evidence index,
-generate `Field Action Artifact Actions`, and then rebuild the package from the
-same delivery revision.
+field acceptance, source revision closeout (`git status --short --branch`;
+`git push origin dev`), `completion:audit`, `handover:index`,
+`field:closure-plan`, strict `handover:package`, and final status refresh. The
+final package refresh section intentionally lists both the source revision
+closeout, standalone index/closure commands, and the strict handover package
+command so reviewers can push the final `dev` revision, refresh the evidence
+index, generate `Field Action Artifact Actions`, and then rebuild the package
+from the same delivery revision.
 This execution plan is an operator runbook only; it does not replace field
 evidence and does not prove completion unless the refreshed final status says
 `READY_TO_CLOSE`.

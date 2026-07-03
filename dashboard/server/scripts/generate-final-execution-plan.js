@@ -158,6 +158,14 @@ function commandCatalog(baseUrl) {
       doneWhen: "Delivery evidence has failedCommandCount=0 and current companion evidence.",
     },
     {
+      id: "source-revision-closeout",
+      phase: "Source Revision",
+      actionTypes: ["AUTOMATED_REFRESH_AVAILABLE"],
+      command: "git status --short --branch; git push origin dev",
+      purpose: "Confirm the final source is on dev, clean, and pushed before regenerating Git-bearing delivery evidence.",
+      doneWhen: "Working tree is clean, current branch is dev, and HEAD matches origin/dev before final evidence refresh.",
+    },
+    {
       id: "completion-audit",
       phase: "Package Refresh",
       actionTypes: ["AUTOMATED_REFRESH_AVAILABLE", "FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED", "REVIEW_REQUIRED"],
