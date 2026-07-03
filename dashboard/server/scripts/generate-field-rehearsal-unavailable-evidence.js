@@ -30,8 +30,22 @@ function buildResult(area, reason, requiredCommand, nextActions, replacementOwne
   };
 }
 
-function qualityStatus(value) {
-  return value && !["UNASSIGNED", "REQUIRED_BEFORE_HANDOVER"].includes(value) ? "RECORDED" : "REVIEW";
+function isPlaceholderValue(value) {
+  return /^(?:-|n\/a|na|none|null|tbd|todo|pending|unknown|unassigned|required_before_handover)$/i.test(
+    String(value || "").trim(),
+  );
+}
+
+function isIsoDate(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "").trim());
+}
+
+function ownerQualityStatus(value) {
+  return value && !isPlaceholderValue(value) ? "RECORDED" : "REVIEW";
+}
+
+function recheckQualityStatus(value) {
+  return value && !isPlaceholderValue(value) && isIsoDate(value) ? "SCHEDULED" : "REVIEW";
 }
 
 function writeManifest(config, runId, options) {
@@ -57,8 +71,8 @@ function writeManifest(config, runId, options) {
       replacementOwner: options.replacementOwner,
       targetRecheckDate: options.targetRecheckDate,
       approvalNote: options.approvalNote,
-      ownerStatus: qualityStatus(options.replacementOwner),
-      recheckStatus: qualityStatus(options.targetRecheckDate),
+      ownerStatus: ownerQualityStatus(options.replacementOwner),
+      recheckStatus: recheckQualityStatus(options.targetRecheckDate),
     },
     results: [result],
   };

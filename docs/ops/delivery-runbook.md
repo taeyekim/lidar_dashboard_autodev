@@ -124,8 +124,11 @@ hardware is not available on the current workstation, run
 `artifacts/field-control-board-rehearsal/` so the handover package records why
 field rehearsal is still open and which command must replace the placeholder
 with a PASS manifest. Use `--replacement-owner` and `--target-recheck-date` to
-record who owns the replacement PASS rehearsal and when it must be rechecked;
-omitting them leaves owner/recheck status in REVIEW until final handover.
+record who owns the replacement PASS rehearsal and when it must be rechecked.
+Use a concrete owner and a `YYYY-MM-DD` target recheck date; placeholder values
+such as `TBD`, `unknown`, `pending`, `UNASSIGNED`, or
+`REQUIRED_BEFORE_HANDOVER` leave owner/recheck status in REVIEW until final
+handover.
 
 Strict field acceptance example after the delivery stack is already running:
 

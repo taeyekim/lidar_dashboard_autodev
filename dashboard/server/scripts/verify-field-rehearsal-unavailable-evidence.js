@@ -35,9 +35,14 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "unavailableAcceptance",
   "ownerStatus",
   "recheckStatus",
+  "isPlaceholderValue",
+  "isIsoDate",
+  "ownerQualityStatus",
+  "recheckQualityStatus",
   "UNASSIGNED",
   "REQUIRED_BEFORE_HANDOVER",
   "RECORDED",
+  "SCHEDULED",
   "nextActions",
   "status: \"REVIEW\"",
 ].forEach((token) => assertIncludes(generator, token, "field rehearsal unavailable generator"));
@@ -54,7 +59,9 @@ assertIncludes(runbook, "npm.cmd run field:rehearsal-unavailable", "delivery run
 assertIncludes(runbook, "FIELD_REHEARSAL_UNAVAILABLE", "delivery runbook");
 assertIncludes(runbook, "--replacement-owner", "delivery runbook");
 assertIncludes(runbook, "--target-recheck-date", "delivery runbook");
+assertIncludes(runbook, "YYYY-MM-DD", "delivery runbook");
 assertIncludes(acceptance, "field:rehearsal-unavailable", "acceptance checklist");
+assertIncludes(acceptance, "--target-recheck-date=YYYY-MM-DD", "acceptance checklist");
 assertIncludes(matrix, "field:rehearsal-unavailable", "delivery evidence matrix");
 
 console.log("field rehearsal unavailable evidence contracts ok");
