@@ -245,16 +245,18 @@ UI/UX 개선은 적극 허용한다. 단, 제공되지 않는 CCTV/번호판/차
 ## 13. 멀티에이전트 협업 루프
 
 ```text
-1. PM이 목표와 브랜치 후보 선정
+1. PM이 목표와 dev 직접 push 작업 묶음 선정
 2. 도메인/하드웨어/백엔드/프론트/보안/QA가 리스크와 계약 제안
 3. Tech Lead가 API, DB, command lifecycle 충돌 조정
 4. 구현
 5. Swagger/Prisma/UI/테스트 문서 동기화
 6. QA/Security/Infra가 검증 또는 미검증 표기
 7. 실패 시 원인 분석 후 수정
-8. 기능별 브랜치 push
+8. 범위와 검증 결과 확인 후 dev 직접 commit/push
 9. 다음 기능으로 이동
 ```
+
+Codex의 멀티에이전트 운영은 단일 모델이 여러 전문가 관점을 분리해 사용하는 방식이다. 메인 에이전트가 PM, Tech Lead, Backend, Frontend, UI/UX, LiDAR Domain, Hardware, Infra, Security, QA, Delivery 관점을 차례로 호출하고, 각 관점의 리스크와 계약을 하나의 구현 계획으로 수렴한다. 별도 하위 에이전트 도구를 사용할 수는 있지만, 최종 파일 수정, 검증, 커밋, push 책임은 현재 세션의 메인 에이전트가 가진다.
 
 ## 14. 개발 우선순위
 
