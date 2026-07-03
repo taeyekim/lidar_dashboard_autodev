@@ -188,6 +188,8 @@ assert(
   [runtimeSmoke, "X-Device-Key", "runtime smoke script"],
   [runtimeSmoke, "/api/ingest/control-board/tcp/test", "runtime smoke script"],
   [runtimeSmoke, "TCP_FRAME_TEST", "runtime smoke script"],
+  [runtimeSmoke, "Assert-NumberProperty", "runtime smoke script"],
+  [runtimeSmoke, "Assert-PropertyExists", "runtime smoke script"],
   [runtimeSmoke, "controlCommands", "runtime smoke script"],
   [runtimeSmoke, "packetHex", "runtime smoke script"],
   [runtimeSmoke, "rawPayload", "runtime smoke script"],

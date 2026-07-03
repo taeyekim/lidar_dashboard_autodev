@@ -187,6 +187,34 @@ function Assert-ResponseHeaderContains {
   }
 }
 
+function Assert-NumberProperty {
+  param(
+    [object]$Object,
+    [string]$Name,
+    [string]$Label
+  )
+
+  $property = $Object.PSObject.Properties[$Name]
+  if ($null -eq $property -or $null -eq $property.Value) {
+    throw "$Label did not include $Name."
+  }
+  if ($property.Value -is [bool] -or $property.Value -isnot [System.ValueType]) {
+    throw "$Label expected $Name to be numeric."
+  }
+}
+
+function Assert-PropertyExists {
+  param(
+    [object]$Object,
+    [string]$Name,
+    [string]$Label
+  )
+
+  if ($null -eq $Object.PSObject.Properties[$Name]) {
+    throw "$Label did not expose $Name."
+  }
+}
+
 function Get-CookieJarValue {
   param(
     [string]$CookieJar,
@@ -447,42 +475,27 @@ try {
 
   Invoke-CurlJson -Url "$BaseUrl/api/events/recent?limit=5" | Out-Null
   $summary = Invoke-CurlJson -Url "$BaseUrl/api/events/summary"
-  if ($null -eq $summary.vehiclesPassed) {
-    throw "Event summary did not include vehiclesPassed unique track count."
-  }
-  if ($null -eq $summary.wrongwayVehicles) {
-    throw "Event summary did not include wrongwayVehicles unique wrong-way vehicle count."
-  }
-  if ($null -eq $summary.wrongWayEvents) {
-    throw "Event summary did not include wrongWayEvents raw event count."
-  }
-  if ($null -eq $summary.wrongwayRate) {
-    throw "Event summary did not include wrongwayRate."
-  }
+  Assert-NumberProperty -Object $summary -Name "vehiclesPassed" -Label "Event summary unique track count"
+  Assert-NumberProperty -Object $summary -Name "wrongwayVehicles" -Label "Event summary unique wrong-way vehicle count"
+  Assert-NumberProperty -Object $summary -Name "wrongWayEvents" -Label "Event summary raw wrong-way event count"
+  Assert-NumberProperty -Object $summary -Name "wrongwayRate" -Label "Event summary wrong-way rate"
   $statistics = Invoke-CurlJson -Url "$BaseUrl/api/statistics/traffic?range=daily"
   if (!$statistics.ok -or !$statistics.totals -or !$statistics.buckets -or !$statistics.zones) {
     throw "Traffic statistics smoke did not include ok, totals, buckets, and zones."
   }
-  if ($null -eq $statistics.totals.normalVehicles -or $null -eq $statistics.totals.wrongwayVehicles) {
-    throw "Traffic statistics smoke did not include normal/wrong-way vehicle counters."
-  }
+  Assert-NumberProperty -Object $statistics.totals -Name "normalVehicles" -Label "Traffic statistics totals"
+  Assert-NumberProperty -Object $statistics.totals -Name "wrongwayVehicles" -Label "Traffic statistics totals"
   if ($null -eq $statistics.totals.commandSuccessRate) {
     Write-Warning "Traffic statistics commandSuccessRate is null; this is expected until LIVE_TCP ACK/FAILED samples exist."
   }
-  if (!($statistics.totals.PSObject.Properties.Name -contains "averageResponseMs")) {
-    throw "Traffic statistics smoke did not expose averageResponseMs."
-  }
+  Assert-PropertyExists -Object $statistics.totals -Name "averageResponseMs" -Label "Traffic statistics totals"
 
   $controlBoardStatus = Invoke-CurlJson -Url "$BaseUrl/api/control-board/status"
   if (!$controlBoardStatus.ok -or !$controlBoardStatus.byStatus) {
     throw "Control-board status smoke did not include ok and byStatus."
   }
-  if (!($controlBoardStatus.PSObject.Properties.Name -contains "averageResponseMs")) {
-    throw "Control-board status smoke did not expose averageResponseMs."
-  }
-  if (!($controlBoardStatus.PSObject.Properties.Name -contains "responseSampleCount")) {
-    throw "Control-board status smoke did not expose responseSampleCount."
-  }
+  Assert-PropertyExists -Object $controlBoardStatus -Name "averageResponseMs" -Label "Control-board status"
+  Assert-NumberProperty -Object $controlBoardStatus -Name "responseSampleCount" -Label "Control-board status"
   if ($controlBoardStatus.latestCommand -and !($controlBoardStatus.latestCommand.PSObject.Properties.Name -contains "responseDurationMs")) {
     throw "Control-board status latestCommand did not expose responseDurationMs."
   }
