@@ -21,6 +21,7 @@ function withDisposition(item, requireScanners = false) {
 
 assert(scannerCloseoutDefinitions.length === 4, "scanner closeout should cover gitleaks, Trivy fs, Trivy images, and ZAP");
 assert(scannerCloseoutDefinitions.every((item) => item.requiredSwitch && item.closeoutWhenSkipped), "scanner closeout rows need switch and closeout guidance");
+assert(scannerCloseoutDefinitions.every((item) => item.installHint.includes("--use-docker-scanners")), "scanner closeout rows should mention Docker scanner fallback");
 
 const skippedGitleaks = skipped("gitleaks secret scan", "gitleaks command is not installed on this PC");
 assert(requiredScannerFailure(skippedGitleaks, false) === false, "skipped scanner should not block unless scanners are required");
@@ -85,7 +86,7 @@ const markdown = buildMarkdown({
     upstreamCommit: "fixture",
     pushed: true,
   },
-  options: { includeContainerImages: true, includeZap: true, requireScanners: true },
+  options: { includeContainerImages: true, includeZap: true, requireScanners: true, useDockerScanners: true },
   strictAcceptanceBlocked: true,
   dispositionSummary: summary,
   toolInventory: [],
@@ -98,6 +99,8 @@ const markdown = buildMarkdown({
   "Acceptance Classification",
   "Git pushed to origin/dev",
   "Working tree clean",
+  "Use Docker scanner fallback",
+  "--use-docker-scanners",
   "BLOCKING",
   "RISK_ACCEPTED",
   "UNVERIFIED",

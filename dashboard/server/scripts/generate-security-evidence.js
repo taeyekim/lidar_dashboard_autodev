@@ -62,12 +62,16 @@ function commandVersion(command, args) {
   };
 }
 
-function buildToolInventory() {
-  return [
+function buildToolInventory(useDockerScanners = false) {
+  const inventory = [
     commandVersion("gitleaks", ["version"]),
     commandVersion("trivy", ["--version"]),
     commandVersion("zap-baseline.py", ["-h"]),
   ];
+  if (useDockerScanners) {
+    inventory.push(commandVersion("docker", ["--version"]));
+  }
+  return inventory;
 }
 
 const scannerCloseoutDefinitions = [
@@ -76,34 +80,34 @@ const scannerCloseoutDefinitions = [
     checks: ["gitleaks secret scan"],
     requiredSwitch: "--require-scanners",
     evidenceFiles: ["gitleaks.json", "gitleaks-secret-scan.log"],
-    installHint: "Install gitleaks and run `gitleaks detect --source . --redact`.",
-    closeoutWhenSkipped: "Install gitleaks or document reviewer risk acceptance in artifacts/manual/field-risk-acceptance.md.",
+    installHint: "Install gitleaks or rerun `npm.cmd run security:evidence -- --use-docker-scanners`.",
+    closeoutWhenSkipped: "Install gitleaks, rerun with --use-docker-scanners, or document reviewer risk acceptance in artifacts/manual/field-risk-acceptance.md.",
   },
   {
     scanner: "Trivy filesystem",
     checks: ["trivy filesystem scan"],
     requiredSwitch: "--require-scanners",
     evidenceFiles: ["trivy-fs.json", "trivy-filesystem-scan.log"],
-    installHint: "Install Trivy and run `trivy fs --scanners vuln,secret,misconfig .`.",
-    closeoutWhenSkipped: "Install Trivy or document reviewer risk acceptance in artifacts/manual/field-risk-acceptance.md.",
+    installHint: "Install Trivy or rerun `npm.cmd run security:evidence -- --use-docker-scanners`.",
+    closeoutWhenSkipped: "Install Trivy, rerun with --use-docker-scanners, or document reviewer risk acceptance in artifacts/manual/field-risk-acceptance.md.",
   },
   {
     scanner: "Trivy images",
     checks: ["trivy image scan", "trivy backend image scan", "trivy frontend image scan"],
     requiredSwitch: "--include-container-images --require-scanners",
     evidenceFiles: ["trivy-backend-image.json", "trivy-frontend-image.json"],
-    installHint: "Build delivery images, install Trivy, and rerun with `--include-container-images`.",
+    installHint: "Build delivery images, install Trivy, or rerun with `--include-container-images --use-docker-scanners`.",
     closeoutWhenSkipped:
-      "Build the delivery images and rerun image scans, or document why image scanning is unavailable for this handover.",
+      "Build the delivery images and rerun image scans with native Trivy or --use-docker-scanners, or document why image scanning is unavailable for this handover.",
   },
   {
     scanner: "OWASP ZAP baseline",
     checks: ["OWASP ZAP baseline"],
     requiredSwitch: "--include-zap --require-scanners --target-url=<nginx-url>",
     evidenceFiles: ["zap-baseline.html", "owasp-zap-baseline.log"],
-    installHint: "Install OWASP ZAP baseline tooling and run against the Nginx entrypoint only.",
+    installHint: "Install OWASP ZAP baseline tooling or rerun with `--include-zap --use-docker-scanners` against the Nginx entrypoint only.",
     closeoutWhenSkipped:
-      "Run the baseline against the delivery Nginx URL, or document reviewer risk acceptance before field closeout.",
+      "Run the baseline natively or with --use-docker-scanners against the delivery Nginx URL, or document reviewer risk acceptance before field closeout.",
   },
 ];
 
@@ -156,6 +160,19 @@ function runCommand(label, command, args, options = {}) {
     stderr: result.stderr || "",
     error: result.error?.message || null,
   };
+}
+
+function dockerVolumePath(value) {
+  return path.resolve(value);
+}
+
+function dockerTargetUrl(targetUrl) {
+  if (process.platform !== "win32") return targetUrl;
+  return String(targetUrl || "").replace(/^http:\/\/(localhost|127\.0\.0\.1)(?=[:/]|$)/i, "http://host.docker.internal");
+}
+
+function dockerScannerSkipped(label, scannerName) {
+  return skipped(label, `${scannerName} command is not installed and --use-docker-scanners was not provided or Docker is unavailable`);
 }
 
 function gitValue(args) {
@@ -290,6 +307,7 @@ function buildMarkdown(manifest) {
     `- Include container images: ${manifest.options.includeContainerImages ? "yes" : "no"}`,
     `- Include ZAP baseline: ${manifest.options.includeZap ? "yes" : "no"}`,
     `- Require scanners: ${manifest.options.requireScanners ? "yes" : "no"}`,
+    `- Use Docker scanner fallback: ${manifest.options.useDockerScanners ? "yes" : "no"}`,
     `- Strict acceptance blocked: ${manifest.strictAcceptanceBlocked ? "yes" : "no"}`,
     "",
     "## Security Disposition Summary",
@@ -361,6 +379,7 @@ function buildMarkdown(manifest) {
     "- `npm audit raw json` is captured as evidence and may report the documented Prisma development-tooling exception.",
     "- `npm audit policy gate` is the required automated pass/fail gate for dependency audit findings.",
     "- Optional tools are recorded as `SKIPPED` when not installed or when image/ZAP switches are not provided.",
+    "- `--use-docker-scanners` runs gitleaks, Trivy, and OWASP ZAP through Docker images when native commands are unavailable.",
     "- Acceptance classification maps results to PASS, BLOCKING, DELIVERY_FIX, RISK_ACCEPTED, or UNVERIFIED for delivery review.",
     "- Scanner closeout rows list the required switch, expected evidence files, install hint, and risk-acceptance path.",
     "- `--require-scanners` treats skipped gitleaks, Trivy, and OWASP ZAP checks as required BLOCKING failures for field acceptance.",
@@ -394,13 +413,15 @@ function main() {
   const includeContainerImages = process.argv.includes("--include-container-images");
   const includeZap = process.argv.includes("--include-zap");
   const requireScanners = process.argv.includes("--require-scanners");
+  const useDockerScanners = process.argv.includes("--use-docker-scanners");
   const targetUrlArg = process.argv.find((arg) => arg.startsWith("--target-url="));
   const outputRootArg = process.argv.find((arg) => arg.startsWith("--output-root="));
   const targetUrl = targetUrlArg ? targetUrlArg.slice("--target-url=".length) : "http://localhost:8080";
   const outputRoot = outputRootArg ? outputRootArg.slice("--output-root=".length) : "artifacts/security";
   const outputDir = path.join(root, outputRoot, timestampForPath());
   ensureDir(outputDir);
-  const toolInventory = buildToolInventory();
+  const dockerReady = useDockerScanners && commandExists("docker");
+  const toolInventory = buildToolInventory(useDockerScanners);
 
   const auditRaw = runCommand("npm audit raw json", npmCommand, ["audit", "--workspaces", "--json"]);
   const auditPolicy = runCommand("npm audit policy gate", npmCommand, ["run", "verify:audit-policy"]);
@@ -423,8 +444,30 @@ function main() {
         path.join(outputDir, "gitleaks.json"),
       ]),
     );
+  } else if (dockerReady) {
+    checks.push(
+      runCommand("gitleaks secret scan", "docker", [
+        "run",
+        "--rm",
+        "-v",
+        `${dockerVolumePath(root)}:/workspace`,
+        "-v",
+        `${dockerVolumePath(outputDir)}:/out`,
+        "-w",
+        "/workspace",
+        "zricethezav/gitleaks:latest",
+        "detect",
+        "--source",
+        "/workspace",
+        "--redact",
+        "--report-format",
+        "json",
+        "--report-path",
+        "/out/gitleaks.json",
+      ]),
+    );
   } else {
-    checks.push(skipped("gitleaks secret scan", "gitleaks command is not installed on this PC"));
+    checks.push(dockerScannerSkipped("gitleaks secret scan", "gitleaks"));
   }
 
   if (commandExists("trivy")) {
@@ -465,9 +508,64 @@ function main() {
     } else {
       checks.push(skipped("trivy image scan", "Run with --include-container-images after Docker images are built"));
     }
+  } else if (dockerReady) {
+    checks.push(
+      runCommand("trivy filesystem scan", "docker", [
+        "run",
+        "--rm",
+        "-v",
+        `${dockerVolumePath(root)}:/workspace`,
+        "-v",
+        `${dockerVolumePath(outputDir)}:/out`,
+        "aquasec/trivy:latest",
+        "fs",
+        "--scanners",
+        "vuln,secret,misconfig",
+        "--format",
+        "json",
+        "--output",
+        "/out/trivy-fs.json",
+        "/workspace",
+      ]),
+    );
+
+    if (includeContainerImages) {
+      checks.push(
+        runCommand("trivy backend image scan", "docker", [
+          "run",
+          "--rm",
+          "-v",
+          `${dockerVolumePath(outputDir)}:/out`,
+          "aquasec/trivy:latest",
+          "image",
+          "--format",
+          "json",
+          "--output",
+          "/out/trivy-backend-image.json",
+          "lidar_dashboard_autodev-backend",
+        ]),
+      );
+      checks.push(
+        runCommand("trivy frontend image scan", "docker", [
+          "run",
+          "--rm",
+          "-v",
+          `${dockerVolumePath(outputDir)}:/out`,
+          "aquasec/trivy:latest",
+          "image",
+          "--format",
+          "json",
+          "--output",
+          "/out/trivy-frontend-image.json",
+          "lidar_dashboard_autodev-frontend",
+        ]),
+      );
+    } else {
+      checks.push(skipped("trivy image scan", "Run with --include-container-images after Docker images are built"));
+    }
   } else {
-    checks.push(skipped("trivy filesystem scan", "trivy command is not installed on this PC"));
-    checks.push(skipped("trivy image scan", "trivy command is not installed on this PC"));
+    checks.push(dockerScannerSkipped("trivy filesystem scan", "trivy"));
+    checks.push(dockerScannerSkipped("trivy image scan", "trivy"));
   }
 
   if (includeZap) {
@@ -480,8 +578,23 @@ function main() {
           path.join(outputDir, "zap-baseline.html"),
         ]),
       );
+    } else if (dockerReady) {
+      checks.push(
+        runCommand("OWASP ZAP baseline", "docker", [
+          "run",
+          "--rm",
+          "-v",
+          `${dockerVolumePath(outputDir)}:/zap/wrk`,
+          "ghcr.io/zaproxy/zaproxy:stable",
+          "zap-baseline.py",
+          "-t",
+          dockerTargetUrl(targetUrl),
+          "-r",
+          "zap-baseline.html",
+        ]),
+      );
     } else {
-      checks.push(skipped("OWASP ZAP baseline", "zap-baseline.py command is not installed on this PC"));
+      checks.push(dockerScannerSkipped("OWASP ZAP baseline", "zap-baseline.py"));
     }
   } else {
     checks.push(skipped("OWASP ZAP baseline", "Run with --include-zap against the delivery Nginx entrypoint"));
@@ -519,6 +632,7 @@ function main() {
       includeContainerImages,
       includeZap,
       requireScanners,
+      useDockerScanners,
     },
     toolInventory,
     scannerCloseout,

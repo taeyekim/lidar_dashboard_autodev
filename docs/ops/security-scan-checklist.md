@@ -57,6 +57,7 @@ Windows evidence script:
 ```powershell
 npm.cmd run security:evidence
 npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners --target-url=http://localhost:8080
+npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners --use-docker-scanners --target-url=http://localhost:8080
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/security-scan.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/security-scan.ps1 -IncludeContainerImages -IncludeZap -RequireScanners
 ```
@@ -74,7 +75,9 @@ Each gitleaks, Trivy filesystem, Trivy image, and OWASP ZAP row must either
 show `EVIDENCE_READY`, show documented `RISK_ACCEPTED`, or have an owner and
 recheck date in `artifacts/manual/field-risk-acceptance.md`.
 
-Use `--require-scanners` or `-RequireScanners` during strict field acceptance
+Use `--use-docker-scanners` when Docker is available but native `gitleaks`,
+`trivy`, or `zap-baseline.py` commands are not installed. Use
+`--require-scanners` or `-RequireScanners` during strict field acceptance
 when skipped gitleaks, Trivy, or OWASP ZAP checks should become `차단` evidence
 instead of being recorded as review-only `미검증` skipped items.
 When a scanner skip is intentionally accepted for delivery, fill
