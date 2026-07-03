@@ -246,6 +246,12 @@ assert(
   ),
   "stale source revision fixture should expose stale handover package commit",
 );
+assert(
+  staleSourceRevision.remainingGates.every(
+    (item) => item.category !== "Evidence Source Revision" || item.actionType === "AUTOMATED_REFRESH_AVAILABLE",
+  ),
+  "stale source revision gates should be automated refresh actions",
+);
 
 const blockedSecurity = buildFinalStatusReport({
   evidenceRefs: {

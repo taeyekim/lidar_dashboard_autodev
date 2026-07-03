@@ -56,6 +56,8 @@ function evidencePath(item) {
 
 function actionTypeForGate(category, status, message) {
   const text = `${category} ${status} ${message}`.toLowerCase();
+  if (category === "Evidence Source Revision") return "AUTOMATED_REFRESH_AVAILABLE";
+  if (category === "Source Code State") return "AUTOMATED_REFRESH_AVAILABLE";
   if ((category === "Completion Audit" || category === "Handover Package") && status !== "MISSING") return "REVIEW_REQUIRED";
   if (text.includes("manual evidence") || text.includes("operator ui walkthrough") || text.includes("field risk acceptance")) {
     return "MANUAL_EVIDENCE_REQUIRED";
