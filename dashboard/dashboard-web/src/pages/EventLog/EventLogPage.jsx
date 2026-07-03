@@ -222,6 +222,72 @@ function ControlCommandTimeline({ commands = [] }) {
   );
 }
 
+function uniqueValues(values) {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function buildSituationEndedSummary(event, logs = []) {
+  const raw = event?.raw || {};
+  const rawPayload = event?.rawPayload || {};
+  const commands = Array.isArray(raw.controlCommands) ? raw.controlCommands : [];
+  const detailLogs = Array.isArray(raw.eventLogs) ? raw.eventLogs : [];
+  const auditLogs = [...detailLogs, ...logs.map((log) => log.raw || log)];
+  const resolutionLogs = auditLogs.filter((log) => log.action === "SITUATION_ENDED_RESOLVED");
+  const returnCommands = commands.filter((command) => command.commandType === "STAGE_2_RETURN");
+  const eventType = String(raw.eventType || event?.category || event?.type || rawPayload.type || "");
+  const isClosingEvent = eventType === "situation-ended";
+
+  if (!isClosingEvent && resolutionLogs.length === 0 && returnCommands.length === 0) return null;
+
+  return {
+    isClosingEvent,
+    resolvedEventIds: uniqueValues([
+      ...(Array.isArray(raw.resolvedEventIds) ? raw.resolvedEventIds : []),
+      ...(Array.isArray(rawPayload.resolvedEventIds) ? rawPayload.resolvedEventIds : []),
+      ...resolutionLogs.map((log) => log.eventId),
+    ]),
+    closingEventIds: uniqueValues(resolutionLogs.map((log) => log.metadata?.closingEventId)),
+    returnCommandStatuses: uniqueValues(returnCommands.map((command) => command.status || "UNKNOWN")),
+    returnCommandPackets: uniqueValues(returnCommands.map((command) => command.packetHex)),
+  };
+}
+
+function SituationEndedSummary({ event, logs }) {
+  const summary = buildSituationEndedSummary(event, logs);
+  if (!summary) return null;
+
+  return (
+    <div className="rounded border border-green-200 bg-green-50 p-3 text-xs text-green-800">
+      <div className="font-black uppercase tracking-wide text-green-700">상황 종료 처리</div>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        <div>
+          <div className="font-bold text-green-900">종료 이벤트</div>
+          <div>{summary.isClosingEvent ? "situation-ended 수신" : "종료 로그로 해결됨"}</div>
+        </div>
+        <div>
+          <div className="font-bold text-green-900">복귀 명령</div>
+          <div>STAGE_2_RETURN / {summary.returnCommandStatuses.join(", ") || "연결 명령 없음"}</div>
+        </div>
+        <div className="sm:col-span-2">
+          <div className="font-bold text-green-900">RESOLVED 이벤트</div>
+          <div className="break-all">{summary.resolvedEventIds.join(", ") || "감사 로그 확인 필요"}</div>
+        </div>
+        {summary.closingEventIds.length > 0 && (
+          <div className="sm:col-span-2">
+            <div className="font-bold text-green-900">Closing event</div>
+            <div className="break-all">{summary.closingEventIds.join(", ")}</div>
+          </div>
+        )}
+        {summary.returnCommandPackets.length > 0 && (
+          <div className="sm:col-span-2 font-mono text-[11px]">
+            <span className="font-bold text-green-900">TX</span> {summary.returnCommandPackets.join(", ")}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function upsertEvent(events, nextEvent) {
   if (!nextEvent?.id) return events;
   const index = events.findIndex((event) => event.id === nextEvent.id);
@@ -618,6 +684,8 @@ export default function EventLogPage() {
                     </div>
 
                     <RawPayloadBlock value={selectedEvent.rawPayload} />
+
+                    <SituationEndedSummary event={selectedEvent} logs={eventLogs} />
 
                     <div>
                       <div className="mb-2 text-xs font-bold uppercase text-gray-400">통합제어보드 명령</div>
