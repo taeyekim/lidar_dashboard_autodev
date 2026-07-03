@@ -114,6 +114,22 @@ function fieldEvidenceStrictFailures(fieldEvidenceSummary) {
     );
 }
 
+function fieldEvidenceNextAction(type) {
+  const actions = {
+    "Field Preflight":
+      "Run npm.cmd run field:preflight -- -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\" after final .env values are set.",
+    "Field Acceptance":
+      "Run npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\" -OperatorUiWalkthroughEvidence artifacts/manual/operator-ui-walkthrough.md after runtime, rehearsal, security, and UI walkthrough evidence are ready.",
+    "DB And Prisma":
+      "Run powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\" against the delivery runtime.",
+    "Lidar Ingest":
+      "Run powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\" with representative lidar payloads.",
+    "Control Board TCP":
+      "Run powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\" after control-board dry-run or approved live TCP conditions are confirmed.",
+  };
+  return actions[type] || "Refresh the related field evidence manifest and rerun npm.cmd run handover:package.";
+}
+
 function buildFieldEvidenceOpenItems(fieldEvidenceSummary) {
   return fieldEvidenceSummary.flatMap((item) => [
     ...(item.reviewItems || []).map((message) => ({
@@ -121,14 +137,20 @@ function buildFieldEvidenceOpenItems(fieldEvidenceSummary) {
       status: "REVIEW",
       message,
       manifestPath: item.manifestPath || null,
+      nextAction: fieldEvidenceNextAction(item.type),
     })),
     ...(item.skippedItems || []).map((message) => ({
       type: item.type,
       status: "SKIPPED",
       message,
       manifestPath: item.manifestPath || null,
+      nextAction: fieldEvidenceNextAction(item.type),
     })),
   ]);
+}
+
+function markdownCell(value) {
+  return String(value ?? "").replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
 }
 
 function buildMarkdown(manifest) {
@@ -165,19 +187,19 @@ function buildMarkdown(manifest) {
     "| --- | --- | --- | --- | --- |",
     ...manifest.fieldEvidenceSummary.map(
       (item) =>
-        `| ${item.type} | ${item.manifestPath ? `\`${item.manifestPath}\`` : "missing"} | ${item.passCount || 0} | ${item.reviewCount || 0} | ${item.skippedCount || 0} |`,
+        `| ${markdownCell(item.type)} | ${item.manifestPath ? `\`${markdownCell(item.manifestPath)}\`` : "missing"} | ${item.passCount || 0} | ${item.reviewCount || 0} | ${item.skippedCount || 0} |`,
     ),
     "",
     "## Field Evidence Open Items",
     "",
-    "| Type | Status | Message | Manifest |",
-    "| --- | --- | --- | --- |",
+    "| Type | Status | Message | Next Action | Manifest |",
+    "| --- | --- | --- | --- | --- |",
     ...(manifest.fieldEvidenceOpenItems.length > 0
       ? manifest.fieldEvidenceOpenItems.map(
           (item) =>
-            `| ${item.type} | ${item.status} | ${item.message} | ${item.manifestPath ? `\`${item.manifestPath}\`` : "missing"} |`,
+            `| ${markdownCell(item.type)} | ${markdownCell(item.status)} | ${markdownCell(item.message)} | ${markdownCell(item.nextAction)} | ${item.manifestPath ? `\`${markdownCell(item.manifestPath)}\`` : "missing"} |`,
         )
-      : ["| none | PASS | No field evidence review/skipped items. | - |"]),
+      : ["| none | PASS | No field evidence review/skipped items. | - | - |"]),
     "",
     "## Commands",
     "",
