@@ -22,6 +22,7 @@ const controlLifecycleMigration = readProjectFile(
   "dashboard/server/prisma/migrations/20260702063000_add_control_command_lifecycle/migration.sql",
 );
 const seed = readProjectFile("dashboard/server/prisma/seed.js");
+const syntaxChecker = readProjectFile("dashboard/server/scripts/check-syntax.js");
 const wrongwayService = readProjectFile("dashboard/server/src/domains/wrongway/wrongway.service.js");
 const controlBoardService = readProjectFile("dashboard/server/src/domains/control-board/controlBoard.service.js");
 const statisticsService = readProjectFile("dashboard/server/src/domains/statistics/statistics.service.js");
@@ -132,21 +133,45 @@ const eventService = readProjectFile("dashboard/server/src/domains/events/events
   'where: { id: "site-wolchulsan-rest-area" }',
   'name: "월출산휴게소"',
   'location: "전라남도 영암군"',
+  'description: "라이다 역주행 방지 시스템 1차 개발 대상 현장"',
   'zoneCode: "ROUNDABOUT-01"',
   'zoneCode: "ROUNDABOUT-02"',
+  'name: "회전교차로 1"',
+  'name: "회전교차로 2"',
   'deviceCode: "LIDAR-PC-01"',
   'deviceCode: "CONTROL-BOARD-01"',
   'deviceCode: "LIDAR-PC-02"',
   'deviceCode: "CONTROL-BOARD-02"',
+  'name: "회전교차로 1 라이다 PC"',
+  'name: "회전교차로 1 통합제어보드"',
+  'name: "회전교차로 2 라이다 PC"',
+  'name: "회전교차로 2 통합제어보드"',
   'deviceType: "LIDAR_PC"',
   'deviceType: "CONTROL_BOARD"',
   'status: "UNKNOWN"',
   'healthStatus: "UNKNOWN"',
 ].forEach((token) => assertIncludes(seed, token, "Prisma seed contract"));
 
-["�", "?붿", "?뚯", "?쇱", "?듯"].forEach((token) => {
+[
+  "占",
+  "沃",
+  "筌",
+  "獄",
+  "癰",
+  "揶",
+  "?붿",
+  "?뚯",
+  "?쇱",
+  "?듯",
+].forEach((token) => {
   assert(!seed.includes(token), `Prisma seed contains mojibake token: ${token}`);
 });
+
+assertIncludes(
+  syntaxChecker,
+  'path.join(serverRoot, "prisma", "seed.js")',
+  "server syntax checker",
+);
 
 [
   "tx.vehicleTrack.upsert",
@@ -175,7 +200,7 @@ const eventService = readProjectFile("dashboard/server/src/domains/events/events
   "include: {",
   "eventLogs:",
   "controlCommands:",
-  "logs: { orderBy: { createdAt: \"asc\" } }",
+  'logs: { orderBy: { createdAt: "asc" } }',
 ].forEach((token) => assertIncludes(eventService, token, "event service Prisma include contract"));
 
 console.log("prisma contracts ok");

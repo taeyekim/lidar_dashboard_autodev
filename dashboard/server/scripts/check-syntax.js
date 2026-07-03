@@ -4,7 +4,7 @@ const path = require("path");
 
 const scriptsRoot = __dirname;
 const serverRoot = path.resolve(__dirname, "..");
-const targets = [path.join(serverRoot, "server.js")];
+const targets = [path.join(serverRoot, "server.js"), path.join(serverRoot, "prisma", "seed.js")];
 
 function collectJsFiles(dir) {
   if (!fs.existsSync(dir)) return;

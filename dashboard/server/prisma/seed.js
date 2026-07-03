@@ -8,17 +8,18 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   const adminUserId = process.env.SEED_ADMIN_USER_ID || "admin";
   const adminPassword = process.env.SEED_ADMIN_PASSWORD || "admin1234!";
+  const adminName = process.env.SEED_ADMIN_NAME || "System Administrator";
 
   await prisma.user.upsert({
     where: { userId: adminUserId },
     update: {
-      name: process.env.SEED_ADMIN_NAME || "System Administrator",
+      name: adminName,
       role: "SUPER_ADMIN",
       isActive: true,
     },
     create: {
       userId: adminUserId,
-      name: process.env.SEED_ADMIN_NAME || "System Administrator",
+      name: adminName,
       passwordHash: hashPassword(adminPassword),
       role: "SUPER_ADMIN",
       isActive: true,
