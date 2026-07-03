@@ -64,6 +64,12 @@ npm.cmd run final:execution-plan -- --base-url=http://localhost:8080
 Use `npm.cmd` and `curl.exe` on Windows when the local PowerShell execution
 policy blocks `npm.ps1` or aliases `curl`.
 
+Before sharing the final status report, confirm the delivery source is on
+`dev`, tracks `origin/dev`, has a clean working tree, and the final commit has
+already been pushed to `origin/dev`. `npm.cmd run final:status` records these
+values and opens a `Git Delivery State` gate when the branch, upstream, or
+push state does not match the direct-push delivery policy.
+
 For a single ordered field acceptance pass, use the orchestrator:
 
 ```powershell

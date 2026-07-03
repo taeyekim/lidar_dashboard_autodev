@@ -27,6 +27,32 @@ function gitValue(args) {
   return result.stdout.trim();
 }
 
+function buildGitState(inputGit) {
+  if (inputGit) {
+    const upstreamCommit = inputGit.upstreamCommit ?? inputGit.remoteCommit ?? null;
+    return {
+      branch: inputGit.branch,
+      commit: inputGit.commit,
+      clean: inputGit.clean,
+      upstream: inputGit.upstream || null,
+      upstreamCommit,
+      pushed: inputGit.pushed ?? Boolean(inputGit.commit && upstreamCommit && inputGit.commit === upstreamCommit),
+    };
+  }
+
+  const upstream = gitValue(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]);
+  const upstreamCommit = upstream ? gitValue(["rev-parse", "@{u}"]) : "";
+  const commit = gitValue(["rev-parse", "HEAD"]);
+  return {
+    branch: gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
+    commit,
+    clean: gitValue(["status", "--short"]) === "",
+    upstream: upstream || null,
+    upstreamCommit: upstreamCommit || null,
+    pushed: Boolean(commit && upstreamCommit && commit === upstreamCommit),
+  };
+}
+
 function latestEvidenceRefs() {
   return {
     delivery: readLatestJsonManifest("artifacts/delivery"),
@@ -58,6 +84,7 @@ function actionTypeForGate(category, status, message) {
   const text = `${category} ${status} ${message}`.toLowerCase();
   if (category === "Evidence Source Revision") return "AUTOMATED_REFRESH_AVAILABLE";
   if (category === "Source Code State") return "AUTOMATED_REFRESH_AVAILABLE";
+  if (category === "Git Delivery State") return "AUTOMATED_REFRESH_AVAILABLE";
   if ((category === "Completion Audit" || category === "Handover Package") && status !== "MISSING") return "REVIEW_REQUIRED";
   if (text.includes("manual evidence") || text.includes("operator ui walkthrough") || text.includes("field risk acceptance")) {
     return "MANUAL_EVIDENCE_REQUIRED";
@@ -210,11 +237,7 @@ function buildFinalStatusReport(input = {}) {
   const securitySummary = buildSecuritySummary(security);
   const manualEvidenceSummary = buildManualEvidenceSummary(manualEvidence);
   const referenceFreshness = refsAreFresh(handoverPackage, evidenceRefs);
-  const git = input.git || {
-    branch: gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
-    commit: gitValue(["rev-parse", "HEAD"]),
-    clean: gitValue(["status", "--short"]) === "",
-  };
+  const git = buildGitState(input.git);
   const sourceRevisionFreshness = sourceGitFreshness(evidenceRefs, git);
 
   if (git.clean !== true) {
@@ -224,6 +247,36 @@ function buildFinalStatusReport(input = {}) {
       "DIRTY",
       "Final status was generated while the working tree was not clean.",
       "Commit or intentionally clear local changes, then rerun npm.cmd run final:status from the delivery revision.",
+      null,
+    );
+  }
+  if (git.branch !== "dev") {
+    addGate(
+      gates,
+      "Git Delivery State",
+      "WRONG_BRANCH",
+      `Final delivery source is on ${git.branch || "unknown"} instead of dev.`,
+      "Switch to dev, commit the delivery source, push origin dev, then rerun npm.cmd run final:status.",
+      null,
+    );
+  }
+  if (git.upstream !== "origin/dev") {
+    addGate(
+      gates,
+      "Git Delivery State",
+      "WRONG_UPSTREAM",
+      `Final delivery source upstream is ${git.upstream || "missing"} instead of origin/dev.`,
+      "Set or switch to the dev branch tracking origin/dev, push the delivery commit, then rerun npm.cmd run final:status.",
+      null,
+    );
+  }
+  if (git.pushed !== true) {
+    addGate(
+      gates,
+      "Git Delivery State",
+      "UNPUSHED",
+      `Final delivery commit ${git.commit || "unknown"} is not proven pushed to origin/dev ${git.upstreamCommit || "missing"}.`,
+      "Push the final delivery commit to origin/dev, confirm git status is clean and synced, then rerun npm.cmd run final:status.",
       null,
     );
   }
@@ -389,6 +442,9 @@ function buildMarkdown(manifest) {
     `- Base URL: ${manifest.baseUrl}`,
     `- Git commit: ${manifest.git.commit}`,
     `- Git branch: ${manifest.git.branch}`,
+    `- Git upstream: ${manifest.git.upstream || "missing"}`,
+    `- Git upstream commit: ${manifest.git.upstreamCommit || "missing"}`,
+    `- Git pushed to origin/dev: ${manifest.git.pushed ? "yes" : "no"}`,
     `- Working tree clean: ${manifest.git.clean ? "yes" : "no"}`,
     "",
     "## Completion Summary",
@@ -491,6 +547,7 @@ if (require.main === module) {
 module.exports = {
   buildFinalStatusReport,
   buildMarkdown,
+  buildGitState,
   refsAreFresh,
   sourceGitFreshness,
 };

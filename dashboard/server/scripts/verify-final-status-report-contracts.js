@@ -45,6 +45,11 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "sourceRevisionFreshness", "final status report generator"],
   [generator, "Source Code State", "final status report generator"],
   [generator, "Evidence Source Revision", "final status report generator"],
+  [generator, "Git Delivery State", "final status report generator"],
+  [generator, "origin/dev", "final status report generator"],
+  [generator, "WRONG_BRANCH", "final status report generator"],
+  [generator, "WRONG_UPSTREAM", "final status report generator"],
+  [generator, "UNPUSHED", "final status report generator"],
   [generator, "final source revision", "final status report generator"],
   [generator, "fieldRiskRegister", "final status report generator"],
   [generator, "fieldActionBoard", "final status report generator"],
@@ -60,9 +65,17 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [finalStatusContracts, "artifacts/final-status", "final status verifier"],
   [deliveryRunbook, "npm.cmd run final:status", "delivery runbook"],
   [deliveryRunbook, "artifacts/final-status", "delivery runbook"],
+  [deliveryRunbook, "Git Delivery State", "delivery runbook"],
+  [deliveryRunbook, "origin/dev", "delivery runbook"],
   [acceptanceChecklist, "npm run final:status", "acceptance checklist"],
   [acceptanceChecklist, "artifacts/final-status", "acceptance checklist"],
+  [acceptanceChecklist, "Git Delivery State", "acceptance checklist"],
+  [acceptanceChecklist, "WRONG_BRANCH", "acceptance checklist"],
+  [acceptanceChecklist, "WRONG_UPSTREAM", "acceptance checklist"],
+  [acceptanceChecklist, "UNPUSHED", "acceptance checklist"],
   [matrix, "artifacts/final-status", "delivery evidence matrix"],
+  [matrix, "Git Delivery State", "delivery evidence matrix"],
+  [matrix, "pushed to `origin/dev`", "delivery evidence matrix"],
   [matrix, "artifacts/field-risk-register", "delivery evidence matrix"],
   [matrix, "artifacts/field-action-board", "delivery evidence matrix"],
   [matrix, "artifacts/field-gate-closure-map", "delivery evidence matrix"],
@@ -73,6 +86,15 @@ const manualPresent = [
   { type: "Operator UI Walkthrough", path: "artifacts/manual/operator-ui-walkthrough.md", status: "PRESENT", required: true },
   { type: "Field Risk Acceptance", path: "artifacts/manual/field-risk-acceptance.md", status: "PRESENT", required: true },
 ];
+
+const readyGit = {
+  branch: "dev",
+  commit: "fixture",
+  clean: true,
+  upstream: "origin/dev",
+  upstreamCommit: "fixture",
+  pushed: true,
+};
 
 const readyEvidence = {
   delivery: {
@@ -154,7 +176,7 @@ const ready = buildFinalStatusReport({
   evidenceRefs: readyEvidence,
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
-  git: { branch: "dev", commit: "fixture", clean: true },
+  git: readyGit,
 });
 
 assert(ready.status === "READY_TO_CLOSE", "complete fixture should be READY_TO_CLOSE");
@@ -183,12 +205,13 @@ assert(
 );
 assert(buildMarkdown(ready).includes("READY_TO_CLOSE"), "markdown should include READY_TO_CLOSE");
 assert(buildMarkdown(ready).includes("Source Revision Freshness"), "markdown should include source revision freshness");
+assert(buildMarkdown(ready).includes("Git pushed to origin/dev: yes"), "markdown should include git push state");
 
 const missing = buildFinalStatusReport({
   evidenceRefs: {},
   manualEvidence: [],
   generatedAt: "2026-01-01T00:00:00.000Z",
-  git: { branch: "dev", commit: "fixture", clean: true },
+  git: readyGit,
 });
 
 assert(missing.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "missing fixture should require review");
@@ -214,7 +237,7 @@ const dirtySource = buildFinalStatusReport({
   evidenceRefs: readyEvidence,
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
-  git: { branch: "dev", commit: "fixture", clean: false },
+  git: { ...readyGit, clean: false },
 });
 
 assert(dirtySource.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "dirty source fixture should require review");
@@ -236,7 +259,7 @@ const staleSourceRevision = buildFinalStatusReport({
   },
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
-  git: { branch: "dev", commit: "fixture", clean: true },
+  git: readyGit,
 });
 
 assert(staleSourceRevision.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "stale source revision fixture should require review");
@@ -263,7 +286,7 @@ const blockedSecurity = buildFinalStatusReport({
   },
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
-  git: { branch: "dev", commit: "fixture", clean: true },
+  git: readyGit,
 });
 
 assert(blockedSecurity.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "blocked security fixture should require review");
@@ -292,7 +315,7 @@ const stalePackage = buildFinalStatusReport({
   },
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
-  git: { branch: "dev", commit: "fixture", clean: true },
+  git: readyGit,
 });
 
 assert(stalePackage.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "stale package fixture should require review");
@@ -317,7 +340,7 @@ const staleRiskRegister = buildFinalStatusReport({
   },
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
-  git: { branch: "dev", commit: "fixture", clean: true },
+  git: readyGit,
 });
 
 assert(staleRiskRegister.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "stale risk register fixture should require review");
@@ -342,7 +365,7 @@ const staleActionBoard = buildFinalStatusReport({
   },
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
-  git: { branch: "dev", commit: "fixture", clean: true },
+  git: readyGit,
 });
 
 assert(staleActionBoard.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "stale action board fixture should require review");
@@ -367,7 +390,7 @@ const staleGateClosureMap = buildFinalStatusReport({
   },
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
-  git: { branch: "dev", commit: "fixture", clean: true },
+  git: readyGit,
 });
 
 assert(staleGateClosureMap.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "stale gate closure map fixture should require review");
@@ -392,7 +415,7 @@ const staleOwnerBriefs = buildFinalStatusReport({
   },
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
-  git: { branch: "dev", commit: "fixture", clean: true },
+  git: readyGit,
 });
 
 assert(staleOwnerBriefs.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "stale owner briefs fixture should require review");
@@ -421,7 +444,7 @@ const objectBlocker = buildFinalStatusReport({
   },
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
-  git: { branch: "dev", commit: "fixture", clean: true },
+  git: readyGit,
 });
 
 const objectBlockerMarkdown = buildMarkdown(objectBlocker);
@@ -430,6 +453,38 @@ assert(objectBlockerMarkdown.includes("Field readiness status is REVIEW."), "obj
 assert(
   objectBlocker.remainingGates.some((item) => item.category === "Completion Audit" && item.actionType === "REVIEW_REQUIRED"),
   "aggregate completion audit gate should remain review action type",
+);
+
+const wrongBranch = buildFinalStatusReport({
+  evidenceRefs: readyEvidence,
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  git: { ...readyGit, branch: "codex/feature" },
+});
+
+assert(wrongBranch.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "wrong branch fixture should require review");
+assert(
+  wrongBranch.remainingGates.some((item) => item.category === "Git Delivery State" && item.status === "WRONG_BRANCH"),
+  "wrong branch fixture should expose Git Delivery State WRONG_BRANCH",
+);
+
+const unpushedDeliveryCommit = buildFinalStatusReport({
+  evidenceRefs: readyEvidence,
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  git: { ...readyGit, upstreamCommit: "older-fixture", pushed: false },
+});
+
+assert(unpushedDeliveryCommit.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "unpushed fixture should require review");
+assert(
+  unpushedDeliveryCommit.remainingGates.some((item) => item.category === "Git Delivery State" && item.status === "UNPUSHED"),
+  "unpushed fixture should expose Git Delivery State UNPUSHED",
+);
+assert(
+  unpushedDeliveryCommit.remainingGates.every(
+    (item) => item.category !== "Git Delivery State" || item.actionType === "AUTOMATED_REFRESH_AVAILABLE",
+  ),
+  "git delivery state gates should be automated refresh actions",
 );
 
 console.log("final status report contracts ok");
