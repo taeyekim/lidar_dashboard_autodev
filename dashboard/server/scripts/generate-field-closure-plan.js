@@ -56,6 +56,21 @@ function actionForEntry(entry) {
   };
 }
 
+function buildFieldReadinessOpenChecks(fieldReadiness) {
+  const checks = fieldReadiness?.data?.checks || [];
+  return checks
+    .filter((check) => ["REVIEW", "SKIPPED"].includes(check.status))
+    .map((check) => ({
+      name: check.name,
+      status: check.status,
+      severity: check.severity,
+      message: check.message,
+      nextAction: check.nextAction,
+      evidenceCommand: check.evidenceCommand,
+      doneWhen: check.doneWhen,
+    }));
+}
+
 function buildClosurePlan(options = {}) {
   const handover = readLatestJsonManifest("artifacts/handover-index");
   const completion = readLatestJsonManifest("artifacts/completion-audit");
@@ -69,6 +84,7 @@ function buildClosurePlan(options = {}) {
   const requiredFieldValues = Array.isArray(completion?.data?.requiredFieldValues)
     ? completion.data.requiredFieldValues
     : [];
+  const fieldReadinessOpenChecks = buildFieldReadinessOpenChecks(fieldReadiness);
   const actions = openEntries.map(actionForEntry);
 
   return {
@@ -89,9 +105,11 @@ function buildClosurePlan(options = {}) {
       openActionCount: actions.length,
       completionBlockerCount: completionBlockers.length,
       requiredFieldValueCount: requiredFieldValues.length,
+      fieldReadinessOpenCheckCount: fieldReadinessOpenChecks.length,
     },
     completionBlockers,
     requiredFieldValues,
+    fieldReadinessOpenChecks,
     actions,
     finalCommands: [
       "npm.cmd run delivery:evidence",
@@ -105,6 +123,7 @@ function buildClosurePlan(options = {}) {
 }
 
 function buildMarkdown(manifest) {
+  const tableValue = (value) => String(value || "").replace(/\|/g, "\\|").replace(/\r?\n/g, "<br>");
   return [
     "# Field Closure Plan",
     "",
@@ -123,6 +142,7 @@ function buildMarkdown(manifest) {
     `- Open actions: ${manifest.counts.openActionCount}`,
     `- Completion blockers: ${manifest.counts.completionBlockerCount}`,
     `- Required field values: ${manifest.counts.requiredFieldValueCount}`,
+    `- Field readiness open checks: ${manifest.counts.fieldReadinessOpenCheckCount}`,
     "",
     "## Actions",
     "",
@@ -152,6 +172,17 @@ function buildMarkdown(manifest) {
     ...(manifest.requiredFieldValues.length > 0
       ? manifest.requiredFieldValues.map((item) => `| ${item.name || "unknown"} | ${item.state || "unknown"} | ${item.completionGate || ""} | ${item.nextAction || ""} | ${item.redacted !== false} |`)
       : ["| none | n/a | n/a | n/a | true |"]),
+    "",
+    "## Field Readiness Open Checks",
+    "",
+    "| Status | Severity | Check | Message | Next Action | Evidence Command | Done When |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+    ...(manifest.fieldReadinessOpenChecks.length > 0
+      ? manifest.fieldReadinessOpenChecks.map(
+          (check) =>
+            `| ${tableValue(check.status)} | ${tableValue(check.severity)} | ${tableValue(check.name)} | ${tableValue(check.message)} | ${tableValue(check.nextAction)} | ${tableValue(check.evidenceCommand)} | ${tableValue(check.doneWhen)} |`,
+        )
+      : ["| none | n/a | n/a | n/a | n/a | n/a | n/a |"]),
     "",
     "## Final Refresh Commands",
     "",
