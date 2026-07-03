@@ -46,6 +46,7 @@ function buildOwnerBrief(ownerGroup, actionBoardPath) {
     `- Owner: ${ownerGroup.owner}`,
     `- Open item count: ${ownerGroup.total}`,
     `- Priority counts: ${JSON.stringify(ownerGroup.byPriority || {})}`,
+    `- Phase counts: ${JSON.stringify(ownerGroup.byPhase || {})}`,
     `- Action type counts: ${JSON.stringify(ownerGroup.byActionType || {})}`,
     `- Source action board: ${actionBoardPath || "missing"}`,
     "",
@@ -65,14 +66,14 @@ function buildOwnerBrief(ownerGroup, actionBoardPath) {
     "",
     "## Items",
     "",
-    "| ID | Priority | Action Type | Category | Status | Message | Close When | Evidence |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| ID | Priority | Phase | Action Type | Category | Status | Message | Close When | Evidence |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(items.length > 0
       ? items.map(
           (item) =>
-            `| ${item.id} | ${item.priority} | ${markdownCell(item.actionType)} | ${markdownCell(item.category)} | ${markdownCell(item.status)} | ${markdownCell(item.message)} | ${markdownCell(item.closeWhen)} | ${item.evidence ? `\`${markdownCell(item.evidence)}\`` : "missing"} |`,
+            `| ${item.id} | ${item.priority} | ${markdownCell(item.phase)} | ${markdownCell(item.actionType)} | ${markdownCell(item.category)} | ${markdownCell(item.status)} | ${markdownCell(item.message)} | ${markdownCell(item.closeWhen)} | ${item.evidence ? `\`${markdownCell(item.evidence)}\`` : "missing"} |`,
         )
-      : ["| none | - | - | - | PASS | No open items. | - | - |"]),
+      : ["| none | - | - | - | - | PASS | No open items. | - | - |"]),
     "",
   ].join("\n");
 }
@@ -87,6 +88,7 @@ function buildManifest(input = {}) {
     fileName: `${slug(group.owner)}.md`,
     openItemCount: group.total || 0,
     priorityCounts: group.byPriority || {},
+    phaseCounts: group.byPhase || {},
     actionTypeCounts: group.byActionType || {},
     commandCount: (group.commands || []).length,
   }));
@@ -138,14 +140,14 @@ function buildMarkdown(manifest) {
     "",
     "## Brief Files",
     "",
-    "| Owner | File | Open Items | Commands | Priority Counts | Action Type Counts |",
-    "| --- | --- | --- | --- | --- | --- |",
+    "| Owner | File | Open Items | Commands | Priority Counts | Phase Counts | Action Type Counts |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
     ...(manifest.briefs.length > 0
       ? manifest.briefs.map(
           (item) =>
-            `| ${markdownCell(item.owner)} | \`${markdownCell(item.fileName)}\` | ${item.openItemCount} | ${item.commandCount} | ${markdownCell(JSON.stringify(item.priorityCounts))} | ${markdownCell(JSON.stringify(item.actionTypeCounts))} |`,
+            `| ${markdownCell(item.owner)} | \`${markdownCell(item.fileName)}\` | ${item.openItemCount} | ${item.commandCount} | ${markdownCell(JSON.stringify(item.priorityCounts))} | ${markdownCell(JSON.stringify(item.phaseCounts))} | ${markdownCell(JSON.stringify(item.actionTypeCounts))} |`,
         )
-      : ["| none | - | 0 | 0 | {} | {} |"]),
+      : ["| none | - | 0 | 0 | {} | {} | {} |"]),
     "",
   ].join("\n");
 }

@@ -36,6 +36,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "sourceFieldActionBoard",
   "Owner briefs split the latest field action board",
   "do not replace manual evidence",
+  "Phase counts",
+  "phaseCounts",
   "buildOwnerBrief",
   "writeOwnerBriefs",
 ].forEach((token) => assertIncludes(generator, token, "field owner briefs generator"));
@@ -72,12 +74,14 @@ const actionBoard = {
         owner: "Auth/Security",
         total: 2,
         byPriority: { P0: 1, P1: 1 },
+        byPhase: { "Security Evidence": 1, "Field Preflight": 1 },
         byActionType: { SECURITY_REVIEW_REQUIRED: 1, FIELD_ACTION_REQUIRED: 1 },
         commands: ["npm.cmd run security:evidence -- --require-scanners"],
         items: [
           {
             id: "GATE-001",
             priority: "P0",
+            phase: "Security Evidence",
             actionType: "SECURITY_REVIEW_REQUIRED",
             category: "Security Evidence",
             status: "BLOCKED",
@@ -102,15 +106,18 @@ assert(manifest.status === "OPEN", "fixture with owner groups should be OPEN");
 assert(manifest.ownerCount === 1, "manifest should preserve owner count");
 assert(manifest.openItemCount === 2, "manifest should sum open item counts");
 assert(manifest.briefs[0].fileName === "auth-security.md", "manifest should expose owner brief file names");
+assert(manifest.briefs[0].phaseCounts["Security Evidence"] === 1, "manifest should expose phase counts");
 assert(manifest.sourceFieldActionBoard === actionBoard.path, "manifest should reference source action board");
 
 const indexMarkdown = buildMarkdown(manifest);
 assert(indexMarkdown.includes("Field Owner Briefs"), "index markdown should include title");
 assert(indexMarkdown.includes("auth-security.md"), "index markdown should include brief file");
+assert(indexMarkdown.includes("Phase Counts"), "index markdown should include phase counts");
 
 const ownerMarkdown = buildOwnerBrief(actionBoard.data.ownerGroups[0], actionBoard.path);
 assert(ownerMarkdown.includes("Field Owner Brief - Auth/Security"), "owner markdown should include owner title");
 assert(ownerMarkdown.includes("GATE-001"), "owner markdown should include action items");
+assert(ownerMarkdown.includes("Security Evidence"), "owner markdown should include item phase");
 assert(ownerMarkdown.includes("Scanner evidence is blocked."), "owner markdown should include message");
 assert(ownerMarkdown.includes("This owner brief is an execution aid"), "owner markdown should include guardrail");
 
