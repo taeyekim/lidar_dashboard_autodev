@@ -275,6 +275,8 @@ const ready = buildFinalStatusReport({
   evidenceRefs: readyEvidence,
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "reviewer-a",
+  siteName: "delivery-site",
   baseUrl: "http://field.local:8080",
   git: readyGit,
 });
@@ -611,6 +613,25 @@ assert(
     (item) => item.category === "Field Acceptance" && item.status === "PLACEHOLDER_METADATA",
   ),
   "placeholder field acceptance metadata should expose PLACEHOLDER_METADATA gate",
+);
+
+const placeholderFinalStatusMetadata = buildFinalStatusReport({
+  evidenceRefs: readyEvidence,
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "field-reviewer",
+  siteName: "field-site",
+  baseUrl: "http://field.local:8080",
+  git: readyGit,
+});
+
+assert(placeholderFinalStatusMetadata.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "placeholder final status metadata should require review");
+assert(placeholderFinalStatusMetadata.canMarkGoalComplete === false, "placeholder final status metadata must block goal completion");
+assert(
+  placeholderFinalStatusMetadata.remainingGates.some(
+    (item) => item.category === "Final Status Metadata" && item.status === "PLACEHOLDER_METADATA",
+  ),
+  "placeholder final status metadata should expose PLACEHOLDER_METADATA gate",
 );
 
 const stalePackage = buildFinalStatusReport({

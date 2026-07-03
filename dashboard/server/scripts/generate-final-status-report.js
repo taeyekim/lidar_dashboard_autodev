@@ -319,7 +319,20 @@ function buildFinalStatusReport(input = {}) {
   const git = buildGitState(input.git);
   const sourceRevisionFreshness = sourceGitFreshness(evidenceRefs, git);
   const baseUrl = input.baseUrl || "http://localhost:8080";
+  const generatedBy = input.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
+  const siteName = input.siteName || "unspecified";
   const deliveryEntrypointConsistency = endpointConsistency(baseUrl, evidenceRefs);
+
+  if (isPlaceholderFieldText(generatedBy) || isPlaceholderFieldText(siteName)) {
+    addGate(
+      gates,
+      "Final Status Metadata",
+      "PLACEHOLDER_METADATA",
+      `Final status generatedBy/siteName metadata is incomplete or placeholder: generatedBy=${generatedBy || "missing"}, siteName=${siteName || "missing"}.`,
+      "Rerun npm.cmd run final:status with concrete --generated-by=<field-reviewer> and --site-name=<delivery-site> values from the delivery session.",
+      null,
+    );
+  }
 
   if (git.clean !== true) {
     addGate(
@@ -623,8 +636,8 @@ function buildFinalStatusReport(input = {}) {
 
   return {
     generatedAt: input.generatedAt || new Date().toISOString(),
-    generatedBy: input.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
-    siteName: input.siteName || "unspecified",
+    generatedBy,
+    siteName,
     hostName: input.hostName || os.hostname(),
     baseUrl,
     git,

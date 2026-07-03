@@ -4,6 +4,7 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 
 const { timestampForPath } = require("./generate-delivery-evidence");
+const { isPlaceholderFieldText } = require("./generate-final-status-report");
 const { manualEvidenceRefs } = require("./manual-evidence");
 
 const root = path.join(__dirname, "..", "..", "..");
@@ -54,8 +55,17 @@ function statusForRefs(refs) {
   return "MISSING";
 }
 
+function metadataReviewItems(generatedBy, siteName) {
+  return [
+    isPlaceholderFieldText(generatedBy) ? "Generated-by reviewer metadata is missing or placeholder." : "",
+    isPlaceholderFieldText(siteName) ? "Site name metadata is missing or placeholder." : "",
+  ].filter(Boolean);
+}
+
 function buildManualEvidenceReadiness(input = {}) {
   const refs = input.manualEvidence || manualEvidenceRefs();
+  const generatedBy = input.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
+  const siteName = input.siteName || "unspecified";
   const items = refs.map((item) => {
     const templateSignals = readTemplateSignals(item.template);
     return {
@@ -73,22 +83,26 @@ function buildManualEvidenceReadiness(input = {}) {
       doneWhen: item.doneWhen,
     };
   });
+  const metadataReview = metadataReviewItems(generatedBy, siteName);
+  const evidenceStatus = statusForRefs(items);
+  const status = metadataReview.length > 0 ? "REVIEW" : evidenceStatus;
 
   return {
     generatedAt: input.generatedAt || new Date().toISOString(),
-    generatedBy: input.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
-    siteName: input.siteName || "unspecified",
+    generatedBy,
+    siteName,
     hostName: input.hostName || os.hostname(),
     git: input.git || {
       branch: gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
       commit: gitValue(["rev-parse", "HEAD"]),
       clean: gitValue(["status", "--short"]) === "",
     },
-    status: statusForRefs(items),
-    readyForFinalClose: items.every((item) => item.status === "PRESENT"),
+    status,
+    readyForFinalClose: metadataReview.length === 0 && items.every((item) => item.status === "PRESENT"),
     missingCount: items.filter((item) => item.status === "MISSING").length,
     invalidCount: items.filter((item) => item.status === "INVALID").length,
     presentCount: items.filter((item) => item.status === "PRESENT").length,
+    metadataReview,
     items,
   };
 }
@@ -113,6 +127,7 @@ function buildMarkdown(manifest) {
     `- Present: ${manifest.presentCount}`,
     `- Missing: ${manifest.missingCount}`,
     `- Invalid: ${manifest.invalidCount}`,
+    `- Metadata review items: ${manifest.metadataReview?.length || 0}`,
     "",
     "## Evidence Items",
     "",
@@ -126,7 +141,10 @@ function buildMarkdown(manifest) {
     "## Final Close Guardrail",
     "",
     "- This report never substitutes for reviewer evidence.",
-    "- Final status remains blocked until every required item is `PRESENT` and `readyForFinalClose=true`.",
+    "- Final status remains blocked until every required item is `PRESENT`, generated-by/site-name are concrete field values, and `readyForFinalClose=true`.",
+    ...(manifest.metadataReview?.length
+      ? ["", "## Metadata Review", "", ...manifest.metadataReview.map((item) => `- ${item}`)]
+      : []),
     "",
   ].join("\n");
 }
@@ -156,4 +174,5 @@ if (require.main === module) {
 module.exports = {
   buildManualEvidenceReadiness,
   buildMarkdown,
+  metadataReviewItems,
 };

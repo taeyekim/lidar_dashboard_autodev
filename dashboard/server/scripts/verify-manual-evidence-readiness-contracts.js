@@ -54,6 +54,8 @@ const missing = buildManualEvidenceReadiness({
     },
   ],
   generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "reviewer-a",
+  siteName: "delivery-site",
   git: { branch: "dev", commit: "fixture", clean: true },
 });
 
@@ -78,6 +80,8 @@ const invalid = buildManualEvidenceReadiness({
     },
   ],
   generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "reviewer-a",
+  siteName: "delivery-site",
   git: { branch: "dev", commit: "fixture", clean: true },
 });
 
@@ -107,11 +111,36 @@ const ready = buildManualEvidenceReadiness({
     },
   ],
   generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "reviewer-a",
+  siteName: "delivery-site",
   git: { branch: "dev", commit: "fixture", clean: true },
 });
 
 assert(ready.status === "READY", "present manual evidence should produce READY readiness");
 assert(ready.readyForFinalClose === true, "present manual evidence should be ready for final close");
 assert(ready.presentCount === 2, "ready manual evidence should count present items");
+
+const placeholderMetadata = buildManualEvidenceReadiness({
+  manualEvidence: [
+    {
+      type: "Operator UI Walkthrough",
+      path: "artifacts/manual/operator-ui-walkthrough.md",
+      template: "docs/ops/operator-ui-walkthrough-template.md",
+      status: "PRESENT",
+      required: true,
+      nextAction: "none",
+      doneWhen: "done",
+    },
+  ],
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "field-reviewer",
+  siteName: "field-site",
+  git: { branch: "dev", commit: "fixture", clean: true },
+});
+
+assert(placeholderMetadata.status === "REVIEW", "placeholder readiness metadata should force REVIEW");
+assert(placeholderMetadata.readyForFinalClose === false, "placeholder readiness metadata must block final close");
+assert(placeholderMetadata.metadataReview.length === 2, "placeholder readiness metadata should expose both metadata review items");
+assert(buildMarkdown(placeholderMetadata).includes("Metadata Review"), "markdown should include metadata review section");
 
 console.log("manual evidence readiness contracts ok");
