@@ -25,6 +25,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `npm run delivery:evidence` creates `artifacts/delivery/<timestamp>/manifest.md`, `manifest.json`, and companion `runtime/` and `security/` evidence folders.
 - [ ] `npm run completion:audit` creates `artifacts/completion-audit/<timestamp>/manifest.json` plus `artifacts/completion-audit/<timestamp>/manifest.md` and keeps `canMarkGoalComplete=false` while field verification or skipped/review evidence remains.
 - [ ] `npm run handover:index` creates `artifacts/handover-index/<timestamp>/manifest.json` plus `manifest.md` listing the latest required handover manifests and missing/review/stale areas.
+- [ ] `npm run field:closure-plan` creates `artifacts/field-closure-plan/<timestamp>/manifest.json` plus `manifest.md` listing the field commands and done-when criteria needed to close open REVIEW/STALE/MISSING areas.
 - [ ] `npm run field:acceptance` or `scripts/field-acceptance.ps1` runs the field acceptance orchestrator and creates `artifacts/field-acceptance/<timestamp>/manifest.json` plus `manifest.md`.
 - [ ] Field acceptance manifest records the field reviewer, site name, handover readiness, skipped/review step counts, and next actions.
 - [ ] `docker compose up --build` starts DB, backend, frontend, and reverse proxy.
