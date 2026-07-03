@@ -487,7 +487,7 @@ function buildMarkdown(manifest) {
     "",
     "## Package Notes",
     "",
-    "- This command refreshes the final evidence chain in order: delivery evidence, manual evidence drafts, manual evidence readiness, field readiness, field risk register, field action board, field gate closure map, field owner briefs, CI status, completion audit, field closure plan, then handover index.",
+    "- This command refreshes the final evidence chain in order: delivery evidence, field readiness, field risk register, manual evidence drafts, manual evidence readiness, field action board, field gate closure map, field owner briefs, CI status, completion audit, field closure plan, then handover index.",
     "- Attach this manifest together with the referenced evidence folders.",
     "- `canMarkGoalComplete=false` means field/runtime/hardware evidence is still open.",
     "- Strict security acceptance should attach `npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners --target-url=<delivery-url>` output so skipped scanners become blocking evidence.",
@@ -507,10 +507,10 @@ function main() {
 
   const commands = [
     ["delivery evidence", ["run", "delivery:evidence"]],
-    ["manual evidence drafts", ["run", "manual:evidence-drafts", "--", `--base-url=${baseUrl}`, `--site-name=${siteName}`, `--reviewer=${generatedBy}`]],
-    ["manual evidence readiness", ["run", "manual:evidence-readiness", "--", `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["field readiness", ["run", "field:readiness", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["field risk register", ["run", "field:risk-register", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
+    ["manual evidence drafts", ["run", "manual:evidence-drafts", "--", `--base-url=${baseUrl}`, `--site-name=${siteName}`, `--reviewer=${generatedBy}`]],
+    ["manual evidence readiness", ["run", "manual:evidence-readiness", "--", `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["field action board", ["run", "field:action-board", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["field gate closure map", ["run", "field:gate-closure-map", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["field owner briefs", ["run", "field:owner-briefs", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],

@@ -189,10 +189,12 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
 ].forEach((token) => assertIncludes(manualEvidence, token, "manual evidence helper"));
 
 assert(
-  generator.indexOf('["manual evidence drafts", ["run", "manual:evidence-drafts"') <
+  generator.indexOf('["field readiness", ["run", "field:readiness"') <
+    generator.indexOf('["field risk register", ["run", "field:risk-register"') &&
+    generator.indexOf('["field risk register", ["run", "field:risk-register"') <
+    generator.indexOf('["manual evidence drafts", ["run", "manual:evidence-drafts"') &&
+    generator.indexOf('["manual evidence drafts", ["run", "manual:evidence-drafts"') <
     generator.indexOf('["manual evidence readiness", ["run", "manual:evidence-readiness"') &&
-    generator.indexOf('["manual evidence readiness", ["run", "manual:evidence-readiness"') <
-    generator.indexOf('["field readiness", ["run", "field:readiness"') &&
     generator.indexOf('["field action board", ["run", "field:action-board"') <
     generator.indexOf('["field gate closure map", ["run", "field:gate-closure-map"') &&
     generator.indexOf('["field gate closure map", ["run", "field:gate-closure-map"') <
@@ -201,7 +203,7 @@ assert(
     generator.indexOf("const residualFieldGates = buildResidualFieldGates") &&
     generator.indexOf('["field closure plan", ["run", "field:closure-plan"') <
     generator.indexOf('["handover index", ["run", "handover:index"'),
-  "handover package must refresh manual evidence drafts before readiness, manual evidence readiness before field readiness, action board before gate closure map before owner briefs, evaluate field action artifacts before residual gates, and field closure plan before handover index",
+  "handover package must refresh field readiness before risk register, risk register before manual evidence drafts, drafts before readiness, action board before gate closure map before owner briefs, evaluate field action artifacts before residual gates, and field closure plan before handover index",
 );
 
 [

@@ -49,10 +49,10 @@ npm.cmd run delivery:evidence
 npm.cmd run completion:audit
 $env:FIELD_REVIEWER="<actual reviewer name>"
 $env:FIELD_SITE_NAME="<actual delivery site name>"
-npm.cmd run manual:evidence-drafts -- --base-url=http://localhost:8080 --site-name="$env:FIELD_SITE_NAME" --reviewer="$env:FIELD_REVIEWER"
-npm.cmd run manual:evidence-readiness -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
 npm.cmd run field:readiness -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
 npm.cmd run field:risk-register -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run manual:evidence-drafts -- --base-url=http://localhost:8080 --site-name="$env:FIELD_SITE_NAME" --reviewer="$env:FIELD_REVIEWER"
+npm.cmd run manual:evidence-readiness -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
 npm.cmd run field:action-board -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
 npm.cmd run field:gate-closure-map -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
 npm.cmd run field:owner-briefs -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
@@ -254,7 +254,7 @@ for field handoff; they do not replace reviewer-filled evidence.
 For the final attachment refresh, run
 `npm.cmd run handover:package -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`. Replace
 the base URL with the delivery Nginx entrypoint when it is not localhost. It
-runs `delivery:evidence`, `manual:evidence-drafts`, `manual:evidence-readiness`, `field:readiness`, `field:risk-register`, `field:action-board`, `field:gate-closure-map`, `field:owner-briefs`, `completion:audit`,
+runs `delivery:evidence`, `field:readiness`, `field:risk-register`, `manual:evidence-drafts`, `manual:evidence-readiness`, `field:action-board`, `field:gate-closure-map`, `field:owner-briefs`, `completion:audit`,
 `field:closure-plan`, and `handover:index` in order, passing the same base URL
 into the refreshed manual draft report, readiness report, risk register, action board, gate closure map, and owner briefs and indexing the refreshed closure plan, then writes
 `artifacts/handover-package/<timestamp>/manifest.json` plus `manifest.md` with
