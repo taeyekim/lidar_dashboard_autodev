@@ -1,9 +1,10 @@
 // /src/pages/Dashboard/Dashboard.jsx
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { Card } from "../../shared/components/Card";
 import { TrafficStatisticsPanel } from "../../components/dashboard/TrafficStatisticsPanel";
 import { apiUrl, detectorUrl, WS_BASE } from "../../shared/api/config";
 import { postJson } from "../../shared/api/http";
+import { useRealtimeSocket } from "../../shared/realtime/useRealtimeSocket";
 import {
   controlBoardModeLabel,
   fetchControlBoardStatus,
@@ -94,7 +95,6 @@ export default function DashboardPage({
   const [activeDashboardEvent, setActiveDashboardEvent] = useState(null); // 모달로 표시할 대시보드 이벤트
   const [latestWrongwayEvent, setLatestWrongwayEvent] = useState(null);
   const [lastLidarEvent, setLastLidarEvent] = useState(null);
-  const [wsStatus, setWsStatus] = useState("CONNECTING");
   const [eventModalEnabled, setEventModalEnabled] = useState(true); // 이벤트 모달 허용 토글(ON/OFF)
   const [vmsText, setVmsText] = useState(""); // 전광판 입력
   const [recentLogs, setRecentLogs] = useState([]); // recent event list
@@ -339,146 +339,121 @@ export default function DashboardPage({
   // ------------------------------
   // websocket 수신 로직
   // ------------------------------
-  useEffect(() => {
-    const ws = new WebSocket(WS_BASE);
-
-    ws.onopen = () => {
-      setWsStatus("CONNECTED");
-      pushLog("WS연결됨");
-    };
-    ws.onclose = () => {
-      setWsStatus("DISCONNECTED");
-      pushLog("WS 연결 종료");
-    };
-    ws.onerror = () => {
-      setWsStatus("ERROR");
-      pushLog("WS 에러");
-    };
-
-    ws.onmessage = (e) => {
-      try {
-        const msg = JSON.parse(e.data);
-    
-
-        //Logs/state는 원하면 반영
-        if(msg.type === "log" && msg.payload?.msg) {
-          setRecentLogs((prev) => [{ msg: msg.payload.msg, time: msg.payload.time || "" }, ...prev].slice(0, MAX_RECENT_LOGS));
-        }
-        if (msg.type === "logs" && Array.isArray(msg.payload)) {
-        setRecentLogs(msg.payload.slice(0, MAX_RECENT_LOGS));
-      }
-
-      if (msg.type === "state" && msg.payload) {
-        setKpi((prev) => ({
-          ...prev,
-          ...normalizeSummary(msg.payload),
-        }));
-      }
-
-      if (msg.type === "traffic-event.created" && msg.payload) {
-        const event = normalizeEvent(msg.payload);
-        setLastLidarEvent(event);
-        setRecentLogs((prev) => [
-          { msg: event.message, time: formatEventTime(event.timestamp) },
-          ...prev,
-        ].slice(0, MAX_RECENT_LOGS));
-        setKpi((prev) => ({
-          ...prev,
-          todaysEvents: prev.todaysEvents + 1,
-          newEvents: prev.newEvents + 1,
-          wrongWayEvents: prev.wrongWayEvents + (isWrongWayEvent(event) ? 1 : 0),
-        }));
-
-        if (eventModalEnabledRef.current && isWrongWayEvent(event)) {
-          const nextDashboardEvent = toDashboardWrongwayEvent(msg.payload);
-          setLatestWrongwayEvent(nextDashboardEvent);
-          setActiveDashboardEvent(nextDashboardEvent);
-        } else if (isWrongWayEvent(event)) {
-          setLatestWrongwayEvent(toDashboardWrongwayEvent(msg.payload));
-        }
-      }
-
-      if (msg.type === "traffic-event.updated" && msg.payload) {
-        const event = normalizeEvent(msg.payload);
-        setLastLidarEvent(event);
-
-        if (isWrongWayEvent(event)) {
-          if (isClosedEventStatus(event.status)) {
-            setActiveDashboardEvent((prev) => (prev?.id === event.id ? null : prev));
-            setLatestWrongwayEvent((prev) => (prev?.id === event.id ? null : prev));
-            setRecentLogs((prev) => [
-              { msg: `${event.message} ${event.status}`, time: formatEventTime(event.timestamp) },
-              ...prev,
-            ].slice(0, MAX_RECENT_LOGS));
-          } else {
-            const nextDashboardEvent = toDashboardWrongwayEvent(msg.payload);
-            setLatestWrongwayEvent((prev) => (prev?.id === event.id ? nextDashboardEvent : prev));
-            setActiveDashboardEvent((prev) => (prev?.id === event.id ? nextDashboardEvent : prev));
-          }
-        }
-      }
-
-      if (msg.type === "vehicle-track.updated" && msg.payload?.vehicleTrack) {
-        const track = msg.payload.vehicleTrack;
-        const timestamp = track.lastSeenAt || track.updatedAt || track.createdAt || new Date().toISOString();
-        setLastLidarEvent({
-          id: track.id || track.trackId,
-          type: track.lastEventType || "vehicle-track",
-          message: track.lastEventType === "normal-driving" ? "정주행 차량 수신" : "차량 track 갱신",
-          location: track.externalZoneId || track.zoneId || "-",
-          timestamp,
-        });
-
-        if (msg.payload.created) {
-          setKpi((prev) => ({
-            ...prev,
-            vehiclesPassed: Number(prev.vehiclesPassed || 0) + 1,
-          }));
-        }
-      }
-
-      if (msg.type === "control-command.created" && msg.payload) {
-        setControlBoardStatus((prev) => ({
-          ...(prev || {}),
-          latestCommand: msg.payload,
-        }));
-      }
-
-      if (msg.type === "control-command.updated" && msg.payload) {
-        setControlBoardStatus((prev) => ({
-          ...(prev || {}),
-          latestCommand: msg.payload,
-        }));
-      }
-
-      // 팝업은 wrong-way만, 토글 on일 때만
-      if(msg.type === "dashboard-event") {
-        const dashboardEvent = msg.payload;
-
-        //토글 off면 팝업 금지, 로그만
-        if (!eventModalEnabledRef.current) {
-          if (dashboardEvent?.subMessage) {
-            setRecentLogs((prev) => [{ msg: `(Muted) ${dashboardEvent.subMessage}`, time:dashboardEvent.timestamp || "" }, ...prev].slice(0, MAX_RECENT_LOGS));
-          }
-          return;
-        }
-
-       if (dashboardEvent?.type === "wrong-way") {
-          setActiveDashboardEvent(dashboardEvent); // 여기서 이벤트 모달이 뜸
-        } else {
-          // 다른 타입은 로그만
-          if (dashboardEvent?.subMessage) {
-            setRecentLogs((prev) => [{ msg: dashboardEvent.subMessage, time: dashboardEvent.timestamp || "" }, ...prev].slice(0, MAX_RECENT_LOGS));
-          }
-        }
-      }
-    } catch {
-      // ignore
+  const handleRealtimeMessage = useCallback((msg) => {
+    if (msg.type === "log" && msg.payload?.msg) {
+      setRecentLogs((prev) => [{ msg: msg.payload.msg, time: msg.payload.time || "" }, ...prev].slice(0, MAX_RECENT_LOGS));
     }
-  };
+    if (msg.type === "logs" && Array.isArray(msg.payload)) {
+      setRecentLogs(msg.payload.slice(0, MAX_RECENT_LOGS));
+    }
 
-  return () => ws.close();
-}, []);
+    if (msg.type === "state" && msg.payload) {
+      setKpi((prev) => ({
+        ...prev,
+        ...normalizeSummary(msg.payload),
+      }));
+    }
+
+    if (msg.type === "traffic-event.created" && msg.payload) {
+      const event = normalizeEvent(msg.payload);
+      setLastLidarEvent(event);
+      setRecentLogs((prev) => [
+        { msg: event.message, time: formatEventTime(event.timestamp) },
+        ...prev,
+      ].slice(0, MAX_RECENT_LOGS));
+      setKpi((prev) => ({
+        ...prev,
+        todaysEvents: prev.todaysEvents + 1,
+        newEvents: prev.newEvents + 1,
+        wrongWayEvents: prev.wrongWayEvents + (isWrongWayEvent(event) ? 1 : 0),
+      }));
+
+      if (eventModalEnabledRef.current && isWrongWayEvent(event)) {
+        const nextDashboardEvent = toDashboardWrongwayEvent(msg.payload);
+        setLatestWrongwayEvent(nextDashboardEvent);
+        setActiveDashboardEvent(nextDashboardEvent);
+      } else if (isWrongWayEvent(event)) {
+        setLatestWrongwayEvent(toDashboardWrongwayEvent(msg.payload));
+      }
+    }
+
+    if (msg.type === "traffic-event.updated" && msg.payload) {
+      const event = normalizeEvent(msg.payload);
+      setLastLidarEvent(event);
+
+      if (isWrongWayEvent(event)) {
+        if (isClosedEventStatus(event.status)) {
+          setActiveDashboardEvent((prev) => (prev?.id === event.id ? null : prev));
+          setLatestWrongwayEvent((prev) => (prev?.id === event.id ? null : prev));
+          setRecentLogs((prev) => [
+            { msg: `${event.message} ${event.status}`, time: formatEventTime(event.timestamp) },
+            ...prev,
+          ].slice(0, MAX_RECENT_LOGS));
+        } else {
+          const nextDashboardEvent = toDashboardWrongwayEvent(msg.payload);
+          setLatestWrongwayEvent((prev) => (prev?.id === event.id ? nextDashboardEvent : prev));
+          setActiveDashboardEvent((prev) => (prev?.id === event.id ? nextDashboardEvent : prev));
+        }
+      }
+    }
+
+    if (msg.type === "vehicle-track.updated" && msg.payload?.vehicleTrack) {
+      const track = msg.payload.vehicleTrack;
+      const timestamp = track.lastSeenAt || track.updatedAt || track.createdAt || new Date().toISOString();
+      setLastLidarEvent({
+        id: track.id || track.trackId,
+        type: track.lastEventType || "vehicle-track",
+        message: track.lastEventType === "normal-driving" ? "정주행 차량 수신" : "차량 track 갱신",
+        location: track.externalZoneId || track.zoneId || "-",
+        timestamp,
+      });
+
+      if (msg.payload.created) {
+        setKpi((prev) => ({
+          ...prev,
+          vehiclesPassed: Number(prev.vehiclesPassed || 0) + 1,
+        }));
+      }
+    }
+
+    if (msg.type === "control-command.created" && msg.payload) {
+      setControlBoardStatus((prev) => ({
+        ...(prev || {}),
+        latestCommand: msg.payload,
+      }));
+    }
+
+    if (msg.type === "control-command.updated" && msg.payload) {
+      setControlBoardStatus((prev) => ({
+        ...(prev || {}),
+        latestCommand: msg.payload,
+      }));
+    }
+
+    if (msg.type === "dashboard-event") {
+      const dashboardEvent = msg.payload;
+      if (!eventModalEnabledRef.current) {
+        if (dashboardEvent?.subMessage) {
+          setRecentLogs((prev) => [{ msg: `(Muted) ${dashboardEvent.subMessage}`, time: dashboardEvent.timestamp || "" }, ...prev].slice(0, MAX_RECENT_LOGS));
+        }
+        return;
+      }
+
+      if (dashboardEvent?.type === "wrong-way") {
+        setActiveDashboardEvent(dashboardEvent);
+      } else if (dashboardEvent?.subMessage) {
+        setRecentLogs((prev) => [{ msg: dashboardEvent.subMessage, time: dashboardEvent.timestamp || "" }, ...prev].slice(0, MAX_RECENT_LOGS));
+      }
+    }
+  }, []);
+
+  const { status: wsStatus } = useRealtimeSocket({
+    url: WS_BASE,
+    onMessage: handleRealtimeMessage,
+    onOpen: () => pushLog("WS connected"),
+    onClose: () => pushLog("WS disconnected"),
+    onError: () => pushLog("WS error"),
+  });
 
   // ------------------------------
   // stage별 스타일 함수 

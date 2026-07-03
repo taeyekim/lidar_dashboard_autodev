@@ -36,6 +36,7 @@ const frontendFilesToCheck = [
     'setStatus("RECONNECTING")',
     "JSON.parse(event.data)",
   ]],
+  ["dashboard/dashboard-web/src/pages/Dashboard/DashboardPage.jsx", ["useRealtimeSocket", "handleRealtimeMessage"]],
   ["dashboard/dashboard-web/src/pages/Devices/DevicesPage.jsx", ["useRealtimeSocket", "device-status.updated"]],
   ["dashboard/dashboard-web/src/pages/EventLog/EventLogPage.jsx", ["useRealtimeSocket", "traffic-event.created"]],
 ];
