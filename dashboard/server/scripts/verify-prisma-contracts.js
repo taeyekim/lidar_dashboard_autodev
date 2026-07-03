@@ -21,6 +21,9 @@ const vehicleTrackMigration = readProjectFile(
 const controlLifecycleMigration = readProjectFile(
   "dashboard/server/prisma/migrations/20260702063000_add_control_command_lifecycle/migration.sql",
 );
+const trafficEventSummaryIndexMigration = readProjectFile(
+  "dashboard/server/prisma/migrations/20260703071000_add_traffic_event_summary_indexes/migration.sql",
+);
 const seed = readProjectFile("dashboard/server/prisma/seed.js");
 const syntaxChecker = readProjectFile("dashboard/server/scripts/check-syntax.js");
 const wrongwayService = readProjectFile("dashboard/server/src/domains/wrongway/wrongway.service.js");
@@ -59,6 +62,9 @@ const eventService = readProjectFile("dashboard/server/src/domains/events/events
   "vehicleTrack             VehicleTrack?",
   "controlCommands          ControlCommand[]",
   "@@index([eventType])",
+  "@@index([eventType, receivedAt])",
+  "@@index([eventType, trackId])",
+  "@@index([eventType, vehicleTrackId])",
   "@@index([status])",
   "@@index([receivedAt])",
 ].forEach((token) => assertIncludes(schema, token, "TrafficEvent schema contract"));
@@ -128,6 +134,12 @@ const eventService = readProjectFile("dashboard/server/src/domains/events/events
   'CONSTRAINT "control_command_logs_control_command_id_fkey"',
   'ON DELETE CASCADE',
 ].forEach((token) => assertIncludes(controlLifecycleMigration, token, "control lifecycle migration"));
+
+[
+  'CREATE INDEX "traffic_events_event_type_received_at_idx"',
+  'CREATE INDEX "traffic_events_event_type_track_id_idx"',
+  'CREATE INDEX "traffic_events_event_type_vehicle_track_id_idx"',
+].forEach((token) => assertIncludes(trafficEventSummaryIndexMigration, token, "traffic event summary index migration"));
 
 [
   'where: { id: "site-wolchulsan-rest-area" }',
