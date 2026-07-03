@@ -156,6 +156,10 @@ assert(!dashboardPage.includes("추후 구현"), "Dashboard page must not expose
   "수동 제어",
   "DB unique",
   "역주행률",
+  "1차 경보: 역주행 감지",
+  "2차 경보: 역주행 차단 필요",
+  "최근 수신 이벤트가 없습니다.",
+  "WebSocket 연결됨",
 ].forEach((token) => {
   assert(dashboardPage.includes(token), `Dashboard page must include operations copy: ${token}`);
 });
@@ -167,6 +171,14 @@ assert(!dashboardPage.includes("추후 구현"), "Dashboard page must not expose
   "Manual command",
   "Latest command",
   "Active situation",
+  "1st Alert: Wrong-way Detection",
+  "2nd Alert: Wrong-way Detection",
+  "No recent events.",
+  "Zone A - Tunnel Entrance",
+  "WS connected",
+  "WS disconnected",
+  "WS error",
+  "command failed",
 ].forEach((token) => {
   assert(!dashboardPage.includes(token), `Dashboard page must not expose sample or unfinished copy: ${token}`);
 });

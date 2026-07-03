@@ -83,7 +83,7 @@ function toDashboardWrongwayEvent(rawEvent) {
 }
 
 // ------------------------------
-// DachboardPage Component
+// DashboardPage Component
 // ------------------------------
 // 메인 대시보드 화면을 담당한다.
 // 서버 상태, KPI, WebSocket 알림, 차단기/VMS 제어 UI를 한 화면에서 보여준다.
@@ -167,7 +167,7 @@ export default function DashboardPage({
       setControlBoardError("");
       return status;
     } catch (error) {
-      setControlBoardError(error.message || "Failed to load control board status.");
+      setControlBoardError(error.message || "통합제어보드 상태를 불러오지 못했습니다.");
       setControlBoardStatus((prev) => prev || { ok: false, mode: "OFFLINE" });
       return null;
     }
@@ -195,10 +195,10 @@ export default function DashboardPage({
     setControlBoardBusy(commandType);
     try {
       const command = await sendControlBoardTestCommand(commandType);
-      pushLog(`${label} command ${command.status || "sent"}`);
+      pushLog(`${label} 명령 ${command.status || "전송"}`);
       await refreshControlBoardStatus();
     } catch (error) {
-      const message = error.message || `${label} command failed`;
+      const message = error.message || `${label} 명령 실패`;
       setControlBoardError(message);
       pushLog(message);
     } finally {
@@ -454,9 +454,9 @@ export default function DashboardPage({
   const { status: wsStatus } = useRealtimeSocket({
     url: WS_BASE,
     onMessage: handleRealtimeMessage,
-    onOpen: () => pushLog("WS connected"),
-    onClose: () => pushLog("WS disconnected"),
-    onError: () => pushLog("WS error"),
+    onOpen: () => pushLog("WebSocket 연결됨"),
+    onClose: () => pushLog("WebSocket 연결 해제"),
+    onError: () => pushLog("WebSocket 오류"),
   });
 
   // ------------------------------
@@ -468,15 +468,15 @@ export default function DashboardPage({
     ? {
         header: "bg-red-600",
         primaryBtn: "bg-red-600 hover:bg-red-700 focus:ring-red-300",
-        stageTitle: "2nd Alert: Wrong-way Detection",
-        statusText: "DANGER",
+        stageTitle: "2차 경보: 역주행 차단 필요",
+        statusText: "위험",
         stageLabel: "역주행 위험 단계",
       }
     : {
         header: "bg-amber-500",
         primaryBtn: "bg-orange-600 hover:bg-orange-700 focus:ring-orange-300",
-        stageTitle: "1st Alert: Wrong-way Detection",
-        statusText: "WARNING",
+        stageTitle: "1차 경보: 역주행 감지",
+        statusText: "경고",
         stageLabel: "역주행 경고 단계",
       };
 
@@ -553,7 +553,7 @@ export default function DashboardPage({
               <p>
                 위치:{" "}
                 <span className="font-semibold text-gray-700">
-                  {activeDashboardEvent.zone_id || "Zone A - Tunnel Entrance"}
+                  {activeDashboardEvent.zone_id || "구역 미수신"}
                 </span>
               </p>
               <p>
@@ -1057,7 +1057,7 @@ export default function DashboardPage({
               <div className="space-y-2 bg-gray-50 p-2 rounded border border-gray-100 max-h-[117px] ">
 
                 {recentLogs.length === 0 && (
-                  <div className="text-xs text-gray-400">No recent events.</div>
+                  <div className="text-xs text-gray-400">최근 수신 이벤트가 없습니다.</div>
                 )}
 
                 {recentLogs.slice(0,4).map((item, i) => (
