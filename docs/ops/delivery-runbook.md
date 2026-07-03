@@ -204,8 +204,9 @@ After final status exists, run
 `npm.cmd run field:action-board -- --base-url=http://localhost:8080`.
 It writes `artifacts/field-action-board/<timestamp>/manifest.json` plus
 `manifest.md`, grouping remaining final-status gates by owner, priority,
-action type, mapped command, evidence path, and done-when criteria. This board
-is an execution aid for field owners; it does not replace final field evidence.
+execution phase, mapped command, evidence path, and done-when criteria. This
+board is an execution aid for field owners; it does not replace final field
+evidence.
 
 After the action board exists, run
 `npm.cmd run field:gate-closure-map -- --base-url=http://localhost:8080`.
@@ -265,9 +266,10 @@ After the final status report, run
 `npm.cmd run final:execution-plan -- --base-url=http://localhost:8080`.
 It writes `artifacts/final-execution-plan/<timestamp>/manifest.json` plus
 `manifest.md`, grouping the latest `remainingGates` by action type and turning
-them into an ordered command list for manual evidence readiness, preflight,
-runtime smoke, DB/LiDAR/control-board rehearsals, strict security evidence,
-field readiness, field acceptance, handover packaging, and final status refresh.
+them into an ordered command list for manual evidence readiness, action board,
+field gate closure map, owner briefs, preflight, runtime smoke,
+DB/LiDAR/control-board rehearsals, strict security evidence, field readiness,
+field acceptance, handover packaging, and final status refresh.
 This execution plan is an operator runbook only; it does not replace field
 evidence and does not prove completion unless the refreshed final status says
 `READY_TO_CLOSE`.

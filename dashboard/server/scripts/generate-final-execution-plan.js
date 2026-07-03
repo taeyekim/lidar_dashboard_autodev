@@ -58,8 +58,16 @@ function commandCatalog(baseUrl) {
       phase: "Field Runtime",
       actionTypes: ["FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED", "REVIEW_REQUIRED"],
       command: `npm.cmd run field:action-board -- --base-url=${baseUrl} --site-name="delivery-site-name" --generated-by="field-reviewer-name"`,
-      purpose: "Group remaining final-status gates by owner, priority, command, evidence, and close criteria.",
+      purpose: "Group remaining final-status gates by owner, priority, execution phase, command, evidence, and close criteria.",
       doneWhen: "The board shows owner-ready commands for every remaining final-status gate.",
+    },
+    {
+      id: "field-gate-closure-map",
+      phase: "Field Runtime",
+      actionTypes: ["FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED", "REVIEW_REQUIRED"],
+      command: `npm.cmd run field:gate-closure-map -- --base-url=${baseUrl} --site-name="delivery-site-name" --generated-by="field-reviewer-name"`,
+      purpose: "Map field commands back to the gates, owners, phases, evidence paths, and close criteria they are expected to resolve.",
+      doneWhen: "The closure map shows command-centered coverage for every remaining final-status gate.",
     },
     {
       id: "field-owner-briefs",
@@ -214,6 +222,7 @@ function buildFinalExecutionPlan(input = {}) {
   const hasInput = (key) => Object.prototype.hasOwnProperty.call(input, key);
   const finalStatus = hasInput("finalStatus") ? input.finalStatus : readLatestJsonManifest("artifacts/final-status");
   const closurePlan = hasInput("closurePlan") ? input.closurePlan : readLatestJsonManifest("artifacts/field-closure-plan");
+  const gateClosureMap = hasInput("gateClosureMap") ? input.gateClosureMap : readLatestJsonManifest("artifacts/field-gate-closure-map");
   const handoverPackage = hasInput("handoverPackage") ? input.handoverPackage : readLatestJsonManifest("artifacts/handover-package");
   const baseUrl = input.baseUrl || finalStatus?.data?.baseUrl || "http://localhost:8080";
   const remainingGates = finalStatus?.data?.remainingGates || [];
@@ -252,6 +261,7 @@ function buildFinalExecutionPlan(input = {}) {
     canMarkGoalComplete: status === "READY_TO_CLOSE",
     sourceFinalStatus: finalStatus?.path || null,
     sourceFieldClosurePlan: closurePlan?.path || null,
+    sourceFieldGateClosureMap: gateClosureMap?.path || null,
     sourceHandoverPackage: handoverPackage?.path || null,
     remainingGateCount: planningGates.length,
     gatesByActionType,
@@ -287,6 +297,7 @@ function buildMarkdown(manifest) {
     `- Working tree clean: ${manifest.git.clean ? "yes" : "no"}`,
     `- Source final status: ${manifest.sourceFinalStatus || "missing"}`,
     `- Source closure plan: ${manifest.sourceFieldClosurePlan || "missing"}`,
+    `- Source gate closure map: ${manifest.sourceFieldGateClosureMap || "missing"}`,
     `- Source handover package: ${manifest.sourceHandoverPackage || "missing"}`,
     "",
     "## Guardrails",

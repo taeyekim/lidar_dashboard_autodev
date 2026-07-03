@@ -33,17 +33,21 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [serverPackageJson, "verify-final-execution-plan-contracts.js", "server verify chain"],
   [generator, "artifacts/final-execution-plan", "final execution plan generator"],
   [generator, "sourceFinalStatus", "final execution plan generator"],
+  [generator, "sourceFieldGateClosureMap", "final execution plan generator"],
   [generator, "gatesByActionType", "final execution plan generator"],
   [generator, "orderedCommands", "final execution plan generator"],
   [generator, "manualEvidenceTargets", "final execution plan generator"],
   [generator, "This execution plan does not prove field completion", "final execution plan generator"],
   [generator, "npm.cmd run final:status", "final execution plan generator"],
   [generator, "npm.cmd run handover:package", "final execution plan generator"],
+  [generator, "npm.cmd run field:gate-closure-map", "final execution plan generator"],
+  [generator, "execution phase", "final execution plan generator"],
   [generator, "scripts/control-board-field-rehearsal.ps1", "final execution plan generator"],
   [generator, "scripts/lidar-ingest-rehearsal.ps1", "final execution plan generator"],
   [generator, "scripts/db-field-rehearsal.ps1", "final execution plan generator"],
   [generator, "--require-scanners", "final execution plan generator"],
   [runbook, "npm.cmd run final:execution-plan", "delivery runbook"],
+  [runbook, "field:gate-closure-map", "delivery runbook"],
   [runbook, "artifacts/final-execution-plan/<timestamp>/manifest.json", "delivery runbook"],
   [checklist, "npm run final:execution-plan", "acceptance checklist"],
   [checklist, "artifacts/final-execution-plan/<timestamp>/manifest.json", "acceptance checklist"],
@@ -68,6 +72,7 @@ const openPlan = buildFinalExecutionPlan({
     },
   },
   closurePlan: { path: "artifacts/field-closure-plan/20260101-000000/manifest.json", data: {} },
+  gateClosureMap: { path: "artifacts/field-gate-closure-map/20260101-000000/manifest.json", data: {} },
   handoverPackage: { path: "artifacts/handover-package/20260101-000000/manifest.json", data: {} },
   manualEvidence: [
     {
@@ -86,7 +91,9 @@ assert(openPlan.remainingGateCount === 3, "execution plan should preserve remain
 assert(openPlan.orderedCommands.some((item) => item.id === "manual-evidence-readiness"), "manual gate should include manual evidence readiness command");
 assert(openPlan.orderedCommands.some((item) => item.id === "control-board-field-rehearsal"), "field gate should include control-board rehearsal command");
 assert(openPlan.orderedCommands.some((item) => item.id === "security-evidence"), "security gate should include strict security evidence command");
+assert(openPlan.orderedCommands.some((item) => item.id === "field-gate-closure-map"), "open plan should include field gate closure map refresh command");
 assert(openPlan.orderedCommands.some((item) => item.command.includes("http://field.local:8080")), "commands should use the requested base URL");
+assert(openPlan.sourceFieldGateClosureMap.includes("artifacts/field-gate-closure-map"), "execution plan should reference gate closure map");
 
 const openMarkdown = buildMarkdown(openPlan);
 assert(openMarkdown.includes("Final Execution Plan"), "markdown should include title");
@@ -119,6 +126,7 @@ assert(missingFinalStatusPlan.status === "FINAL_STATUS_MISSING", "missing final 
 assert(missingFinalStatusPlan.remainingGateCount === 1, "missing final status should create one planning gate");
 assert(missingFinalStatusPlan.orderedCommands.some((item) => item.id === "final-status"), "missing final status should include final status command");
 assert(buildOrderedCommands([{ actionType: "REVIEW_REQUIRED" }], "http://localhost:8080").some((item) => item.id === "final-status"), "review gates should still include final status refresh");
+assert(buildOrderedCommands([{ actionType: "REVIEW_REQUIRED" }], "http://localhost:8080").some((item) => item.id === "field-gate-closure-map"), "review gates should include gate closure map refresh");
 assert(commandCatalog("http://localhost:8080").some((item) => item.id === "field-acceptance" && item.command.includes("-RequireScanners")), "catalog should include strict field acceptance command");
 
 console.log("final execution plan contracts ok");
