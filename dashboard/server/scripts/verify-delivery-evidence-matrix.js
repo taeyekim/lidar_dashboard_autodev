@@ -30,6 +30,7 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "Nginx And Runtime",
   "Security",
   "Delivery Evidence",
+  "Final Status",
 ].forEach((area) => {
   assert(matrix.includes(`| ${area} |`), `delivery evidence matrix is missing area: ${area}`);
 });
@@ -64,6 +65,7 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "npm run handover:package",
   "npm run field:readiness",
   "npm run verify:delivery-evidence-summary",
+  "npm run verify:final-status",
   "artifacts/delivery/<timestamp>/runtime/",
   "artifacts/delivery/<timestamp>/security/",
   "artifacts/completion-audit/<timestamp>/manifest.json",
@@ -94,6 +96,9 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "Field Rehearsal Follow-ups",
   "Field Rehearsal Follow-up Actions",
   "Field Evidence Follow-ups",
+  "Residual Field Gates",
+  "completionBlockers",
+  "strictFailureReasons",
   "canMarkGoalComplete",
   "DRY_RUN/LIVE command separation",
   "HTTP bridge diagnostics",
@@ -118,6 +123,8 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   [packageJson, "verify:handover-package", "root smoke chain"],
   [packageJson, "field:readiness", "root package scripts"],
   [packageJson, "verify:field-readiness", "root smoke chain"],
+  [packageJson, "verify:final-status", "root package scripts"],
+  [packageJson, "verify-final-status-contracts.js", "root smoke chain"],
   [packageJson, "field:acceptance", "root package scripts"],
   [packageJson, "field:rehearsal-unavailable", "root package scripts"],
   [packageJson, "verify:field-rehearsal-unavailable", "root smoke chain"],
@@ -137,6 +144,7 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   [serverPackageJson, "verify-field-closure-plan-contracts.js", "server verify chain"],
   [serverPackageJson, "verify-handover-package-contracts.js", "server verify chain"],
   [serverPackageJson, "verify-field-readiness-contracts.js", "server verify chain"],
+  [serverPackageJson, "verify-final-status-contracts.js", "server verify chain"],
   [deliveryEvidence, "Delivery Evidence Matrix", "delivery evidence generator"],
   [deliveryEvidence, "delivery-evidence-matrix.md", "delivery evidence generator"],
   [deliveryEvidence, "parseEvidenceMatrix", "delivery evidence generator"],
