@@ -27,7 +27,11 @@ async function main() {
 
   const site = await prisma.site.upsert({
     where: { id: "site-wolchulsan-rest-area" },
-    update: {},
+    update: {
+      name: "월출산휴게소",
+      location: "전라남도 영암군",
+      description: "라이다 역주행 방지 시스템 1차 개발 대상 현장",
+    },
     create: {
       id: "site-wolchulsan-rest-area",
       name: "월출산휴게소",
@@ -38,7 +42,12 @@ async function main() {
 
   const roundabout1 = await prisma.zone.upsert({
     where: { zoneCode: "ROUNDABOUT-01" },
-    update: {},
+    update: {
+      siteId: site.id,
+      name: "회전교차로 1",
+      type: "ROUNDABOUT",
+      description: "월출산휴게소 회전교차로 1",
+    },
     create: {
       siteId: site.id,
       zoneCode: "ROUNDABOUT-01",
@@ -50,7 +59,12 @@ async function main() {
 
   const roundabout2 = await prisma.zone.upsert({
     where: { zoneCode: "ROUNDABOUT-02" },
-    update: {},
+    update: {
+      siteId: site.id,
+      name: "회전교차로 2",
+      type: "ROUNDABOUT",
+      description: "월출산휴게소 회전교차로 2",
+    },
     create: {
       siteId: site.id,
       zoneCode: "ROUNDABOUT-02",

@@ -21,6 +21,7 @@ const vehicleTrackMigration = readProjectFile(
 const controlLifecycleMigration = readProjectFile(
   "dashboard/server/prisma/migrations/20260702063000_add_control_command_lifecycle/migration.sql",
 );
+const seed = readProjectFile("dashboard/server/prisma/seed.js");
 const wrongwayService = readProjectFile("dashboard/server/src/domains/wrongway/wrongway.service.js");
 const controlBoardService = readProjectFile("dashboard/server/src/domains/control-board/controlBoard.service.js");
 const statisticsService = readProjectFile("dashboard/server/src/domains/statistics/statistics.service.js");
@@ -126,6 +127,26 @@ const eventService = readProjectFile("dashboard/server/src/domains/events/events
   'CONSTRAINT "control_command_logs_control_command_id_fkey"',
   'ON DELETE CASCADE',
 ].forEach((token) => assertIncludes(controlLifecycleMigration, token, "control lifecycle migration"));
+
+[
+  'where: { id: "site-wolchulsan-rest-area" }',
+  'name: "월출산휴게소"',
+  'location: "전라남도 영암군"',
+  'zoneCode: "ROUNDABOUT-01"',
+  'zoneCode: "ROUNDABOUT-02"',
+  'deviceCode: "LIDAR-PC-01"',
+  'deviceCode: "CONTROL-BOARD-01"',
+  'deviceCode: "LIDAR-PC-02"',
+  'deviceCode: "CONTROL-BOARD-02"',
+  'deviceType: "LIDAR_PC"',
+  'deviceType: "CONTROL_BOARD"',
+  'status: "UNKNOWN"',
+  'healthStatus: "UNKNOWN"',
+].forEach((token) => assertIncludes(seed, token, "Prisma seed contract"));
+
+["�", "?붿", "?뚯", "?쇱", "?듯"].forEach((token) => {
+  assert(!seed.includes(token), `Prisma seed contains mojibake token: ${token}`);
+});
 
 [
   "tx.vehicleTrack.upsert",
