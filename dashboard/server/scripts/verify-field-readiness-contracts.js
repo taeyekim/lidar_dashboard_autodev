@@ -35,6 +35,12 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "trivy",
   "zap-baseline.py",
   "missingExampleKeys",
+  "requiredFieldValues",
+  "Required Field Values",
+  "completionGate",
+  "redacted",
+  "missing-or-trusted-lan-exception-required",
+  "Blocks live control-board TCP evidence",
 ].forEach((token) => assertIncludes(generator, token, "field readiness generator"));
 
 [

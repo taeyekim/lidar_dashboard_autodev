@@ -65,6 +65,23 @@ function buildCheck(name, status, severity, message, nextAction = "") {
   return { name, status, severity, message, nextAction };
 }
 
+function valueState(value, placeholder = "") {
+  if (!value) return "missing";
+  if (placeholder && value === placeholder) return "placeholder";
+  return "configured";
+}
+
+function buildRequiredFieldValue(name, state, requiredForPass, completionGate, nextAction, redacted = true) {
+  return {
+    name,
+    state,
+    requiredForPass,
+    completionGate,
+    nextAction,
+    redacted,
+  };
+}
+
 function buildEnvChecks() {
   const example = readEnvFile(".env.example");
   const local = readEnvFile(".env");
@@ -96,12 +113,76 @@ function buildEnvChecks() {
 
   const exampleKeys = Object.keys(example.values);
   const missingExampleKeys = local.exists ? exampleKeys.filter((key) => !(key in values)) : exampleKeys;
+  const requiredFieldValues = [
+    buildRequiredFieldValue(
+      "JWT_SECRET",
+      valueState(jwtSecret, "change-this-to-a-long-random-secret"),
+      "Set a unique long random value before delivery.",
+      "Blocks authentication/security acceptance while missing or placeholder.",
+      "Generate and store a field-only JWT_SECRET in .env.",
+    ),
+    buildRequiredFieldValue(
+      "SEED_ADMIN_PASSWORD",
+      valueState(adminPassword, "admin1234!"),
+      "Set a non-example seed admin password before DB seed or field acceptance.",
+      "Blocks field readiness while missing or example value.",
+      "Update SEED_ADMIN_PASSWORD in .env and re-run the seed only against the intended field DB.",
+    ),
+    buildRequiredFieldValue(
+      "DEVICE_INGEST_API_KEY",
+      deviceKey ? "configured" : "missing-or-trusted-lan-exception-required",
+      "Configure the device key, or document the trusted-LAN exception for the lidar PC/bridge.",
+      "Blocks ingest hardening evidence unless an explicit exception is accepted.",
+      "Set DEVICE_INGEST_API_KEY and configure the lidar sender to use X-Device-Key, or attach the exception note.",
+    ),
+    buildRequiredFieldValue(
+      "CONTROL_BOARD_HOST",
+      host ? "configured" : "missing",
+      "Set the integrated control-board TCP host before approved live TCP rehearsal.",
+      "Blocks live control-board TCP evidence.",
+      "Fill CONTROL_BOARD_HOST after the hardware owner confirms the field IP.",
+      false,
+    ),
+    buildRequiredFieldValue(
+      "CONTROL_BOARD_PORT",
+      port ? "configured" : "missing",
+      "Set the integrated control-board TCP port before approved live TCP rehearsal.",
+      "Blocks live control-board TCP evidence.",
+      "Fill CONTROL_BOARD_PORT after the hardware owner confirms the field port.",
+      false,
+    ),
+    buildRequiredFieldValue(
+      "CONTROL_BOARD_DRY_RUN",
+      dryRun || "missing",
+      "Keep true before approval; set false only for approved live TCP rehearsal.",
+      "Blocks final live TCP completion while true, but protects hardware before approval.",
+      "Use CONTROL_BOARD_DRY_RUN=false only with field IP/port and hardware approval.",
+      false,
+    ),
+    buildRequiredFieldValue(
+      "AUTH_COOKIE_SECURE",
+      secureCookie || "missing",
+      "Set true when HTTPS/TLS is used through the delivery proxy.",
+      "Blocks HTTPS cookie delivery posture when false or missing.",
+      "Set AUTH_COOKIE_SECURE=true for the TLS delivery topology.",
+      false,
+    ),
+    buildRequiredFieldValue(
+      "NGINX_SWAGGER_ALLOW",
+      swaggerAllow && swaggerAllow !== "all" ? "restricted" : "open-or-missing",
+      "Restrict Swagger to the operator/internal network CIDR before delivery.",
+      "Blocks Swagger exposure acceptance when open or missing.",
+      "Set NGINX_SWAGGER_ALLOW to the approved operator/internal CIDR.",
+      false,
+    ),
+  ];
   return {
     exists: local.exists,
     exampleExists: example.exists,
     presentKeyCount: Object.keys(values).length,
     exampleKeyCount: exampleKeys.length,
     missingExampleKeys,
+    requiredFieldValues,
     controlBoardSafetyStatus: safetyStatus,
     checks,
   };
@@ -178,6 +259,12 @@ function buildMarkdown(manifest) {
     `- .env.example key count: ${manifest.env.exampleKeyCount}`,
     `- Missing .env.example keys: ${manifest.env.missingExampleKeys.join(", ") || "none"}`,
     `- Control-board safety status: ${manifest.env.controlBoardSafetyStatus}`,
+    "",
+    "## Required Field Values",
+    "",
+    "| Name | State | Required For Pass | Completion Gate | Next Action | Redacted |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ...manifest.env.requiredFieldValues.map((item) => `| ${tableValue(item.name)} | ${tableValue(item.state)} | ${tableValue(item.requiredForPass)} | ${tableValue(item.completionGate)} | ${tableValue(item.nextAction)} | ${item.redacted} |`),
     "",
   ].join("\n");
 }
