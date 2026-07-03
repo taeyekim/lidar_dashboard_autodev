@@ -65,6 +65,22 @@ function manualEvidenceEntries() {
   }));
 }
 
+function fieldRehearsalFollowUpEntries(completionManifest, fieldClosurePlanEntry) {
+  const followUps = completionManifest?.data?.fieldRehearsalFollowUps;
+  if (!Array.isArray(followUps)) return [];
+  return followUps.map((item) => ({
+    type: item.type || "unknown",
+    evidenceType: item.evidenceType || "UNKNOWN",
+    owner: item.replacementOwner || "unknown",
+    targetRecheckDate: item.targetRecheckDate || "unknown",
+    ownerStatus: item.ownerStatus || "unknown",
+    recheckStatus: item.recheckStatus || "unknown",
+    reason: item.reason || "unknown",
+    manifestPath: item.manifestPath || null,
+    closurePlanManifest: fieldClosurePlanEntry?.manifestPath || null,
+  }));
+}
+
 function buildIndexManifest(options = {}) {
   const entries = [
     {
@@ -182,6 +198,7 @@ function buildIndexManifest(options = {}) {
   );
   const completion = entries.find((entry) => entry.area === "Completion Audit");
   const completionManifest = completion?.manifestPath ? readLatestJsonManifest("artifacts/completion-audit") : null;
+  const fieldRehearsalFollowUps = fieldRehearsalFollowUpEntries(completionManifest, fieldClosurePlanEntry);
   const manualEvidence = manualEvidenceEntries();
   const missingManualEvidence = manualEvidence.filter((entry) => entry.required && entry.status !== "PRESENT");
   const controlBoardSafetyStatus =
@@ -212,9 +229,11 @@ function buildIndexManifest(options = {}) {
       attachableManifestCount: entries.filter((entry) => entry.attach).length,
       manualEvidenceCount: manualEvidence.length,
       missingManualEvidenceCount: missingManualEvidence.length,
+      fieldRehearsalFollowUpCount: fieldRehearsalFollowUps.length,
     },
     entries,
     manualEvidence,
+    fieldRehearsalFollowUps,
     missingRequiredAreas: missingRequired.map((entry) => entry.area),
     missingManualEvidenceAreas: missingManualEvidence.map((entry) => entry.area),
     staleAreas: staleEntries.map((entry) => entry.area),
@@ -244,6 +263,7 @@ function buildMarkdown(manifest) {
     `- Review entries: ${manifest.counts.reviewEntryCount}`,
     `- Manual evidence: ${manifest.counts.manualEvidenceCount}`,
     `- Missing manual evidence: ${manifest.counts.missingManualEvidenceCount}`,
+    `- Field rehearsal follow-ups: ${manifest.counts.fieldRehearsalFollowUpCount}`,
     "",
     "## Evidence Entries",
     "",
@@ -260,6 +280,17 @@ function buildMarkdown(manifest) {
     ...manifest.manualEvidence.map((entry) =>
       `| ${entry.area} | ${entry.status} | ${entry.required ? "yes" : "no"} | \`${entry.path}\` | \`${entry.template}\` | ${entry.validationReason || "ok"} |`,
     ),
+    "",
+    "## Field Rehearsal Follow-ups",
+    "",
+    "| Type | Evidence | Owner | Recheck Date | Owner Status | Recheck Status | Reason | Source Manifest | Closure Plan |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    ...(manifest.fieldRehearsalFollowUps.length > 0
+      ? manifest.fieldRehearsalFollowUps.map(
+          (entry) =>
+            `| ${entry.type} | ${entry.evidenceType} | ${entry.owner} | ${entry.targetRecheckDate} | ${entry.ownerStatus} | ${entry.recheckStatus} | ${entry.reason} | ${entry.manifestPath ? `\`${entry.manifestPath}\`` : "missing"} | ${entry.closurePlanManifest ? `\`${entry.closurePlanManifest}\`` : "missing"} |`,
+        )
+      : ["| none | - | - | - | - | - | - | - | - |"]),
     "",
     "## Missing Required Areas",
     "",
