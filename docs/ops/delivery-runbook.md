@@ -51,6 +51,8 @@ npm.cmd run handover:index
 npm.cmd run field:closure-plan
 npm.cmd run field:readiness -- --base-url=http://localhost:8080
 npm.cmd run handover:package
+npm.cmd run final:status -- --base-url=http://localhost:8080
+npm.cmd run final:execution-plan -- --base-url=http://localhost:8080
 ```
 
 Use `npm.cmd` and `curl.exe` on Windows when the local PowerShell execution
@@ -210,6 +212,17 @@ remaining gates under `FIELD_OR_SECURITY_REVIEW_REQUIRED`. Start with the
 refreshed by Codex, while `FIELD_ACTION_REQUIRED`, `MANUAL_EVIDENCE_REQUIRED`,
 and `SECURITY_REVIEW_REQUIRED` need field runtime, reviewer evidence, or scanner
 evidence before final close.
+
+After the final status report, run
+`npm.cmd run final:execution-plan -- --base-url=http://localhost:8080`.
+It writes `artifacts/final-execution-plan/<timestamp>/manifest.json` plus
+`manifest.md`, grouping the latest `remainingGates` by action type and turning
+them into an ordered command list for manual evidence readiness, preflight,
+runtime smoke, DB/LiDAR/control-board rehearsals, strict security evidence,
+field readiness, field acceptance, handover packaging, and final status refresh.
+This execution plan is an operator runbook only; it does not replace field
+evidence and does not prove completion unless the refreshed final status says
+`READY_TO_CLOSE`.
 
 Default URLs:
 
