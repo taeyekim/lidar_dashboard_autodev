@@ -33,6 +33,7 @@ Windows PowerShell rehearsal:
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/delivery-verify.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/runtime-smoke.ps1 -StartCompose -StopCompose
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl http://localhost:8080
 npm.cmd run runtime:evidence -- --run-smoke
 npm.cmd run runtime:evidence -- --run-smoke --use-existing-stack --base-url=http://localhost:8080
 npm.cmd run delivery:evidence
@@ -122,6 +123,19 @@ ingest request:
 
 `scripts/runtime-smoke.ps1` reads `DEVICE_INGEST_API_KEY` from the environment
 or `.env` and sends this header automatically.
+
+For focused field evidence, run the dedicated lidar ingest rehearsal:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl http://localhost:8080
+```
+
+The rehearsal sends representative `normal-driving`, duplicate
+`normal-driving`, `wrong-way-level-1`, duplicate `wrong-way-level-1`,
+`wrong-way-level-2`, and `situation-ended` payloads. It verifies unique vehicle
+track creation, duplicate track update, wrong-way event reuse, linked control
+commands, raw payload retention, summary KPI fields, and writes
+`artifacts/field-lidar-rehearsal/<timestamp>/manifest.json` plus `manifest.md`.
 
 `scripts/runtime-smoke.ps1` also verifies wrong-way event detail, preserved
 `rawPayload`, linked `controlCommands`, command `packetHex`, and summary
@@ -291,6 +305,7 @@ Evidence package:
 - `npm.cmd run verify:audit-policy` or `npm run verify:audit-policy` result
 - `npm.cmd run security:evidence` manifest under `artifacts/security/<timestamp>/`
 - `scripts/runtime-smoke.ps1` result when Docker runtime smoke is available
+- `artifacts/field-lidar-rehearsal/<timestamp>/manifest.json` and `manifest.md` from `scripts/lidar-ingest-rehearsal.ps1`
 - raw `npm audit --workspaces` result
 - `artifacts/security/**` security scan evidence, with skipped checks explained
 - Swagger screenshots or exported API list
