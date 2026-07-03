@@ -35,6 +35,8 @@ const checklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "sourceFieldActionBoard",
   "commandGroups",
   "openGateCount",
+  "categoryCounts",
+  "statusCounts",
 ].forEach((token) => assertIncludes(generator, token, "field gate closure map generator"));
 
 [
@@ -64,8 +66,10 @@ const actionBoard = {
         phase: "Security Evidence",
         priority: "P0",
         actionType: "SECURITY_REVIEW_REQUIRED",
+        category: "Security Evidence",
+        status: "DELIVERY_FIX_REQUIRED",
         evidence: "artifacts/security/example/manifest.json",
-        closeWhen: "Run scanners or attach accepted risk evidence.",
+        closeWhen: "Fix reported security findings and rerun strict security evidence.",
         command: "npm.cmd run security:evidence -- --require-scanners",
       },
       {
@@ -74,6 +78,8 @@ const actionBoard = {
         phase: "Security Evidence",
         priority: "P1",
         actionType: "SECURITY_REVIEW_REQUIRED",
+        category: "Security Evidence",
+        status: "BLOCKED",
         evidence: "artifacts/security/example/manifest.json",
         closeWhen: "Run scanners or attach accepted risk evidence.",
         command: "npm.cmd run security:evidence -- --require-scanners",
@@ -84,6 +90,8 @@ const actionBoard = {
         phase: "Field Rehearsal",
         priority: "P0",
         actionType: "FIELD_ACTION_REQUIRED",
+        category: "Control Board TCP",
+        status: "DRY_RUN_SAFE",
         evidence: "artifacts/field-control-board-rehearsal/example/manifest.json",
         closeWhen: "Record live TCP or approved dry-run rehearsal evidence.",
         command: "powershell.exe -File scripts/control-board-field-rehearsal.ps1",
@@ -98,8 +106,14 @@ assert(groups[0].gateCount === 2, "largest command group should preserve gate co
 assert(groups[0].gateIds.includes("GATE-001") && groups[0].gateIds.includes("GATE-002"), "group should preserve gate ids");
 assert(groups[0].owners.includes("Auth/Security"), "group should preserve owners");
 assert(groups[0].phases.includes("Security Evidence"), "group should preserve phases");
+assert(groups[0].categoryCounts["Security Evidence"] === 2, "group should count categories");
+assert(groups[0].statusCounts.DELIVERY_FIX_REQUIRED === 1, "group should preserve delivery-fix status count");
 assert(groups[0].evidencePaths.length === 1, "group should de-duplicate evidence paths");
-assert(groups[0].closeCriteria.length === 1, "group should de-duplicate close criteria");
+assert(groups[0].closeCriteria.length === 2, "group should preserve distinct close criteria");
+assert(
+  groups[0].closeCriteria.some((item) => item.includes("Fix reported security findings")),
+  "group should preserve delivery-fix close criteria",
+);
 
 const manifest = buildManifest({
   generatedAt: "2026-01-01T00:00:00.000Z",
@@ -117,6 +131,7 @@ const markdown = buildMarkdown(manifest);
 assert(markdown.includes("Field Gate Closure Map"), "markdown should include title");
 assert(markdown.includes("Command Summary"), "markdown should include command summary");
 assert(markdown.includes("Closure Map"), "markdown should include closure map");
+assert(markdown.includes("DELIVERY_FIX_REQUIRED"), "markdown should include delivery-fix status");
 assert(markdown.includes("GATE-001, GATE-002"), "markdown should include grouped gate ids");
 
 const ready = buildManifest({

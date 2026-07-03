@@ -84,9 +84,9 @@ const actionBoard = {
             phase: "Security Evidence",
             actionType: "SECURITY_REVIEW_REQUIRED",
             category: "Security Evidence",
-            status: "BLOCKED",
-            message: "Scanner evidence is blocked.",
-            closeWhen: "Run scanners or attach risk evidence.",
+            status: "DELIVERY_FIX_REQUIRED",
+            message: "Security delivery fix is required.",
+            closeWhen: "Fix reported findings and rerun strict security evidence.",
             evidence: "artifacts/security/example/manifest.json",
           },
         ],
@@ -118,7 +118,8 @@ const ownerMarkdown = buildOwnerBrief(actionBoard.data.ownerGroups[0], actionBoa
 assert(ownerMarkdown.includes("Field Owner Brief - Auth/Security"), "owner markdown should include owner title");
 assert(ownerMarkdown.includes("GATE-001"), "owner markdown should include action items");
 assert(ownerMarkdown.includes("Security Evidence"), "owner markdown should include item phase");
-assert(ownerMarkdown.includes("Scanner evidence is blocked."), "owner markdown should include message");
+assert(ownerMarkdown.includes("DELIVERY_FIX_REQUIRED"), "owner markdown should include delivery-fix status");
+assert(ownerMarkdown.includes("Security delivery fix is required."), "owner markdown should include message");
 assert(ownerMarkdown.includes("This owner brief is an execution aid"), "owner markdown should include guardrail");
 
 const missing = buildManifest({

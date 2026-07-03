@@ -50,6 +50,8 @@ function buildCommandGroups(actionBoard) {
           phases: [],
           priorityCounts: {},
           actionTypeCounts: {},
+          categoryCounts: {},
+          statusCounts: {},
           evidencePaths: [],
           closeCriteria: [],
         };
@@ -61,6 +63,8 @@ function buildCommandGroups(actionBoard) {
       group.phases = unique([...group.phases, item.phase]);
       group.priorityCounts = incrementCount(group.priorityCounts, item.priority);
       group.actionTypeCounts = incrementCount(group.actionTypeCounts, item.actionType);
+      group.categoryCounts = incrementCount(group.categoryCounts, item.category);
+      group.statusCounts = incrementCount(group.statusCounts, item.status);
       group.evidencePaths = unique([...group.evidencePaths, item.evidence]);
       group.closeCriteria = unique([...group.closeCriteria, item.closeWhen]);
       return acc;
@@ -124,14 +128,14 @@ function buildMarkdown(manifest) {
     "",
     "## Command Summary",
     "",
-    "| Command ID | Gates | Owners | Phases | Priority Counts | Action Type Counts |",
-    "| --- | --- | --- | --- | --- | --- |",
+    "| Command ID | Gates | Owners | Phases | Priority Counts | Action Type Counts | Category Counts | Status Counts |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(manifest.commandGroups.length > 0
       ? manifest.commandGroups.map(
           (group) =>
-            `| ${group.commandId} | ${group.gateCount} | ${markdownCell(group.owners.join(", "))} | ${markdownCell(group.phases.join(", "))} | ${markdownCell(JSON.stringify(group.priorityCounts))} | ${markdownCell(JSON.stringify(group.actionTypeCounts))} |`,
+            `| ${group.commandId} | ${group.gateCount} | ${markdownCell(group.owners.join(", "))} | ${markdownCell(group.phases.join(", "))} | ${markdownCell(JSON.stringify(group.priorityCounts))} | ${markdownCell(JSON.stringify(group.actionTypeCounts))} | ${markdownCell(JSON.stringify(group.categoryCounts))} | ${markdownCell(JSON.stringify(group.statusCounts))} |`,
         )
-      : ["| none | 0 | - | - | {} | {} |"]),
+      : ["| none | 0 | - | - | {} | {} | {} | {} |"]),
     "",
     "## Closure Map",
     "",
