@@ -116,7 +116,9 @@ delivery, completion, preflight, acceptance, field rehearsal, runtime, and
 security manifests that should be attached to the handover package. If the
 completion audit does not reference the latest delivery evidence manifest, the
 index reports `STALE`; run `npm.cmd run completion:audit` and
-`npm.cmd run handover:index` again.
+`npm.cmd run handover:index` again. If the field closure plan does not reference
+the latest completion audit, the index also reports `STALE`; run
+`npm.cmd run field:closure-plan` and `npm.cmd run handover:index` again.
 
 After `npm.cmd run handover:index`, run `npm.cmd run field:closure-plan`.
 The closure plan writes `artifacts/field-closure-plan/<timestamp>/manifest.json`

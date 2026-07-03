@@ -46,6 +46,7 @@ function indexEntry(entry) {
     attach: Boolean(manifest?.path),
     notes: entry.notes,
     sourceDeliveryManifest: data.sourceDeliveryManifest || null,
+    sourceCompletionAudit: data.sourceCompletionAudit || null,
     sourceFieldReadinessManifest: data.sourceFieldReadinessManifest || null,
     controlBoardSafetyStatus: data.env?.controlBoardSafetyStatus || data.controlBoardSafetyStatus || null,
   };
@@ -89,6 +90,13 @@ function buildIndexManifest(options = {}) {
       notes: "Pre-delivery readiness report for .env posture, Docker daemon, Nginx/API health, control-board TCP live values, Swagger allowlist, and optional scanner availability.",
     },
     {
+      area: "Field Closure Plan",
+      required: true,
+      outputRoot: "artifacts/field-closure-plan",
+      command: "npm run field:closure-plan",
+      notes: "Ordered closure actions, completion blockers, required field value states, and final refresh commands.",
+    },
+    {
       area: "DB And Prisma Field Rehearsal",
       required: true,
       outputRoot: "artifacts/field-db-rehearsal",
@@ -128,6 +136,7 @@ function buildIndexManifest(options = {}) {
   const deliveryEntry = entries.find((entry) => entry.area === "Delivery Evidence");
   const completionEntry = entries.find((entry) => entry.area === "Completion Audit");
   const fieldReadinessEntry = entries.find((entry) => entry.area === "Field Readiness");
+  const fieldClosurePlanEntry = entries.find((entry) => entry.area === "Field Closure Plan");
   const consistencyIssues = [];
 
   if (deliveryEntry?.manifestPath && completionEntry?.manifestPath) {
@@ -141,6 +150,14 @@ function buildIndexManifest(options = {}) {
       completionEntry.status = "STALE";
       consistencyIssues.push(
         `Completion Audit sourceFieldReadinessManifest (${completionEntry.sourceFieldReadinessManifest || "missing"}) does not match latest Field Readiness (${fieldReadinessEntry.manifestPath}). Run npm run completion:audit again.`,
+      );
+    }
+  }
+  if (completionEntry?.manifestPath && fieldClosurePlanEntry?.manifestPath) {
+    if (fieldClosurePlanEntry.sourceCompletionAudit !== completionEntry.manifestPath) {
+      fieldClosurePlanEntry.status = "STALE";
+      consistencyIssues.push(
+        `Field Closure Plan sourceCompletionAudit (${fieldClosurePlanEntry.sourceCompletionAudit || "missing"}) does not match latest Completion Audit (${completionEntry.manifestPath}). Run npm run field:closure-plan again.`,
       );
     }
   }
