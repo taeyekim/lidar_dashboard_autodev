@@ -36,7 +36,7 @@
 | --- | --- | --- |
 | `normal-driving` | 정주행 차량 감지 | 객체 ID 기준 최초 1회만 차량 track DB 저장, 이후 1초 간격 데이터는 최신 상태 갱신 중심 |
 | `wrong-way-level-1` | 역주행 1차 감지 | 역주행 이벤트 저장, 통합제어보드에 1차 경고 명령 송신 |
-| `wrong-way-level-2` | 역주행 2차 감지 | 역주행 이벤트 저장, 통합제어보드에 2차 차단 명령 송신 |
+| `wrong-way-level-2` | 역주행 2차 상태 | 역주행 이벤트 저장, 통합제어보드에 2차 차단 명령 송신. 최종 운영 기준은 대시보드가 측량/현장 조건에 따라 1차 이벤트를 2차로 승격하는 방식이다. |
 | `situation-ended` | 상황 종료 | 상황 종료 이벤트/로그 저장, 통합제어보드에 해제/복귀 명령 송신 |
 
 ### 3.2 예상 JSON 예시
@@ -79,7 +79,7 @@
 | --- | --- | --- | --- |
 | 정상 | `normal-driving` | 차량 track 갱신, 차량 수 집계 | 없음 |
 | 1차 | `wrong-way-level-1` | 이벤트 저장, 관제 알림, 명령 로그 생성 | 전광판 + 스피커 경고 |
-| 2차 | `wrong-way-level-2` | 이벤트 저장, 위험 단계 상승, 명령 로그 생성 | 차단기 하강, 진입 차단 |
+| 2차 | 대시보드 조건 기반 승격 또는 `wrong-way-level-2` 수신 | 이벤트 저장, 위험 단계 상승, 명령 로그 생성 | 차단기 하강, 진입 차단 |
 | 종료 | `situation-ended` | 상황 종료 처리, 명령 로그 생성 | 차단기 복귀/상승, 경고 해제 |
 
 ## 5. 통합제어보드 명령 프레임
@@ -149,9 +149,9 @@ Prisma ORM을 기준으로 DB를 설계하고 조작한다.
 | `vehicle_tracks` | 차량/객체 ID 기준 track 저장, 정주행 반복 데이터 dedupe 및 최신 상태 갱신 |
 | `traffic_events` | 역주행 1차/2차/상황종료 등 관제 이벤트 저장 |
 | `event_logs` | 수신, 상태 변경, 메모, 명령, 오류 등 감사 로그 저장 |
-| `control_commands` | 대시보드가 통합제어보드로 보낸 명령 요청 저장 후보 |
-| `control_command_logs` | 명령 생성, 송신, 응답, 실패, timeout 이력 저장 후보 |
-| `device_status_logs` | 통합제어보드/장비 상태 변화 저장 후보 |
+| `control_commands` | 대시보드가 통합제어보드로 보낸 명령 요청, packet hex, CRC 상태, dry-run/live 상태 저장 |
+| `control_command_logs` | 명령 생성, 송신, 응답, 실패, timeout 이력 저장 |
+| `device_status_logs` | 통합제어보드/장비 상태 변화 저장 |
 
 ### 6.2 수신 처리 로직
 
@@ -235,7 +235,7 @@ CONTROL_BOARD_DRY_RUN=true
 
 | 역할 | 검증/자문 항목 |
 | --- | --- |
-| PM/Tech Lead | 요구사항 충돌 조정, 브랜치/마일스톤 관리 |
+| PM/Tech Lead | 요구사항 충돌 조정, dev 직접 push 작업 묶음과 마일스톤 관리 |
 | Backend/DB | Prisma schema, dedupe 로직, command lifecycle, API/Swagger |
 | Frontend/UI/UX | 관제 화면 정보 구조, 경보 단계, 장비 상태, 운영자 조작 UX |
 | Hardware/Field Control | UTP Ethernet/TCP 연결, raw frame, 패킷/CRC, 통합제어보드 응답, 현장 안전 조건 |
@@ -359,22 +359,37 @@ CONTROL_BOARD_DRY_RUN=true
 
 ### 14.5 백엔드/API 제안
 
-초기 구현은 아래 API 중 최소 세트를 우선한다.
+초기 구현은 아래 단일 API를 우선한다. 세부 지표는 여러 엔드포인트로 분리하지 않고 `totals`, `buckets`, `zones` 안에 함께 담아 프론트 관제 패널과 Swagger 계약을 단순하게 유지한다.
 
 ```text
 GET /api/statistics/traffic?range=daily|weekly|monthly|yearly
-GET /api/statistics/wrongway-rate?range=daily|weekly|monthly|yearly
-GET /api/statistics/control-commands?range=daily|weekly|monthly|yearly
-GET /api/statistics/zones?range=daily|weekly|monthly|yearly
 ```
 
-응답은 프론트 차트가 바로 사용할 수 있도록 bucket 배열을 포함한다.
+응답은 프론트 KPI, 차트, 구역 ranking이 바로 사용할 수 있도록 `totals`, `buckets`, `zones`를 포함한다.
 
 ```json
 {
+  "ok": true,
   "range": "daily",
+  "bucketUnit": "hour",
+  "generatedAt": "2026-07-03T10:00:00.000Z",
+  "period": {
+    "start": "2026-07-03T00:00:00.000Z",
+    "end": "2026-07-04T00:00:00.000Z"
+  },
+  "totals": {
+    "normalVehicles": 1024,
+    "wrongwayEvents": 3,
+    "wrongwayRate": 0.29,
+    "dryRunCommands": 3,
+    "liveCommands": 0,
+    "acknowledgedCommands": 0,
+    "failedCommands": 0,
+    "commandSuccessRate": null
+  },
   "buckets": [
     {
+      "key": "hour-9",
       "label": "09:00",
       "normalVehicles": 120,
       "wrongwayEvents": 1,
@@ -383,12 +398,7 @@ GET /api/statistics/zones?range=daily|weekly|monthly|yearly
       "stage2Commands": 0
     }
   ],
-  "summary": {
-    "normalVehicles": 1024,
-    "wrongwayEvents": 3,
-    "wrongwayRate": 0.29,
-    "commandSuccessRate": 100
-  }
+  "zones": []
 }
 ```
 

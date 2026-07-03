@@ -20,6 +20,7 @@ const routeIndex = readProjectFile("dashboard/server/src/routes/index.js");
 const panel = readProjectFile("dashboard/dashboard-web/src/components/dashboard/TrafficStatisticsPanel.jsx");
 const api = readProjectFile("dashboard/dashboard-web/src/features/statistics/statisticsApi.js");
 const evidenceMatrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
+const fieldRequirements = readProjectFile("docs/ai/field-system-requirements.md");
 const expectedRanges = ["daily", "weekly", "monthly", "yearly"];
 
 [
@@ -45,6 +46,17 @@ assertIncludes(routes, 'router.get("/statistics/traffic"', "statistics routes");
 assertIncludes(routeIndex, "statisticsRoutes", "route index");
 assertIncludes(api, "/api/statistics/traffic", "statistics api");
 assertIncludes(api, "URLSearchParams", "statistics api query builder");
+assertIncludes(fieldRequirements, "GET /api/statistics/traffic?range=daily|weekly|monthly|yearly", "field requirements statistics endpoint");
+assertIncludes(fieldRequirements, "totals", "field requirements statistics response");
+assertIncludes(fieldRequirements, "buckets", "field requirements statistics response");
+assertIncludes(fieldRequirements, "zones", "field requirements statistics response");
+[
+  "/api/statistics/wrongway-rate",
+  "/api/statistics/control-commands",
+  "/api/statistics/zones",
+].forEach((endpoint) => {
+  assert(!fieldRequirements.includes(endpoint), `field requirements must not document obsolete split endpoint ${endpoint}`);
+});
 
 [
   "TrafficStatisticsPanel",
