@@ -1,4 +1,5 @@
 const authService = require("./auth.service");
+const { getAuthCookieToken } = require("./auth.cookie");
 const { verifyUserToken } = require("./token");
 
 function getBearerToken(req) {
@@ -14,7 +15,7 @@ function sendUnauthorized(res, message = "Authentication required.") {
 
 async function requireAuth(req, res, next) {
   try {
-    const token = getBearerToken(req);
+    const token = getAuthCookieToken(req) || getBearerToken(req);
     if (!token) return sendUnauthorized(res);
 
     const payload = verifyUserToken(token);

@@ -26,6 +26,7 @@ app.use(cors({
     }
     callback(null, false);
   },
+  credentials: true,
 }));
 app.use(requireJsonForMutations);
 app.use(express.json({ limit: config.jsonBodyLimit }));

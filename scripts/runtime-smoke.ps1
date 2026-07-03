@@ -46,7 +46,8 @@ function Invoke-CurlJson {
     [string]$Url,
     [object]$Body = $null,
     [string]$BearerToken = "",
-    [string]$DeviceKey = ""
+    [string]$DeviceKey = "",
+    [string]$CookieJar = ""
   )
 
   $curlArgs = @("-sS", "-f", "-X", $Method)
@@ -55,6 +56,9 @@ function Invoke-CurlJson {
   }
   if ($DeviceKey) {
     $curlArgs += @("-H", "X-Device-Key: $DeviceKey")
+  }
+  if ($CookieJar) {
+    $curlArgs += @("-b", $CookieJar, "-c", $CookieJar)
   }
   if ($null -ne $Body) {
     $json = $Body | ConvertTo-Json -Depth 12 -Compress
@@ -78,6 +82,7 @@ function Invoke-CurlStatus {
     [string]$BearerToken = "",
     [string]$DeviceKey = "",
     [string]$ContentType = "",
+    [string]$CookieJar = "",
     [switch]$RawBody
   )
 
@@ -88,6 +93,9 @@ function Invoke-CurlStatus {
   }
   if ($DeviceKey) {
     $curlArgs += @("-H", "X-Device-Key: $DeviceKey")
+  }
+  if ($CookieJar) {
+    $curlArgs += @("-b", $CookieJar, "-c", $CookieJar)
   }
   if ($ContentType) {
     $curlArgs += @("-H", "Content-Type: $ContentType")
@@ -226,12 +234,18 @@ try {
   }
 
   if ($adminUser -and $adminPassword) {
+    $cookieJar = Join-Path $env:TEMP "lidar-runtime-smoke-cookies-$([guid]::NewGuid().ToString('N')).txt"
     $login = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/auth/login" -Body @{
       userId = $adminUser
       password = $adminPassword
+    } -CookieJar $cookieJar
+    if ($login.token) { throw "Login response must not expose token when HttpOnly cookie auth is enabled" }
+    if ($login.authMode -ne "httpOnlyCookie") { throw "Login response did not report httpOnlyCookie auth mode" }
+    Invoke-CurlJson -Url "$BaseUrl/api/auth/me" -CookieJar $cookieJar | Out-Null
+    Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/auth/logout" -Body @{} -CookieJar $cookieJar | Out-Null
+    if (Test-Path $cookieJar) {
+      Remove-Item -LiteralPath $cookieJar -Force
     }
-    if (!$login.token) { throw "Login response did not include token" }
-    Invoke-CurlJson -Url "$BaseUrl/api/auth/me" -BearerToken $login.token | Out-Null
   } else {
     Write-Warning "Skipping auth smoke because SEED_ADMIN_USER_ID or SEED_ADMIN_PASSWORD is not available."
   }

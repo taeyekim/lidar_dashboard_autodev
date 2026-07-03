@@ -1,29 +1,11 @@
 import { apiUrl } from "./config";
 
-const TOKEN_STORAGE_KEY = "lidar_dashboard_auth_token";
-
-export function getAuthToken() {
-  return localStorage.getItem(TOKEN_STORAGE_KEY);
-}
-
-export function setAuthToken(token) {
-  if (token) {
-    localStorage.setItem(TOKEN_STORAGE_KEY, token);
-    return;
-  }
-  localStorage.removeItem(TOKEN_STORAGE_KEY);
-}
-
-function authHeaders(options = {}) {
-  const token = options.skipAuth ? null : getAuthToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
 function buildRequestOptions(options = {}, headers = {}) {
   const rest = { ...options };
   delete rest.skipAuth;
   delete rest.headers;
   return {
+    credentials: "include",
     ...rest,
     headers,
   };
@@ -38,7 +20,6 @@ export async function getJson(path, options = {}) {
   const response = await fetch(
     apiUrl(path),
     buildRequestOptions({ cache: "no-store", ...options }, {
-      ...authHeaders(options),
       ...(options.headers || {}),
     }),
   );
@@ -63,7 +44,6 @@ export async function postJson(path, body = {}, options = {}) {
       },
       {
         "Content-Type": "application/json",
-        ...authHeaders(options),
         ...(options.headers || {}),
       },
     ),
@@ -88,7 +68,6 @@ export async function patchJson(path, body = {}, options = {}) {
       },
       {
         "Content-Type": "application/json",
-        ...authHeaders(options),
         ...(options.headers || {}),
       },
     ),

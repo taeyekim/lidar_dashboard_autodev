@@ -41,7 +41,7 @@ async function login({ userId, password }) {
   return {
     ok: true,
     token: signUserToken(updatedUser),
-    tokenType: "Bearer",
+    authMode: "httpOnlyCookie",
     user: serializeUser(updatedUser),
   };
 }

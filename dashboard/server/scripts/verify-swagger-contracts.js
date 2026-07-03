@@ -15,11 +15,15 @@ function assertSchema(name) {
   assert(swaggerSpec.components?.schemas?.[name], `Schema ${name} is missing from Swagger`);
 }
 
-function assertBearer(operation, label) {
+function assertOperatorAuth(operation, label) {
   const security = operation.security || [];
   assert(
+    security.some((item) => Array.isArray(item.cookieAuth)),
+    `${label} must declare cookieAuth security`,
+  );
+  assert(
     security.some((item) => Array.isArray(item.bearerAuth)),
-    `${label} must declare bearerAuth security`,
+    `${label} must keep bearerAuth compatibility security`,
   );
 }
 
@@ -54,7 +58,7 @@ function assertOptionalDeviceKey(operation, label) {
   ["/api/demo/start", "post"],
   ["/api/demo/reset", "post"],
 ].forEach(([path, method]) => {
-  assertBearer(assertPath(method, path), `${method.toUpperCase()} ${path}`);
+  assertOperatorAuth(assertPath(method, path), `${method.toUpperCase()} ${path}`);
 });
 
 [
@@ -69,9 +73,17 @@ function assertOptionalDeviceKey(operation, label) {
 });
 
 assert(
+  swaggerSpec.components?.securitySchemes?.cookieAuth?.in === "cookie",
+  "Swagger must define cookieAuth cookie security scheme",
+);
+assert(
   swaggerSpec.components?.securitySchemes?.deviceKeyAuth?.name === "X-Device-Key",
   "Swagger must define X-Device-Key apiKey security scheme",
 );
+
+const authLogin = swaggerSpec.components?.schemas?.AuthLoginResponse;
+assert(authLogin?.properties?.authMode?.example === "httpOnlyCookie", "AuthLoginResponse must expose httpOnlyCookie mode");
+assert(!authLogin?.properties?.token, "AuthLoginResponse must not expose the JWT token body field");
 
 const controlBoardMockPacket =
   swaggerSpec.components?.schemas?.ControlBoardMockRequest?.properties?.packet?.oneOf?.[0]?.example;
