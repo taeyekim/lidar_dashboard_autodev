@@ -130,6 +130,17 @@ function fieldEvidenceNextAction(type) {
   return actions[type] || "Refresh the related field evidence manifest and rerun npm.cmd run handover:package.";
 }
 
+function fieldEvidenceDoneWhen(type) {
+  const doneWhen = {
+    "Field Preflight": "Preflight manifest has no REVIEW or SKIPPED checks required by the field acceptance policy.",
+    "Field Acceptance": "Field acceptance manifest is PASS and has no REVIEW or SKIPPED steps.",
+    "DB And Prisma": "DB field rehearsal manifest results are all PASS against the delivery runtime.",
+    "Lidar Ingest": "LiDAR rehearsal manifest proves normal-driving de-duplication and wrong-way command creation using representative payloads.",
+    "Control Board TCP": "Control-board rehearsal manifest proves DRY_RUN command lifecycle or approved LIVE_TCP command/ACK evidence.",
+  };
+  return doneWhen[type] || "Replacement manifest is generated and the area is no longer REVIEW, STALE, or MISSING.";
+}
+
 function buildFieldEvidenceOpenItems(fieldEvidenceSummary) {
   return fieldEvidenceSummary.flatMap((item) => [
     ...(item.reviewItems || []).map((message) => ({
@@ -138,6 +149,7 @@ function buildFieldEvidenceOpenItems(fieldEvidenceSummary) {
       message,
       manifestPath: item.manifestPath || null,
       nextAction: fieldEvidenceNextAction(item.type),
+      doneWhen: fieldEvidenceDoneWhen(item.type),
     })),
     ...(item.skippedItems || []).map((message) => ({
       type: item.type,
@@ -145,6 +157,7 @@ function buildFieldEvidenceOpenItems(fieldEvidenceSummary) {
       message,
       manifestPath: item.manifestPath || null,
       nextAction: fieldEvidenceNextAction(item.type),
+      doneWhen: fieldEvidenceDoneWhen(item.type),
     })),
   ]);
 }
@@ -161,6 +174,7 @@ function buildFieldEvidenceCommandRunbook(fieldEvidenceOpenItems) {
     .map((item) => ({
       type: item.type,
       command: item.nextAction,
+      doneWhen: item.doneWhen,
     }));
 }
 
@@ -218,11 +232,13 @@ function buildMarkdown(manifest) {
     "",
     "## Field Evidence Command Runbook",
     "",
-    "| Type | Command |",
-    "| --- | --- |",
+    "| Type | Command | Done When |",
+    "| --- | --- | --- |",
     ...(manifest.fieldEvidenceCommandRunbook.length > 0
-      ? manifest.fieldEvidenceCommandRunbook.map((item) => `| ${markdownCell(item.type)} | ${markdownCell(item.command)} |`)
-      : ["| none | No field evidence commands required. |"]),
+      ? manifest.fieldEvidenceCommandRunbook.map(
+          (item) => `| ${markdownCell(item.type)} | ${markdownCell(item.command)} | ${markdownCell(item.doneWhen)} |`,
+        )
+      : ["| none | No field evidence commands required. | - |"]),
     "",
     "## Commands",
     "",
