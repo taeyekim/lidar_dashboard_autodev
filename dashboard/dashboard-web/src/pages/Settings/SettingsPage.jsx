@@ -19,6 +19,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { fetchControlBoardStatus } from "../../features/controlBoard/controlBoardApi";
 import { fetchSystemStatus } from "../../features/devices/devicesApi";
+import { AUTH_CSRF_COOKIE_NAME } from "../../shared/api/config";
 import { Card } from "../../shared/components/Card";
 
 const SECTIONS = [
@@ -173,7 +174,7 @@ export default function SettingsPage() {
   const controlSafetyStatus = controlBoardStatus?.safetyStatus || systemStatus?.controlBoard?.safetyStatus || "UNKNOWN";
   const controlLiveApproved = Boolean(controlBoardStatus?.liveApproved || systemStatus?.controlBoard?.liveApproved);
   const csrfEnabled =
-    typeof document !== "undefined" && document.cookie.includes("lidar_dashboard_csrf=");
+    typeof document !== "undefined" && document.cookie.includes(`${AUTH_CSRF_COOKIE_NAME}=`);
 
   const summary = useMemo(
     () => [

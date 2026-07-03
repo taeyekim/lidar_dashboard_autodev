@@ -15,6 +15,8 @@ const settingsPage = readProjectFile("dashboard/dashboard-web/src/pages/Settings
   "fetchSystemStatus",
   "fetchControlBoardStatus",
   "useAuth",
+  "AUTH_CSRF_COOKIE_NAME",
+  "document.cookie.includes(`${AUTH_CSRF_COOKIE_NAME}=`)",
   "HttpOnly",
   "CSRF",
   "DRY_RUN",
