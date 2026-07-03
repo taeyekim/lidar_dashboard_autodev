@@ -67,6 +67,8 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Connect timeout and response timeout are distinguishable in error messages.
 - [ ] Timeout/failure records `FAILED` status, final error message, and per-attempt retry logs.
 - [ ] `/api/ingest/control-board/tcp/test` validates the 10-byte TCP frame sample and CRC parser.
+- [ ] `/api/ingest/control-board` is treated only as an HTTP bridge/diagnostic ingest path for response/status packets, not as the primary operator command path.
+- [ ] `/api/ingest/control-board/serial/test` is documented as a legacy compatibility alias; new field rehearsals use `/api/ingest/control-board/tcp/test`.
 - [ ] Control board ingest creates a `device_status_logs` row and updates the Devices page.
 - [ ] Event detail exposes linked `controlCommands`, `packetHex`, response hex, CRC status, and command logs.
 

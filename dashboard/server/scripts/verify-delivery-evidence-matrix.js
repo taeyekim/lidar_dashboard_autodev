@@ -70,6 +70,9 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "failed command count",
   "field verification required areas",
   "DRY_RUN/LIVE command separation",
+  "HTTP bridge diagnostics",
+  "legacy serial alias",
+  "Swagger documents `/api/ingest/control-board` as HTTP bridge diagnostics",
 ].forEach((token) => {
   assert(matrix.includes(token), `delivery evidence matrix is missing token: ${token}`);
 });
@@ -111,7 +114,13 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   [deliveryEvidence, "Requirement Area | Field Evidence", "delivery evidence generator"],
   [envContracts, "delivery-evidence-matrix.md", "environment contract verifier"],
   [deliveryRunbook, "delivery-evidence-matrix.md", "delivery runbook"],
+  [deliveryRunbook, "diagnostic ingest path, not the primary operator command path", "delivery runbook"],
+  [deliveryRunbook, "legacy `/api/ingest/control-board/serial/test` alias", "delivery runbook"],
   [acceptanceChecklist, "delivery-evidence-matrix.md", "acceptance checklist"],
+  [acceptanceChecklist, "/api/ingest/control-board", "acceptance checklist"],
+  [acceptanceChecklist, "/api/ingest/control-board/serial/test", "acceptance checklist"],
+  [acceptanceChecklist, "HTTP bridge/diagnostic ingest path", "acceptance checklist"],
+  [acceptanceChecklist, "legacy compatibility alias", "acceptance checklist"],
 ].forEach(([content, token, label]) => {
   assert(content.includes(token), `${label} is missing ${token}`);
 });

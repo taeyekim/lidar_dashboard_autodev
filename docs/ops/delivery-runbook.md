@@ -181,6 +181,8 @@ curl -X POST http://localhost:8080/api/ingest/control-board/tcp/test \
   -d "{\"host\":\"192.168.0.50\",\"port\":5001,\"samplePacket\":\"02 A1 20 01 01 02 00 CD 03 0D\"}"
 ```
 
+Use `/api/ingest/control-board` only when a bridge or test program forwards control-board response/status packets as HTTP JSON. It is a diagnostic ingest path, not the primary operator command path. The legacy `/api/ingest/control-board/serial/test` alias is kept only for older RS-485-era rehearsal scripts; new field rehearsals should use `/api/ingest/control-board/tcp/test`.
+
 Situation-ended smoke:
 
 ```bash
