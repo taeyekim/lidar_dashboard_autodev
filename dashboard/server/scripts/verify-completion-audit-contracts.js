@@ -102,7 +102,7 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "INVALID",
   "validationReason",
   "TODO accepted-item rows",
-  "ACCEPTED|RECHECK_REQUIRED",
+  "Decision | ACCEPTED",
   "Operator UI Walkthrough",
   "Field Risk Acceptance",
   "artifacts/manual/operator-ui-walkthrough.md",

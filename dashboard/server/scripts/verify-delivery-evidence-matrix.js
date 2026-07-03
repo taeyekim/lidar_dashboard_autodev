@@ -207,7 +207,7 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   [manualEvidence, "INVALID", "manual evidence helper"],
   [manualEvidence, "validationReason", "manual evidence helper"],
   [manualEvidence, "TODO accepted-item rows", "manual evidence helper"],
-  [manualEvidence, "ACCEPTED|RECHECK_REQUIRED", "manual evidence helper"],
+  [manualEvidence, "Decision | ACCEPTED", "manual evidence helper"],
   [manualEvidence, "Operator UI Walkthrough", "manual evidence helper"],
   [manualEvidence, "LIVE_TCP_APPROVAL_REQUIRED", "manual evidence helper"],
   [manualEvidence, "liveApproved", "manual evidence helper"],

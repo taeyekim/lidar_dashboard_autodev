@@ -38,3 +38,7 @@ keys, or unrestricted internal network maps.
 | Follow-up owner |  |
 | Target recheck date |  |
 | Reviewer signature/name |  |
+
+`RECHECK_REQUIRED` is valid as a field note, but it does not satisfy final
+completion evidence. The final completion gate requires `Decision` to be
+`ACCEPTED` after the recheck or mitigation is closed.

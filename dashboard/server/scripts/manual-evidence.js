@@ -31,7 +31,7 @@ const manualEvidenceDefinitions = [
     nextAction:
       "Fill docs/ops/field-risk-acceptance-template.md for accepted trusted-LAN, scanner, Swagger, HTTPS cookie, dry-run, or unavailable-hardware risks.",
     doneWhen:
-      "Accepted field risks include reviewer decision, compensating control, owner, and recheck date.",
+      "Accepted field risks record '| Decision | ACCEPTED |' plus compensating control, owner, and recheck date.",
   },
 ];
 
@@ -76,8 +76,11 @@ function validateManualEvidence(type, content) {
     const missingTokens = requiredTokens.filter((token) => !content.includes(token));
     if (missingTokens.length > 0) return `Missing required token(s): ${missingTokens.join(", ")}.`;
     if (/\|\s*TODO\s*\|/.test(content)) return "Evidence still contains TODO accepted-item rows.";
-    if (!/\|\s*Decision\s*\|\s*(ACCEPTED|RECHECK_REQUIRED)\s*\|/.test(content)) {
-      return "Evidence must record a reviewer decision of ACCEPTED or RECHECK_REQUIRED.";
+    if (/\|\s*Decision\s*\|\s*RECHECK_REQUIRED\s*\|/.test(content)) {
+      return "Evidence decision is RECHECK_REQUIRED; close the recheck or keep the risk evidence invalid before final completion.";
+    }
+    if (!/\|\s*Decision\s*\|\s*ACCEPTED\s*\|/.test(content)) {
+      return "Evidence must record a reviewer decision of ACCEPTED.";
     }
     const emptyField = ["Follow-up owner", "Target recheck date", "Reviewer signature/name"].find((field) => {
       const pattern = new RegExp(`\\|\\s*${field}\\s*\\|\\s*\\|`);

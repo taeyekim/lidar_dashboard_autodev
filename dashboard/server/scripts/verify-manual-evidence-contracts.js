@@ -80,13 +80,19 @@ const validRiskEvidence = `
 ## Reviewer Decision
 | Item | Value |
 | --- | --- |
-| Decision | RECHECK_REQUIRED |
+| Decision | ACCEPTED |
 | Required follow-up | Install approved scanner package. |
 | Follow-up owner | field-owner |
 | Target recheck date | 2026-08-01 |
 | Reviewer signature/name | reviewer |
 `;
 assert(validateManualEvidence("Field Risk Acceptance", validRiskEvidence) === "", "valid risk acceptance evidence should pass");
+
+const recheckRiskEvidence = validRiskEvidence.replace("| Decision | ACCEPTED |", "| Decision | RECHECK_REQUIRED |");
+assert(
+  validateManualEvidence("Field Risk Acceptance", recheckRiskEvidence).includes("RECHECK_REQUIRED"),
+  "risk acceptance evidence must stay invalid while reviewer decision is RECHECK_REQUIRED",
+);
 
 const manualEvidence = manualEvidenceRefs();
 assert(manualEvidence.length === manualEvidenceDefinitions.length, "manual evidence refs should mirror definitions");
