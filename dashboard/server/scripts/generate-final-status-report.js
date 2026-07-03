@@ -10,6 +10,7 @@ const root = path.join(__dirname, "..", "..", "..");
 const REQUIRED_SOURCE_REVISION_EVIDENCE_KEYS = [
   "delivery",
   "fieldReadiness",
+  "fieldAcceptance",
   "securityEvidence",
   "handoverPackage",
 ];

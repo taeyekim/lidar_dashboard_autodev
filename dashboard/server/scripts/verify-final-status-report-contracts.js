@@ -155,6 +155,7 @@ const readyEvidence = {
     data: {
       status: "PASS",
       baseUrl: "http://field.local:8080",
+      git: readyEvidenceGit,
       handover: {
         readyForHandover: true,
         requiresFieldReview: false,
