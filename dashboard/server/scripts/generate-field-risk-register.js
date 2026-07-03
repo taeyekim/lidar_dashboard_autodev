@@ -90,7 +90,7 @@ function buildFieldValueRisks(fieldReadiness) {
 function buildSecurityRisks(security) {
   const checks = security?.data?.checks || [];
   return checks
-    .filter((check) => check.disposition?.code === "BLOCKING" || check.status === "skipped")
+    .filter((check) => ["BLOCKING", "DELIVERY_FIX"].includes(check.disposition?.code) || check.status === "skipped")
     .map((check) => ({
       area: "Security scanners",
       source: "security.evidence",

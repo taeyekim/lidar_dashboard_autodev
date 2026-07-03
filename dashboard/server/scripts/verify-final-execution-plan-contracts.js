@@ -67,7 +67,7 @@ const openPlan = buildFinalExecutionPlan({
       remainingGates: [
         { actionType: "MANUAL_EVIDENCE_REQUIRED", category: "Manual Evidence", status: "MISSING", message: "Operator walkthrough missing.", closeWhen: "Attach evidence." },
         { actionType: "FIELD_ACTION_REQUIRED", category: "Control Board TCP", status: "DRY_RUN_SAFE", message: "Live TCP missing.", closeWhen: "Run rehearsal." },
-        { actionType: "SECURITY_REVIEW_REQUIRED", category: "Security Evidence", status: "BLOCKED", message: "Scanner evidence missing.", closeWhen: "Run scanners." },
+        { actionType: "SECURITY_REVIEW_REQUIRED", category: "Security Evidence", status: "DELIVERY_FIX_REQUIRED", message: "Security delivery fix required.", closeWhen: "Fix findings and rerun scanners." },
       ],
     },
   },
@@ -91,6 +91,7 @@ assert(openPlan.remainingGateCount === 3, "execution plan should preserve remain
 assert(openPlan.orderedCommands.some((item) => item.id === "manual-evidence-readiness"), "manual gate should include manual evidence readiness command");
 assert(openPlan.orderedCommands.some((item) => item.id === "control-board-field-rehearsal"), "field gate should include control-board rehearsal command");
 assert(openPlan.orderedCommands.some((item) => item.id === "security-evidence"), "security gate should include strict security evidence command");
+assert(openPlan.gatesByActionType.SECURITY_REVIEW_REQUIRED.some((gate) => gate.status === "DELIVERY_FIX_REQUIRED"), "security delivery-fix status should be preserved in gate groups");
 assert(openPlan.orderedCommands.some((item) => item.id === "field-gate-closure-map"), "open plan should include field gate closure map refresh command");
 assert(openPlan.orderedCommands.some((item) => item.command.includes("http://field.local:8080")), "commands should use the requested base URL");
 assert(openPlan.sourceFieldGateClosureMap.includes("artifacts/field-gate-closure-map"), "execution plan should reference gate closure map");

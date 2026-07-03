@@ -52,6 +52,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "sourceFieldReadiness",
   "sourceSecurityEvidence",
   "sourceManualEvidenceReadiness",
+  "DELIVERY_FIX",
 ].forEach((token) => assertIncludes(generator, token, "field risk register generator"));
 
 [
@@ -147,7 +148,8 @@ const security = {
       {
         label: "npm audit policy gate",
         status: "executed",
-        disposition: { code: "PASS" },
+        reason: "moderate vulnerability requires package upgrade before delivery",
+        disposition: { code: "DELIVERY_FIX" },
       },
     ],
   },
@@ -190,7 +192,11 @@ assert(
   buildFieldValueRisks(fieldReadiness).some((item) => item.area === "Nginx content security policy"),
   "field value risks should map Nginx CSP to a reviewer-readable area",
 );
-assert(buildSecurityRisks(security).length === 1, "security risks should include blocking scanner checks");
+assert(buildSecurityRisks(security).length === 2, "security risks should include blocking and delivery-fix scanner checks");
+assert(
+  buildSecurityRisks(security).some((item) => item.status === "DELIVERY_FIX"),
+  "security risks should preserve DELIVERY_FIX disposition",
+);
 assert(buildFinalStatusRisks(finalStatus).length === 2, "final status risks should include actionable gates");
 assert(groupRiskItems([{ area: "Security scanners", owner: "Auth/Security", requiresReviewerDecision: true, copyToRiskAcceptance: true }])[0].copyToRiskAcceptanceCount === 1, "risk grouping should count acceptance rows");
 

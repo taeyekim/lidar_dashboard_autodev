@@ -80,9 +80,9 @@ const gates = [
   {
     actionType: "SECURITY_REVIEW_REQUIRED",
     category: "Security Evidence",
-    status: "BLOCKED",
-    message: "Required scanner security evidence is strictAcceptanceBlocked.",
-    closeWhen: "Resolve scanner failures/skips or attach accepted field-risk evidence.",
+    status: "DELIVERY_FIX_REQUIRED",
+    message: "1 security check requires delivery fixes.",
+    closeWhen: "Fix the reported security findings and rerun strict security evidence.",
     evidence: "artifacts/security/example/manifest.json",
   },
   {
@@ -111,6 +111,7 @@ assert(phaseForGate(gates[0]) === "Security Evidence", "security gate should map
 assert(phaseForGate(gates[1]) === "Field Rehearsal", "control-board gate should map to Field Rehearsal phase");
 assert(phaseForGate(gates[2]) === "Manual Evidence", "manual gate should map to Manual Evidence phase");
 assert(commandForGate(gates[1], "http://field.local:8080").includes("control-board-field-rehearsal.ps1"), "control-board gate should map to control-board rehearsal command");
+assert(commandForGate(gates[0], "http://field.local:8080").includes("security:evidence"), "delivery-fix security gate should map to security evidence command");
 
 const actionItems = buildActionItems({ data: { remainingGates: gates } }, "http://field.local:8080");
 assert(actionItems.length === 3, "action items should preserve gate count");
