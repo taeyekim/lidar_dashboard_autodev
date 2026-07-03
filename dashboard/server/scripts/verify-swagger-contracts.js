@@ -254,9 +254,13 @@ const controlCommandLog = swaggerSpec.components?.schemas?.ControlCommandLog;
 });
 
 const controlBoardStatus = swaggerSpec.components?.schemas?.ControlBoardStatusResponse;
-["averageResponseMs", "responseSampleCount", "latestCommand"].forEach((field) => {
+["averageResponseMs", "responseSampleCount", "latestCommand", "liveTcpReady", "safetyStatus"].forEach((field) => {
   assert(controlBoardStatus?.properties?.[field], `ControlBoardStatusResponse must expose ${field}`);
 });
+assert(
+  controlBoardStatus?.properties?.safetyStatus?.enum?.includes("LIVE_TCP_REVIEW"),
+  "ControlBoardStatusResponse safetyStatus must document LIVE_TCP_REVIEW",
+);
 
 const eventSummary = swaggerSpec.components?.schemas?.EventSummaryResponse;
 ["vehiclesPassed", "vehicleTracks", "todayVehicleTracks", "wrongwayVehicles", "wrongWayEvents", "newEvents"].forEach((field) => {

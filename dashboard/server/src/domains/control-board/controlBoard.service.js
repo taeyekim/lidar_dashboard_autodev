@@ -351,10 +351,18 @@ async function getStatus() {
     }),
   ]);
   const latency = summarizeResponseLatency(recentAckCommands);
+  const liveTcpReady = !config.dryRun && Boolean(config.host) && Boolean(config.port);
+  const safetyStatus = config.dryRun
+    ? "DRY_RUN_SAFE"
+    : liveTcpReady
+      ? "LIVE_TCP_READY"
+      : "LIVE_TCP_REVIEW";
 
   return {
     ok: true,
     mode: config.dryRun ? "DRY_RUN" : "LIVE_TCP",
+    liveTcpReady,
+    safetyStatus,
     transport: config.transport,
     hostConfigured: Boolean(config.host),
     portConfigured: Boolean(config.port),

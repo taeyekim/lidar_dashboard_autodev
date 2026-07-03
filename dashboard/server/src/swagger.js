@@ -1293,6 +1293,17 @@ const swaggerSpec = {
         properties: {
           ok: { type: "boolean", example: true },
           mode: { type: "string", example: "DRY_RUN" },
+          liveTcpReady: {
+            type: "boolean",
+            example: false,
+            description: "True only when LIVE_TCP is active and both control-board host and port are configured.",
+          },
+          safetyStatus: {
+            type: "string",
+            enum: ["DRY_RUN_SAFE", "LIVE_TCP_READY", "LIVE_TCP_REVIEW"],
+            example: "DRY_RUN_SAFE",
+            description: "Operator-facing safety state for dry-run/live TCP readiness.",
+          },
           transport: { type: "string", example: "tcp" },
           hostConfigured: { type: "boolean", example: false },
           portConfigured: { type: "boolean", example: false },

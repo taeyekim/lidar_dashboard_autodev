@@ -31,6 +31,13 @@ function formatDurationMs(value) {
   return `${Number(value).toLocaleString()}ms`;
 }
 
+function controlBoardSafetyLabel(status = "UNKNOWN") {
+  if (status === "LIVE_TCP_READY") return "LIVE_TCP_READY";
+  if (status === "LIVE_TCP_REVIEW") return "LIVE_TCP_REVIEW";
+  if (status === "DRY_RUN_SAFE") return "DRY_RUN_SAFE";
+  return status || "UNKNOWN";
+}
+
 function statusTone(status = "", healthStatus = "") {
   const value = `${status} ${healthStatus}`.toUpperCase();
   if (value.includes("ERROR") || value.includes("FAILED") || value.includes("OFFLINE")) {
@@ -137,6 +144,10 @@ export default function DevicesPage() {
   const systemTone = systemStatus.database?.ok === false ? "red" : summary.errorCount > 0 ? "amber" : "green";
   const systemLabel =
     systemStatus.database?.ok === false ? "DB 오류" : summary.total > 0 ? "구성 완료" : "장비 미구성";
+  const controlBoardLiveReady = Boolean(systemStatus.controlBoard?.liveTcpReady);
+  const controlBoardReviewRequired = systemStatus.controlBoard?.mode === "LIVE_TCP" && !controlBoardLiveReady;
+  const controlBoardTone = controlBoardLiveReady ? "green" : controlBoardReviewRequired ? "red" : "amber";
+  const controlBoardSafetyStatus = controlBoardSafetyLabel(systemStatus.controlBoard?.safetyStatus);
 
   return (
     <div className="min-h-screen space-y-6 bg-white p-6 font-sans">
@@ -190,9 +201,9 @@ export default function DevicesPage() {
         <SummaryCard
           icon={HardDrive}
           title="제어보드"
-          value={systemStatus.controlBoard?.mode || "UNKNOWN"}
-          subText={`TCP ${systemStatus.controlBoard?.hostConfigured ? "대상 설정됨" : "대상 미설정"} · ACK 평균 ${formatDurationMs(systemStatus.controlBoard?.averageResponseMs)} / 샘플 ${Number(systemStatus.controlBoard?.responseSampleCount || 0).toLocaleString()}건`}
-          tone={systemStatus.controlBoard?.mode === "LIVE_TCP" ? "green" : "amber"}
+          value={controlBoardSafetyStatus}
+          subText={`TCP ${systemStatus.controlBoard?.hostConfigured && systemStatus.controlBoard?.portConfigured ? "대상 설정됨" : "대상 미설정"} · ACK 평균 ${formatDurationMs(systemStatus.controlBoard?.averageResponseMs)} / 샘플 ${Number(systemStatus.controlBoard?.responseSampleCount || 0).toLocaleString()}건`}
+          tone={controlBoardTone}
         />
       </div>
 

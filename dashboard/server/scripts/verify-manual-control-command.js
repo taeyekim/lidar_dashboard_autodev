@@ -44,6 +44,9 @@ assertIncludes(controller, 'trigger: "MANUAL_TEST"', "control board controller")
   "summarizeResponseLatency",
   "averageResponseMs",
   "responseSampleCount",
+  "liveTcpReady",
+  "safetyStatus",
+  "LIVE_TCP_REVIEW",
   "broadcastRealtime(\"control-command.created\"",
   "broadcastRealtime(\"control-command.updated\"",
 ].forEach((token) => assertIncludes(service, token, "control board service"));
@@ -84,6 +87,10 @@ assertIncludes(controller, 'trigger: "MANUAL_TEST"', "control board controller")
   'requestControlBoardCommand("STAGE_2_RETURN")',
   "pendingCommand",
   "controlBoardBusy",
+  "controlBoardLiveReady",
+  "controlBoardReviewRequired",
+  "LIVE_TCP_READY",
+  "DRY_RUN_SAFE",
 ].forEach((token) => assertIncludes(dashboard, token, "dashboard manual command UI"));
 
 const operation = swaggerSpec.paths?.["/api/control-board/commands/test"]?.post;

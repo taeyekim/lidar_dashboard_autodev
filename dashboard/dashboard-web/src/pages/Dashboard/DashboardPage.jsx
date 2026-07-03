@@ -507,7 +507,13 @@ export default function DashboardPage({
 
   const controlBoardMode = controlBoardModeLabel(controlBoardStatus || {});
   const latestControlCommand = controlBoardStatus?.latestCommand || null;
-  const controlBoardLive = controlBoardMode === "LIVE_TCP";
+  const controlBoardLiveReady = Boolean(controlBoardStatus?.liveTcpReady);
+  const controlBoardReviewRequired = controlBoardMode === "LIVE_TCP" && !controlBoardLiveReady;
+  const controlBoardBadgeClass = controlBoardLiveReady
+    ? "bg-emerald-100 text-emerald-700"
+    : controlBoardReviewRequired
+      ? "bg-red-100 text-red-700"
+      : "bg-amber-100 text-amber-700";
   const activeIncident = activeDashboardEvent || latestWrongwayEvent;
   const activeIncidentStage = Number(activeIncident?.stage || 0);
   const hasActiveIncident = Boolean(activeIncident);
@@ -740,7 +746,7 @@ export default function DashboardPage({
               </div>
               <span
                 className={`shrink-0 rounded px-2 py-1 text-[11px] font-black ${
-                  controlBoardLive ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                  controlBoardBadgeClass
                 }`}
               >
                 {controlBoardMode}
@@ -794,7 +800,7 @@ export default function DashboardPage({
             </div>
             <span
               className={`h-3 w-3 rounded-full ${
-                controlBoardLive ? "bg-green-500" : controlBoardMode === "DRY_RUN" ? "bg-amber-500" : "bg-red-500"
+                controlBoardLiveReady ? "bg-green-500" : controlBoardMode === "DRY_RUN" ? "bg-amber-500" : "bg-red-500"
               }`}
               title={controlBoardMode}
             />
@@ -856,7 +862,13 @@ export default function DashboardPage({
             </button>
           </div>
           <div className="mt-3 text-xs text-gray-500">
-            {controlBoardBusy ? `명령 전송 중: ${controlBoardBusy}` : "LIVE_TCP 전환 전에는 dry-run 명령으로 기록됩니다."}
+            {controlBoardBusy
+              ? `명령 전송 중: ${controlBoardBusy}`
+              : controlBoardLiveReady
+                ? "LIVE_TCP_READY: host/port 설정 후 실제 TCP 전송 모드입니다."
+                : controlBoardReviewRequired
+                  ? "LIVE_TCP_REVIEW: host/port 또는 현장 승인 확인이 필요합니다."
+                  : "DRY_RUN_SAFE: LIVE_TCP 전환 전에는 dry-run 명령으로 기록됩니다."}
           </div>
         </Card>
       </div>
