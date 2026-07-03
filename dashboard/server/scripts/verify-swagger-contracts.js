@@ -88,6 +88,23 @@ const swaggerText = JSON.stringify(swaggerSpec);
 MOJIBAKE_FORBIDDEN_TOKENS.forEach((token) => {
   assert(!swaggerText.includes(token), `Swagger must not expose mojibake token: ${token}`);
 });
+[
+  "?쇱",
+  "?놁",
+  "諛",
+  "媛",
+  "理",
+  "command留",
+].forEach((token) => {
+  assert(!swaggerText.includes(token), `Swagger must not expose mojibake fragment: ${token}`);
+});
+[
+  "LiDAR wrong-way event received",
+  "Diagnostic CRC status used only when testing by command without a packet",
+  "Database connection or base table query failed.",
+].forEach((token) => {
+  assert(swaggerText.includes(token), `Swagger must expose clean diagnostic copy: ${token}`);
+});
 
 [
   ["/api/health", "get", "HealthResponse"],

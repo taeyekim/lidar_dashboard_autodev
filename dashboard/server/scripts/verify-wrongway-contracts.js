@@ -21,6 +21,7 @@ const eventsService = readProjectFile("dashboard/server/src/domains/events/event
 const securityMiddleware = readProjectFile("dashboard/server/src/middleware/security.js");
 const wrongwayRoutes = readProjectFile("dashboard/server/src/domains/wrongway/wrongway.routes.js");
 const externalIngestRoutes = readProjectFile("dashboard/server/src/domains/external-ingest/externalIngest.routes.js");
+const externalIngestController = readProjectFile("dashboard/server/src/domains/external-ingest/externalIngest.controller.js");
 const externalIngestService = readProjectFile("dashboard/server/src/domains/external-ingest/externalIngest.service.js");
 const externalEventModel = readProjectFile("dashboard/server/src/domains/external-ingest/externalEvent.model.js");
 const lidarHttpAdapter = readProjectFile("dashboard/server/src/domains/external-ingest/adapters/lidarHttp.adapter.js");
@@ -137,8 +138,20 @@ assert(stableIdEvent.message === "LiDAR wrong-way event received", "lidar adapte
 const replacementChar = String.fromCharCode(0xfffd);
 const knownMojibakeChars = [0xf9e4, 0xb97c, 0xbcf4, 0xae38].map((code) => String.fromCharCode(code));
 [replacementChar, ...knownMojibakeChars].forEach((token) => {
+  assert(!externalIngestController.includes(token), `external ingest controller must not contain mojibake token: ${token}`);
   assert(!externalEventModel.includes(token), `external event model must not contain mojibake token: ${token}`);
   assert(!lidarHttpAdapter.includes(token), `lidar HTTP adapter must not contain mojibake token: ${token}`);
+});
+[
+  "?쇱",
+  "?ㅼ",
+  "?듯",
+  "?놁",
+  "諛",
+  "媛",
+  "理",
+].forEach((token) => {
+  assert(!externalIngestController.includes(token), `external ingest controller must not contain mojibake fragment: ${token}`);
 });
 assert(!externalIngestService.includes("temporary"), "external ingest service comments must not read like unfinished temporary code");
 assert(!externalEventModel.includes("temporary"), "external event model comments must not read like unfinished temporary code");

@@ -790,7 +790,7 @@ const swaggerSpec = {
       post: {
         tags: ["External Ingest"],
         summary: "통합 제어보드 mock 패킷 수신",
-        description: "Ethernet/TCP payload로 오갈 10바이트 raw frame adapter 흐름을 HTTP로 먼저 테스트하기 위한 API입니다. packet이 있으면 Byte 1~6 기준 CRC-8/SMBUS를 계산해 Byte 7 값과 비교합니다. DEVICE_INGEST_API_KEY가 설정된 환경에서는 X-Device-Key header가 필요합니다.",
+        description: "HTTP diagnostic endpoint for testing the 10-byte raw frame adapter used by Ethernet/TCP payloads. When packet is provided, Byte 1-6 CRC-8/SMBUS is calculated and compared with Byte 7. DEVICE_INGEST_API_KEY environments require the X-Device-Key header.",
         security: [{ deviceKeyAuth: [] }, {}],
         requestBody: {
           required: false,
@@ -1086,7 +1086,7 @@ const swaggerSpec = {
           checkedAt: { type: "string", format: "date-time" },
           message: {
             type: "string",
-            example: "DB 연결 또는 기본 테이블 조회에 실패했습니다.",
+            example: "Database connection or base table query failed.",
           },
         },
       },
@@ -1761,7 +1761,7 @@ const swaggerSpec = {
           track_id: { type: "string", example: "track-001" },
           confidence: { type: "number", example: 0.92 },
           timestamp: { type: "string", format: "date-time" },
-          message: { type: "string", example: "라이다 역주행 감지 이벤트 수신" },
+          message: { type: "string", example: "LiDAR wrong-way event received" },
         },
       },
       ControlBoardMockRequest: {
@@ -1786,7 +1786,7 @@ const swaggerSpec = {
           crcValid: {
             type: "boolean",
             example: true,
-            description: "packet 없이 command만 테스트할 때 사용하는 임시 CRC 상태 값입니다. packet이 있으면 실제 CRC-8 계산 결과가 우선 적용됩니다.",
+            description: "Diagnostic CRC status used only when testing by command without a packet. When packet is provided, the calculated CRC-8 result takes precedence.",
           },
           zone_id: { type: "string", example: "ROUNDABOUT-01" },
           device_id: { type: "string", example: "CONTROL-BOARD-01" },
