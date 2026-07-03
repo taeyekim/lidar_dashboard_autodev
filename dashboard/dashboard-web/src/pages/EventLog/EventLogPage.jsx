@@ -242,6 +242,7 @@ function upsertEvent(events, nextEvent) {
 export default function EventLogPage() {
   const [searchParams] = useSearchParams();
   const tabParam = (searchParams.get("tab") || "all").toLowerCase();
+  const eventIdParam = searchParams.get("eventId") || "";
   const safeTab = ["all", "analytics", "vehicles", "unidentified"].includes(tabParam)
     ? tabParam
     : "all";
@@ -281,6 +282,8 @@ export default function EventLogPage() {
       const data = normalizeEvents(await fetchEvents({ limit: 50 }));
       setEvents(data);
       setSelectedEvent((prev) => {
+        const urlSelected = eventIdParam ? data.find((event) => event.id === eventIdParam) : null;
+        if (urlSelected) return urlSelected;
         if (prev && data.some((event) => event.id === prev.id)) return prev;
         return data[0] || null;
       });
@@ -291,7 +294,7 @@ export default function EventLogPage() {
     } finally {
       setListLoading(false);
     }
-  }, []);
+  }, [eventIdParam]);
 
   const loadSelectedDetail = useCallback(async (eventId) => {
     if (!eventId) {
@@ -326,6 +329,40 @@ export default function EventLogPage() {
     loadEvents();
     loadSummary();
   }, [loadEvents, loadSummary]);
+
+  useEffect(() => {
+    if (!eventIdParam) return;
+    if (selectedEvent?.id === eventIdParam) return;
+
+    const listedEvent = events.find((event) => event.id === eventIdParam);
+    if (listedEvent) {
+      setSelectedEvent(listedEvent);
+      return;
+    }
+
+    let ignore = false;
+    setDetailLoading(true);
+    setDetailError("");
+    fetchEvent(eventIdParam)
+      .then((detail) => {
+        if (ignore || !detail) return;
+        const normalized = normalizeEvent(detail);
+        setSelectedEvent(normalized);
+        setEvents((prev) => upsertEvent(prev, normalized));
+      })
+      .catch((err) => {
+        if (!ignore) {
+          setDetailError(err.message || "Failed to load event detail.");
+        }
+      })
+      .finally(() => {
+        if (!ignore) setDetailLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [eventIdParam, events, selectedEvent?.id]);
 
   useEffect(() => {
     const timer = setInterval(() => {

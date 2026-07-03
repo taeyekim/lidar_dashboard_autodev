@@ -230,11 +230,15 @@ export default function DashboardPage({
   }; 
 
 
-  const handleViewDashboardEvent = () => { // 즉시 조치화면 보기 -> 추후 구현
-    if (activeDashboardEvent?.type === "wrong-way" && onNavigateToTotalVehicles) {
+  const handleViewDashboardEvent = () => {
+    if (activeDashboardEvent?.id) {
+      navigate(`/events?tab=all&eventId=${encodeURIComponent(activeDashboardEvent.id)}`);
+    } else if (activeDashboardEvent?.type === "wrong-way" && onNavigateToTotalVehicles) {
       onNavigateToTotalVehicles();
     } else if (activeDashboardEvent?.type === "unidentified" && onNavigateToUnidentified) {
       onNavigateToUnidentified();
+    } else {
+      navigate("/events?tab=all");
     }
     setActiveDashboardEvent(null);
   };

@@ -11,6 +11,8 @@ function readProjectFile(relativePath) {
 
 const card = readProjectFile("dashboard/dashboard-web/src/shared/components/Card.jsx");
 const devicesPage = readProjectFile("dashboard/dashboard-web/src/pages/Devices/DevicesPage.jsx");
+const dashboardPage = readProjectFile("dashboard/dashboard-web/src/pages/Dashboard/DashboardPage.jsx");
+const eventLogPage = readProjectFile("dashboard/dashboard-web/src/pages/EventLog/EventLogPage.jsx");
 const todaysEventsPath = path.join(
   __dirname,
   "..",
@@ -47,5 +49,23 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
 ["�", "占", "誘", "理", "諛", "蹂", "媛"].forEach((token) => {
   assert(!devicesPage.includes(token), `Devices page must not include mojibake token: ${token}`);
 });
+
+[
+  "handleViewDashboardEvent",
+  "/events?tab=all&eventId=",
+  "encodeURIComponent(activeDashboardEvent.id)",
+].forEach((token) => {
+  assert(dashboardPage.includes(token), `Dashboard modal action must deep-link to event detail: ${token}`);
+});
+
+[
+  "searchParams.get(\"eventId\")",
+  "fetchEvent(eventIdParam)",
+  "upsertEvent(prev, normalized)",
+].forEach((token) => {
+  assert(eventLogPage.includes(token), `Event log must support eventId deep-link selection: ${token}`);
+});
+
+assert(!dashboardPage.includes("추후 구현"), "Dashboard page must not expose unfinished action comments");
 
 console.log("frontend UI contracts ok");
