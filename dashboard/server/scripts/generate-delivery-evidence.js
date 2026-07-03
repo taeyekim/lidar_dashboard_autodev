@@ -140,7 +140,7 @@ function summarizeCompanionEvidence(type, outputRoot) {
 
   const items = manifest.data.commands || manifest.data.checks || [];
   const reviewItems = items
-    .filter((item) => item.status !== "skipped" && item.exitCode !== 0)
+    .filter((item) => item.status !== "skipped" && item.status !== "policy_accepted" && item.exitCode !== 0)
     .map((item) => `${type}: ${item.label}`);
   const skippedItems = items
     .filter((item) => item.status === "skipped")

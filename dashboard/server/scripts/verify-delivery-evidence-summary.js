@@ -3,6 +3,7 @@ const {
   buildHandoverSummary,
   parseEvidenceMatrix,
   readLatestJsonManifest,
+  summarizeCompanionEvidence,
   summarizeFieldAcceptance,
   summarizeFieldPreflight,
 } = require("./generate-delivery-evidence");
@@ -63,6 +64,13 @@ const companionSummary = buildHandoverSummary(rows, commands.slice(0, 3), covera
     skippedItems: ["Security: gitleaks secret scan"],
   },
 ]);
+const policyAcceptedCompanionSummary = buildHandoverSummary(rows, commands.slice(0, 3), coverage, [
+  {
+    type: "Security",
+    reviewItems: [],
+    skippedItems: [],
+  },
+]);
 const skippedOnlyCompanionSummary = buildHandoverSummary(rows, commands.slice(0, 3), coverage, [
   {
     type: "Security",
@@ -97,6 +105,27 @@ const bomVectorDir = path.join(bomVectorRoot, "20260703-000000");
 fs.mkdirSync(bomVectorDir, { recursive: true });
 fs.writeFileSync(path.join(bomVectorDir, "manifest.json"), `\uFEFF${JSON.stringify({ checks: [] })}`);
 const bomManifest = readLatestJsonManifest("artifacts/delivery-summary-vector-bom");
+const policyAcceptedRoot = path.join(__dirname, "..", "..", "..", "artifacts", "delivery-summary-policy-accepted");
+const policyAcceptedDir = path.join(policyAcceptedRoot, "20260703-000000");
+fs.mkdirSync(policyAcceptedDir, { recursive: true });
+fs.writeFileSync(
+  path.join(policyAcceptedDir, "manifest.json"),
+  JSON.stringify({
+    checks: [
+      {
+        label: "npm audit raw json",
+        status: "policy_accepted",
+        exitCode: 1,
+      },
+      {
+        label: "npm audit policy gate",
+        status: "executed",
+        exitCode: 0,
+      },
+    ],
+  }),
+);
+const policyAcceptedSummary = summarizeCompanionEvidence("Security", "artifacts/delivery-summary-policy-accepted");
 
 assert(rows.length === 3, "delivery evidence summary vector should parse three matrix rows");
 assert(summary.status === "AUTOMATED_CHECKS_REVIEW", "failed commands should force review status");
@@ -155,6 +184,11 @@ assert(
 assert(companionSummary.failedCommandCount === 0, "companion-only review should not create failed commands");
 assert(companionSummary.companionReviewCount === 1, "summary should count companion REVIEW items");
 assert(companionSummary.companionSkippedCount === 2, "summary should count companion SKIPPED items");
+assert(
+  policyAcceptedCompanionSummary.companionReviewCount === 0,
+  "policy accepted audit evidence should not create companion review items",
+);
+assert(policyAcceptedSummary.reviewCount === 0, "policy_accepted manifest checks should not be review items");
 assertIncludes(
   companionSummary.companionReviewItems,
   "Runtime: docker compose daemon check",

@@ -114,6 +114,7 @@ function writeCommandLog(dir, item) {
 
 function statusLabel(item) {
   if (item.status === "skipped") return "SKIPPED";
+  if (item.status === "policy_accepted") return "ACCEPTED";
   return item.exitCode === 0 ? "PASS" : "REVIEW";
 }
 
@@ -202,10 +203,13 @@ function main() {
   ensureDir(outputDir);
   const toolInventory = buildToolInventory();
 
-  const checks = [
-    runCommand("npm audit raw json", npmCommand, ["audit", "--workspaces", "--json"]),
-    runCommand("npm audit policy gate", npmCommand, ["run", "verify:audit-policy"]),
-  ];
+  const auditRaw = runCommand("npm audit raw json", npmCommand, ["audit", "--workspaces", "--json"]);
+  const auditPolicy = runCommand("npm audit policy gate", npmCommand, ["run", "verify:audit-policy"]);
+  if (auditRaw.exitCode !== 0 && auditPolicy.exitCode === 0) {
+    auditRaw.status = "policy_accepted";
+    auditRaw.reason = "npm audit reported only vulnerabilities accepted by verify:audit-policy";
+  }
+  const checks = [auditRaw, auditPolicy];
 
   if (commandExists("gitleaks")) {
     checks.push(
