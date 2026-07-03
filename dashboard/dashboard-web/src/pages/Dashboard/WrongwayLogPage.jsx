@@ -90,15 +90,11 @@ export default function WrongwayLogPage() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return events;
-    return events.filter((event) => {
-      return (
-        event.id.toLowerCase().includes(q) ||
-        event.type.toLowerCase().includes(q) ||
-        event.location.toLowerCase().includes(q) ||
-        event.message.toLowerCase().includes(q) ||
-        event.status.toLowerCase().includes(q)
-      );
-    });
+    return events.filter((event) =>
+      [event.id, event.type, event.location, event.message, event.status]
+        .map((value) => String(value || "").toLowerCase())
+        .some((value) => value.includes(q)),
+    );
   }, [events, query]);
 
   const selectedEvent = useMemo(() => {
@@ -118,9 +114,7 @@ export default function WrongwayLogPage() {
     setActionError("");
     try {
       await updateEventStatus(selectedEvent.id, status);
-      setEvents((prev) =>
-        prev.map((event) => (event.id === selectedEvent.id ? { ...event, status } : event)),
-      );
+      setEvents((prev) => prev.map((event) => (event.id === selectedEvent.id ? { ...event, status } : event)));
     } catch (err) {
       setActionError(err.message || "이벤트 상태를 변경하지 못했습니다.");
     }
@@ -210,11 +204,7 @@ export default function WrongwayLogPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      {error && <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:h-[calc(100vh-250px)]">
         <div className="flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-gray-50 lg:col-span-4">
@@ -223,14 +213,10 @@ export default function WrongwayLogPage() {
           </div>
 
           <div className="flex-1 space-y-2 overflow-y-auto p-2">
-            {loading && (
-              <div className="p-6 text-center text-sm text-gray-500">역주행 이벤트를 불러오는 중입니다.</div>
-            )}
+            {loading && <div className="p-6 text-center text-sm text-gray-500">역주행 이벤트를 불러오는 중입니다.</div>}
 
             {!loading && !error && filtered.length === 0 && (
-              <div className="p-6 text-center text-sm text-gray-500">
-                조건에 맞는 역주행 이벤트가 없습니다.
-              </div>
+              <div className="p-6 text-center text-sm text-gray-500">조건에 맞는 역주행 이벤트가 없습니다.</div>
             )}
 
             {!loading &&
@@ -249,9 +235,7 @@ export default function WrongwayLogPage() {
                     <div className="flex min-w-0 items-center">
                       <AlertTriangle
                         className={`mr-2 h-4 w-4 ${
-                          event.status === "pending" || event.status === "new"
-                            ? "text-red-500"
-                            : "text-gray-400"
+                          event.status === "pending" || event.status === "new" ? "text-red-500" : "text-gray-400"
                         }`}
                       />
                       <span className="truncate font-mono font-bold text-gray-800">{event.id}</span>
@@ -293,9 +277,7 @@ export default function WrongwayLogPage() {
                   <div>
                     <div className="mb-2 flex items-center space-x-3">
                       <h2 className="font-mono text-3xl font-bold text-gray-900">{selectedEvent.id}</h2>
-                      <span className="rounded bg-red-600 px-3 py-1 text-xs font-bold text-white">
-                        역주행
-                      </span>
+                      <span className="rounded bg-red-600 px-3 py-1 text-xs font-bold text-white">역주행</span>
                     </div>
                     <div className="flex items-center text-sm text-gray-500">
                       <Clock className="mr-2 h-4 w-4" />
@@ -304,9 +286,7 @@ export default function WrongwayLogPage() {
                   </div>
 
                   <div className="text-right">
-                    <div className="mb-1 text-xs font-bold uppercase tracking-wider text-gray-400">
-                      신뢰도
-                    </div>
+                    <div className="mb-1 text-xs font-bold uppercase tracking-wider text-gray-400">신뢰도</div>
                     <div className="text-2xl font-bold text-gray-900">
                       {formatConfidencePercent(selectedEvent.confidence)}
                     </div>

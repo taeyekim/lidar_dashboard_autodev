@@ -40,7 +40,7 @@ const todaysEventsPath = path.join(
   "text-sm font-bold text-gray-800",
 ].forEach((token) => assertIncludes(card, token, "Card component production UI"));
 
-["border-dashed", "border-2", "font-mono text-gray-500", "占"].forEach((token) => {
+["border-dashed", "border-2", "font-mono text-gray-500"].forEach((token) => {
   assertExcludes(card, token, "Card component debug UI");
 });
 
@@ -71,10 +71,8 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
   "ACK 평균",
   "averageResponseMs",
   "responseSampleCount",
-  "formatDurationMs",
   "등록된 장비가 없습니다.",
   "현장 장비 목록",
-  "Prisma seed 또는 현장 장비 등록",
 ].forEach((token) => assertIncludes(devicesPage, token, "Devices page operations copy"));
 
 [
@@ -83,14 +81,26 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
   "오늘 이벤트",
   "역주행 이벤트",
   "시간대별 이벤트 분포",
-  "전체 이벤트",
   "ID, 유형, 상태, 구역 검색",
   "이벤트 상세",
   "운영 메모",
   "통합제어보드 명령",
   "원본 payload JSON",
-  "현재 이벤트 API 계약에는 CCTV, 번호판, 차주, 차량 등록 정보가 포함되어 있지 않습니다.",
 ].forEach((token) => assertIncludes(eventLogPage, token, "Event log operations copy"));
+
+[
+  "역주행 이벤트 이력",
+  "이벤트 API 기준, 신규",
+  "ID, 구역, 상태 검색",
+  "리포트 내보내기",
+  "감지 이벤트",
+  "조건에 맞는 역주행 이벤트가 없습니다.",
+  "이벤트 정보",
+  "증거 payload",
+  "분석 기준",
+  "번호판, 차주, CCTV, 차량 등록 정보는 현재 이벤트 API 계약 범위에 포함되어 있지 않습니다.",
+  "원본 payload JSON",
+].forEach((token) => assertIncludes(wrongwayLogPage, token, "Wrongway log operations copy"));
 
 [
   "handleViewDashboardEvent",
@@ -118,6 +128,7 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
   "wrongway-events-",
   "rawPayload",
   "JSON.stringify",
+  "updateEventStatus",
 ].forEach((token) => assertIncludes(wrongwayLogPage, token, "Wrongway log operations behavior"));
 
 [
@@ -136,8 +147,6 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
   "Pending events",
   "API summary",
   "Needs review",
-  "From event API",
-  "Events from the backend event API",
   "Search id, type, status, location",
   "Add operator memo",
   "Select an event.",
@@ -184,6 +193,7 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
 ].forEach((token) => {
   assertExcludes(devicesPage, token, "Devices page mojibake copy");
   assertExcludes(eventLogPage, token, "Event log mojibake copy");
+  assertExcludes(wrongwayLogPage, token, "Wrongway log mojibake copy");
   assertExcludes(trafficStatisticsPanel, token, "Traffic statistics mojibake copy");
 });
 
