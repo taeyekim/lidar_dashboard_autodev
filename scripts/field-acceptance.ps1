@@ -113,6 +113,33 @@ function Add-OperatorUiWalkthroughGate {
     return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "read $OperatorUiWalkthroughEvidence" -LogPath "" -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence path was provided but does not exist."
   }
 
+  $evidence = Get-Content -LiteralPath $OperatorUiWalkthroughEvidence -Raw
+  $requiredTokens = @(
+    "## Required Screens",
+    "Login",
+    "Dashboard",
+    "Control-board mode",
+    "Event detail",
+    "Devices",
+    "Event Log",
+    "Statistics",
+    "Swagger",
+    "## Reviewer Decision",
+    "Walkthrough result"
+  )
+  $missingTokens = @($requiredTokens | Where-Object { $evidence -notlike "*$_*" })
+  if ($missingTokens.Count -gt 0) {
+    return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "validate $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence is missing required section/token(s): $($missingTokens -join ', ')."
+  }
+
+  if ($evidence -match "\|\s*TODO\s*\|") {
+    return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "validate $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence still contains TODO screen rows; complete each required screen row before final field acceptance."
+  }
+
+  if ($evidence -notmatch "\|\s*Walkthrough result\s*\|\s*PASS\s*\|") {
+    return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "validate $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence must record '| Walkthrough result | PASS |' before final field acceptance."
+  }
+
   return New-StepResult -Name "operator UI browser walkthrough" -Status "PASS" -Command "read $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 0 -StartedAt $now -FinishedAt $now
 }
 
