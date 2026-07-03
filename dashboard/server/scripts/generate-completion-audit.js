@@ -273,6 +273,7 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest, manualEv
   const companionEvidenceMetadata = buildCompanionEvidenceMetadata(deliveryManifest);
   const fieldRehearsalFollowUps = buildFieldRehearsalFollowUps(deliveryManifest);
   const manualEvidenceSignals = buildManualEvidenceSignals();
+  const openManualEvidenceSignals = manualEvidenceSignals.filter((item) => item.required && item.status !== "PRESENT");
   const manualEvidenceReadiness = manualEvidenceReadinessManifest?.data || {};
   const completionBlockers = buildCompletionBlockers(
     deliveryManifest,
@@ -326,7 +327,9 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest, manualEv
       fieldVerificationRequiredCount: normalizeNumber(summary.fieldVerificationRequiredCount),
       fieldReadinessReviewCount: readinessSignals.reviewCount,
       fieldReadinessSkippedCount: readinessSignals.skippedCount,
-      manualEvidenceMissingCount: manualEvidenceSignals.filter((item) => item.status !== "PRESENT").length,
+      manualEvidenceOpenCount: openManualEvidenceSignals.length,
+      manualEvidenceMissingCount: openManualEvidenceSignals.filter((item) => item.status === "MISSING").length,
+      manualEvidenceInvalidCount: openManualEvidenceSignals.filter((item) => item.status === "INVALID").length,
       manualEvidenceReadinessMissingCount: manualEvidenceReadinessManifest ? 0 : 1,
       manualEvidenceReadinessInvalidCount: manualEvidenceReadiness.invalidCount ?? 0,
       automatedBlockerCount: automatedBlockers.length,
@@ -387,7 +390,9 @@ function buildMarkdown(manifest) {
     `- Field preflight skipped items: ${manifest.counts.fieldPreflightSkippedCount}`,
     `- Field readiness review items: ${manifest.counts.fieldReadinessReviewCount}`,
     `- Field readiness skipped items: ${manifest.counts.fieldReadinessSkippedCount}`,
+    `- Manual evidence open: ${manifest.counts.manualEvidenceOpenCount}`,
     `- Manual evidence missing: ${manifest.counts.manualEvidenceMissingCount}`,
+    `- Manual evidence invalid: ${manifest.counts.manualEvidenceInvalidCount}`,
     `- Manual evidence readiness missing: ${manifest.counts.manualEvidenceReadinessMissingCount}`,
     `- Manual evidence readiness invalid: ${manifest.counts.manualEvidenceReadinessInvalidCount}`,
     `- Field verification required areas: ${manifest.counts.fieldVerificationRequiredCount}`,

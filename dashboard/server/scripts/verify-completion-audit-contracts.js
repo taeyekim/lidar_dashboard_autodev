@@ -75,7 +75,9 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "manualEvidenceSignals",
   "openRequiredManualEvidence",
   "Required manual evidence",
+  "manualEvidenceOpenCount",
   "manualEvidenceMissingCount",
+  "manualEvidenceInvalidCount",
   "Manual Evidence",
   "manual evidence",
   "requiredFieldValues",
@@ -137,7 +139,9 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
 });
 
 [
+  "manual evidence open count",
   "manual evidence missing count",
+  "manual evidence invalid count",
   "manual operator UI/risk acceptance evidence",
 ].forEach((token) => {
   assert(deliveryMatrix.includes(token), `delivery evidence matrix is missing ${token}`);
