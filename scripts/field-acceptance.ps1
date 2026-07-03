@@ -212,8 +212,11 @@ function New-AcceptanceManifest {
   $skippedSteps = @(Get-StepsByStatus -Steps $stepList -Status "SKIPPED")
   $hasReviewer = ![string]::IsNullOrWhiteSpace($Reviewer)
   $hasSiteName = ![string]::IsNullOrWhiteSpace($SiteName)
-  $readyForHandover = $Status -eq "PASS" -and $hasReviewer -and $hasSiteName
-  $requiresFieldReview = $Status -eq "REVIEW" -or $Status -eq "IN_PROGRESS" -or $skippedSteps.Count -gt 0 -or !$hasReviewer -or !$hasSiteName
+  $latestPreflightManifest = Get-LatestManifest -Root "artifacts/field-preflight"
+  $latestPreflightStatus = if ($null -eq $latestPreflightManifest) { "MISSING" } else { $latestPreflightManifest.status }
+  $latestPreflightPassed = $latestPreflightStatus -eq "PASS"
+  $readyForHandover = $Status -eq "PASS" -and $latestPreflightPassed -and $hasReviewer -and $hasSiteName
+  $requiresFieldReview = $Status -eq "REVIEW" -or $Status -eq "IN_PROGRESS" -or $skippedSteps.Count -gt 0 -or !$latestPreflightPassed -or !$hasReviewer -or !$hasSiteName
   $nextActions = @()
   if ($Status -eq "IN_PROGRESS") {
     $nextActions += "Wait for the field acceptance orchestrator to complete and confirm the final manifest status."
@@ -223,6 +226,9 @@ function New-AcceptanceManifest {
   }
   if ($skippedSteps.Count -gt 0) {
     $nextActions += "Confirm each skipped step is accepted by the field reviewer or rerun without skip switches."
+  }
+  if (!$latestPreflightPassed) {
+    $nextActions += "Rerun field preflight until the latest preflight manifest status is PASS before final handover."
   }
   if (!$hasReviewer) {
     $nextActions += "Record the field reviewer name with -Reviewer before attaching the evidence package."
@@ -247,6 +253,8 @@ function New-AcceptanceManifest {
       decisionNote = $DecisionNote
       hostName = $env:COMPUTERNAME
       operatorUser = $env:USERNAME
+      latestPreflightStatus = $latestPreflightStatus
+      latestPreflightPassed = $latestPreflightPassed
       reviewStepCount = $reviewSteps.Count
       skippedStepCount = $skippedSteps.Count
       nextActions = $nextActions
@@ -314,6 +322,8 @@ function Write-AcceptanceManifest {
     "| Operator user | $($manifest.handover.operatorUser) |",
     "| Host name | $($manifest.handover.hostName) |",
     "| Decision note | $($manifest.handover.decisionNote) |",
+    "| Latest preflight status | $($manifest.handover.latestPreflightStatus) |",
+    "| Latest preflight passed | $($manifest.handover.latestPreflightPassed) |",
     "| Review steps | $($manifest.handover.reviewStepCount) |",
     "| Skipped steps | $($manifest.handover.skippedStepCount) |",
     "| Ready for handover | $($manifest.handover.readyForHandover) |",
