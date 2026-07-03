@@ -43,6 +43,16 @@ assert(
   "Nginx template must preserve WebSocket upgrade headers",
 );
 assert(
+  nginxTemplate.includes("location /assets/") &&
+    nginxTemplate.includes('add_header Cache-Control "public, max-age=2592000, immutable" always') &&
+    nginxTemplate.includes("expires 30d"),
+  "Nginx template must cache hashed frontend assets with an immutable policy",
+);
+assert(
+  nginxTemplate.includes('add_header Cache-Control "no-store" always'),
+  "Nginx template must keep the SPA entrypoint uncached",
+);
+assert(
   frontendConfig.includes("`ws://${API_HOST}:${API_PORT}/ws`"),
   "frontend default WS_BASE must use /ws",
 );

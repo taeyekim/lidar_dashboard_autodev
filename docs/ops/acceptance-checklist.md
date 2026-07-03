@@ -28,6 +28,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `curl http://localhost:8080/api/status` returns server, database, ingest, websocket, devices, and control board sections.
 - [ ] `curl http://localhost:8080/api/devices/status` returns configured device counts.
 - [ ] Browser WebSocket URL uses `ws://<host>:<NGINX_PORT>/ws` through Nginx.
+- [ ] `/assets/` responses include immutable cache headers, while SPA entry routes include `Cache-Control: no-store`.
 
 ## Authentication
 

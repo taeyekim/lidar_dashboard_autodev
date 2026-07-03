@@ -48,6 +48,11 @@ Default URLs:
 - Swagger: `http://localhost:8080/api-docs`
 - Backend direct health: `http://localhost:5000/api/health`
 
+Nginx delivery cache policy:
+
+- Vite hashed frontend assets under `/assets/` are served with immutable public cache headers.
+- SPA entry routes remain `no-store` so new dashboard deployments are picked up without stale HTML.
+
 ## 3. Database
 
 The backend container runs these commands on startup:
@@ -84,6 +89,7 @@ Expected:
 - Control board ingest creates `device_status_logs` and broadcasts `device-status.updated`.
 - Wrong-way ingest broadcasts `traffic-event.created` and `vehicle-track.updated`; event status/memo changes broadcast `traffic-event.updated`.
 - Browser WebSocket traffic uses `/ws`; Nginx must proxy that path to the backend with upgrade headers.
+- Frontend hashed assets under `/assets/` use immutable caching, while SPA entry routes remain non-cacheable.
 
 ## 4. Operator Account
 
