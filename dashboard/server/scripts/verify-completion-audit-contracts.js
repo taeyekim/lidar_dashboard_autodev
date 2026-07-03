@@ -93,10 +93,20 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "canMarkGoalComplete",
   "field readiness",
   "required field value states",
+  "manual evidence",
+  "artifacts/manual/operator-ui-walkthrough.md",
+  "artifacts/manual/field-risk-acceptance.md",
 ].forEach((token) => {
   assert(deliveryMatrix.includes(token), `delivery evidence matrix is missing ${token}`);
   assert(deliveryRunbook.includes(token), `delivery runbook is missing ${token}`);
   assert(acceptanceChecklist.includes(token), `acceptance checklist is missing ${token}`);
+});
+
+[
+  "manual evidence missing count",
+  "manual operator UI/risk acceptance evidence",
+].forEach((token) => {
+  assert(deliveryMatrix.includes(token), `delivery evidence matrix is missing ${token}`);
 });
 
 console.log("completion audit contracts ok");
