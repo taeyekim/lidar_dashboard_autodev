@@ -71,6 +71,29 @@ function buildFieldReadinessOpenChecks(fieldReadiness) {
     }));
 }
 
+function buildManualEvidenceActions() {
+  const items = [
+    {
+      type: "Operator UI Walkthrough",
+      path: "artifacts/manual/operator-ui-walkthrough.md",
+      template: "docs/ops/operator-ui-walkthrough-template.md",
+      nextAction: "Fill docs/ops/operator-ui-walkthrough-template.md after browser walkthrough and save the field copy to artifacts/manual/operator-ui-walkthrough.md.",
+      doneWhen: "Operator UI walkthrough evidence is attached and field acceptance can use -OperatorUiWalkthroughEvidence artifacts/manual/operator-ui-walkthrough.md.",
+    },
+    {
+      type: "Field Risk Acceptance",
+      path: "artifacts/manual/field-risk-acceptance.md",
+      template: "docs/ops/field-risk-acceptance-template.md",
+      nextAction: "Fill docs/ops/field-risk-acceptance-template.md for accepted trusted-LAN, scanner, Swagger, HTTPS cookie, dry-run, or unavailable-hardware risks.",
+      doneWhen: "Accepted field risks include reviewer decision, compensating control, owner, and recheck date.",
+    },
+  ];
+  return items.map((item) => ({
+    ...item,
+    status: fs.existsSync(path.join(root, item.path)) ? "PRESENT" : "MISSING",
+  }));
+}
+
 function buildClosurePlan(options = {}) {
   const handover = readLatestJsonManifest("artifacts/handover-index");
   const completion = readLatestJsonManifest("artifacts/completion-audit");
@@ -85,6 +108,7 @@ function buildClosurePlan(options = {}) {
     ? completion.data.requiredFieldValues
     : [];
   const fieldReadinessOpenChecks = buildFieldReadinessOpenChecks(fieldReadiness);
+  const manualEvidenceActions = buildManualEvidenceActions();
   const actions = openEntries.map(actionForEntry);
 
   return {
@@ -106,10 +130,12 @@ function buildClosurePlan(options = {}) {
       completionBlockerCount: completionBlockers.length,
       requiredFieldValueCount: requiredFieldValues.length,
       fieldReadinessOpenCheckCount: fieldReadinessOpenChecks.length,
+      manualEvidenceMissingCount: manualEvidenceActions.filter((item) => item.status === "MISSING").length,
     },
     completionBlockers,
     requiredFieldValues,
     fieldReadinessOpenChecks,
+    manualEvidenceActions,
     actions,
     finalCommands: [
       "npm.cmd run delivery:evidence",
@@ -143,6 +169,7 @@ function buildMarkdown(manifest) {
     `- Completion blockers: ${manifest.counts.completionBlockerCount}`,
     `- Required field values: ${manifest.counts.requiredFieldValueCount}`,
     `- Field readiness open checks: ${manifest.counts.fieldReadinessOpenCheckCount}`,
+    `- Manual evidence missing: ${manifest.counts.manualEvidenceMissingCount}`,
     "",
     "## Actions",
     "",
@@ -183,6 +210,17 @@ function buildMarkdown(manifest) {
             `| ${tableValue(check.status)} | ${tableValue(check.severity)} | ${tableValue(check.name)} | ${tableValue(check.message)} | ${tableValue(check.nextAction)} | ${tableValue(check.evidenceCommand)} | ${tableValue(check.doneWhen)} |`,
         )
       : ["| none | n/a | n/a | n/a | n/a | n/a | n/a |"]),
+    "",
+    "## Manual Evidence Actions",
+    "",
+    "| Status | Type | Path | Template | Next Action | Done When |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ...(manifest.manualEvidenceActions.length > 0
+      ? manifest.manualEvidenceActions.map(
+          (item) =>
+            `| ${tableValue(item.status)} | ${tableValue(item.type)} | \`${tableValue(item.path)}\` | \`${tableValue(item.template)}\` | ${tableValue(item.nextAction)} | ${tableValue(item.doneWhen)} |`,
+        )
+      : ["| none | n/a | n/a | n/a | n/a | n/a |"]),
     "",
     "## Final Refresh Commands",
     "",
