@@ -1,6 +1,8 @@
 const net = require("net");
 const {
   CONTROL_BOARD_FRAME_LENGTH,
+  DEFAULT_CONNECT_TIMEOUT_MS,
+  DEFAULT_RESPONSE_TIMEOUT_MS,
   sendRawPacket,
 } = require("../src/domains/control-board/adapters/tcpControlBoard.adapter");
 const {
@@ -54,6 +56,8 @@ async function withLoopbackServer(responseWriter, handler) {
 
 async function main() {
   assert(CONTROL_BOARD_FRAME_LENGTH === 10, "control board response frame length must be 10 bytes");
+  assert(DEFAULT_CONNECT_TIMEOUT_MS === 1000, "adapter must default connect timeout to 1000ms");
+  assert(DEFAULT_RESPONSE_TIMEOUT_MS === 1000, "adapter must default response timeout to 1000ms");
 
   await withLoopbackServer((socket) => {
     socket.write(hexToBuffer(RESPONSE_HEX));
@@ -133,6 +137,8 @@ async function main() {
   assert(adapterSource.includes("Timed out connecting to control board after"), "adapter must distinguish connect timeout errors");
   assert(adapterSource.includes("connectTimeoutMs"), "adapter must use connectTimeoutMs explicitly");
   assert(adapterSource.includes("responseTimeoutMs"), "adapter must use responseTimeoutMs explicitly");
+  assert(adapterSource.includes("positiveInteger(config.connectTimeoutMs, DEFAULT_CONNECT_TIMEOUT_MS)"), "adapter must guard missing connect timeout");
+  assert(adapterSource.includes("positiveInteger(config.responseTimeoutMs, DEFAULT_RESPONSE_TIMEOUT_MS)"), "adapter must guard missing response timeout");
 
   console.log("control board TCP loopback ok");
 }

@@ -1,6 +1,14 @@
 const net = require("net");
 
 const CONTROL_BOARD_FRAME_LENGTH = 10;
+const DEFAULT_CONNECT_TIMEOUT_MS = 1000;
+const DEFAULT_RESPONSE_TIMEOUT_MS = 1000;
+
+function positiveInteger(value, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return fallback;
+  return Math.trunc(number);
+}
 
 function bufferToHex(buffer) {
   return Array.from(buffer).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ");
@@ -30,14 +38,12 @@ function sendRawPacket(packetBuffer, config) {
       resolve(result);
     }
 
-    const connectTimeoutMs = Number(config.connectTimeoutMs) || 0;
-    const responseTimeoutMs = Number(config.responseTimeoutMs) || 0;
-    if (connectTimeoutMs > 0) {
-      connectTimer = setTimeout(() => {
-        finish(new Error(`Timed out connecting to control board after ${connectTimeoutMs}ms.`));
-      }, connectTimeoutMs);
-      connectTimer.unref?.();
-    }
+    const connectTimeoutMs = positiveInteger(config.connectTimeoutMs, DEFAULT_CONNECT_TIMEOUT_MS);
+    const responseTimeoutMs = positiveInteger(config.responseTimeoutMs, DEFAULT_RESPONSE_TIMEOUT_MS);
+    connectTimer = setTimeout(() => {
+      finish(new Error(`Timed out connecting to control board after ${connectTimeoutMs}ms.`));
+    }, connectTimeoutMs);
+    connectTimer.unref?.();
 
     socket.once("error", (error) => finish(error));
     socket.once("timeout", () => finish(new Error(`Timed out waiting for control board response after ${responseTimeoutMs}ms.`)));
@@ -60,7 +66,7 @@ function sendRawPacket(packetBuffer, config) {
         clearTimeout(connectTimer);
         connectTimer = null;
       }
-      if (responseTimeoutMs > 0) socket.setTimeout(responseTimeoutMs);
+      socket.setTimeout(responseTimeoutMs);
       socket.write(packetBuffer);
     });
   });
@@ -68,5 +74,7 @@ function sendRawPacket(packetBuffer, config) {
 
 module.exports = {
   CONTROL_BOARD_FRAME_LENGTH,
+  DEFAULT_CONNECT_TIMEOUT_MS,
+  DEFAULT_RESPONSE_TIMEOUT_MS,
   sendRawPacket,
 };
