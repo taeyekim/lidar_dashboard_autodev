@@ -680,6 +680,9 @@ const openScannerCloseout = buildFinalStatusReport({
             requiredSwitch: "--require-scanners",
             relatedChecks: ["gitleaks secret scan"],
             evidenceFiles: ["gitleaks.json"],
+            nativeCommand: "gitleaks detect --source . --redact",
+            dockerFallbackCommand: "npm.cmd run security:evidence -- --require-scanners --use-docker-scanners",
+            riskAcceptanceEvidence: "artifacts/manual/field-risk-acceptance.md",
             closeoutWhenSkipped: "Install gitleaks or document reviewer risk acceptance.",
           },
         ],
@@ -700,12 +703,28 @@ assert(
   "open scanner closeout fixture should expose scanner-specific closeout gate",
 );
 assert(
+  openScannerCloseout.remainingGates.some(
+    (item) =>
+      item.category === "Security Scanner Closeout" &&
+      item.scanner === "gitleaks" &&
+      item.closeoutCommands?.dockerFallbackCommand?.includes("--use-docker-scanners") &&
+      item.closeoutCommands?.riskAcceptanceEvidence === "artifacts/manual/field-risk-acceptance.md",
+  ),
+  "open scanner closeout gate should carry executable scanner closeout commands",
+);
+assert(
   openScannerCloseout.securityEvidence.scannerCloseoutSummary.open === 1,
   "open scanner closeout fixture should count open scanner rows",
 );
 assert(
   buildMarkdown(openScannerCloseout).includes("Security Scanner Closeout"),
   "markdown should include Security Scanner Closeout",
+);
+assert(
+  buildMarkdown(openScannerCloseout).includes("Docker Fallback") &&
+    buildMarkdown(openScannerCloseout).includes("gitleaks detect") &&
+    buildMarkdown(openScannerCloseout).includes("field-risk-acceptance.md"),
+  "markdown should include scanner closeout command columns",
 );
 
 const missingScannerCloseout = buildFinalStatusReport({

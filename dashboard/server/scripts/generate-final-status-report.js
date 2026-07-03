@@ -122,16 +122,20 @@ function actionTypeForGate(category, status, message) {
   return "REVIEW_REQUIRED";
 }
 
-function addGate(gates, category, status, message, closeWhen, evidence) {
+function addGate(gates, category, status, message, closeWhen, evidence, metadata = {}) {
   const normalizedMessage = String(message || "Gate requires review.").replace(/\s+/g, " ").trim();
-  gates.push({
+  const gate = {
     category,
     status,
     actionType: actionTypeForGate(category, status, normalizedMessage),
     message: normalizedMessage,
     closeWhen,
     evidence: evidence || null,
+  };
+  Object.entries(metadata || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") gate[key] = value;
   });
+  gates.push(gate);
 }
 
 function formatCompletionBlocker(blocker) {
@@ -629,6 +633,14 @@ function buildFinalStatusReport(input = {}) {
           `${item.scanner} scanner closeout is ${item.closeoutStatus || "REVIEW"}; related checks=${(item.relatedChecks || []).join(", ") || "none"}.`,
           item.closeoutWhenSkipped || "Run the scanner, attach evidence, or document reviewer risk acceptance.",
           evidencePath(security),
+          {
+            scanner: item.scanner,
+            closeoutCommands: {
+              nativeCommand: item.nativeCommand || null,
+              dockerFallbackCommand: item.dockerFallbackCommand || null,
+              riskAcceptanceEvidence: item.riskAcceptanceEvidence || "artifacts/manual/field-risk-acceptance.md",
+            },
+          },
         );
       });
     if (!securitySummary.requireScanners) {
@@ -924,14 +936,14 @@ function buildMarkdown(manifest) {
     "",
     "## Security Scanner Closeout",
     "",
-    "| Scanner | Status | Required Switch | Related Checks | Evidence Files | Closeout If Skipped |",
-    "| --- | --- | --- | --- | --- | --- |",
+    "| Scanner | Status | Required Switch | Related Checks | Evidence Files | Native Command | Docker Fallback | Risk Acceptance Evidence | Closeout If Skipped |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(manifest.securityEvidence.scannerCloseout.length > 0
       ? manifest.securityEvidence.scannerCloseout.map(
           (item) =>
-            `| ${markdownCell(item.scanner)} | ${markdownCell(item.closeoutStatus)} | \`${markdownCell(item.requiredSwitch || "")}\` | ${markdownCell((item.relatedChecks || []).join(", ") || "none")} | ${markdownCell((item.evidenceFiles || []).join(", ") || "none")} | ${markdownCell(item.closeoutWhenSkipped || "Run scanner or attach accepted risk evidence.")} |`,
+            `| ${markdownCell(item.scanner)} | ${markdownCell(item.closeoutStatus)} | \`${markdownCell(item.requiredSwitch || "")}\` | ${markdownCell((item.relatedChecks || []).join(", ") || "none")} | ${markdownCell((item.evidenceFiles || []).join(", ") || "none")} | \`${markdownCell(item.nativeCommand || "missing")}\` | \`${markdownCell(item.dockerFallbackCommand || "missing")}\` | \`${markdownCell(item.riskAcceptanceEvidence || "artifacts/manual/field-risk-acceptance.md")}\` | ${markdownCell(item.closeoutWhenSkipped || "Run scanner or attach accepted risk evidence.")} |`,
         )
-      : ["| missing | MISSING | - | - | - | Rerun security:evidence with Scanner Closeout Matrix support. |"]),
+      : ["| missing | MISSING | - | - | - | - | - | - | Rerun security:evidence with Scanner Closeout Matrix support. |"]),
     "",
     "## Field Acceptance",
     "",

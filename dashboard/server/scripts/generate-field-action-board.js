@@ -87,6 +87,9 @@ function phaseForGate(gate) {
 }
 
 function commandForGate(gate, baseUrl) {
+  if (gate.closeoutCommands?.dockerFallbackCommand) return gate.closeoutCommands.dockerFallbackCommand;
+  if (gate.closeoutCommands?.nativeCommand) return gate.closeoutCommands.nativeCommand;
+  if (gate.command) return gate.command;
   const text = `${gate.category || ""} ${gate.message || ""} ${gate.closeWhen || ""}`.toLowerCase();
   if (text.includes("manual evidence") || text.includes("operator ui walkthrough") || text.includes("field risk acceptance")) {
     return `npm.cmd run manual:evidence-readiness -- --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg}`;
@@ -130,6 +133,8 @@ function buildActionItems(finalStatus, baseUrl) {
     message: gate.message || "",
     closeWhen: gate.closeWhen || "",
     evidence: gate.evidence || null,
+    scanner: gate.scanner || null,
+    closeoutCommands: gate.closeoutCommands || null,
     command: commandForGate(gate, baseUrl),
   }));
 }
@@ -306,14 +311,14 @@ function buildMarkdown(manifest) {
     "",
     "## Action Items",
     "",
-    "| ID | Priority | Phase | Owner | Action Type | Category | Status | Message | Close When | Evidence | Command |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| ID | Priority | Phase | Owner | Action Type | Category | Status | Message | Close When | Evidence | Scanner | Risk Acceptance Evidence | Command |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(manifest.actionItems.length > 0
       ? manifest.actionItems.map(
           (item) =>
-            `| ${item.id} | ${item.priority} | ${markdownCell(item.phase)} | ${markdownCell(item.owner)} | ${markdownCell(item.actionType)} | ${markdownCell(item.category)} | ${markdownCell(item.status)} | ${markdownCell(item.message)} | ${markdownCell(item.closeWhen)} | ${item.evidence ? `\`${markdownCell(item.evidence)}\`` : "missing"} | \`${markdownCell(item.command)}\` |`,
+            `| ${item.id} | ${item.priority} | ${markdownCell(item.phase)} | ${markdownCell(item.owner)} | ${markdownCell(item.actionType)} | ${markdownCell(item.category)} | ${markdownCell(item.status)} | ${markdownCell(item.message)} | ${markdownCell(item.closeWhen)} | ${item.evidence ? `\`${markdownCell(item.evidence)}\`` : "missing"} | ${markdownCell(item.scanner || "-")} | ${item.closeoutCommands?.riskAcceptanceEvidence ? `\`${markdownCell(item.closeoutCommands.riskAcceptanceEvidence)}\`` : "-"} | \`${markdownCell(item.command)}\` |`,
         )
-      : ["| none | - | - | - | - | - | PASS | No open final-status gates. | - | - | - |"]),
+      : ["| none | - | - | - | - | - | PASS | No open final-status gates. | - | - | - | - | - |"]),
     "",
   ].join("\n");
 }
