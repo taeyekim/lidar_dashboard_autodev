@@ -160,9 +160,15 @@ async function main() {
   });
   installMock(path.join(serverRoot, "src/domains/control-board/controlBoard.service.js"), {
     async createCommandForWrongwayEvent(payloadType, trafficEvent) {
-      commandCalls.push({ payloadType, trafficEventId: trafficEvent?.id || null });
+      const commandTypeByPayloadType = {
+        "wrong-way-level-1": "STAGE_1_ON",
+        "wrong-way-level-2": "STAGE_2_ON",
+        "situation-ended": "STAGE_2_RETURN",
+      };
+      const commandType = commandTypeByPayloadType[payloadType] || null;
+      commandCalls.push({ payloadType, commandType, trafficEventId: trafficEvent?.id || null });
       if (!trafficEvent?.id) return null;
-      return { id: `command-${commandCalls.length}`, payloadType, trafficEventId: trafficEvent.id };
+      return { id: `command-${commandCalls.length}`, payloadType, commandType, trafficEventId: trafficEvent.id };
     },
   });
 
@@ -221,9 +227,22 @@ async function main() {
   assertEqual(prisma.__state.trafficEvents.length, 1, "repeated active wrong-way payload must not duplicate traffic events");
   assertEqual(prisma.__state.trafficEvents[0].vehicleTrackId, track.id, "wrong-way event must link to the unique vehicle track");
   assertEqual(commandCalls.filter((call) => call.trafficEventId).length, 2, "wrong-way command hook must receive the event on both create and reuse");
+  assertEqual(commandCalls.filter((call) => call.commandType === "STAGE_1_ON").length, 2, "level-1 wrong-way payloads must create or reuse only stage-1 control commands");
+  assertEqual(commandCalls.filter((call) => call.commandType === "STAGE_2_ON").length, 0, "level-1 wrong-way payloads must not auto-escalate to stage-2 control commands");
+
+  const explicitLevel2 = await ingestWrongwayPayload({
+    type: "wrong-way-level-2",
+    zone_id: "Z-DEDUPE",
+    track_id: "stable-track-001",
+    timestamp: "2026-07-03T00:00:04.000Z",
+    confidence: 0.99,
+  }, { receivedAt: "2026-07-03T00:00:04.000Z" });
+
+  assert(explicitLevel2.eventCreated, "explicit wrong-way level 2 payload must create the stage-2 traffic event");
+  assertEqual(commandCalls.filter((call) => call.commandType === "STAGE_2_ON").length, 1, "stage-2 control command must be created only after an explicit level-2 payload");
 
   const vehicleTrackRealtime = realtimeMessages.filter((message) => message.type === "vehicle-track.updated");
-  assertEqual(vehicleTrackRealtime.length, 4, "every ingest must publish vehicle-track.updated for operators");
+  assertEqual(vehicleTrackRealtime.length, 5, "every ingest must publish vehicle-track.updated for operators");
 
   console.log("wrongway runtime dedupe ok");
 }

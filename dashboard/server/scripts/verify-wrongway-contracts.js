@@ -25,6 +25,7 @@ const externalIngestController = readProjectFile("dashboard/server/src/domains/e
 const externalIngestService = readProjectFile("dashboard/server/src/domains/external-ingest/externalIngest.service.js");
 const externalEventModel = readProjectFile("dashboard/server/src/domains/external-ingest/externalEvent.model.js");
 const lidarHttpAdapter = readProjectFile("dashboard/server/src/domains/external-ingest/adapters/lidarHttp.adapter.js");
+const wrongwayRuntimeDedupe = readProjectFile("dashboard/server/scripts/verify-wrongway-runtime-dedupe.js");
 const schema = readProjectFile("dashboard/server/prisma/schema.prisma");
 const payloadSpec = readProjectFile("docs/specs/lidar-dashboard-payload.md");
 const runbook = readProjectFile("docs/ops/delivery-runbook.md");
@@ -90,6 +91,15 @@ assertIncludes(
   "metadata: options.metadata",
   "control board command reused for wrongway event",
 ].forEach((token) => assertIncludes(controlBoardService, token, "control board service"));
+[
+  "\"wrong-way-level-1\": \"STAGE_1_ON\"",
+  "\"wrong-way-level-2\": \"STAGE_2_ON\"",
+].forEach((token) => assertIncludes(controlBoardService, token, "control board wrong-way command map"));
+[
+  "level-1 wrong-way payloads must create or reuse only stage-1 control commands",
+  "level-1 wrong-way payloads must not auto-escalate to stage-2 control commands",
+  "stage-2 control command must be created only after an explicit level-2 payload",
+].forEach((token) => assertIncludes(wrongwayRuntimeDedupe, token, "wrongway runtime command escalation guard"));
 [
   "controlCommands:",
   "eventLogs:",
