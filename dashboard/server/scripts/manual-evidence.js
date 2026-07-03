@@ -115,6 +115,14 @@ function validateManualEvidence(type, content) {
     ].find((field) => isPlaceholderMarkdownCell(markdownTableValue(content, field)));
     if (placeholderSessionField) return `Evidence has a placeholder '${placeholderSessionField}' session value.`;
     if (/\|\s*TODO\s*\|/.test(content)) return "Evidence still contains TODO screen rows.";
+    const screenRows = markdownRowsAfterHeader(content, "Evidence To Capture");
+    if (screenRows.length < 8) {
+      return "Evidence must include every required operator screen row.";
+    }
+    const incompleteScreenRow = screenRows.find((row) => row[0] !== "PASS");
+    if (incompleteScreenRow) {
+      return "Every required operator screen row must have PASS status.";
+    }
     if (!/\|\s*Walkthrough result\s*\|\s*PASS\s*\|/.test(content)) {
       return "Evidence must record '| Walkthrough result | PASS |'.";
     }

@@ -79,6 +79,15 @@ assert(
   "operator UI evidence should remain invalid until walkthrough rows are completed",
 );
 
+const reviewedScreenOperatorEvidence = validOperatorEvidence.replace(
+  "| PASS | Statistics | Daily, weekly, monthly, yearly normal/wrong-way counts and wrong-way rate | Unique vehicle counts and wrong-way rate are visible without manual DB inspection. |",
+  "| REVIEW | Statistics | Daily, weekly, monthly, yearly normal/wrong-way counts and wrong-way rate | Unique vehicle counts and wrong-way rate are visible without manual DB inspection. |",
+);
+assert(
+  validateManualEvidence("Operator UI Walkthrough", reviewedScreenOperatorEvidence).includes("Every required operator screen row must have PASS"),
+  "operator UI evidence must reject REVIEW screen rows even when final walkthrough result says PASS",
+);
+
 const missingSessionOperatorEvidence = validOperatorEvidence.replace(
   "| Delivery display resolution | 1920x1080 |",
   "| Delivery display resolution |  |",
