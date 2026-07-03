@@ -37,6 +37,10 @@ const fieldPreflightScript = readProjectFile("scripts/field-preflight.ps1");
 const fieldAcceptanceScript = readProjectFile("scripts/field-acceptance.ps1");
 const env = parseEnvExample(envExample);
 
+["猷", "釉", "濡", "湲", "媛", "留", "?ㅽ", "?꾩", "?대", "?곕"].forEach((token) => {
+  assert(!envExample.includes(token), `.env.example contains mojibake token: ${token}`);
+});
+
 const requiredEnvKeys = [
   "FRONTEND_PORT",
   "DASHBOARD_PORT",
