@@ -92,6 +92,10 @@ function hasOpenRequiredFieldValue(item) {
   ].includes(state);
 }
 
+function requiredFieldState(items, name) {
+  return String((items || []).find((item) => item.name === name)?.state || "").toLowerCase();
+}
+
 if (latestCompletion) {
   const data = latestCompletion.data || {};
   assert(
@@ -123,6 +127,10 @@ if (latestCompletion) {
       "complete audit requires no open required field values",
     );
     assert(
+      requiredFieldState(data.requiredFieldValues, "CONTROL_BOARD_LIVE_APPROVED") === "approved",
+      "complete audit requires CONTROL_BOARD_LIVE_APPROVED to be approved",
+    );
+    assert(
       Array.isArray(data.manualEvidenceSignals) &&
         data.manualEvidenceSignals.every((item) => item.status === "PRESENT"),
       "complete audit requires all manual evidence signals to be PRESENT",
@@ -143,6 +151,10 @@ if (latestReadiness) {
     assert(
       requiredFieldValues.every((item) => !hasOpenRequiredFieldValue(item)),
       "PASS field readiness requires no open required field values",
+    );
+    assert(
+      requiredFieldState(requiredFieldValues, "CONTROL_BOARD_LIVE_APPROVED") === "approved",
+      "PASS field readiness requires CONTROL_BOARD_LIVE_APPROVED approved state",
     );
   }
 }
