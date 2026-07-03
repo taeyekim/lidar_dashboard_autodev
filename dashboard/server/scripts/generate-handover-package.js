@@ -243,6 +243,7 @@ function buildFieldEvidenceFollowUps(fieldEvidenceSummary) {
 }
 
 function buildResidualFieldGates({
+  canMarkGoalComplete,
   strictFailureReasons,
   openManualEvidence,
   fieldEvidenceOpenItems,
@@ -274,12 +275,14 @@ function buildResidualFieldGates({
       message: `${item.type} replacement rehearsal is assigned to ${item.replacementOwner} for ${item.targetRecheckDate}.`,
       closeWhen: `${item.type} has a PASS manifest or approved replacement evidence after recheck.`,
     })),
-    ...knownLimitations.map((item) => ({
-      category: "Known Limitation",
-      status: "FIELD_REVIEW",
-      message: `${item.area}: ${item.limitation}`,
-      closeWhen: item.closeWhen,
-    })),
+    ...(canMarkGoalComplete
+      ? []
+      : knownLimitations.map((item) => ({
+          category: "Known Limitation",
+          status: "FIELD_REVIEW",
+          message: `${item.area}: ${item.limitation}`,
+          closeWhen: item.closeWhen,
+        }))),
   ];
 }
 
@@ -461,6 +464,7 @@ function main() {
   }
   strictFailureReasons.push(...fieldEvidenceStrictFailures(fieldEvidenceSummary));
   const residualFieldGates = buildResidualFieldGates({
+    canMarkGoalComplete,
     strictFailureReasons,
     openManualEvidence,
     fieldEvidenceOpenItems,
