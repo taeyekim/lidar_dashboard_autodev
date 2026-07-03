@@ -84,6 +84,23 @@ function buildManualEvidenceActions() {
   }));
 }
 
+function buildFieldRehearsalFollowUpActions(completion) {
+  const followUps = completion?.data?.fieldRehearsalFollowUps;
+  if (!Array.isArray(followUps)) return [];
+  return followUps.map((item) => ({
+    type: item.type || "unknown",
+    evidenceType: item.evidenceType || "UNKNOWN",
+    owner: item.replacementOwner || "unknown",
+    targetRecheckDate: item.targetRecheckDate || "unknown",
+    ownerStatus: item.ownerStatus || "unknown",
+    recheckStatus: item.recheckStatus || "unknown",
+    reason: item.reason || "unknown",
+    manifestPath: item.manifestPath || null,
+    nextAction: `Confirm ${item.type || "field rehearsal"} with ${item.replacementOwner || "the assigned owner"} by ${item.targetRecheckDate || "the target recheck date"}.`,
+    doneWhen: `${item.type || "Field rehearsal"} has a PASS manifest or an approved replacement evidence record after recheck.`,
+  }));
+}
+
 function buildClosurePlan(options = {}) {
   const handover = readLatestJsonManifest("artifacts/handover-index");
   const completion = readLatestJsonManifest("artifacts/completion-audit");
@@ -99,6 +116,7 @@ function buildClosurePlan(options = {}) {
     : [];
   const fieldReadinessOpenChecks = buildFieldReadinessOpenChecks(fieldReadiness);
   const manualEvidenceActions = buildManualEvidenceActions();
+  const fieldRehearsalFollowUpActions = buildFieldRehearsalFollowUpActions(completion);
   const actions = openEntries.map(actionForEntry);
 
   return {
@@ -120,11 +138,13 @@ function buildClosurePlan(options = {}) {
       completionBlockerCount: completionBlockers.length,
       requiredFieldValueCount: requiredFieldValues.length,
       fieldReadinessOpenCheckCount: fieldReadinessOpenChecks.length,
+      fieldRehearsalFollowUpCount: fieldRehearsalFollowUpActions.length,
       manualEvidenceMissingCount: manualEvidenceActions.filter((item) => item.status !== "PRESENT").length,
     },
     completionBlockers,
     requiredFieldValues,
     fieldReadinessOpenChecks,
+    fieldRehearsalFollowUpActions,
     manualEvidenceActions,
     actions,
     finalCommands: [
@@ -159,6 +179,7 @@ function buildMarkdown(manifest) {
     `- Completion blockers: ${manifest.counts.completionBlockerCount}`,
     `- Required field values: ${manifest.counts.requiredFieldValueCount}`,
     `- Field readiness open checks: ${manifest.counts.fieldReadinessOpenCheckCount}`,
+    `- Field rehearsal follow-ups: ${manifest.counts.fieldRehearsalFollowUpCount}`,
     `- Manual evidence missing: ${manifest.counts.manualEvidenceMissingCount}`,
     "",
     "## Actions",
@@ -200,6 +221,17 @@ function buildMarkdown(manifest) {
             `| ${tableValue(check.status)} | ${tableValue(check.severity)} | ${tableValue(check.name)} | ${tableValue(check.message)} | ${tableValue(check.nextAction)} | ${tableValue(check.evidenceCommand)} | ${tableValue(check.doneWhen)} |`,
         )
       : ["| none | n/a | n/a | n/a | n/a | n/a | n/a |"]),
+    "",
+    "## Field Rehearsal Follow-up Actions",
+    "",
+    "| Type | Evidence | Owner | Recheck Date | Owner Status | Recheck Status | Reason | Next Action | Done When | Manifest |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    ...(manifest.fieldRehearsalFollowUpActions.length > 0
+      ? manifest.fieldRehearsalFollowUpActions.map(
+          (item) =>
+            `| ${tableValue(item.type)} | ${tableValue(item.evidenceType)} | ${tableValue(item.owner)} | ${tableValue(item.targetRecheckDate)} | ${tableValue(item.ownerStatus)} | ${tableValue(item.recheckStatus)} | ${tableValue(item.reason)} | ${tableValue(item.nextAction)} | ${tableValue(item.doneWhen)} | ${item.manifestPath ? `\`${tableValue(item.manifestPath)}\`` : "missing"} |`,
+        )
+      : ["| none | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |"]),
     "",
     "## Manual Evidence Actions",
     "",
