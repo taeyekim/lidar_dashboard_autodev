@@ -104,6 +104,7 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "strictFailureReasons",
   "canMarkGoalComplete",
   "security evidence",
+  "no residual field gates",
   "fresh delivery/readiness/security/index/closure references",
   "DRY_RUN/LIVE command separation",
   "HTTP bridge diagnostics",

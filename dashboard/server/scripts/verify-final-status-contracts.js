@@ -46,16 +46,19 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [deliveryRunbook, "canMarkGoalComplete", "delivery runbook"],
   [deliveryRunbook, "Residual Field Gates", "delivery runbook"],
   [deliveryRunbook, "verify:final-status", "delivery runbook"],
-  [deliveryRunbook, "fresh delivery/readiness/security/index/", "delivery runbook"],
+  [deliveryRunbook, "delivery/readiness/security/index/closure references", "delivery runbook"],
+  [deliveryRunbook, "a security evidence manifest", "delivery runbook"],
   [acceptanceChecklist, "canMarkGoalComplete=false", "acceptance checklist"],
   [acceptanceChecklist, "npm run verify:final-status", "acceptance checklist"],
   [acceptanceChecklist, "fresh referenced artifacts", "acceptance checklist"],
+  [acceptanceChecklist, "a security evidence manifest", "acceptance checklist"],
   [matrix, "canMarkGoalComplete", "delivery evidence matrix"],
   [matrix, "field readiness", "delivery evidence matrix"],
   [matrix, "LIVE_TCP_READY", "delivery evidence matrix"],
   [matrix, "strictAcceptanceBlocked", "delivery evidence matrix"],
   [matrix, "manual evidence", "delivery evidence matrix"],
   [matrix, "latest referenced artifacts", "delivery evidence matrix"],
+  [matrix, "no residual field gates", "delivery evidence matrix"],
   [matrix, "Final Status", "delivery evidence matrix"],
 ].forEach(([content, token, label]) => assertIncludes(content, token, label));
 
@@ -66,6 +69,14 @@ const latestSecurity = readLatestJsonManifest("artifacts/security");
 const latestDelivery = readLatestJsonManifest("artifacts/delivery");
 const latestIndex = readLatestJsonManifest("artifacts/handover-index");
 const latestClosurePlan = readLatestJsonManifest("artifacts/field-closure-plan");
+
+function finalClaimsReady() {
+  return (
+    latestCompletion?.data?.canMarkGoalComplete === true ||
+    latestPackage?.data?.status === "READY" ||
+    latestPackage?.data?.canMarkGoalComplete === true
+  );
+}
 
 function hasOpenRequiredFieldValue(item) {
   const state = String(item.state || "").toLowerCase();
@@ -134,13 +145,13 @@ if (latestReadiness) {
   }
 }
 
+if (finalClaimsReady()) {
+  assert(latestSecurity, "READY/COMPLETE final status requires security evidence manifest");
+}
+
 if (latestSecurity) {
   const data = latestSecurity.data || {};
-  const finalClaimsReady =
-    latestCompletion?.data?.canMarkGoalComplete === true ||
-    latestPackage?.data?.status === "READY" ||
-    latestPackage?.data?.canMarkGoalComplete === true;
-  if (data.options?.requireScanners === true && finalClaimsReady) {
+  if (data.options?.requireScanners === true && finalClaimsReady()) {
     assert(
       data.strictAcceptanceBlocked === false,
       "required scanner security evidence must not be strictAcceptanceBlocked",
@@ -159,11 +170,11 @@ if (latestPackage) {
     assert(data.evidenceRefs?.delivery === latestDelivery?.path, "READY package must reference latest delivery evidence");
     assert(data.evidenceRefs?.completionAudit === latestCompletion?.path, "READY package must reference latest completion audit");
     assert(data.evidenceRefs?.fieldReadiness === latestReadiness?.path, "READY package must reference latest field readiness");
-    if (latestSecurity) {
-      assert(data.evidenceRefs?.securityEvidence === latestSecurity.path, "READY package must reference latest security evidence");
-    }
+    assert(latestSecurity, "READY package requires latest security evidence");
+    assert(data.evidenceRefs?.securityEvidence === latestSecurity.path, "READY package must reference latest security evidence");
     assert(data.evidenceRefs?.handoverIndex === latestIndex?.path, "READY package must reference latest handover index");
     assert(data.evidenceRefs?.fieldClosurePlan === latestClosurePlan?.path, "READY package must reference latest field closure plan");
+    assert(data.residualFieldGates.length === 0, "READY handover package must have no residual field gates");
   }
   if (!data.canMarkGoalComplete || data.status !== "READY") {
     assert(
