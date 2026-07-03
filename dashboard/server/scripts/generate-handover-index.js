@@ -52,6 +52,29 @@ function indexEntry(entry) {
   };
 }
 
+function manualEvidenceEntries() {
+  const entries = [
+    {
+      area: "Operator UI Walkthrough",
+      path: "artifacts/manual/operator-ui-walkthrough.md",
+      template: "docs/ops/operator-ui-walkthrough-template.md",
+      required: true,
+      notes: "Browser walkthrough evidence for login, dashboard, DRY_RUN/LIVE_TCP, event detail, devices, realtime state, statistics, and Swagger.",
+    },
+    {
+      area: "Field Risk Acceptance",
+      path: "artifacts/manual/field-risk-acceptance.md",
+      template: "docs/ops/field-risk-acceptance-template.md",
+      required: true,
+      notes: "Reviewer decision for accepted trusted-LAN, scanner, Swagger, HTTPS cookie, dry-run, or unavailable-hardware risks.",
+    },
+  ];
+  return entries.map((entry) => ({
+    ...entry,
+    status: fs.existsSync(path.join(root, entry.path)) ? "PRESENT" : "MISSING",
+  }));
+}
+
 function buildIndexManifest(options = {}) {
   const entries = [
     {
@@ -169,6 +192,8 @@ function buildIndexManifest(options = {}) {
   );
   const completion = entries.find((entry) => entry.area === "Completion Audit");
   const completionManifest = completion?.manifestPath ? readLatestJsonManifest("artifacts/completion-audit") : null;
+  const manualEvidence = manualEvidenceEntries();
+  const missingManualEvidence = manualEvidence.filter((entry) => entry.required && entry.status === "MISSING");
   const controlBoardSafetyStatus =
     fieldReadinessEntry?.controlBoardSafetyStatus ||
     completionManifest?.data?.controlBoardSafetyStatus ||
@@ -188,9 +213,13 @@ function buildIndexManifest(options = {}) {
       staleEntryCount: staleEntries.length,
       reviewEntryCount: reviewEntries.length,
       attachableManifestCount: entries.filter((entry) => entry.attach).length,
+      manualEvidenceCount: manualEvidence.length,
+      missingManualEvidenceCount: missingManualEvidence.length,
     },
     entries,
+    manualEvidence,
     missingRequiredAreas: missingRequired.map((entry) => entry.area),
+    missingManualEvidenceAreas: missingManualEvidence.map((entry) => entry.area),
     staleAreas: staleEntries.map((entry) => entry.area),
     reviewAreas: reviewEntries.map((entry) => entry.area),
     consistencyIssues,
@@ -216,6 +245,8 @@ function buildMarkdown(manifest) {
     `- Missing required entries: ${manifest.counts.missingRequiredCount}`,
     `- Stale entries: ${manifest.counts.staleEntryCount}`,
     `- Review entries: ${manifest.counts.reviewEntryCount}`,
+    `- Manual evidence: ${manifest.counts.manualEvidenceCount}`,
+    `- Missing manual evidence: ${manifest.counts.missingManualEvidenceCount}`,
     "",
     "## Evidence Entries",
     "",
@@ -225,9 +256,21 @@ function buildMarkdown(manifest) {
       `| ${entry.area} | ${entry.status} | ${entry.required ? "yes" : "no"} | ${entry.controlBoardSafetyStatus || "-"} | ${entry.manifestPath ? `\`${entry.manifestPath}\`` : "missing"} | \`${entry.command}\` |`,
     ),
     "",
+    "## Manual Evidence Entries",
+    "",
+    "| Area | Status | Required | Path | Template |",
+    "| --- | --- | --- | --- | --- |",
+    ...manifest.manualEvidence.map((entry) =>
+      `| ${entry.area} | ${entry.status} | ${entry.required ? "yes" : "no"} | \`${entry.path}\` | \`${entry.template}\` |`,
+    ),
+    "",
     "## Missing Required Areas",
     "",
     ...(manifest.missingRequiredAreas.length > 0 ? manifest.missingRequiredAreas.map((area) => `- ${area}`) : ["- none"]),
+    "",
+    "## Missing Manual Evidence",
+    "",
+    ...(manifest.missingManualEvidenceAreas.length > 0 ? manifest.missingManualEvidenceAreas.map((area) => `- ${area}`) : ["- none"]),
     "",
     "## Stale Areas",
     "",
