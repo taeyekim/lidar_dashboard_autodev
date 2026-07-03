@@ -134,11 +134,12 @@ const readyGit = {
   upstreamCommit: "fixture",
   pushed: true,
 };
+const readyEvidenceGit = { ...readyGit };
 
 const readyEvidence = {
   delivery: {
     path: "artifacts/delivery/20260101-000000/manifest.json",
-    data: { git: { branch: "dev", commit: "fixture", clean: true } },
+    data: { git: readyEvidenceGit },
   },
   completionAudit: {
     path: "artifacts/completion-audit/20260101-000000/manifest.json",
@@ -219,7 +220,7 @@ const readyEvidence = {
       readyForFinalClose: true,
       missingCount: 0,
       invalidCount: 0,
-      git: { branch: "dev", commit: "fixture", clean: true },
+      git: readyEvidenceGit,
     },
   },
   fieldRiskRegister: {
@@ -228,7 +229,7 @@ const readyEvidence = {
   },
   fieldActionBoard: {
     path: "artifacts/field-action-board/20260101-000000/manifest.json",
-    data: { status: "READY_TO_CLOSE", openActionCount: 0, git: { branch: "dev", commit: "fixture", clean: true } },
+    data: { status: "READY_TO_CLOSE", openActionCount: 0, git: readyEvidenceGit },
   },
   fieldGateClosureMap: {
     path: "artifacts/field-gate-closure-map/20260101-000000/manifest.json",
@@ -236,12 +237,12 @@ const readyEvidence = {
       status: "READY_TO_CLOSE",
       commandCount: 0,
       openGateCount: 0,
-      git: { branch: "dev", commit: "fixture", clean: true },
+      git: readyEvidenceGit,
     },
   },
   fieldOwnerBriefs: {
     path: "artifacts/field-owner-briefs/20260101-000000/manifest.json",
-    data: { status: "READY_TO_CLOSE", ownerCount: 0, openItemCount: 0, git: { branch: "dev", commit: "fixture", clean: true } },
+    data: { status: "READY_TO_CLOSE", ownerCount: 0, openItemCount: 0, git: readyEvidenceGit },
   },
 };
 
@@ -251,7 +252,7 @@ readyEvidence.handoverPackage = {
     status: "READY",
     canMarkGoalComplete: true,
     baseUrl: "http://field.local:8080",
-    git: { branch: "dev", commit: "fixture", clean: true },
+    git: readyEvidenceGit,
     residualFieldGates: [],
     strictFailureReasons: [],
     evidenceRefs: {
@@ -323,7 +324,10 @@ assert(
 );
 assert(buildMarkdown(ready).includes("READY_TO_CLOSE"), "markdown should include READY_TO_CLOSE");
 assert(buildMarkdown(ready).includes("Source Revision Freshness"), "markdown should include source revision freshness");
-assert(buildMarkdown(ready).includes("| Evidence | Path | Branch | Evidence Commit | Final Status Commit | Clean | Fresh |"), "markdown should include source revision branch");
+assert(
+  buildMarkdown(ready).includes("| Evidence | Path | Branch | Upstream | Evidence Commit | Upstream Commit | Final Status Commit | Clean | Pushed | Fresh |"),
+  "markdown should include source revision upstream and pushed state",
+);
 assert(buildMarkdown(ready).includes("Delivery Entrypoint Consistency"), "markdown should include delivery entrypoint consistency");
 assert(buildMarkdown(ready).includes("Field Acceptance"), "markdown should include field acceptance summary");
 assert(buildMarkdown(ready).includes("Git pushed to origin/dev: yes"), "markdown should include git push state");
@@ -398,6 +402,34 @@ assert(
     (item) => item.category !== "Evidence Source Revision" || item.actionType === "AUTOMATED_REFRESH_AVAILABLE",
   ),
   "stale source revision gates should be automated refresh actions",
+);
+
+const unpushedEvidenceRevision = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    handoverPackage: {
+      ...readyEvidence.handoverPackage,
+      data: {
+        ...readyEvidence.handoverPackage.data,
+        git: { branch: "dev", commit: "fixture", clean: true, upstream: "origin/dev", upstreamCommit: "older-fixture", pushed: false },
+      },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
+  git: readyGit,
+});
+
+assert(unpushedEvidenceRevision.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "unpushed evidence revision fixture should require review");
+assert(
+  unpushedEvidenceRevision.remainingGates.some(
+    (item) =>
+      item.category === "Evidence Source Revision" &&
+      item.message.includes("handoverPackage") &&
+      item.message.includes("was not proven pushed to origin/dev"),
+  ),
+  "unpushed evidence revision fixture should expose evidence push freshness gate",
 );
 
 const wrongEvidenceBranch = buildFinalStatusReport({

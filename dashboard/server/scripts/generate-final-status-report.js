@@ -240,6 +240,10 @@ function sourceGitFreshness(evidenceRefs, reportGit) {
       actualCommit: value.data.git.commit,
       branch: value.data.git.branch || null,
       branchOk: value.data.git.branch === "dev",
+      upstream: value.data.git.upstream || null,
+      upstreamCommit: value.data.git.upstreamCommit || null,
+      upstreamOk: value.data.git.upstream === "origin/dev",
+      pushed: value.data.git.pushed === true,
       clean: value.data.git.clean === true,
       fresh: Boolean(reportGit?.commit && value.data.git.commit === reportGit.commit),
     }));
@@ -601,11 +605,13 @@ function buildFinalStatusReport(input = {}) {
   }
 
   sourceRevisionFreshness
-    .filter((item) => !item.fresh || !item.clean || !item.branchOk)
+    .filter((item) => !item.fresh || !item.clean || !item.branchOk || !item.upstreamOk || !item.pushed)
     .forEach((item) => {
       const reasons = [
         !item.fresh ? `commit ${item.actualCommit} does not match final status commit ${item.expectedCommit}` : "",
         !item.branchOk ? `evidence branch ${item.branch || "missing"} is not dev` : "",
+        !item.upstreamOk ? `evidence upstream ${item.upstream || "missing"} is not origin/dev` : "",
+        !item.pushed ? `evidence commit ${item.actualCommit || "missing"} was not proven pushed to origin/dev ${item.upstreamCommit || "missing"}` : "",
         !item.clean ? "source evidence was generated with a dirty working tree" : "",
       ].filter(Boolean).join("; ");
       addGate(
@@ -782,14 +788,14 @@ function buildMarkdown(manifest) {
     "",
     "## Source Revision Freshness",
     "",
-    "| Evidence | Path | Branch | Evidence Commit | Final Status Commit | Clean | Fresh |",
-    "| --- | --- | --- | --- | --- | --- | --- |",
+    "| Evidence | Path | Branch | Upstream | Evidence Commit | Upstream Commit | Final Status Commit | Clean | Pushed | Fresh |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(manifest.sourceRevisionFreshness.length > 0
       ? manifest.sourceRevisionFreshness.map(
           (item) =>
-            `| ${markdownCell(item.key)} | ${item.path ? `\`${markdownCell(item.path)}\`` : "missing"} | ${markdownCell(item.branch || "missing")} | ${markdownCell(item.actualCommit)} | ${markdownCell(item.expectedCommit)} | ${item.clean ? "yes" : "no"} | ${item.fresh && item.branchOk ? "yes" : "no"} |`,
+            `| ${markdownCell(item.key)} | ${item.path ? `\`${markdownCell(item.path)}\`` : "missing"} | ${markdownCell(item.branch || "missing")} | ${markdownCell(item.upstream || "missing")} | ${markdownCell(item.actualCommit)} | ${markdownCell(item.upstreamCommit || "missing")} | ${markdownCell(item.expectedCommit)} | ${item.clean ? "yes" : "no"} | ${item.pushed ? "yes" : "no"} | ${item.fresh && item.branchOk && item.upstreamOk && item.pushed ? "yes" : "no"} |`,
         )
-      : ["| none | - | - | - | - | - | - |"]),
+      : ["| none | - | - | - | - | - | - | - | - | - |"]),
     "",
     "## Delivery Entrypoint Consistency",
     "",
