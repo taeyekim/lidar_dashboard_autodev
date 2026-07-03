@@ -5,6 +5,9 @@ const { spawnSync } = require("child_process");
 
 const {
   readLatestJsonManifest,
+  summarizeFieldAcceptance,
+  summarizeFieldPreflight,
+  summarizeFieldRehearsal,
   timestampForPath,
 } = require("./generate-delivery-evidence");
 
@@ -92,6 +95,16 @@ function latestControlBoardSafetyStatus() {
   );
 }
 
+function buildFieldEvidenceSummary() {
+  return [
+    summarizeFieldPreflight("Field Preflight", "artifacts/field-preflight"),
+    summarizeFieldAcceptance("Field Acceptance", "artifacts/field-acceptance"),
+    summarizeFieldRehearsal("DB And Prisma", "artifacts/field-db-rehearsal"),
+    summarizeFieldRehearsal("Lidar Ingest", "artifacts/field-lidar-rehearsal"),
+    summarizeFieldRehearsal("Control Board TCP", "artifacts/field-control-board-rehearsal"),
+  ];
+}
+
 function buildMarkdown(manifest) {
   return [
     "# Handover Package",
@@ -119,6 +132,15 @@ function buildMarkdown(manifest) {
     `- Control-board field rehearsal: ${manifest.evidenceRefs.controlBoardFieldRehearsal || "missing"}`,
     `- Runtime evidence: ${manifest.evidenceRefs.runtimeEvidence || "missing"}`,
     `- Security evidence: ${manifest.evidenceRefs.securityEvidence || "missing"}`,
+    "",
+    "## Field Evidence Summary",
+    "",
+    "| Type | Manifest | PASS | REVIEW | SKIPPED |",
+    "| --- | --- | --- | --- | --- |",
+    ...manifest.fieldEvidenceSummary.map(
+      (item) =>
+        `| ${item.type} | ${item.manifestPath ? `\`${item.manifestPath}\`` : "missing"} | ${item.passCount || 0} | ${item.reviewCount || 0} | ${item.skippedCount || 0} |`,
+    ),
     "",
     "## Commands",
     "",
@@ -169,6 +191,7 @@ function main() {
   const packageStatus = failedCommands.length > 0 ? "FAILED" : handoverIndex?.data?.status || "UNKNOWN";
   const canMarkGoalComplete = Boolean(completion?.data?.canMarkGoalComplete);
   const controlBoardSafetyStatus = latestControlBoardSafetyStatus();
+  const fieldEvidenceSummary = buildFieldEvidenceSummary();
   const strictFailureReasons = [];
   if (failedCommands.length > 0) {
     strictFailureReasons.push(`${failedCommands.length} package command(s) failed.`);
@@ -199,6 +222,7 @@ function main() {
       logFile: writeCommandLog(outputDir, item),
     })),
     evidenceRefs,
+    fieldEvidenceSummary,
     failedCommandCount: failedCommands.length,
     strictFailureReasons,
   };
