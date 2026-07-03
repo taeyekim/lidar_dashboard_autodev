@@ -90,5 +90,6 @@ export function useRealtimeSocket({
     };
   }, [enabled, url]);
 
-  return { status };
+  const effectiveStatus = enabled && url ? status : "DISABLED";
+  return { status: effectiveStatus };
 }

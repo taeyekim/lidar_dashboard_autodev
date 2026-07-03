@@ -55,6 +55,7 @@ const frontendFilesToCheck = [
   ["dashboard/dashboard-web/src/shared/realtime/useRealtimeSocket.js", [
     "RECONNECT_DELAYS_MS",
     "setTimeout(connect, delay)",
+    'enabled && url ? status : "DISABLED"',
     'setStatus("RECONNECTING")',
     "JSON.parse(event.data)",
   ]],

@@ -81,6 +81,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Devices page loads `/api/devices` data and marks empty/unconfigured state clearly.
 - [ ] Event Log and Devices page show WebSocket connected/degraded state while polling fallback remains active.
 - [ ] Event Log receives realtime updates through `/ws` when Nginx is the browser entrypoint.
+- [ ] WebSocket disabled or missing URL state is shown as disabled/degraded, never as connected.
 
 ## Swagger/API
 
