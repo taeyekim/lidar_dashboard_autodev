@@ -42,6 +42,7 @@ function latestEvidenceRefs() {
     lidarFieldRehearsal: readLatestJsonManifest("artifacts/field-lidar-rehearsal"),
     controlBoardFieldRehearsal: readLatestJsonManifest("artifacts/field-control-board-rehearsal"),
     runtimeEvidence: readLatestJsonManifest("artifacts/runtime"),
+    manualEvidenceReadiness: readLatestJsonManifest("artifacts/manual-evidence-readiness"),
   };
 }
 
@@ -180,6 +181,8 @@ function buildFinalStatusReport(input = {}) {
   const completionData = completion?.data || {};
   const readinessData = readiness?.data || {};
   const packageData = handoverPackage?.data || {};
+  const manualReadiness = evidenceRefs.manualEvidenceReadiness;
+  const manualReadinessData = manualReadiness?.data || {};
   const securitySummary = buildSecuritySummary(security);
   const manualEvidenceSummary = buildManualEvidenceSummary(manualEvidence);
   const referenceFreshness = refsAreFresh(handoverPackage, evidenceRefs);
@@ -222,6 +225,25 @@ function buildFinalStatusReport(input = {}) {
     .forEach((item) => {
       addGate(gates, "Manual Evidence", item.status, `${item.type} evidence is ${item.status}. ${item.validationReason}`.trim(), item.doneWhen, item.path);
     });
+  if (!manualReadiness) {
+    addGate(
+      gates,
+      "Manual Evidence Readiness",
+      "MISSING",
+      "Manual evidence readiness report is missing.",
+      "Run npm.cmd run manual:evidence-readiness and review the generated checklist.",
+      null,
+    );
+  } else if (manualReadinessData.readyForFinalClose !== true) {
+    addGate(
+      gates,
+      "Manual Evidence Readiness",
+      manualReadinessData.status || "REVIEW",
+      `Manual evidence readiness is ${manualReadinessData.status || "REVIEW"} with missing=${manualReadinessData.missingCount ?? "unknown"} invalid=${manualReadinessData.invalidCount ?? "unknown"}.`,
+      "Fill or repair required manual evidence and rerun npm.cmd run manual:evidence-readiness.",
+      evidencePath(manualReadiness),
+    );
+  }
 
   if (!handoverPackage) {
     addGate(gates, "Handover Package", "MISSING", "Latest handover package manifest is missing.", "Run npm.cmd run handover:package -- --base-url=<delivery-url>.", null);
@@ -272,6 +294,13 @@ function buildFinalStatusReport(input = {}) {
       controlBoardSafetyStatus: readinessData.env?.controlBoardSafetyStatus || "UNKNOWN",
     },
     securityEvidence: securitySummary,
+    manualEvidenceReadiness: {
+      path: evidencePath(manualReadiness),
+      status: manualReadinessData.status || "MISSING",
+      readyForFinalClose: manualReadinessData.readyForFinalClose === true,
+      missingCount: manualReadinessData.missingCount ?? null,
+      invalidCount: manualReadinessData.invalidCount ?? null,
+    },
     handoverPackage: {
       path: evidencePath(handoverPackage),
       status: packageData.status || "MISSING",
@@ -313,6 +342,7 @@ function buildMarkdown(manifest) {
     `- Field readiness: ${manifest.fieldReadiness.status} (${manifest.fieldReadiness.path || "missing"})`,
     `- Control-board safety: ${manifest.fieldReadiness.controlBoardSafetyStatus}`,
     `- Security evidence: ${manifest.securityEvidence.exists ? "present" : "missing"} (${manifest.securityEvidence.path || "missing"})`,
+    `- Manual evidence readiness: ${manifest.manualEvidenceReadiness.status} (${manifest.manualEvidenceReadiness.path || "missing"})`,
     `- Handover package: ${manifest.handoverPackage.status} (${manifest.handoverPackage.path || "missing"})`,
     `- Remaining gate count: ${manifest.gateSummary.total}`,
     "",

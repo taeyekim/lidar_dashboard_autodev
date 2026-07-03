@@ -74,6 +74,10 @@ const readyEvidence = {
   },
   handoverIndex: { path: "artifacts/handover-index/20260101-000000/manifest.json", data: { status: "READY" } },
   fieldClosurePlan: { path: "artifacts/field-closure-plan/20260101-000000/manifest.json", data: { status: "CLOSED" } },
+  manualEvidenceReadiness: {
+    path: "artifacts/manual-evidence-readiness/20260101-000000/manifest.json",
+    data: { status: "READY", readyForFinalClose: true, missingCount: 0, invalidCount: 0 },
+  },
 };
 
 readyEvidence.handoverPackage = {
@@ -123,6 +127,10 @@ assert(
 assert(
   missing.remainingGates.some((item) => item.category === "Security Evidence" && item.status === "MISSING"),
   "missing fixture should expose missing security evidence",
+);
+assert(
+  missing.remainingGates.some((item) => item.category === "Manual Evidence Readiness" && item.status === "MISSING"),
+  "missing fixture should expose missing manual evidence readiness",
 );
 assert(
   missing.gateActionRunbook.some((item) => item.actionType === "AUTOMATED_REFRESH_AVAILABLE"),
