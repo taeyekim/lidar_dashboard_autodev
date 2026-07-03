@@ -30,6 +30,14 @@ function gitValue(args) {
 function commandCatalog(baseUrl) {
   return [
     {
+      id: "manual-evidence-drafts",
+      phase: "Manual Evidence",
+      actionTypes: ["MANUAL_EVIDENCE_REQUIRED"],
+      command: `npm.cmd run manual:evidence-drafts -- --base-url=${baseUrl} --site-name="delivery-site-name" --reviewer="field-reviewer-name"`,
+      purpose: "Create missing reviewer-fillable manual evidence drafts without overwriting existing evidence.",
+      doneWhen: "Draft files exist under artifacts/manual/ and are ready for reviewer completion.",
+    },
+    {
       id: "manual-evidence-readiness",
       phase: "Manual Evidence",
       actionTypes: ["MANUAL_EVIDENCE_REQUIRED"],

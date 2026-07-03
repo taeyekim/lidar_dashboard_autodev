@@ -49,6 +49,8 @@ npm.cmd run delivery:evidence
 npm.cmd run completion:audit
 npm.cmd run handover:index
 npm.cmd run field:closure-plan
+npm.cmd run manual:evidence-drafts -- --base-url=http://localhost:8080 --site-name="delivery-site-name" --reviewer="field-reviewer-name"
+npm.cmd run manual:evidence-readiness
 npm.cmd run field:readiness -- --base-url=http://localhost:8080
 npm.cmd run handover:package
 npm.cmd run final:status -- --base-url=http://localhost:8080
@@ -157,7 +159,15 @@ list for unavailable DB, LiDAR, and control-board rehearsal evidence; each row
 must show the owner, target recheck date, next action, done-when condition, and
 source manifest.
 
-Before the final handover package, run `npm.cmd run manual:evidence-readiness`.
+Before the final handover package, run
+`npm.cmd run manual:evidence-drafts -- --base-url=http://localhost:8080 --site-name="delivery-site-name" --reviewer="field-reviewer-name"`
+when `artifacts/manual/operator-ui-walkthrough.md` or
+`artifacts/manual/field-risk-acceptance.md` is missing. It creates reviewer-fillable
+drafts and writes `artifacts/manual-evidence-drafts/<timestamp>/manifest.json`
+plus `manifest.md`. Existing manual evidence files are preserved unless
+`--force` is used after backing up reviewer content.
+
+Then run `npm.cmd run manual:evidence-readiness`.
 It writes `artifacts/manual-evidence-readiness/<timestamp>/manifest.json` plus
 `manifest.md`, summarizing the required manual evidence target files, template
 paths, validation failures, and next actions. This report is a preparation
