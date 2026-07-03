@@ -166,7 +166,7 @@ function gateSummary(gates) {
 function gateActionRunbook(gates) {
   const runbooks = {
     AUTOMATED_REFRESH_AVAILABLE:
-      "Refresh generated evidence with npm.cmd run delivery:evidence, npm.cmd run completion:audit, npm.cmd run handover:package -- --generated-by=<field-reviewer> --site-name=<delivery-site>, then rerun npm.cmd run final:status -- --generated-by=<field-reviewer> --site-name=<delivery-site>.",
+      "Refresh generated evidence with npm.cmd run delivery:evidence, npm.cmd run ci:closeout -- --dispatch --generated-by=<field-reviewer> when CI status is missing or REVIEW, npm.cmd run completion:audit, npm.cmd run handover:package -- --generated-by=<field-reviewer> --site-name=<delivery-site>, then rerun npm.cmd run final:status -- --generated-by=<field-reviewer> --site-name=<delivery-site>.",
     FIELD_ACTION_REQUIRED:
       "Run the field preflight, runtime smoke, DB/LiDAR/control-board rehearsals, field readiness, and field acceptance commands against the delivery Nginx entrypoint and approved hardware/network.",
     MANUAL_EVIDENCE_REQUIRED:
@@ -758,14 +758,14 @@ function buildFinalStatusReport(input = {}) {
   }
 
   if (!ciStatus) {
-    addGate(gates, "CI Status", "MISSING", "Latest CI status evidence manifest is missing.", "Run npm.cmd run ci:status after the final dev push and GitHub Actions completion.", null);
+    addGate(gates, "CI Status", "MISSING", "Latest CI status evidence manifest is missing.", "Run npm.cmd run ci:closeout -- --dispatch after the final dev push to intentionally trigger/wait for GitHub Actions and regenerate ci:status.", null);
   } else if (ciStatusData.status !== "PASS" || ciStatusData.canUseForFinalClose !== true) {
     addGate(
       gates,
       "CI Status",
       ciStatusData.status || "REVIEW",
       `CI status evidence is not PASS for the final source revision: ${(ciStatusData.reviewReasons || []).join("; ") || "review required"}.`,
-      "Confirm the GitHub Actions CI run for the final dev commit completed with conclusion=success, then rerun npm.cmd run ci:status and final:status.",
+      "Run npm.cmd run ci:closeout -- --dispatch to intentionally trigger/wait for the final dev commit CI run when needed, then rerun final:status.",
       evidencePath(ciStatus),
     );
   }

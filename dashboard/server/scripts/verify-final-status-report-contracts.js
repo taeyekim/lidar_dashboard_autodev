@@ -89,6 +89,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "Field Gate Closure Map", "final status report generator"],
   [generator, "Field Owner Briefs", "final status report generator"],
   [generator, "CI Status", "final status report generator"],
+  [generator, "ci:closeout -- --dispatch", "final status report generator"],
   [generator, "openRiskCount", "final status report generator"],
   [generator, "openActionCount", "final status report generator"],
   [generator, "openGateCount", "final status report generator"],
@@ -457,8 +458,56 @@ assert(
   "missing fixture should expose missing LiDAR field rehearsal",
 );
 assert(
+  missing.remainingGates.some((item) => item.category === "CI Status" && item.closeWhen.includes("ci:closeout -- --dispatch")),
+  "missing CI status gate should point to ci:closeout dispatch",
+);
+assert(
   missing.gateActionRunbook.some((item) => item.actionType === "AUTOMATED_REFRESH_AVAILABLE"),
   "missing fixture should expose automated refresh action type",
+);
+assert(
+  missing.gateActionRunbook.some((item) => item.actionType === "AUTOMATED_REFRESH_AVAILABLE" && item.nextAction.includes("ci:closeout")),
+  "automated refresh runbook should mention ci closeout",
+);
+
+const reviewCiStatus = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    ciStatus: {
+      path: "artifacts/ci-status/20260101-010000/manifest.json",
+      data: {
+        status: "REVIEW",
+        canUseForFinalClose: false,
+        git: readyEvidenceGit,
+        latestRun: null,
+        reviewReasons: ["No CI workflow run was found for branch dev."],
+      },
+    },
+    handoverPackage: {
+      ...readyEvidence.handoverPackage,
+      data: {
+        ...readyEvidence.handoverPackage.data,
+        evidenceRefs: {
+          ...readyEvidence.handoverPackage.data.evidenceRefs,
+          ciStatus: "artifacts/ci-status/20260101-010000/manifest.json",
+        },
+      },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "reviewer-a",
+  siteName: "delivery-site",
+  baseUrl: "http://field.local:8080",
+  git: readyGit,
+});
+assert(
+  reviewCiStatus.remainingGates.some((item) => item.category === "CI Status" && item.status === "REVIEW"),
+  "review CI status fixture should expose CI review gate",
+);
+assert(
+  reviewCiStatus.remainingGates.some((item) => item.category === "CI Status" && item.closeWhen.includes("ci:closeout -- --dispatch")),
+  "review CI status gate should point to ci:closeout dispatch",
 );
 
 const dirtySource = buildFinalStatusReport({
