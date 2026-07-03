@@ -122,7 +122,9 @@ Before strict completion, run `npm.cmd run field:readiness -- --base-url=http://
 The readiness report writes `artifacts/field-readiness/<timestamp>/manifest.json`
 and `manifest.md`, checking Docker daemon reachability, Nginx/API health,
 required `.env` posture, control-board TCP mode, Swagger exposure, and optional
-security scanner availability without printing secret values.
+security scanner availability without printing secret values. The control-board
+safety status is recorded as `DRY_RUN_SAFE`, `LIVE_TCP_READY`, or
+`LIVE_TCP_REVIEW`.
 
 For the final attachment refresh, run `npm.cmd run handover:package`. It runs
 `delivery:evidence`, `field:readiness`, `completion:audit`,

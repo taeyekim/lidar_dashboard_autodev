@@ -86,7 +86,8 @@ function buildEnvChecks() {
   const host = envValue(values, "CONTROL_BOARD_HOST");
   const port = envValue(values, "CONTROL_BOARD_PORT");
   const liveReady = dryRun === "false" && host && port;
-  checks.push(buildCheck("control-board TCP mode", liveReady ? "PASS" : "REVIEW", "critical", liveReady ? "LIVE_TCP values are configured." : "Control-board is dry-run or live TCP values are incomplete.", "Set CONTROL_BOARD_DRY_RUN=false only after field IP/port and hardware approval are confirmed."));
+  const safetyStatus = dryRun === "false" ? (liveReady ? "LIVE_TCP_READY" : "LIVE_TCP_REVIEW") : "DRY_RUN_SAFE";
+  checks.push(buildCheck("control-board TCP mode", liveReady ? "PASS" : "REVIEW", "critical", `${safetyStatus}: ${liveReady ? "LIVE_TCP values are configured." : "Control-board is dry-run or live TCP values are incomplete."}`, "Set CONTROL_BOARD_DRY_RUN=false only after field IP/port and hardware approval are confirmed."));
 
   const secureCookie = envValue(values, "AUTH_COOKIE_SECURE").toLowerCase();
   const swaggerAllow = envValue(values, "NGINX_SWAGGER_ALLOW");
@@ -101,6 +102,7 @@ function buildEnvChecks() {
     presentKeyCount: Object.keys(values).length,
     exampleKeyCount: exampleKeys.length,
     missingExampleKeys,
+    controlBoardSafetyStatus: safetyStatus,
     checks,
   };
 }
@@ -175,6 +177,7 @@ function buildMarkdown(manifest) {
     `- Present .env key count: ${manifest.env.presentKeyCount}`,
     `- .env.example key count: ${manifest.env.exampleKeyCount}`,
     `- Missing .env.example keys: ${manifest.env.missingExampleKeys.join(", ") || "none"}`,
+    `- Control-board safety status: ${manifest.env.controlBoardSafetyStatus}`,
     "",
   ].join("\n");
 }

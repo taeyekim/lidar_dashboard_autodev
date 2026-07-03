@@ -496,6 +496,20 @@ try {
   }
   Assert-PropertyExists -Object $controlBoardStatus -Name "averageResponseMs" -Label "Control-board status"
   Assert-NumberProperty -Object $controlBoardStatus -Name "responseSampleCount" -Label "Control-board status"
+  Assert-PropertyExists -Object $controlBoardStatus -Name "liveTcpReady" -Label "Control-board status"
+  Assert-PropertyExists -Object $controlBoardStatus -Name "safetyStatus" -Label "Control-board status"
+  if ($controlBoardStatus.safetyStatus -notin @("DRY_RUN_SAFE", "LIVE_TCP_READY", "LIVE_TCP_REVIEW")) {
+    throw "Control-board status safetyStatus must be DRY_RUN_SAFE, LIVE_TCP_READY, or LIVE_TCP_REVIEW."
+  }
+  if ($controlBoardStatus.mode -eq "DRY_RUN" -and $controlBoardStatus.safetyStatus -ne "DRY_RUN_SAFE") {
+    throw "Control-board DRY_RUN mode must report DRY_RUN_SAFE."
+  }
+  if ($controlBoardStatus.mode -eq "LIVE_TCP" -and $controlBoardStatus.liveTcpReady -and $controlBoardStatus.safetyStatus -ne "LIVE_TCP_READY") {
+    throw "Control-board LIVE_TCP ready state must report LIVE_TCP_READY."
+  }
+  if ($controlBoardStatus.mode -eq "LIVE_TCP" -and !$controlBoardStatus.liveTcpReady -and $controlBoardStatus.safetyStatus -ne "LIVE_TCP_REVIEW") {
+    throw "Control-board LIVE_TCP without host/port readiness must report LIVE_TCP_REVIEW."
+  }
   if ($controlBoardStatus.latestCommand -and !($controlBoardStatus.latestCommand.PSObject.Properties.Name -contains "responseDurationMs")) {
     throw "Control-board status latestCommand did not expose responseDurationMs."
   }
