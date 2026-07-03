@@ -85,6 +85,7 @@ function actionTypeForGate(category, status, message) {
   if (category === "Evidence Source Revision") return "AUTOMATED_REFRESH_AVAILABLE";
   if (category === "Source Code State") return "AUTOMATED_REFRESH_AVAILABLE";
   if (category === "Git Delivery State") return "AUTOMATED_REFRESH_AVAILABLE";
+  if (category === "Delivery Entrypoint") return "FIELD_ACTION_REQUIRED";
   if ((category === "Completion Audit" || category === "Handover Package") && status !== "MISSING") return "REVIEW_REQUIRED";
   if (text.includes("manual evidence") || text.includes("operator ui walkthrough") || text.includes("field risk acceptance")) {
     return "MANUAL_EVIDENCE_REQUIRED";
@@ -221,6 +222,27 @@ function sourceGitFreshness(evidenceRefs, reportGit) {
     }));
 }
 
+function normalizeEndpoint(value) {
+  return String(value || "").trim().replace(/\/+$/, "");
+}
+
+function endpointConsistency(reportBaseUrl, evidenceRefs) {
+  const expected = normalizeEndpoint(reportBaseUrl);
+  return [
+    ["fieldReadiness", evidenceRefs.fieldReadiness?.data?.baseUrl],
+    ["securityEvidence", evidenceRefs.securityEvidence?.data?.targetUrl],
+    ["handoverPackage", evidenceRefs.handoverPackage?.data?.baseUrl],
+    ["runtimeEvidence", evidenceRefs.runtimeEvidence?.data?.options?.baseUrl],
+  ]
+    .filter(([, actual]) => actual)
+    .map(([key, actual]) => ({
+      key,
+      expected: reportBaseUrl,
+      actual,
+      fresh: Boolean(expected && normalizeEndpoint(actual) === expected),
+    }));
+}
+
 function buildFinalStatusReport(input = {}) {
   const evidenceRefs = input.evidenceRefs || latestEvidenceRefs();
   const manualEvidence = input.manualEvidence || manualEvidenceRefs();
@@ -239,6 +261,8 @@ function buildFinalStatusReport(input = {}) {
   const referenceFreshness = refsAreFresh(handoverPackage, evidenceRefs);
   const git = buildGitState(input.git);
   const sourceRevisionFreshness = sourceGitFreshness(evidenceRefs, git);
+  const baseUrl = input.baseUrl || "http://localhost:8080";
+  const deliveryEntrypointConsistency = endpointConsistency(baseUrl, evidenceRefs);
 
   if (git.clean !== true) {
     addGate(
@@ -377,6 +401,19 @@ function buildFinalStatusReport(input = {}) {
       );
     });
 
+  deliveryEntrypointConsistency
+    .filter((item) => !item.fresh)
+    .forEach((item) => {
+      addGate(
+        gates,
+        "Delivery Entrypoint",
+        "MISMATCH",
+        `${item.key} evidence was generated for ${item.actual}, but final status is using ${item.expected}.`,
+        "Regenerate field readiness, security evidence, runtime evidence, and handover package against the same delivery Nginx entrypoint, then rerun npm.cmd run final:status -- --base-url=<delivery-url>.",
+        evidencePath(evidenceRefs[item.key]),
+      );
+    });
+
   const status = gates.length === 0 ? "READY_TO_CLOSE" : "FIELD_OR_SECURITY_REVIEW_REQUIRED";
   const summary = gateSummary(gates);
 
@@ -385,7 +422,7 @@ function buildFinalStatusReport(input = {}) {
     generatedBy: input.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
     siteName: input.siteName || "unspecified",
     hostName: input.hostName || os.hostname(),
-    baseUrl: input.baseUrl || "http://localhost:8080",
+    baseUrl,
     git,
     status,
     canMarkGoalComplete: status === "READY_TO_CLOSE",
@@ -418,6 +455,7 @@ function buildFinalStatusReport(input = {}) {
     evidenceRefs: Object.fromEntries(Object.entries(evidenceRefs).map(([key, value]) => [key, evidencePath(value)])),
     referenceFreshness,
     sourceRevisionFreshness,
+    deliveryEntrypointConsistency,
     manualEvidence: manualEvidenceSummary,
     gateSummary: summary,
     gateActionRunbook: gateActionRunbook(gates),
@@ -503,6 +541,17 @@ function buildMarkdown(manifest) {
             `| ${markdownCell(item.key)} | ${item.path ? `\`${markdownCell(item.path)}\`` : "missing"} | ${markdownCell(item.actualCommit)} | ${markdownCell(item.expectedCommit)} | ${item.clean ? "yes" : "no"} | ${item.fresh ? "yes" : "no"} |`,
         )
       : ["| none | - | - | - | - | - |"]),
+    "",
+    "## Delivery Entrypoint Consistency",
+    "",
+    "| Evidence | Final Status Base URL | Evidence URL | Match |",
+    "| --- | --- | --- | --- |",
+    ...(manifest.deliveryEntrypointConsistency.length > 0
+      ? manifest.deliveryEntrypointConsistency.map(
+          (item) =>
+            `| ${markdownCell(item.key)} | ${markdownCell(item.expected)} | ${markdownCell(item.actual)} | ${item.fresh ? "yes" : "no"} |`,
+        )
+      : ["| none | - | - | - |"]),
     "",
     "## Manual Evidence",
     "",

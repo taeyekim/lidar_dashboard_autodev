@@ -45,6 +45,11 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "sourceRevisionFreshness", "final status report generator"],
   [generator, "Source Code State", "final status report generator"],
   [generator, "Evidence Source Revision", "final status report generator"],
+  [generator, "Delivery Entrypoint", "final status report generator"],
+  [generator, "deliveryEntrypointConsistency", "final status report generator"],
+  [generator, "endpointConsistency", "final status report generator"],
+  [generator, "targetUrl", "final status report generator"],
+  [generator, "Delivery Entrypoint Consistency", "final status report generator"],
   [generator, "Git Delivery State", "final status report generator"],
   [generator, "origin/dev", "final status report generator"],
   [generator, "WRONG_BRANCH", "final status report generator"],
@@ -70,11 +75,14 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [acceptanceChecklist, "npm run final:status", "acceptance checklist"],
   [acceptanceChecklist, "artifacts/final-status", "acceptance checklist"],
   [acceptanceChecklist, "Git Delivery State", "acceptance checklist"],
+  [acceptanceChecklist, "Delivery Entrypoint Consistency", "acceptance checklist"],
   [acceptanceChecklist, "WRONG_BRANCH", "acceptance checklist"],
   [acceptanceChecklist, "WRONG_UPSTREAM", "acceptance checklist"],
   [acceptanceChecklist, "UNPUSHED", "acceptance checklist"],
   [matrix, "artifacts/final-status", "delivery evidence matrix"],
   [matrix, "Git Delivery State", "delivery evidence matrix"],
+  [matrix, "Delivery Entrypoint Consistency", "delivery evidence matrix"],
+  [matrix, "MISMATCH", "delivery evidence matrix"],
   [matrix, "pushed to `origin/dev`", "delivery evidence matrix"],
   [matrix, "artifacts/field-risk-register", "delivery evidence matrix"],
   [matrix, "artifacts/field-action-board", "delivery evidence matrix"],
@@ -107,11 +115,11 @@ const readyEvidence = {
   },
   fieldReadiness: {
     path: "artifacts/field-readiness/20260101-000000/manifest.json",
-    data: { status: "PASS", env: { controlBoardSafetyStatus: "LIVE_TCP_READY" } },
+    data: { status: "PASS", baseUrl: "http://field.local:8080", env: { controlBoardSafetyStatus: "LIVE_TCP_READY" } },
   },
   securityEvidence: {
     path: "artifacts/security/20260101-000000/manifest.json",
-    data: { options: { requireScanners: true }, strictAcceptanceBlocked: false },
+    data: { targetUrl: "http://field.local:8080", options: { requireScanners: true }, strictAcceptanceBlocked: false },
   },
   handoverIndex: { path: "artifacts/handover-index/20260101-000000/manifest.json", data: { status: "READY" } },
   fieldClosurePlan: { path: "artifacts/field-closure-plan/20260101-000000/manifest.json", data: { status: "CLOSED" } },
@@ -153,6 +161,7 @@ readyEvidence.handoverPackage = {
   data: {
     status: "READY",
     canMarkGoalComplete: true,
+    baseUrl: "http://field.local:8080",
     git: { branch: "dev", commit: "fixture", clean: true },
     residualFieldGates: [],
     strictFailureReasons: [],
@@ -176,6 +185,7 @@ const ready = buildFinalStatusReport({
   evidenceRefs: readyEvidence,
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
   git: readyGit,
 });
 
@@ -205,12 +215,14 @@ assert(
 );
 assert(buildMarkdown(ready).includes("READY_TO_CLOSE"), "markdown should include READY_TO_CLOSE");
 assert(buildMarkdown(ready).includes("Source Revision Freshness"), "markdown should include source revision freshness");
+assert(buildMarkdown(ready).includes("Delivery Entrypoint Consistency"), "markdown should include delivery entrypoint consistency");
 assert(buildMarkdown(ready).includes("Git pushed to origin/dev: yes"), "markdown should include git push state");
 
 const missing = buildFinalStatusReport({
   evidenceRefs: {},
   manualEvidence: [],
   generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
   git: readyGit,
 });
 
@@ -237,6 +249,7 @@ const dirtySource = buildFinalStatusReport({
   evidenceRefs: readyEvidence,
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
   git: { ...readyGit, clean: false },
 });
 
@@ -259,6 +272,7 @@ const staleSourceRevision = buildFinalStatusReport({
   },
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
   git: readyGit,
 });
 
@@ -286,6 +300,7 @@ const blockedSecurity = buildFinalStatusReport({
   },
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
   git: readyGit,
 });
 
@@ -315,6 +330,7 @@ const stalePackage = buildFinalStatusReport({
   },
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
   git: readyGit,
 });
 
@@ -340,6 +356,7 @@ const staleRiskRegister = buildFinalStatusReport({
   },
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
   git: readyGit,
 });
 
@@ -365,6 +382,7 @@ const staleActionBoard = buildFinalStatusReport({
   },
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
   git: readyGit,
 });
 
@@ -390,6 +408,7 @@ const staleGateClosureMap = buildFinalStatusReport({
   },
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
   git: readyGit,
 });
 
@@ -415,6 +434,7 @@ const staleOwnerBriefs = buildFinalStatusReport({
   },
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
   git: readyGit,
 });
 
@@ -444,6 +464,7 @@ const objectBlocker = buildFinalStatusReport({
   },
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
   git: readyGit,
 });
 
@@ -459,6 +480,7 @@ const wrongBranch = buildFinalStatusReport({
   evidenceRefs: readyEvidence,
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
   git: { ...readyGit, branch: "codex/feature" },
 });
 
@@ -472,6 +494,7 @@ const unpushedDeliveryCommit = buildFinalStatusReport({
   evidenceRefs: readyEvidence,
   manualEvidence: manualPresent,
   generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
   git: { ...readyGit, upstreamCommit: "older-fixture", pushed: false },
 });
 
@@ -485,6 +508,33 @@ assert(
     (item) => item.category !== "Git Delivery State" || item.actionType === "AUTOMATED_REFRESH_AVAILABLE",
   ),
   "git delivery state gates should be automated refresh actions",
+);
+
+const mismatchedEntrypoint = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    securityEvidence: {
+      ...readyEvidence.securityEvidence,
+      data: {
+        ...readyEvidence.securityEvidence.data,
+        targetUrl: "http://localhost:8080",
+      },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
+  git: readyGit,
+});
+
+assert(mismatchedEntrypoint.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "mismatched delivery entrypoint should require review");
+assert(
+  mismatchedEntrypoint.remainingGates.some((item) => item.category === "Delivery Entrypoint" && item.status === "MISMATCH"),
+  "mismatched delivery entrypoint should expose Delivery Entrypoint MISMATCH",
+);
+assert(
+  mismatchedEntrypoint.gateActionRunbook.some((item) => item.actionType === "FIELD_ACTION_REQUIRED"),
+  "mismatched delivery entrypoint should route to field action",
 );
 
 console.log("final status report contracts ok");

@@ -262,6 +262,10 @@ status report includes `Source Revision Freshness`; any dirty working tree or
 Git-bearing evidence generated from an older commit remains a no-close gate.
 Then run `npm.cmd run final:status -- --base-url=http://localhost:8080` to
 write `artifacts/final-status/<timestamp>/manifest.json` plus `manifest.md`.
+Use the same delivery Nginx base URL that was used for field readiness,
+security evidence, runtime evidence, and the handover package; the report's
+`Delivery Entrypoint Consistency` section opens a no-close gate when those
+evidence URLs do not match the final status base URL.
 Share this report as the final close/no-close decision. It reports
 `READY_TO_CLOSE` only when completion audit, field readiness, strict scanner
 security evidence, manual evidence, handover package readiness, residual field
