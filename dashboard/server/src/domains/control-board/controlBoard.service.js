@@ -8,6 +8,7 @@ const {
   validateControlBoardCommandResponse,
 } = require("../external-ingest/protocol/controlBoardProtocol");
 const { getControlBoardConfig } = require("./controlBoard.config");
+const { responseDurationMs, summarizeResponseLatency } = require("./controlBoardLatency");
 const { sendRawPacket } = require("./adapters/tcpControlBoard.adapter");
 
 const COMMAND_STATUS = {
@@ -28,14 +29,6 @@ function serializeDate(value) {
   return value instanceof Date ? value.toISOString() : value;
 }
 
-function responseDurationMs(command) {
-  if (!command?.sentAt || !command?.acknowledgedAt) return null;
-  const sentAtMs = new Date(command.sentAt).getTime();
-  const acknowledgedAtMs = new Date(command.acknowledgedAt).getTime();
-  const durationMs = acknowledgedAtMs - sentAtMs;
-  return durationMs >= 0 ? durationMs : null;
-}
-
 function serializeCommand(command) {
   if (!command) return null;
   return {
@@ -51,16 +44,6 @@ function serializeCommand(command) {
       ...log,
       createdAt: serializeDate(log.createdAt),
     })),
-  };
-}
-
-function summarizeResponseLatency(commands = []) {
-  const durations = commands.map(responseDurationMs).filter((duration) => duration !== null);
-  return {
-    averageResponseMs: durations.length
-      ? Math.round(durations.reduce((sum, duration) => sum + duration, 0) / durations.length)
-      : null,
-    responseSampleCount: durations.length,
   };
 }
 

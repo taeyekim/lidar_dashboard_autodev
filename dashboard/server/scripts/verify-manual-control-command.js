@@ -17,9 +17,12 @@ function assertIncludes(content, token, label) {
 const routes = readProjectFile("dashboard/server/src/domains/control-board/controlBoard.routes.js");
 const controller = readProjectFile("dashboard/server/src/domains/control-board/controlBoard.controller.js");
 const service = readProjectFile("dashboard/server/src/domains/control-board/controlBoard.service.js");
+const latency = readProjectFile("dashboard/server/src/domains/control-board/controlBoardLatency.js");
 const schema = readProjectFile("dashboard/server/prisma/schema.prisma");
 const api = readProjectFile("dashboard/dashboard-web/src/features/controlBoard/controlBoardApi.js");
 const dashboard = readProjectFile("dashboard/dashboard-web/src/pages/Dashboard/DashboardPage.jsx");
+const packageJson = readProjectFile("package.json");
+const serverPackageJson = readProjectFile("dashboard/server/package.json");
 const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
 const evidenceMatrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
 
@@ -36,6 +39,7 @@ assertIncludes(controller, 'trigger: "MANUAL_TEST"', "control board controller")
   "TCP_SEND_ATTEMPT_FAILED",
   "TCP_RESPONSE_ACKNOWLEDGED",
   "TCP_SEND_FAILED",
+  "controlBoardLatency",
   "responseDurationMs",
   "summarizeResponseLatency",
   "averageResponseMs",
@@ -43,6 +47,19 @@ assertIncludes(controller, 'trigger: "MANUAL_TEST"', "control board controller")
   "broadcastRealtime(\"control-command.created\"",
   "broadcastRealtime(\"control-command.updated\"",
 ].forEach((token) => assertIncludes(service, token, "control board service"));
+
+[
+  "function responseDurationMs",
+  "function summarizeResponseLatency",
+  "averageResponseMs",
+  "responseSampleCount",
+].forEach((token) => assertIncludes(latency, token, "control board latency helper"));
+
+[
+  [packageJson, "verify:control-board-latency", "root package scripts"],
+  [packageJson, "verify-control-board-latency.js", "root package scripts"],
+  [serverPackageJson, "verify-control-board-latency.js", "server package verify chain"],
+].forEach(([content, token, label]) => assertIncludes(content, token, label));
 
 [
   "requestedByUserId  String?",
