@@ -1,4 +1,5 @@
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { spawnSync } = require("child_process");
 
@@ -22,6 +23,51 @@ function commandExists(command) {
     shell: process.platform !== "win32",
   });
   return result.status === 0;
+}
+
+function firstMeaningfulLine(text) {
+  return (
+    String(text || "")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find(Boolean) || ""
+  );
+}
+
+function commandVersion(command, args) {
+  if (!commandExists(command)) {
+    return {
+      command,
+      available: false,
+      versionCommand: [command, ...args].join(" "),
+      version: null,
+      exitCode: null,
+      error: "command is not installed",
+    };
+  }
+
+  const result = spawnSync(command, args, {
+    cwd: root,
+    encoding: "utf8",
+    shell: process.platform === "win32",
+  });
+
+  return {
+    command,
+    available: true,
+    versionCommand: [command, ...args].join(" "),
+    version: firstMeaningfulLine(result.stdout) || firstMeaningfulLine(result.stderr) || "version output unavailable",
+    exitCode: result.status ?? (result.error ? 1 : 0),
+    error: result.error?.message || null,
+  };
+}
+
+function buildToolInventory() {
+  return [
+    commandVersion("gitleaks", ["version"]),
+    commandVersion("trivy", ["--version"]),
+    commandVersion("zap-baseline.py", ["-h"]),
+  ];
 }
 
 function runCommand(label, command, args, options = {}) {
@@ -76,15 +122,32 @@ function buildMarkdown(manifest) {
     "# Security Evidence Manifest",
     "",
     `- Generated at: ${manifest.generatedAt}`,
+    `- Operator: ${manifest.operator}`,
+    `- Hostname: ${manifest.hostname}`,
+    `- Platform: ${manifest.platform}`,
     `- Target URL: ${manifest.targetUrl}`,
     `- Include container images: ${manifest.options.includeContainerImages ? "yes" : "no"}`,
     `- Include ZAP baseline: ${manifest.options.includeZap ? "yes" : "no"}`,
+    "",
+    "## Tool Inventory",
+    "",
+    "| Tool | Available | Version Command | Version Or Reason |",
+    "| --- | --- | --- | --- |",
+  ];
+
+  manifest.toolInventory.forEach((item) => {
+    lines.push(
+      `| ${item.command} | ${item.available ? "yes" : "no"} | \`${item.versionCommand}\` | ${item.available ? item.version : item.error} |`,
+    );
+  });
+
+  lines.push(
     "",
     "## Checks",
     "",
     "| Status | Check | Command Or Reason | Log |",
     "| --- | --- | --- | --- |",
-  ];
+  );
 
   manifest.checks.forEach((item) => {
     const commandOrReason = item.status === "skipped" ? item.reason : `\`${item.command}\``;
@@ -129,6 +192,7 @@ function main() {
   const outputRoot = outputRootArg ? outputRootArg.slice("--output-root=".length) : "artifacts/security";
   const outputDir = path.join(root, outputRoot, timestampForPath());
   ensureDir(outputDir);
+  const toolInventory = buildToolInventory();
 
   const checks = [
     runCommand("npm audit raw json", npmCommand, ["audit", "--workspaces", "--json"]),
@@ -214,11 +278,15 @@ function main() {
 
   const manifest = {
     generatedAt: new Date().toISOString(),
+    operator: process.env.SECURITY_EVIDENCE_OPERATOR || process.env.USERNAME || process.env.USER || "unknown",
+    hostname: os.hostname(),
+    platform: `${process.platform} ${process.arch}`,
     targetUrl,
     options: {
       includeContainerImages,
       includeZap,
     },
+    toolInventory,
     checks: checks.map((item) => {
       const logFile = item.status === "skipped" ? null : writeCommandLog(outputDir, item);
       return {
