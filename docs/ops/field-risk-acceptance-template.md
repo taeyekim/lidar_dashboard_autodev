@@ -9,6 +9,8 @@ Empty session values, accepted-item evidence/recheck cells, or reviewer follow-u
 values are not valid final risk acceptance evidence.
 Placeholder values such as `TBD`, `N/A`, `none`, `pending`, or `unknown` are not
 valid accepted-risk evidence.
+`Acceptance date`, accepted-item `Expiry Or Recheck`, and `Target recheck date`
+must use `YYYY-MM-DD`.
 
 ## Session
 

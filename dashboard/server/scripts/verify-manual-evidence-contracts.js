@@ -4,6 +4,7 @@ const path = require("path");
 const {
   manualEvidenceDefinitions,
   manualEvidenceRefs,
+  isIsoDateCell,
   validateManualEvidence,
 } = require("./manual-evidence");
 
@@ -195,12 +196,41 @@ assert(
   "risk acceptance evidence must reject placeholder reviewer follow-up values",
 );
 
+const placeholderSessionRiskEvidence = validRiskEvidence.replace("| Reviewer | reviewer |", "| Reviewer | pending |");
+assert(
+  validateManualEvidence("Field Risk Acceptance", placeholderSessionRiskEvidence).includes("placeholder 'Reviewer'"),
+  "risk acceptance evidence must reject placeholder session values",
+);
+
+const invalidAcceptanceDateRiskEvidence = validRiskEvidence.replace("| Acceptance date | 2026-08-01 |", "| Acceptance date | 2026/08/01 |");
+assert(
+  validateManualEvidence("Field Risk Acceptance", invalidAcceptanceDateRiskEvidence).includes("Acceptance date"),
+  "risk acceptance evidence must require YYYY-MM-DD acceptance date",
+);
+
+const invalidAcceptedRowRecheckRiskEvidence = validRiskEvidence.replace(
+  "| ACCEPTED | Security scanners | ZAP skipped on field PC. | Internal-only network and audit policy evidence. | artifacts/security/example/manifest.json | 2026-08-01 |",
+  "| ACCEPTED | Security scanners | ZAP skipped on field PC. | Internal-only network and audit policy evidence. | artifacts/security/example/manifest.json | 2026/08/01 |",
+);
+assert(
+  validateManualEvidence("Field Risk Acceptance", invalidAcceptedRowRecheckRiskEvidence).includes("Expiry Or Recheck"),
+  "risk acceptance evidence must require YYYY-MM-DD accepted-item recheck dates",
+);
+
+const invalidTargetRecheckRiskEvidence = validRiskEvidence.replace("| Target recheck date | 2026-08-01 |", "| Target recheck date | August 1, 2026 |");
+assert(
+  validateManualEvidence("Field Risk Acceptance", invalidTargetRecheckRiskEvidence).includes("Target recheck date"),
+  "risk acceptance evidence must require YYYY-MM-DD target recheck date",
+);
+
 const recheckRiskEvidence = validRiskEvidence.replace("| Decision | ACCEPTED |", "| Decision | RECHECK_REQUIRED |");
 assert(
   validateManualEvidence("Field Risk Acceptance", recheckRiskEvidence).includes("RECHECK_REQUIRED"),
   "risk acceptance evidence must stay invalid while reviewer decision is RECHECK_REQUIRED",
 );
 
+assert(isIsoDateCell("2026-08-01") === true, "YYYY-MM-DD should be accepted as a manual evidence date");
+assert(isIsoDateCell("2026/08/01") === false, "slash dates should not be accepted as manual evidence dates");
 assertIncludes(riskTemplate, "Placeholder values", "field risk acceptance template");
 
 const manualEvidence = manualEvidenceRefs();

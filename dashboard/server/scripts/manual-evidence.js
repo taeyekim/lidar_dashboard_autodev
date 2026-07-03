@@ -67,6 +67,10 @@ function isPlaceholderMarkdownCell(value) {
   return /^(?:-|n\/a|na|none|null|tbd|todo|pending|unknown)$/i.test(String(value || "").trim());
 }
 
+function isIsoDateCell(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "").trim());
+}
+
 function validateManualEvidence(type, content) {
   if (type === "Operator UI Walkthrough") {
     const requiredTokens = [
@@ -156,6 +160,18 @@ function validateManualEvidence(type, content) {
       "Acceptance date",
     ]);
     if (emptySessionField) return `Evidence has an empty '${emptySessionField}' session value.`;
+    const placeholderSessionField = [
+      "Site name",
+      "Reviewer",
+      "Operator",
+      "Delivery host",
+      "Base URL",
+      "Acceptance date",
+    ].find((field) => isPlaceholderMarkdownCell(markdownTableValue(content, field)));
+    if (placeholderSessionField) return `Evidence has a placeholder '${placeholderSessionField}' session value.`;
+    if (!isIsoDateCell(markdownTableValue(content, "Acceptance date"))) {
+      return "Evidence 'Acceptance date' must use YYYY-MM-DD.";
+    }
     if (/\|\s*TODO\s*\|/.test(content)) return "Evidence still contains TODO accepted-item rows.";
     const acceptedRows = markdownRowsAfterHeader(content, "Risk Accepted").filter((row) => row[0] === "ACCEPTED");
     if (acceptedRows.length === 0) return "Evidence must include at least one ACCEPTED risk item row.";
@@ -166,6 +182,10 @@ function validateManualEvidence(type, content) {
     const placeholderAcceptedCell = acceptedRows.find((row) => row.slice(1, 6).some(isPlaceholderMarkdownCell));
     if (placeholderAcceptedCell) {
       return "Accepted risk item rows must not use placeholder values such as TBD, N/A, none, pending, or unknown.";
+    }
+    const invalidRecheckCell = acceptedRows.find((row) => !isIsoDateCell(row[5]));
+    if (invalidRecheckCell) {
+      return "Accepted risk item rows must use YYYY-MM-DD for Expiry Or Recheck.";
     }
     if (/\|\s*Decision\s*\|\s*RECHECK_REQUIRED\s*\|/.test(content)) {
       return "Evidence decision is RECHECK_REQUIRED; close the recheck or keep the risk evidence invalid before final completion.";
@@ -187,6 +207,9 @@ function validateManualEvidence(type, content) {
       "Reviewer signature/name",
     ].find((field) => isPlaceholderMarkdownCell(markdownTableValue(content, field)));
     if (placeholderDecisionField) return `Evidence has a placeholder '${placeholderDecisionField}' value.`;
+    if (!isIsoDateCell(markdownTableValue(content, "Target recheck date"))) {
+      return "Evidence 'Target recheck date' must use YYYY-MM-DD.";
+    }
   }
 
   return "";
@@ -210,6 +233,7 @@ function manualEvidenceRefs() {
 
 module.exports = {
   firstEmptyMarkdownField,
+  isIsoDateCell,
   isPlaceholderMarkdownCell,
   markdownRowsAfterHeader,
   manualEvidenceDefinitions,
