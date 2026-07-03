@@ -29,6 +29,28 @@ filesToCheck.forEach(([relativePath, tokens]) => {
   });
 });
 
+const mockLidarService = fs.readFileSync(
+  path.join(__dirname, "..", "src", "domains", "mock-lidar", "mockLidar.service.js"),
+  "utf8",
+);
+[
+  "vehiclesPassed: 0",
+  "unidentified: 0",
+  "Dashboard event pipeline ready",
+  "state.vehiclesPassed = 0",
+  "state.unidentified = 0",
+  "wrongWayHistory = []",
+].forEach((token) => {
+  assert(mockLidarService.includes(token), `mock lidar state must keep non-sample reset token: ${token}`);
+});
+[
+  "vehiclesPassed: 12842",
+  "unidentified: 24",
+  "Mock pipeline ready",
+].forEach((token) => {
+  assert(!mockLidarService.includes(token), `mock lidar state must not expose sample token: ${token}`);
+});
+
 const frontendFilesToCheck = [
   ["dashboard/dashboard-web/src/shared/realtime/useRealtimeSocket.js", [
     "RECONNECT_DELAYS_MS",

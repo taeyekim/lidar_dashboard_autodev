@@ -13,9 +13,9 @@ const state = {
 
   todaysEvents: 0,
   newEvents: 0,
-  vehiclesPassed: 12842,
+  vehiclesPassed: 0,
   wrongWayEvents: 0,
-  unidentified: 24,
+  unidentified: 0,
   hourlyEvents: Array.from({ length: 24 }, (_, i) => ({
     hour: `${String(i).padStart(2, "0")}:00`,
     events: 0,
@@ -32,7 +32,7 @@ const MAX_HISTORY = 30;
 
 let logs = [
   { msg: "System boot completed", time: nowTime() },
-  { msg: "Mock pipeline ready", time: nowTime() },
+  { msg: "Dashboard event pipeline ready", time: nowTime() },
 ];
 
 function getState() {
@@ -132,10 +132,13 @@ function addWrongWayHistory(dashboardEvent) {
 function resetKpi() {
   state.todaysEvents = 0;
   state.newEvents = 0;
+  state.vehiclesPassed = 0;
   state.wrongWayEvents = 0;
+  state.unidentified = 0;
   state.hourlyEvents.forEach((h) => {
     h.events = 0;
   });
+  wrongWayHistory = [];
   broadcast("state", state);
 }
 
