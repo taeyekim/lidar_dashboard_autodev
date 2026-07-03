@@ -33,6 +33,7 @@ assertIncludes(controller, 'trigger: "MANUAL_TEST"', "control board controller")
   "COMMAND_CREATED",
   "DRY_RUN_SKIPPED_SEND",
   "TCP_SEND_STARTED",
+  "TCP_SEND_ATTEMPT_FAILED",
   "TCP_RESPONSE_ACKNOWLEDGED",
   "TCP_SEND_FAILED",
   "broadcastRealtime(\"control-command.created\"",

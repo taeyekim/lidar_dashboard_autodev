@@ -148,6 +148,16 @@ async function sendRawPacketWithRetry(packetBuffer, config, commandId) {
       return await sendRawPacket(packetBuffer, config);
     } catch (error) {
       lastError = error;
+      await addCommandLog(commandId, {
+        action: "TCP_SEND_ATTEMPT_FAILED",
+        message: `Control board command attempt ${attempt}/${maxAttempts} failed.`,
+        metadata: {
+          attempt,
+          maxAttempts,
+          errorMessage: error.message,
+          willRetry: attempt < maxAttempts,
+        },
+      });
     }
   }
 
