@@ -1,8 +1,26 @@
-import { apiUrl } from "./config";
+import { AUTH_CSRF_COOKIE_NAME, apiUrl } from "./config";
+
+function readCookie(name) {
+  if (typeof document === "undefined") return "";
+  const prefix = `${name}=`;
+  const cookie = document.cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(prefix));
+  if (!cookie) return "";
+  return decodeURIComponent(cookie.slice(prefix.length));
+}
+
+function buildCsrfHeaders(options = {}) {
+  if (options.skipCsrf) return {};
+  const token = readCookie(AUTH_CSRF_COOKIE_NAME);
+  return token ? { "X-CSRF-Token": token } : {};
+}
 
 function buildRequestOptions(options = {}, headers = {}) {
   const rest = { ...options };
   delete rest.skipAuth;
+  delete rest.skipCsrf;
   delete rest.headers;
   return {
     credentials: "include",
@@ -44,6 +62,7 @@ export async function postJson(path, body = {}, options = {}) {
       },
       {
         "Content-Type": "application/json",
+        ...buildCsrfHeaders(options),
         ...(options.headers || {}),
       },
     ),
@@ -68,6 +87,7 @@ export async function patchJson(path, body = {}, options = {}) {
       },
       {
         "Content-Type": "application/json",
+        ...buildCsrfHeaders(options),
         ...(options.headers || {}),
       },
     ),

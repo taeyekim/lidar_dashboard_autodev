@@ -1,6 +1,13 @@
 const fs = require("fs");
 const path = require("path");
-const { buildAuthCookie, buildClearAuthCookie, parseCookies } = require("../src/domains/auth/auth.cookie");
+const {
+  buildAuthCookie,
+  buildClearAuthCookie,
+  buildClearCsrfCookie,
+  buildCsrfCookie,
+  createCsrfToken,
+  parseCookies,
+} = require("../src/domains/auth/auth.cookie");
 const swaggerSpec = require("../src/swagger");
 
 function assert(condition, message) {
@@ -21,6 +28,7 @@ const middleware = readProjectFile("dashboard/server/src/domains/auth/auth.middl
 const service = readProjectFile("dashboard/server/src/domains/auth/auth.service.js");
 const routes = readProjectFile("dashboard/server/src/domains/auth/auth.routes.js");
 const http = readProjectFile("dashboard/dashboard-web/src/shared/api/http.js");
+const frontendConfig = readProjectFile("dashboard/dashboard-web/src/shared/api/config.js");
 const authContext = readProjectFile("dashboard/dashboard-web/src/context/AuthContext.jsx");
 const envExample = readProjectFile(".env.example");
 
@@ -28,16 +36,27 @@ const envExample = readProjectFile(".env.example");
   "credentials: true",
   "buildAuthCookie",
   "buildClearAuthCookie",
-  "getAuthCookieToken(req) || getBearerToken(req)",
+  "buildCsrfCookie",
+  "buildClearCsrfCookie",
+  "hasValidCsrfToken(req)",
+  "getCsrfCookieToken(req)",
   "authMode: \"httpOnlyCookie\"",
   'router.post("/auth/logout", controller.logout)',
   'credentials: "include"',
+  '"X-CSRF-Token"',
 ].forEach((token) => {
-  const haystack = `${app}\n${controller}\n${middleware}\n${service}\n${routes}\n${http}`;
+  const haystack = `${app}\n${controller}\n${middleware}\n${service}\n${routes}\n${http}\n${frontendConfig}`;
   assertIncludes(haystack, token, "auth cookie implementation");
 });
 
-["AUTH_COOKIE_NAME", "AUTH_COOKIE_SECURE", "AUTH_COOKIE_SAMESITE", "AUTH_COOKIE_MAX_AGE_MS"].forEach((token) => {
+[
+  "AUTH_COOKIE_NAME",
+  "AUTH_CSRF_COOKIE_NAME",
+  "VITE_AUTH_CSRF_COOKIE_NAME",
+  "AUTH_COOKIE_SECURE",
+  "AUTH_COOKIE_SAMESITE",
+  "AUTH_COOKIE_MAX_AGE_MS",
+].forEach((token) => {
   assertIncludes(envExample, token, ".env.example");
 });
 
@@ -55,12 +74,27 @@ assert(cookie.startsWith("lidar_dashboard_access="), "auth cookie must use the d
 const clearCookie = buildClearAuthCookie();
 assert(clearCookie.includes("Max-Age=0"), "clear auth cookie must expire immediately");
 
-const parsed = parseCookies("lidar_dashboard_access=jwt-token; other=value");
+const csrfToken = createCsrfToken();
+assert(csrfToken.length >= 32, "CSRF token must have enough entropy");
+const csrfCookie = buildCsrfCookie(csrfToken);
+assert(csrfCookie.startsWith("lidar_dashboard_csrf="), "CSRF cookie must use the default name");
+assert(!csrfCookie.includes("HttpOnly"), "CSRF cookie must be readable by the frontend");
+assert(csrfCookie.includes("SameSite=Lax"), "CSRF cookie must default to SameSite=Lax");
+
+const clearCsrfCookie = buildClearCsrfCookie();
+assert(clearCsrfCookie.includes("Max-Age=0"), "clear CSRF cookie must expire immediately");
+
+const parsed = parseCookies(`lidar_dashboard_access=jwt-token; lidar_dashboard_csrf=${csrfToken}; other=value`);
 assert(parsed.lidar_dashboard_access === "jwt-token", "parseCookies must read auth cookie value");
+assert(parsed.lidar_dashboard_csrf === csrfToken, "parseCookies must read CSRF cookie value");
 
 const authLogin = swaggerSpec.components?.schemas?.AuthLoginResponse;
 assert(authLogin?.properties?.authMode, "Swagger AuthLoginResponse must expose authMode");
 assert(!authLogin?.properties?.token, "Swagger AuthLoginResponse must not expose token");
 assert(swaggerSpec.components?.securitySchemes?.cookieAuth?.in === "cookie", "Swagger must define cookieAuth");
+assert(
+  swaggerSpec.components?.securitySchemes?.csrfHeaderAuth?.name === "X-CSRF-Token",
+  "Swagger must define CSRF header security",
+);
 
 console.log("auth cookie contracts ok");

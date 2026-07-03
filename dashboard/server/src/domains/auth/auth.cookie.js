@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const { getAuthConfig } = require("./auth.config");
 
 function encodeCookieValue(value) {
@@ -47,6 +48,22 @@ function buildAuthCookie(token) {
   });
 }
 
+function createCsrfToken() {
+  return crypto.randomBytes(32).toString("base64url");
+}
+
+function buildCsrfCookie(token) {
+  const options = authCookieOptions();
+  const config = getAuthConfig();
+  return serializeCookie(config.csrfCookieName, token, {
+    maxAge: options.maxAgeSeconds,
+    path: options.path,
+    httpOnly: false,
+    secure: options.secure,
+    sameSite: options.sameSite,
+  });
+}
+
 function buildClearAuthCookie() {
   const options = authCookieOptions();
   return serializeCookie(options.name, "", {
@@ -54,6 +71,19 @@ function buildClearAuthCookie() {
     expires: new Date(0),
     path: options.path,
     httpOnly: options.httpOnly,
+    secure: options.secure,
+    sameSite: options.sameSite,
+  });
+}
+
+function buildClearCsrfCookie() {
+  const options = authCookieOptions();
+  const config = getAuthConfig();
+  return serializeCookie(config.csrfCookieName, "", {
+    maxAge: 0,
+    expires: new Date(0),
+    path: options.path,
+    httpOnly: false,
     secure: options.secure,
     sameSite: options.sameSite,
   });
@@ -83,10 +113,19 @@ function getAuthCookieToken(req) {
   return parseCookies(req.headers?.cookie || "")[name] || null;
 }
 
+function getCsrfCookieToken(req) {
+  const config = getAuthConfig();
+  return parseCookies(req.headers?.cookie || "")[config.csrfCookieName] || null;
+}
+
 module.exports = {
   authCookieOptions,
   buildAuthCookie,
+  buildCsrfCookie,
   buildClearAuthCookie,
+  buildClearCsrfCookie,
+  createCsrfToken,
   getAuthCookieToken,
+  getCsrfCookieToken,
   parseCookies,
 };

@@ -5,6 +5,7 @@ const API_HOST = import.meta.env.VITE_API_HOST || "localhost";
 const API_PORT = import.meta.env.VITE_API_PORT || "5000";
 const DETECTOR_HOST = import.meta.env.VITE_DETECTOR_HOST || API_HOST;
 const DETECTOR_PORT = import.meta.env.VITE_DETECTOR_PORT || "8888";
+export const AUTH_CSRF_COOKIE_NAME = import.meta.env.VITE_AUTH_CSRF_COOKIE_NAME || "lidar_dashboard_csrf";
 
 export const API_BASE = trimTrailingSlash(
   import.meta.env.VITE_API_BASE_URL || `http://${API_HOST}:${API_PORT}`,

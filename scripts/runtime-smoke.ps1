@@ -47,7 +47,8 @@ function Invoke-CurlJson {
     [object]$Body = $null,
     [string]$BearerToken = "",
     [string]$DeviceKey = "",
-    [string]$CookieJar = ""
+    [string]$CookieJar = "",
+    [string]$CsrfToken = ""
   )
 
   $curlArgs = @("-sS", "-f", "-X", $Method)
@@ -56,6 +57,9 @@ function Invoke-CurlJson {
   }
   if ($DeviceKey) {
     $curlArgs += @("-H", "X-Device-Key: $DeviceKey")
+  }
+  if ($CsrfToken) {
+    $curlArgs += @("-H", "X-CSRF-Token: $CsrfToken")
   }
   if ($CookieJar) {
     $curlArgs += @("-b", $CookieJar, "-c", $CookieJar)
@@ -83,6 +87,7 @@ function Invoke-CurlStatus {
     [string]$DeviceKey = "",
     [string]$ContentType = "",
     [string]$CookieJar = "",
+    [string]$CsrfToken = "",
     [switch]$RawBody
   )
 
@@ -93,6 +98,9 @@ function Invoke-CurlStatus {
   }
   if ($DeviceKey) {
     $curlArgs += @("-H", "X-Device-Key: $DeviceKey")
+  }
+  if ($CsrfToken) {
+    $curlArgs += @("-H", "X-CSRF-Token: $CsrfToken")
   }
   if ($CookieJar) {
     $curlArgs += @("-b", $CookieJar, "-c", $CookieJar)
@@ -165,6 +173,23 @@ function Assert-ResponseHeader {
   }
 }
 
+function Get-CookieJarValue {
+  param(
+    [string]$CookieJar,
+    [string]$Name
+  )
+
+  if (!$CookieJar -or !(Test-Path -LiteralPath $CookieJar)) { return "" }
+  foreach ($line in Get-Content -LiteralPath $CookieJar) {
+    if (!$line -or $line.StartsWith("#")) { continue }
+    $parts = $line -split "`t"
+    if ($parts.Length -ge 7 -and $parts[5] -eq $Name) {
+      return $parts[6]
+    }
+  }
+  return ""
+}
+
 function Wait-HttpReady {
   param([string]$Url)
 
@@ -226,6 +251,13 @@ try {
     $deviceIngestKey = $envValues["DEVICE_INGEST_API_KEY"]
   }
   $deviceIngestKey = [string]($deviceIngestKey -split "," | Select-Object -First 1).Trim()
+  $csrfCookieName = $env:AUTH_CSRF_COOKIE_NAME
+  if (!$csrfCookieName -and $envValues.ContainsKey("AUTH_CSRF_COOKIE_NAME")) {
+    $csrfCookieName = $envValues["AUTH_CSRF_COOKIE_NAME"]
+  }
+  if (!$csrfCookieName) {
+    $csrfCookieName = "lidar_dashboard_csrf"
+  }
 
   if ($deviceIngestKey) {
     $missingDeviceKey = Invoke-CurlStatus -Method "POST" -Url "$BaseUrl/api/wrongway" -Body @{
@@ -245,7 +277,17 @@ try {
     } -CookieJar $cookieJar
     if ($login.token) { throw "Login response must not expose token when HttpOnly cookie auth is enabled" }
     if ($login.authMode -ne "httpOnlyCookie") { throw "Login response did not report httpOnlyCookie auth mode" }
+    $csrfToken = Get-CookieJarValue -CookieJar $cookieJar -Name $csrfCookieName
+    if (!$csrfToken) { throw "Login did not set the CSRF cookie" }
     Invoke-CurlJson -Url "$BaseUrl/api/auth/me" -CookieJar $cookieJar | Out-Null
+    $missingCsrfMutation = Invoke-CurlStatus -Method "PATCH" -Url "$BaseUrl/api/events/runtime-smoke-missing/status" -Body @{
+      status = "ACKNOWLEDGED"
+    } -CookieJar $cookieJar
+    Assert-HttpStatus -Response $missingCsrfMutation -Expected 403 -Label "cookie-auth mutation without CSRF smoke"
+    $csrfMutation = Invoke-CurlStatus -Method "PATCH" -Url "$BaseUrl/api/events/runtime-smoke-missing/status" -Body @{
+      status = "ACKNOWLEDGED"
+    } -CookieJar $cookieJar -CsrfToken $csrfToken
+    Assert-HttpStatus -Response $csrfMutation -Expected 404 -Label "cookie-auth mutation with CSRF smoke"
     Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/auth/logout" -Body @{} -CookieJar $cookieJar | Out-Null
     if (Test-Path $cookieJar) {
       Remove-Item -LiteralPath $cookieJar -Force

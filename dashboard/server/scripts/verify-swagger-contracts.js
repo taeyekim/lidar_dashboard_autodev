@@ -18,8 +18,8 @@ function assertSchema(name) {
 function assertOperatorAuth(operation, label) {
   const security = operation.security || [];
   assert(
-    security.some((item) => Array.isArray(item.cookieAuth)),
-    `${label} must declare cookieAuth security`,
+    security.some((item) => Array.isArray(item.cookieAuth) && Array.isArray(item.csrfHeaderAuth)),
+    `${label} must declare cookieAuth plus csrfHeaderAuth security`,
   );
   assert(
     security.some((item) => Array.isArray(item.bearerAuth)),
@@ -75,6 +75,10 @@ function assertOptionalDeviceKey(operation, label) {
 assert(
   swaggerSpec.components?.securitySchemes?.cookieAuth?.in === "cookie",
   "Swagger must define cookieAuth cookie security scheme",
+);
+assert(
+  swaggerSpec.components?.securitySchemes?.csrfHeaderAuth?.name === "X-CSRF-Token",
+  "Swagger must define X-CSRF-Token apiKey security scheme",
 );
 assert(
   swaggerSpec.components?.securitySchemes?.deviceKeyAuth?.name === "X-Device-Key",

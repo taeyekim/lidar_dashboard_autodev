@@ -1,6 +1,12 @@
 const { logger } = require("../../utils/logger");
 const authService = require("./auth.service");
-const { buildAuthCookie, buildClearAuthCookie } = require("./auth.cookie");
+const {
+  buildAuthCookie,
+  buildClearAuthCookie,
+  buildClearCsrfCookie,
+  buildCsrfCookie,
+  createCsrfToken,
+} = require("./auth.cookie");
 
 function sendError(res, error, fallbackMessage) {
   logger.warn("auth api failed", {
@@ -17,7 +23,8 @@ function sendError(res, error, fallbackMessage) {
 async function login(req, res) {
   try {
     const result = await authService.login(req.body || {});
-    res.setHeader("Set-Cookie", buildAuthCookie(result.token));
+    const csrfToken = createCsrfToken();
+    res.setHeader("Set-Cookie", [buildAuthCookie(result.token), buildCsrfCookie(csrfToken)]);
     const { token, ...response } = result;
     res.json(response);
   } catch (error) {
@@ -33,7 +40,7 @@ async function me(req, res) {
 }
 
 async function logout(req, res) {
-  res.setHeader("Set-Cookie", buildClearAuthCookie());
+  res.setHeader("Set-Cookie", [buildClearAuthCookie(), buildClearCsrfCookie()]);
   res.json({ ok: true });
 }
 

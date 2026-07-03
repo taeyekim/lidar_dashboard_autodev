@@ -10,6 +10,7 @@ This checklist is for delivery rehearsals before connecting to the real control 
 - Confirm Nginx is the browser entrypoint: `http://<PUBLIC_HOST>:<NGINX_PORT>`.
 - Confirm `CORS_ORIGINS` contains only trusted operator UI origins.
 - Confirm `AUTH_COOKIE_SECURE=true` when HTTPS/TLS is used and `AUTH_COOKIE_SAMESITE` matches the delivery topology.
+- Confirm cookie-authenticated mutation APIs require `X-CSRF-Token` matching the readable CSRF cookie.
 - Confirm `AUTH_RATE_LIMIT_*`, `MUTATION_RATE_LIMIT_*`, and `JSON_BODY_LIMIT` match the field network policy.
 - Set `DEVICE_INGEST_API_KEY` before delivery if the lidar PC and bridge program can send `X-Device-Key`.
 - Confirm `NGINX_WRONGWAY_RATE_LIMIT` and `NGINX_WRONGWAY_BURST` match the lidar PC event rate.

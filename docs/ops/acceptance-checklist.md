@@ -32,9 +32,11 @@ Use this checklist during delivery rehearsal and field acceptance.
 
 - [ ] Operator can log in through the UI.
 - [ ] `/api/auth/login` sets the `lidar_dashboard_access` HttpOnly cookie and does not expose the JWT in the response body.
+- [ ] `/api/auth/login` sets the readable `lidar_dashboard_csrf` cookie for mutation request CSRF protection.
 - [ ] `/api/auth/me` returns the current operator with the HttpOnly cookie.
 - [ ] Bearer JWT remains available only as backend compatibility for scripted clients.
 - [ ] Mutation API without an auth cookie or compatible Bearer token returns `401`.
+- [ ] Cookie-authenticated mutation API without `X-CSRF-Token` returns `403`.
 - [ ] Non-JSON mutation request returns `415`.
 - [ ] Manual control command records `requestedByUserId`.
 
@@ -78,7 +80,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 ## Swagger/API
 
 - [ ] Swagger opens through Nginx at `/api-docs`.
-- [ ] Auth schemas show `cookieAuth` as the primary scheme and Bearer as compatibility.
+- [ ] Auth schemas show `cookieAuth` plus `csrfHeaderAuth` for cookie-authenticated mutations and Bearer as compatibility.
 - [ ] Wrong-way request/response schema matches implementation.
 - [ ] Wrong-way and external ingest endpoints document optional `X-Device-Key` security.
 - [ ] Control board command endpoints are documented.
@@ -96,6 +98,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Raw `npm audit --workspaces` result is documented.
 - [ ] Runtime smoke confirms security headers through the Nginx entrypoint.
 - [ ] Runtime smoke confirms `Content-Security-Policy` through the Nginx entrypoint.
+- [ ] Runtime smoke confirms CSRF rejection for cookie-authenticated mutation requests without `X-CSRF-Token`.
 - [ ] If `DEVICE_INGEST_API_KEY` is configured, ingest without `X-Device-Key` returns `401`.
 - [ ] `scripts/security-scan.ps1` evidence exists under `artifacts/security/`, or skipped tools are documented with reasons.
 - [ ] Delivery evidence manifest exists under `artifacts/delivery/` and links raw command logs.
