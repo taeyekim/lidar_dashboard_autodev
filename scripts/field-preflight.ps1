@@ -61,6 +61,13 @@ function Add-Check {
   }
 }
 
+function Split-ListValue {
+  param([string]$Value)
+
+  if (!$Value) { return @() }
+  return @($Value.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+}
+
 $runId = (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmss")
 $outputDir = Join-Path $OutputRoot $runId
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
@@ -97,9 +104,23 @@ $sameSite = (Get-EnvValue -Values $envValues -Name "AUTH_COOKIE_SAMESITE").ToLow
 $httpsCookieReady = $secureCookie -eq "true" -and @("lax", "strict", "none") -contains $sameSite
 $checks = Add-Check -Checks $checks -Name "auth cookie delivery settings" -Status $(if ($httpsCookieReady -or !$RequireHttpsCookies) { if ($httpsCookieReady) { "PASS" } else { "SKIPPED" } } else { "REVIEW" }) -Severity $(if ($RequireHttpsCookies) { "critical" } else { "warning" }) -Message $(if ($httpsCookieReady) { "AUTH_COOKIE_SECURE=true and AUTH_COOKIE_SAMESITE is valid." } elseif ($RequireHttpsCookies) { "HTTPS cookie settings are required but AUTH_COOKIE_SECURE/AUTH_COOKIE_SAMESITE are not ready." } else { "HTTPS cookie settings are not enforced for this run." })
 
+$corsOrigins = Get-EnvValue -Values $envValues -Name "CORS_ORIGINS"
+$corsOriginList = @(Split-ListValue -Value $corsOrigins)
+$openCorsOrigins = @($corsOriginList | Where-Object { $_.ToLowerInvariant() -in @("*", "all") })
+$corsTrustedOnly = $corsOriginList.Count -gt 0 -and $openCorsOrigins.Count -eq 0
+$checks = Add-Check -Checks $checks -Name "CORS trusted origins" -Status $(if ($corsTrustedOnly) { "PASS" } else { "REVIEW" }) -Severity "warning" -Message $(if ($corsTrustedOnly) { "CORS_ORIGINS contains explicit operator UI origins only." } else { "CORS_ORIGINS is missing, wildcard, or open; restrict it to approved operator UI origins." })
+
 $swaggerAllow = Get-EnvValue -Values $envValues -Name "NGINX_SWAGGER_ALLOW"
 $swaggerRestricted = $swaggerAllow -and $swaggerAllow -ne "all"
 $checks = Add-Check -Checks $checks -Name "Swagger allowlist" -Status $(if ($swaggerRestricted) { "PASS" } elseif ($RequireSwaggerAllowlist) { "REVIEW" } else { "SKIPPED" }) -Severity $(if ($RequireSwaggerAllowlist) { "critical" } else { "warning" }) -Message $(if ($swaggerRestricted) { "NGINX_SWAGGER_ALLOW is restricted." } elseif ($RequireSwaggerAllowlist) { "NGINX_SWAGGER_ALLOW must be restricted for this acceptance run." } else { "NGINX_SWAGGER_ALLOW is not restricted; field reviewer must accept internal-only Swagger exposure." })
+
+$wrongwayRateLimit = Get-EnvValue -Values $envValues -Name "NGINX_WRONGWAY_RATE_LIMIT"
+$wrongwayBurst = Get-EnvValue -Values $envValues -Name "NGINX_WRONGWAY_BURST"
+$wrongwayLimiterReady = $wrongwayRateLimit -and $wrongwayBurst
+$checks = Add-Check -Checks $checks -Name "Nginx wrong-way rate limit" -Status $(if ($wrongwayLimiterReady) { "PASS" } else { "REVIEW" }) -Severity "warning" -Message $(if ($wrongwayLimiterReady) { "NGINX_WRONGWAY_RATE_LIMIT and NGINX_WRONGWAY_BURST are configured." } else { "NGINX_WRONGWAY_RATE_LIMIT or NGINX_WRONGWAY_BURST is missing; set values for the expected LiDAR event rate." })
+
+$contentSecurityPolicy = Get-EnvValue -Values $envValues -Name "NGINX_CONTENT_SECURITY_POLICY"
+$checks = Add-Check -Checks $checks -Name "Nginx content security policy" -Status $(if ($contentSecurityPolicy) { "PASS" } else { "REVIEW" }) -Severity "warning" -Message $(if ($contentSecurityPolicy) { "NGINX_CONTENT_SECURITY_POLICY is configured." } else { "NGINX_CONTENT_SECURITY_POLICY is missing; review final camera/lidar/media host topology." })
 
 $reviewCount = @($checks | Where-Object { $_.status -eq "REVIEW" }).Count
 $skippedCount = @($checks | Where-Object { $_.status -eq "SKIPPED" }).Count

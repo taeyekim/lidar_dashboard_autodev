@@ -81,7 +81,9 @@ npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -Reviewer "field-
 
 The preflight records `.env` readiness, `JWT_SECRET`, seed admin password,
 `DEVICE_INGEST_API_KEY`, `CONTROL_BOARD_DRY_RUN`, `CONTROL_BOARD_LIVE_APPROVED`, live TCP host/port,
-`AUTH_COOKIE_SECURE`, `AUTH_COOKIE_SAMESITE`, and `NGINX_SWAGGER_ALLOW` under
+`AUTH_COOKIE_SECURE`, `AUTH_COOKIE_SAMESITE`, `CORS_ORIGINS`,
+`NGINX_SWAGGER_ALLOW`, `NGINX_WRONGWAY_RATE_LIMIT`, `NGINX_WRONGWAY_BURST`,
+and `NGINX_CONTENT_SECURITY_POLICY` under
 `artifacts/field-preflight/<timestamp>/manifest.json` plus `manifest.md`.
 Use `-RequireDeviceKey`, `-RequireHttpsCookies`, `-RequireSwaggerAllowlist`,
 and `-StrictPreflight` when those checks should fail instead of being recorded
