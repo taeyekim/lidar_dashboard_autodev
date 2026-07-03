@@ -37,6 +37,8 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "AUTOMATED_REVIEW_REQUIRED",
   "COMPLETE",
   "completionBlockers",
+  "blockerNextAction",
+  "nextAction",
   "automatedBlockers",
   "fieldBlockers",
   "automatedBlockerCount",
@@ -65,6 +67,9 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "redacted",
   "artifacts/field-readiness",
   "npm run field:readiness",
+  "npm run field:preflight",
+  "npm run field:acceptance",
+  "--require-scanners",
   "goal remains active",
 ].forEach((token) => {
   assert(completionAudit.includes(token), `completion audit generator is missing ${token}`);

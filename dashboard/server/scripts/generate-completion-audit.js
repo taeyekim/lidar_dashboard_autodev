@@ -24,8 +24,25 @@ function latestFieldReadinessManifest(outputRoot = "artifacts/field-readiness") 
   return readLatestJsonManifest(outputRoot);
 }
 
-function addBlocker(blockers, category, message) {
-  blockers.push({ category, message });
+function addBlocker(blockers, category, message, nextAction = "") {
+  blockers.push({ category, message, nextAction });
+}
+
+function blockerNextAction(kind) {
+  const actions = {
+    missingDelivery: "Run npm run delivery:evidence, then rerun npm run completion:audit.",
+    deliveryStatus: "Review the latest delivery manifest Handover Summary and rerun npm run handover:package after evidence refresh.",
+    failedCommands: "Open the failed command logs in the delivery evidence folder, fix failures, then rerun npm run delivery:evidence.",
+    companionReview: "Review companion runtime/security manifests and resolve REVIEW items before rerunning delivery evidence.",
+    companionSkipped: "Run runtime/security evidence with the required field switches, including --run-smoke and --require-scanners when applicable.",
+    fieldRehearsal: "Run DB, LiDAR, and control-board field rehearsal scripts against the delivery runtime or attach approved unavailable evidence.",
+    fieldAcceptance: "Run npm run field:acceptance after preflight, runtime, rehearsal, and security evidence are refreshed.",
+    fieldPreflight: "Run npm run field:preflight after .env, cookie, Swagger allowlist, device key, and control-board settings are updated.",
+    fieldVerification: "Complete the listed field verification areas and attach PASS manifests to the handover package.",
+    readiness: "Run npm run field:readiness after filling required field values and starting the delivery Nginx/API entrypoint.",
+    controlBoard: "Set CONTROL_BOARD_HOST/PORT and use LIVE TCP only after hardware approval, then rerun readiness and control-board rehearsal.",
+  };
+  return actions[kind] || "Refresh the related evidence manifest and rerun npm run completion:audit.";
 }
 
 function buildReadinessSignals(fieldReadinessManifest) {
@@ -97,6 +114,7 @@ function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest) {
     return [{
       category: "automated",
       message: "Delivery evidence manifest is missing. Run npm run delivery:evidence first.",
+      nextAction: blockerNextAction("missingDelivery"),
     }];
   }
 
@@ -114,31 +132,31 @@ function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest) {
   const readinessSignals = buildReadinessSignals(fieldReadinessManifest);
 
   if (summary.status !== "AUTOMATED_CHECKS_PASS") {
-    addBlocker(blockers, "field", `Delivery handover summary status is ${summary.status || "UNKNOWN"}.`);
+    addBlocker(blockers, "field", `Delivery handover summary status is ${summary.status || "UNKNOWN"}.`, blockerNextAction("deliveryStatus"));
   }
   if (failedCommandCount > 0) {
-    addBlocker(blockers, "automated", `${failedCommandCount} automated delivery command(s) failed.`);
+    addBlocker(blockers, "automated", `${failedCommandCount} automated delivery command(s) failed.`, blockerNextAction("failedCommands"));
   }
   if (companionReviewCount > 0) {
-    addBlocker(blockers, "field", `${companionReviewCount} companion evidence item(s) require review.`);
+    addBlocker(blockers, "field", `${companionReviewCount} companion evidence item(s) require review.`, blockerNextAction("companionReview"));
   }
   if (companionSkippedCount > 0) {
-    addBlocker(blockers, "field", `${companionSkippedCount} companion evidence item(s) were skipped.`);
+    addBlocker(blockers, "field", `${companionSkippedCount} companion evidence item(s) were skipped.`, blockerNextAction("companionSkipped"));
   }
   if (fieldRehearsalReviewCount > 0) {
-    addBlocker(blockers, "field", `${fieldRehearsalReviewCount} field rehearsal item(s) require review.`);
+    addBlocker(blockers, "field", `${fieldRehearsalReviewCount} field rehearsal item(s) require review.`, blockerNextAction("fieldRehearsal"));
   }
   if (fieldAcceptanceReviewCount > 0) {
-    addBlocker(blockers, "field", `${fieldAcceptanceReviewCount} field acceptance step(s) require review.`);
+    addBlocker(blockers, "field", `${fieldAcceptanceReviewCount} field acceptance step(s) require review.`, blockerNextAction("fieldAcceptance"));
   }
   if (fieldAcceptanceSkippedCount > 0) {
-    addBlocker(blockers, "field", `${fieldAcceptanceSkippedCount} field acceptance step(s) were skipped.`);
+    addBlocker(blockers, "field", `${fieldAcceptanceSkippedCount} field acceptance step(s) were skipped.`, blockerNextAction("fieldAcceptance"));
   }
   if (fieldPreflightReviewCount > 0) {
-    addBlocker(blockers, "field", `${fieldPreflightReviewCount} field preflight check(s) require review.`);
+    addBlocker(blockers, "field", `${fieldPreflightReviewCount} field preflight check(s) require review.`, blockerNextAction("fieldPreflight"));
   }
   if (fieldPreflightSkippedCount > 0) {
-    addBlocker(blockers, "field", `${fieldPreflightSkippedCount} field preflight check(s) were skipped.`);
+    addBlocker(blockers, "field", `${fieldPreflightSkippedCount} field preflight check(s) were skipped.`, blockerNextAction("fieldPreflight"));
   }
   if (fieldVerificationRequiredCount > 0) {
     const areas = Array.isArray(summary.fieldVerificationRequiredAreas)
@@ -148,9 +166,17 @@ function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest) {
       blockers,
       "field",
       `${fieldVerificationRequiredCount} requirement area(s) still need field verification: ${areas}.`,
+      blockerNextAction("fieldVerification"),
     );
   }
-  readinessSignals.blockerMessages.forEach((message) => addBlocker(blockers, "field", message));
+  readinessSignals.blockerMessages.forEach((message) => {
+    addBlocker(
+      blockers,
+      "field",
+      message,
+      message.includes("Control-board safety status") ? blockerNextAction("controlBoard") : blockerNextAction("readiness"),
+    );
+  });
 
   return blockers;
 }
@@ -282,7 +308,11 @@ function buildMarkdown(manifest) {
     "## Completion Blockers",
     "",
     ...(manifest.completionBlockers.length > 0
-      ? manifest.completionBlockers.map((item) => `- [${item.category}] ${item.message}`)
+      ? [
+          "| Category | Message | Next Action |",
+          "| --- | --- | --- |",
+          ...manifest.completionBlockers.map((item) => `| ${item.category} | ${item.message} | ${item.nextAction || ""} |`),
+        ]
       : ["- none"]),
     "",
     "## Decision Rule",
