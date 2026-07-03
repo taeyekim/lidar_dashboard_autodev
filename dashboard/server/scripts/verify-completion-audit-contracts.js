@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const {
   buildCompletionBlockers,
+  buildFieldActionArtifactSignals,
 } = require("./generate-completion-audit");
 
 function assert(condition, message) {
@@ -65,6 +66,20 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "Manual evidence readiness",
   "manualEvidenceReadinessMissingCount",
   "manualEvidenceReadinessInvalidCount",
+  "latestFieldActionArtifacts",
+  "buildFieldActionArtifactSignals",
+  "fieldActionArtifactSignals",
+  "fieldActionArtifactOpenCount",
+  "Field Action Artifacts",
+  "field action artifact",
+  "field:risk-register",
+  "field:action-board",
+  "field:gate-closure-map",
+  "field:owner-briefs",
+  "openRiskCount",
+  "openActionCount",
+  "openGateCount",
+  "openItemCount",
   "latestFieldReadinessManifest",
   "buildReadinessSignals",
   "buildRequiredFieldValueSignals",
@@ -142,6 +157,7 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "manual evidence open count",
   "manual evidence missing count",
   "manual evidence invalid count",
+  "field action artifact open counts",
   "manual operator UI/risk acceptance evidence",
 ].forEach((token) => {
   assert(deliveryMatrix.includes(token), `delivery evidence matrix is missing ${token}`);
@@ -198,6 +214,37 @@ assert(
 assert(
   missingManualEvidenceBlockers.some((item) => item.message === "Manual evidence readiness is MISSING with missing=1 invalid=0."),
   "completion audit must block COMPLETE when manual evidence readiness is not ready",
+);
+
+const fieldActionArtifactSignals = buildFieldActionArtifactSignals({
+  fieldRiskRegister: { path: "artifacts/field-risk-register/example/manifest.json", data: { status: "OPEN", openRiskCount: 1 } },
+  fieldActionBoard: { path: "artifacts/field-action-board/example/manifest.json", data: { status: "READY_TO_CLOSE", openActionCount: 0 } },
+  fieldGateClosureMap: { path: "artifacts/field-gate-closure-map/example/manifest.json", data: { status: "OPEN", openGateCount: 2 } },
+  fieldOwnerBriefs: { path: "artifacts/field-owner-briefs/example/manifest.json", data: { status: "READY_TO_CLOSE", openItemCount: 0 } },
+});
+assert(
+  fieldActionArtifactSignals.some((item) => item.key === "fieldRiskRegister" && item.ready === false && item.openCount === 1),
+  "completion audit should detect open field risk register artifacts",
+);
+assert(
+  fieldActionArtifactSignals.some((item) => item.key === "fieldGateClosureMap" && item.ready === false && item.openCount === 2),
+  "completion audit should detect open field gate closure map artifacts",
+);
+
+const fieldActionArtifactBlockers = buildCompletionBlockers(
+  cleanDeliveryManifest,
+  cleanFieldReadinessManifest,
+  { data: { status: "READY", readyForFinalClose: true, missingCount: 0, invalidCount: 0 } },
+  [],
+  fieldActionArtifactSignals,
+);
+assert(
+  fieldActionArtifactBlockers.some((item) => item.message === "Field risk register status is OPEN with 1 open risk item(s)."),
+  "completion audit must block COMPLETE when field risk register has open items",
+);
+assert(
+  fieldActionArtifactBlockers.some((item) => item.message === "Field gate closure map status is OPEN with 2 open gate(s)."),
+  "completion audit must block COMPLETE when field gate closure map has open gates",
 );
 
 console.log("completion audit contracts ok");

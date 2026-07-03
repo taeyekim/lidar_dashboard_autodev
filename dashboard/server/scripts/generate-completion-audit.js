@@ -32,6 +32,15 @@ function latestManualEvidenceReadinessManifest(outputRoot = "artifacts/manual-ev
   return readLatestJsonManifest(outputRoot);
 }
 
+function latestFieldActionArtifacts() {
+  return {
+    fieldRiskRegister: readLatestJsonManifest("artifacts/field-risk-register"),
+    fieldActionBoard: readLatestJsonManifest("artifacts/field-action-board"),
+    fieldGateClosureMap: readLatestJsonManifest("artifacts/field-gate-closure-map"),
+    fieldOwnerBriefs: readLatestJsonManifest("artifacts/field-owner-briefs"),
+  };
+}
+
 function addBlocker(blockers, category, message, nextAction = "") {
   blockers.push({ category, message, nextAction });
 }
@@ -47,6 +56,7 @@ function blockerNextAction(kind) {
     fieldAcceptance: "Run npm run field:acceptance after preflight, runtime, rehearsal, and security evidence are refreshed.",
     fieldPreflight: "Run npm run field:preflight after .env, cookie, Swagger allowlist, device key, and control-board settings are updated.",
     fieldVerification: "Complete the listed field verification areas and attach PASS manifests to the handover package.",
+    fieldActionArtifacts: "Close field risk/action/gate/owner items, refresh field:risk-register, field:action-board, field:gate-closure-map, and field:owner-briefs, then rerun npm run completion:audit.",
     readiness: "Run npm run field:readiness after filling required field values and starting the delivery Nginx/API entrypoint.",
     controlBoard: "Set CONTROL_BOARD_HOST/PORT and use LIVE TCP only after hardware approval, then rerun readiness and control-board rehearsal.",
     manualReadiness: "Run npm run manual:evidence-readiness after filling required manual evidence, then rerun npm run completion:audit.",
@@ -143,7 +153,40 @@ function buildManualEvidenceSignals() {
   return manualEvidenceRefs();
 }
 
-function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest, manualEvidenceReadinessManifest, manualEvidenceSignals = []) {
+function buildFieldActionArtifactSignals(fieldActionArtifacts = {}) {
+  const definitions = [
+    ["fieldRiskRegister", "Field risk register", "NO_OPEN_RISKS", "openRiskCount", "open risk item(s)"],
+    ["fieldActionBoard", "Field action board", "READY_TO_CLOSE", "openActionCount", "open action item(s)"],
+    ["fieldGateClosureMap", "Field gate closure map", "READY_TO_CLOSE", "openGateCount", "open gate(s)"],
+    ["fieldOwnerBriefs", "Field owner briefs", "READY_TO_CLOSE", "openItemCount", "open owner item(s)"],
+  ];
+
+  return definitions.map(([key, label, readyStatus, countKey, itemLabel]) => {
+    const manifest = fieldActionArtifacts[key] || null;
+    const data = manifest?.data || {};
+    const status = manifest ? data.status || "UNKNOWN" : "MISSING";
+    const openCount = manifest ? normalizeNumber(data[countKey]) : 1;
+    return {
+      key,
+      label,
+      readyStatus,
+      countKey,
+      itemLabel,
+      path: manifest?.path || null,
+      status,
+      openCount,
+      ready: Boolean(manifest && status === readyStatus && openCount === 0),
+    };
+  });
+}
+
+function buildCompletionBlockers(
+  deliveryManifest,
+  fieldReadinessManifest,
+  manualEvidenceReadinessManifest,
+  manualEvidenceSignals = [],
+  fieldActionArtifactSignals = [],
+) {
   if (!deliveryManifest) {
     return [{
       category: "automated",
@@ -238,6 +281,14 @@ function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest, manua
       blockerNextAction("manualReadiness"),
     );
   }
+  fieldActionArtifactSignals
+    .filter((item) => !item.ready)
+    .forEach((item) => {
+      const message = item.status === "MISSING"
+        ? `${item.label} manifest is missing.`
+        : `${item.label} status is ${item.status} with ${item.openCount} ${item.itemLabel}.`;
+      addBlocker(blockers, "field", message, blockerNextAction("fieldActionArtifacts"));
+    });
 
   if ((fieldAcceptanceReviewCount > 0 || fieldAcceptanceSkippedCount > 0) && operatorUiEvidence?.status !== "PRESENT") {
     addBlocker(
@@ -266,13 +317,19 @@ function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest, manua
   return blockers;
 }
 
-function buildCompletionAudit(deliveryManifest, fieldReadinessManifest, manualEvidenceReadinessManifest) {
+function buildCompletionAudit(
+  deliveryManifest,
+  fieldReadinessManifest,
+  manualEvidenceReadinessManifest,
+  fieldActionArtifacts = latestFieldActionArtifacts(),
+) {
   const summary = deliveryManifest?.data?.handoverSummary || {};
   const readinessSignals = buildReadinessSignals(fieldReadinessManifest);
   const requiredFieldValues = buildRequiredFieldValueSignals(fieldReadinessManifest);
   const companionEvidenceMetadata = buildCompanionEvidenceMetadata(deliveryManifest);
   const fieldRehearsalFollowUps = buildFieldRehearsalFollowUps(deliveryManifest);
   const manualEvidenceSignals = buildManualEvidenceSignals();
+  const fieldActionArtifactSignals = buildFieldActionArtifactSignals(fieldActionArtifacts);
   const openManualEvidenceSignals = manualEvidenceSignals.filter((item) => item.required && item.status !== "PRESENT");
   const manualEvidenceReadiness = manualEvidenceReadinessManifest?.data || {};
   const completionBlockers = buildCompletionBlockers(
@@ -280,6 +337,7 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest, manualEv
     fieldReadinessManifest,
     manualEvidenceReadinessManifest,
     manualEvidenceSignals,
+    fieldActionArtifactSignals,
   );
   const automatedBlockers = completionBlockers.filter((item) => item.category === "automated");
   const fieldBlockers = completionBlockers.filter((item) => item.category === "field");
@@ -294,6 +352,7 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest, manualEv
     normalizeNumber(summary.fieldVerificationRequiredCount),
     readinessSignals.reviewCount,
     readinessSignals.skippedCount,
+    fieldActionArtifactSignals.filter((item) => !item.ready).length,
   ].reduce((total, value) => total + value, 0);
 
   let status = "COMPLETE";
@@ -332,6 +391,7 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest, manualEv
       manualEvidenceInvalidCount: openManualEvidenceSignals.filter((item) => item.status === "INVALID").length,
       manualEvidenceReadinessMissingCount: manualEvidenceReadinessManifest ? 0 : 1,
       manualEvidenceReadinessInvalidCount: manualEvidenceReadiness.invalidCount ?? 0,
+      fieldActionArtifactOpenCount: fieldActionArtifactSignals.filter((item) => !item.ready).length,
       automatedBlockerCount: automatedBlockers.length,
       fieldBlockerCount: fieldBlockers.length,
     },
@@ -344,6 +404,7 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest, manualEv
     companionEvidenceMetadata,
     fieldRehearsalFollowUps,
     manualEvidenceSignals,
+    fieldActionArtifactSignals,
     manualEvidenceReadiness: {
       status: manualEvidenceReadiness.status || "MISSING",
       readyForFinalClose: manualEvidenceReadiness.readyForFinalClose === true,
@@ -352,7 +413,7 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest, manualEv
     },
     handoverSummaryStatus: summary.status || null,
     decisionRule:
-      "canMarkGoalComplete is true only when automated delivery checks pass and no field readiness, companion, acceptance, preflight, skipped, manual evidence, or required verification item remains.",
+      "canMarkGoalComplete is true only when automated delivery checks pass and no field readiness, companion, acceptance, preflight, skipped, manual evidence, field action artifact, or required verification item remains.",
   };
 }
 
@@ -395,6 +456,7 @@ function buildMarkdown(manifest) {
     `- Manual evidence invalid: ${manifest.counts.manualEvidenceInvalidCount}`,
     `- Manual evidence readiness missing: ${manifest.counts.manualEvidenceReadinessMissingCount}`,
     `- Manual evidence readiness invalid: ${manifest.counts.manualEvidenceReadinessInvalidCount}`,
+    `- Field action artifact open: ${manifest.counts.fieldActionArtifactOpenCount}`,
     `- Field verification required areas: ${manifest.counts.fieldVerificationRequiredCount}`,
     "",
     "## Field Verification Required",
@@ -435,6 +497,12 @@ function buildMarkdown(manifest) {
     "| Type | Status | Path | Template | Required When |",
     "| --- | --- | --- | --- | --- |",
     ...manifest.manualEvidenceSignals.map((item) => `| ${item.type} | ${item.status} | ${item.path} | ${item.template} | ${item.requiredWhen}${item.validationReason ? ` (${item.validationReason})` : ""} |`),
+    "",
+    "## Field Action Artifacts",
+    "",
+    "| Artifact | Status | Open Count | Ready | Path |",
+    "| --- | --- | --- | --- | --- |",
+    ...manifest.fieldActionArtifactSignals.map((item) => `| ${item.label} | ${item.status} | ${item.openCount} | ${item.ready} | ${item.path || "missing"} |`),
     "",
     "## Manual Evidence Readiness",
     "",
@@ -494,6 +562,7 @@ if (require.main === module) {
 module.exports = {
   buildCompletionAudit,
   buildCompletionBlockers,
+  buildFieldActionArtifactSignals,
   buildManualEvidenceSignals,
   validateManualEvidence,
   buildReadinessSignals,
