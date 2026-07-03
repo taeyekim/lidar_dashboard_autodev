@@ -49,16 +49,41 @@ assert(manualEvidenceDefinitions.length === 2, "manual evidence definitions shou
 
 const operatorTemplateReason = validateManualEvidence("Operator UI Walkthrough", operatorTemplate);
 assert(
-  operatorTemplateReason.includes("TODO screen rows"),
-  "operator UI template should remain invalid until walkthrough rows are completed",
+  operatorTemplateReason.includes("Site name"),
+  "operator UI template should remain invalid until session values are completed",
 );
 
 const validOperatorEvidence = operatorTemplate
   .replace(/\| TODO \|/g, "| PASS |")
+  .replace("| Site name |  |", "| Site name | delivery-site |")
+  .replace("| Reviewer |  |", "| Reviewer | reviewer |")
+  .replace("| Operator account |  |", "| Operator account | operator@example.local |")
+  .replace("| Browser and version |  |", "| Browser and version | Chrome 126 |")
+  .replace("| Delivery display resolution |  |", "| Delivery display resolution | 1920x1080 |")
+  .replace("| Entry URL |  |", "| Entry URL | https://dashboard.example.local |")
+  .replace("| Base API URL |  |", "| Base API URL | https://dashboard.example.local/api |")
+  .replace("| Captured at |  |", "| Captured at | 2026-07-03T00:00:00Z |")
   .replace("| Walkthrough result | PASS / REVIEW |", "| Walkthrough result | PASS |")
   .replace("| Reviewer signature/name |  |", "| Reviewer signature/name | reviewer |")
   .replace("| Decision timestamp |  |", "| Decision timestamp | 2026-07-03T00:00:00Z |");
 assert(validateManualEvidence("Operator UI Walkthrough", validOperatorEvidence) === "", "valid operator evidence should pass");
+
+const sessionOnlyOperatorEvidence = validOperatorEvidence
+  .replace(/\| PASS \|/g, "| TODO |")
+  .replace("| Walkthrough result | PASS |", "| Walkthrough result | PASS / REVIEW |");
+assert(
+  validateManualEvidence("Operator UI Walkthrough", sessionOnlyOperatorEvidence).includes("TODO screen rows"),
+  "operator UI evidence should remain invalid until walkthrough rows are completed",
+);
+
+const missingSessionOperatorEvidence = validOperatorEvidence.replace(
+  "| Delivery display resolution | 1920x1080 |",
+  "| Delivery display resolution |  |",
+);
+assert(
+  validateManualEvidence("Operator UI Walkthrough", missingSessionOperatorEvidence).includes("Delivery display resolution"),
+  "operator evidence must reject empty delivery display resolution",
+);
 
 [
   "liveApproved",

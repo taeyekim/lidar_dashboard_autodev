@@ -35,6 +35,17 @@ const manualEvidenceDefinitions = [
   },
 ];
 
+function markdownTableValue(content, field) {
+  const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`\\|\\s*${escaped}\\s*\\|\\s*([^|\\r\\n]+?)\\s*\\|`);
+  const match = content.match(pattern);
+  return match ? match[1].trim() : "";
+}
+
+function firstEmptyMarkdownField(content, fields) {
+  return fields.find((field) => markdownTableValue(content, field) === "");
+}
+
 function validateManualEvidence(type, content) {
   if (type === "Operator UI Walkthrough") {
     const requiredTokens = [
@@ -54,10 +65,26 @@ function validateManualEvidence(type, content) {
     ];
     const missingTokens = requiredTokens.filter((token) => !content.includes(token));
     if (missingTokens.length > 0) return `Missing required token(s): ${missingTokens.join(", ")}.`;
+    const emptySessionField = firstEmptyMarkdownField(content, [
+      "Site name",
+      "Reviewer",
+      "Operator account",
+      "Browser and version",
+      "Delivery display resolution",
+      "Entry URL",
+      "Base API URL",
+      "Captured at",
+    ]);
+    if (emptySessionField) return `Evidence has an empty '${emptySessionField}' session value.`;
     if (/\|\s*TODO\s*\|/.test(content)) return "Evidence still contains TODO screen rows.";
     if (!/\|\s*Walkthrough result\s*\|\s*PASS\s*\|/.test(content)) {
       return "Evidence must record '| Walkthrough result | PASS |'.";
     }
+    const emptyDecisionField = firstEmptyMarkdownField(content, [
+      "Reviewer signature/name",
+      "Decision timestamp",
+    ]);
+    if (emptyDecisionField) return `Evidence has an empty '${emptyDecisionField}' decision value.`;
   }
 
   if (type === "Field Risk Acceptance") {
@@ -109,7 +136,9 @@ function manualEvidenceRefs() {
 }
 
 module.exports = {
+  firstEmptyMarkdownField,
   manualEvidenceDefinitions,
   manualEvidenceRefs,
+  markdownTableValue,
   validateManualEvidence,
 };

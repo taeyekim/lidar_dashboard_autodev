@@ -134,12 +134,40 @@ function Add-OperatorUiWalkthroughGate {
     return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "validate $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence is missing required section/token(s): $($missingTokens -join ', ')."
   }
 
+  $requiredSessionFields = @(
+    "Site name",
+    "Reviewer",
+    "Operator account",
+    "Browser and version",
+    "Delivery display resolution",
+    "Entry URL",
+    "Base API URL",
+    "Captured at"
+  )
+  foreach ($field in $requiredSessionFields) {
+    $escapedField = [regex]::Escape($field)
+    if ($evidence -notmatch "\|\s*$escapedField\s*\|\s*[^|\r\n]+\s*\|") {
+      return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "validate $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence has an empty '$field' session value."
+    }
+  }
+
   if ($evidence -match "\|\s*TODO\s*\|") {
     return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "validate $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence still contains TODO screen rows; complete each required screen row before final field acceptance."
   }
 
   if ($evidence -notmatch "\|\s*Walkthrough result\s*\|\s*PASS\s*\|") {
     return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "validate $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence must record '| Walkthrough result | PASS |' before final field acceptance."
+  }
+
+  $requiredDecisionFields = @(
+    "Reviewer signature/name",
+    "Decision timestamp"
+  )
+  foreach ($field in $requiredDecisionFields) {
+    $escapedField = [regex]::Escape($field)
+    if ($evidence -notmatch "\|\s*$escapedField\s*\|\s*[^|\r\n]+\s*\|") {
+      return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "validate $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence has an empty '$field' decision value."
+    }
   }
 
   return New-StepResult -Name "operator UI browser walkthrough" -Status "PASS" -Command "read $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 0 -StartedAt $now -FinishedAt $now

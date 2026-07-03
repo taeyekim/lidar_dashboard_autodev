@@ -62,8 +62,8 @@ assert(draftedOperator.includes("| Site name | field-site |"), "draft should fil
 assert(draftedOperator.includes("| Reviewer | reviewer-a |"), "draft should fill reviewer");
 assert(draftedOperator.includes("| Entry URL | http://field.local:8080 |"), "draft should fill entry URL");
 assert(
-  validateManualEvidence("Operator UI Walkthrough", draftedOperator).includes("TODO screen rows"),
-  "drafted operator walkthrough must remain invalid until reviewer completes rows",
+  validateManualEvidence("Operator UI Walkthrough", draftedOperator).includes("Operator account"),
+  "drafted operator walkthrough must remain invalid until reviewer completes session values",
 );
 
 const plan = buildManualEvidenceDraftPlan({ force: false });

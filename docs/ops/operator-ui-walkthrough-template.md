@@ -5,6 +5,7 @@ before running field acceptance with
 `-OperatorUiWalkthroughEvidence artifacts/manual/operator-ui-walkthrough.md`.
 Do not record passwords, JWTs, cookies, private IP ranges outside the approved
 handover audience, or other secret values.
+Empty session or reviewer decision values are not valid field evidence.
 
 ## Session
 
