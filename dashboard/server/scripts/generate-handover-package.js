@@ -58,6 +58,20 @@ function gitValue(args) {
   return result.stdout.trim();
 }
 
+function buildGitState() {
+  const upstream = gitValue(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]);
+  const upstreamCommit = upstream ? gitValue(["rev-parse", "@{u}"]) : "";
+  const commit = gitValue(["rev-parse", "HEAD"]);
+  return {
+    branch: gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
+    commit,
+    clean: gitValue(["status", "--short"]) === "",
+    upstream: upstream || null,
+    upstreamCommit: upstreamCommit || null,
+    pushed: Boolean(commit && upstreamCommit && commit === upstreamCommit),
+  };
+}
+
 function writeCommandLog(dir, item) {
   const fileName = `${item.label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}.log`;
   fs.writeFileSync(
@@ -349,6 +363,9 @@ function buildMarkdown(manifest) {
     `- Base URL: ${manifest.baseUrl}`,
     `- Git commit: ${manifest.git.commit}`,
     `- Git branch: ${manifest.git.branch}`,
+    `- Git upstream: ${manifest.git.upstream || "missing"}`,
+    `- Git upstream commit: ${manifest.git.upstreamCommit || "missing"}`,
+    `- Git pushed to origin/dev: ${manifest.git.pushed ? "yes" : "no"}`,
     `- Working tree clean: ${manifest.git.clean ? "yes" : "no"}`,
     "",
     "## Residual Field Gates",
@@ -501,6 +518,7 @@ function main() {
   const packageStatus = failedCommands.length > 0 ? "FAILED" : handoverIndex?.data?.status || "UNKNOWN";
   const canMarkGoalComplete = Boolean(completion?.data?.canMarkGoalComplete);
   const controlBoardSafetyStatus = latestControlBoardSafetyStatus();
+  const git = buildGitState();
   const fieldEvidenceSummary = buildFieldEvidenceSummary();
   const fieldEvidenceOpenItems = buildFieldEvidenceOpenItems(fieldEvidenceSummary);
   const fieldEvidenceCommandRunbook = buildFieldEvidenceCommandRunbook(fieldEvidenceOpenItems);
@@ -511,6 +529,18 @@ function main() {
   const strictFailureReasons = [];
   if (failedCommands.length > 0) {
     strictFailureReasons.push(`${failedCommands.length} package command(s) failed.`);
+  }
+  if (git.clean !== true) {
+    strictFailureReasons.push("working tree is not clean.");
+  }
+  if (git.branch !== "dev") {
+    strictFailureReasons.push(`git branch is ${git.branch || "unknown"} instead of dev.`);
+  }
+  if (git.upstream !== "origin/dev") {
+    strictFailureReasons.push(`git upstream is ${git.upstream || "missing"} instead of origin/dev.`);
+  }
+  if (git.pushed !== true) {
+    strictFailureReasons.push(`git commit ${git.commit || "unknown"} is not proven pushed to origin/dev ${git.upstreamCommit || "missing"}.`);
   }
   if (packageStatus !== "READY") {
     strictFailureReasons.push(`handover package status is ${packageStatus}.`);
@@ -546,11 +576,7 @@ function main() {
     siteName,
     hostName: os.hostname(),
     baseUrl,
-    git: {
-      branch: gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
-      commit: gitValue(["rev-parse", "HEAD"]),
-      clean: gitValue(["status", "--short"]) === "",
-    },
+    git,
     strict,
     status: packageStatus,
     canMarkGoalComplete,
