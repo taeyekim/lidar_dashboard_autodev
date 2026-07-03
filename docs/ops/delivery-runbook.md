@@ -33,6 +33,7 @@ Windows PowerShell rehearsal:
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/delivery-verify.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/runtime-smoke.ps1 -StartCompose -StopCompose
+npm.cmd run runtime:evidence -- --run-smoke
 npm.cmd run delivery:evidence
 ```
 
@@ -262,6 +263,7 @@ Evidence package:
 
 - `.env` values redacted summary
 - `artifacts/delivery/<timestamp>/manifest.md` and `manifest.json` from `npm run delivery:evidence`
+- `artifacts/runtime/<timestamp>/manifest.md` and `manifest.json` from `npm run runtime:evidence`
 - `docker compose config --quiet` result
 - `npm.cmd run smoke` or `npm run smoke` result
 - `npm.cmd run ci` or `npm run ci` result

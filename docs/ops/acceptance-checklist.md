@@ -19,6 +19,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 ## Startup
 
 - [ ] `docker compose config --quiet` passes.
+- [ ] `npm run runtime:evidence` records Docker CLI, daemon availability, compose config, and `.env` key inventory.
 - [ ] `npm run delivery:evidence` creates `artifacts/delivery/<timestamp>/manifest.md` and `manifest.json`.
 - [ ] `docker compose up --build` starts DB, backend, frontend, and reverse proxy.
 - [ ] `curl http://localhost:8080/healthz` returns `ok`.

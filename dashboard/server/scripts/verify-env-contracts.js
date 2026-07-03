@@ -30,6 +30,7 @@ const runtimeSmoke = readProjectFile("scripts/runtime-smoke.ps1");
 const packageJson = readProjectFile("package.json");
 const evidenceScript = readProjectFile("dashboard/server/scripts/generate-delivery-evidence.js");
 const securityEvidenceScript = readProjectFile("dashboard/server/scripts/generate-security-evidence.js");
+const runtimeEvidenceScript = readProjectFile("dashboard/server/scripts/generate-runtime-evidence.js");
 const env = parseEnvExample(envExample);
 
 const requiredEnvKeys = [
@@ -129,12 +130,15 @@ assert(
   [acceptanceChecklist, "X-Device-Key", "acceptance checklist"],
   [acceptanceChecklist, "/api/ingest/control-board/tcp/test", "acceptance checklist"],
   [acceptanceChecklist, "scripts/security-scan.ps1", "acceptance checklist"],
+  [acceptanceChecklist, "runtime:evidence", "acceptance checklist"],
   [acceptanceChecklist, "security:evidence", "acceptance checklist"],
   [acceptanceChecklist, "delivery:evidence", "acceptance checklist"],
+  [deliveryRunbook, "runtime:evidence", "delivery runbook"],
   [deliveryRunbook, "security:evidence", "delivery runbook"],
   [deliveryRunbook, "delivery:evidence", "delivery runbook"],
   [deliveryRunbook, "/api/ingest/control-board/tcp/test", "delivery runbook"],
   [securityChecklist, "security:evidence", "security checklist"],
+  [packageJson, "runtime:evidence", "package scripts"],
   [packageJson, "security:evidence", "package scripts"],
   [packageJson, "delivery:evidence", "package scripts"],
   [evidenceScript, "artifacts/delivery", "delivery evidence script"],
@@ -147,6 +151,11 @@ assert(
   [securityEvidenceScript, "gitleaks", "security evidence script"],
   [securityEvidenceScript, "trivy", "security evidence script"],
   [securityEvidenceScript, "OWASP ZAP", "security evidence script"],
+  [runtimeEvidenceScript, "artifacts/runtime", "runtime evidence script"],
+  [runtimeEvidenceScript, "manifest.md", "runtime evidence script"],
+  [runtimeEvidenceScript, "manifest.json", "runtime evidence script"],
+  [runtimeEvidenceScript, "docker compose config", "runtime evidence script"],
+  [runtimeEvidenceScript, "runtime-smoke.ps1", "runtime evidence script"],
   [runtimeSmoke, "DEVICE_INGEST_API_KEY", "runtime smoke script"],
   [runtimeSmoke, "X-Device-Key", "runtime smoke script"],
   [runtimeSmoke, "/api/ingest/control-board/tcp/test", "runtime smoke script"],
