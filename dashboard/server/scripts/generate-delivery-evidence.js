@@ -229,6 +229,33 @@ function buildAutomatedEvidenceCoverage(rows, commands) {
   );
 }
 
+function buildHandoverSummary(matrixRows, commands, automatedEvidenceCoverage) {
+  const failedCommands = commands.filter((item) => item.exitCode !== 0);
+  const coverageCounts = automatedEvidenceCoverage.reduce((accumulator, item) => {
+    accumulator[item.coverage] = (accumulator[item.coverage] || 0) + 1;
+    return accumulator;
+  }, {});
+  const fieldRequiredRows = matrixRows.filter((row) => {
+    const value = String(row.fieldEvidenceStillRequired || "").trim();
+    return value && !["none", "n/a", "-"].includes(value.toLowerCase());
+  });
+
+  return {
+    status: failedCommands.length === 0 ? "AUTOMATED_CHECKS_PASS" : "AUTOMATED_CHECKS_REVIEW",
+    failedCommandCount: failedCommands.length,
+    failedCommands: failedCommands.map((item) => item.label),
+    requirementAreaCount: matrixRows.length,
+    automatedEvidenceItemCount: automatedEvidenceCoverage.length,
+    coverageCounts,
+    fieldVerificationRequiredCount: fieldRequiredRows.length,
+    fieldVerificationRequiredAreas: fieldRequiredRows.map((row) => row.area),
+    notes: [
+      "Automated evidence proves local contract/build/security gates only.",
+      "Field verification remains required for hardware IP/port, live TCP control-board test, lidar PC payload, and delivery-network runtime smoke.",
+    ],
+  };
+}
+
 function buildMarkdown(manifest) {
   const lines = [
     "# Delivery Evidence Manifest",
@@ -237,6 +264,28 @@ function buildMarkdown(manifest) {
     `- Git commit: ${manifest.git.commit}`,
     `- Git branch: ${manifest.git.branch}`,
     `- Working tree clean: ${manifest.git.clean ? "yes" : "no"}`,
+    "",
+    "## Handover Summary",
+    "",
+    `- Status: ${manifest.handoverSummary.status}`,
+    `- Failed automated commands: ${manifest.handoverSummary.failedCommandCount}`,
+    `- Requirement areas: ${manifest.handoverSummary.requirementAreaCount}`,
+    `- Automated evidence items: ${manifest.handoverSummary.automatedEvidenceItemCount}`,
+    `- Field verification required areas: ${manifest.handoverSummary.fieldVerificationRequiredCount}`,
+    "",
+    "| Coverage | Count |",
+    "| --- | --- |",
+    ...Object.entries(manifest.handoverSummary.coverageCounts)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([coverage, count]) => `| ${coverage} | ${count} |`),
+    "",
+    "Field verification areas:",
+    "",
+    ...manifest.handoverSummary.fieldVerificationRequiredAreas.map((area) => `- ${area}`),
+    "",
+    "Notes:",
+    "",
+    ...manifest.handoverSummary.notes.map((note) => `- ${note}`),
     "",
     "## Verification Commands",
     "",
@@ -338,6 +387,8 @@ function main() {
   const evidenceMatrix = readDeliveryEvidenceMatrix();
   const matrixRows = parseEvidenceMatrix(evidenceMatrix);
   const requirementAreas = matrixRows.map((row) => row.area);
+  const automatedEvidenceCoverage = buildAutomatedEvidenceCoverage(matrixRows, commands);
+  const handoverSummary = buildHandoverSummary(matrixRows, commands, automatedEvidenceCoverage);
 
   const manifest = {
     generatedAt: new Date().toISOString(),
@@ -361,7 +412,8 @@ function main() {
       rows: matrixRows,
     },
     companionEvidence,
-    automatedEvidenceCoverage: buildAutomatedEvidenceCoverage(matrixRows, commands),
+    automatedEvidenceCoverage,
+    handoverSummary,
     fieldVerificationStillRequired: matrixRows.map((row) => ({
       area: row.area,
       evidence: row.fieldEvidenceStillRequired,
