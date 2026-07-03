@@ -112,6 +112,7 @@ function main() {
 
   const commands = [
     ["smoke", npmCommand, ["run", "smoke"]],
+    ["server test", npmCommand, ["run", "server:test"]],
     ["frontend lint", npmCommand, ["--prefix", "dashboard/dashboard-web", "run", "lint"]],
     ["ci", npmCommand, ["run", "ci"]],
     ["audit policy", npmCommand, ["run", "verify:audit-policy"]],

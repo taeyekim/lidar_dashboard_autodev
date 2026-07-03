@@ -22,6 +22,7 @@ assertIncludes("postgres:16-alpine");
 assertIncludes("DATABASE_URL: postgresql://lidar_dashboard_ci:lidar_dashboard_ci@localhost:5432/lidar_dashboard_ci?schema=public");
 assertIncludes("CONTROL_BOARD_DRY_RUN: \"true\"");
 assertIncludes("npm run smoke");
+assertIncludes("npm run server:test");
 assertIncludes("npm run ci:db");
 assertIncludes("npm --prefix dashboard/dashboard-web run lint");
 assertIncludes("npm run ci");
