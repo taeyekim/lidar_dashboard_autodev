@@ -67,6 +67,81 @@ function buildRiskAcceptanceDraftRows(fieldRiskRegister) {
     }));
 }
 
+function buildOperatorWalkthroughCapturePlan(options = {}) {
+  const baseUrl = options.baseUrl || "http://localhost:8080";
+  const baseApiUrl = options.baseApiUrl || `${baseUrl}/api`;
+  const trim = (value) => String(value || "").replace(/\/+$/, "");
+  const ui = trim(baseUrl);
+  const api = trim(baseApiUrl);
+  return [
+    {
+      screen: "Login",
+      route: `${ui}/login`,
+      apiCheck: `${api}/auth/me`,
+      evidenceHint: "Capture the login form and the signed-in operator session without recording credentials, JWTs, or cookies.",
+    },
+    {
+      screen: "Dashboard",
+      route: `${ui}/`,
+      apiCheck: `${api}/status`,
+      evidenceHint: "Capture server, detector, control-board state, latest event, latest command, and realtime state.",
+    },
+    {
+      screen: "Control-board mode",
+      route: `${ui}/settings`,
+      apiCheck: `${api}/control-board/status`,
+      evidenceHint: "Capture DRY_RUN/LIVE_TCP mode, liveApproved, packet hex, latest command status, and any LIVE_TCP_APPROVAL_REQUIRED state.",
+    },
+    {
+      screen: "Event detail",
+      route: `${ui}/events`,
+      apiCheck: `${api}/events`,
+      evidenceHint: "Capture raw LiDAR payload, wrong-way stage, linked command timeline, response/CRC evidence, and event logs.",
+    },
+    {
+      screen: "Devices",
+      route: `${ui}/devices`,
+      apiCheck: `${api}/devices/status`,
+      evidenceHint: "Capture LiDAR PC, control board, device connection/status history, or the configured empty state.",
+    },
+    {
+      screen: "Event Log",
+      route: `${ui}/events`,
+      apiCheck: `${api}/ingest/events/recent`,
+      evidenceHint: "Capture realtime connected/degraded/disabled state and polling fallback behavior.",
+    },
+    {
+      screen: "Statistics",
+      route: `${ui}/`,
+      apiCheck: `${api}/statistics/traffic?range=daily`,
+      evidenceHint: "Capture daily, weekly, monthly, yearly unique normal/wrong-way counts and wrong-way rate.",
+    },
+    {
+      screen: "Swagger",
+      route: `${ui}/api-docs`,
+      apiCheck: `${ui}/api-docs.json`,
+      evidenceHint: "Capture auth schemes plus wrong-way/control-board endpoints under the approved Swagger exposure policy.",
+    },
+  ];
+}
+
+function buildOperatorCapturePlanMarkdown(rows) {
+  if (!rows || rows.length === 0) return "";
+  return [
+    "## Capture Route Checklist",
+    "",
+    "Use these reviewer-facing routes to collect the screenshot and browser/network notes required above. This checklist does not replace PASS rows in `## Required Screens`.",
+    "",
+    "| Screen | Route | API Or Network Check | Evidence Hint |",
+    "| --- | --- | --- | --- |",
+    ...rows.map(
+      (row) =>
+        `| ${markdownCell(row.screen)} | \`${markdownCell(row.route)}\` | \`${markdownCell(row.apiCheck)}\` | ${markdownCell(row.evidenceHint)} |`,
+    ),
+    "",
+  ].join("\n");
+}
+
 function replaceAcceptedItemRows(content, rows) {
   if (!rows || rows.length === 0) return content;
   const lines = content.split(/\r?\n/);
@@ -95,6 +170,12 @@ function buildDraftContent(templateContent, definition, options = {}) {
   content = replaceTableValue(content, "Acceptance date", options.generatedAt ? options.generatedAt.slice(0, 10) : "");
   if (definition.type === "Field Risk Acceptance") {
     content = replaceAcceptedItemRows(content, options.riskAcceptanceDraftRows || []);
+  }
+  if (definition.type === "Operator UI Walkthrough") {
+    const checklist = buildOperatorCapturePlanMarkdown(options.operatorWalkthroughCapturePlan || []);
+    if (checklist && !content.includes("## Capture Route Checklist")) {
+      content = `${content.trimEnd()}\n\n${checklist}`;
+    }
   }
 
   const header = [
@@ -139,6 +220,7 @@ function writeManualEvidenceDrafts(options = {}) {
   const generatedAt = options.generatedAt || new Date().toISOString();
   const fieldRiskRegister = options.fieldRiskRegister || readLatestJsonManifest("artifacts/field-risk-register");
   const riskAcceptanceDraftRows = options.riskAcceptanceDraftRows || buildRiskAcceptanceDraftRows(fieldRiskRegister);
+  const operatorWalkthroughCapturePlan = options.operatorWalkthroughCapturePlan || buildOperatorWalkthroughCapturePlan(options);
   const plan = buildManualEvidenceDraftPlan({ ...options, generatedAt });
   const items = plan.map((item) => {
     if (item.status !== "READY_TO_WRITE") return item;
@@ -148,6 +230,7 @@ function writeManualEvidenceDrafts(options = {}) {
       ...options,
       generatedAt,
       riskAcceptanceDraftRows,
+      operatorWalkthroughCapturePlan,
     });
     const targetPath = path.join(root, definition.path);
     ensureDir(path.dirname(targetPath));
@@ -170,6 +253,7 @@ function writeManualEvidenceDrafts(options = {}) {
     sourceFieldRiskRegister: fieldRiskRegister?.path || null,
     riskAcceptanceDraftRowCount: riskAcceptanceDraftRows.length,
     riskAcceptanceDraftRows,
+    operatorWalkthroughCapturePlan,
     createdCount: items.filter((item) => item.status === "CREATED").length,
     skippedCount: items.filter((item) => item.status === "SKIP_EXISTS").length,
     missingTemplateCount: items.filter((item) => item.status === "TEMPLATE_MISSING").length,
@@ -201,6 +285,7 @@ function buildMarkdown(manifest) {
     `- Working tree clean: ${manifest.git.clean ? "yes" : "no"}`,
     `- Source field risk register: ${manifest.sourceFieldRiskRegister || "missing"}`,
     `- Risk acceptance draft rows: ${manifest.riskAcceptanceDraftRowCount}`,
+    `- Operator walkthrough capture routes: ${manifest.operatorWalkthroughCapturePlan.length}`,
     "",
     "## Guardrails",
     "",
@@ -227,6 +312,19 @@ function buildMarkdown(manifest) {
             `| ${markdownCell(row.status)} | ${markdownCell(row.area)} | ${markdownCell(row.riskAccepted)} | ${markdownCell(row.compensatingControl)} | ${markdownCell(row.evidenceReference)} | ${markdownCell(row.expiryOrRecheck)} | ${markdownCell(row.owner)} |`,
         )
       : ["| none | - | No field-risk-register rows are currently marked for risk acceptance. | - | - | - | - |"]),
+    "",
+    "## Operator Walkthrough Capture Routes",
+    "",
+    "These routes are copied into newly created operator walkthrough drafts to guide screenshot and browser/network capture. They are not final evidence until the reviewer records PASS rows and evidence references.",
+    "",
+    "| Screen | Route | API Or Network Check | Evidence Hint |",
+    "| --- | --- | --- | --- |",
+    ...(manifest.operatorWalkthroughCapturePlan.length > 0
+      ? manifest.operatorWalkthroughCapturePlan.map(
+          (row) =>
+            `| ${markdownCell(row.screen)} | \`${markdownCell(row.route)}\` | \`${markdownCell(row.apiCheck)}\` | ${markdownCell(row.evidenceHint)} |`,
+        )
+      : ["| none | - | - | No operator walkthrough routes were generated. |"]),
     "",
   ].join("\n");
 }
@@ -257,8 +355,10 @@ if (require.main === module) {
 module.exports = {
   buildDraftContent,
   buildManualEvidenceDraftPlan,
+  buildOperatorWalkthroughCapturePlan,
   buildRiskAcceptanceDraftRows,
   buildMarkdown,
+  buildOperatorCapturePlanMarkdown,
   replaceAcceptedItemRows,
   writeManualEvidenceDrafts,
 };

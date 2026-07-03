@@ -6,7 +6,9 @@ const {
   buildDraftContent,
   buildManualEvidenceDraftPlan,
   buildMarkdown,
+  buildOperatorWalkthroughCapturePlan,
   buildRiskAcceptanceDraftRows,
+  buildOperatorCapturePlanMarkdown,
   replaceAcceptedItemRows,
   writeManualEvidenceDrafts,
 } = require("./generate-manual-evidence-drafts");
@@ -46,6 +48,8 @@ const riskTemplate = readProjectFile("docs/ops/field-risk-acceptance-template.md
   [generator, "buildRiskAcceptanceDraftRows", "manual evidence drafts generator"],
   [generator, "sourceFieldRiskRegister", "manual evidence drafts generator"],
   [generator, "Risk Acceptance Draft Rows", "manual evidence drafts generator"],
+  [generator, "Operator Walkthrough Capture Routes", "manual evidence drafts generator"],
+  [generator, "Capture Route Checklist", "manual evidence drafts generator"],
   [generator, "Draft files are not final evidence", "manual evidence drafts generator"],
   [generator, "SKIP_EXISTS", "manual evidence drafts generator"],
   [finalExecutionPlan, "manual:evidence-drafts", "final execution plan"],
@@ -62,15 +66,27 @@ const draftedOperator = buildDraftContent(operatorTemplate, { type: "Operator UI
   reviewer: "reviewer-a",
   baseUrl: "http://field.local:8080",
   generatedAt: "2026-01-01T00:00:00.000Z",
+  operatorWalkthroughCapturePlan: buildOperatorWalkthroughCapturePlan({
+    baseUrl: "http://field.local:8080",
+    baseApiUrl: "http://field.local:8080/api",
+  }),
 });
 assert(draftedOperator.includes("Generated manual evidence draft"), "draft should include guardrail comment");
 assert(draftedOperator.includes("| Site name | west-ramp-delivery |"), "draft should fill site name");
 assert(draftedOperator.includes("| Reviewer | reviewer-a |"), "draft should fill reviewer");
 assert(draftedOperator.includes("| Entry URL | http://field.local:8080 |"), "draft should fill entry URL");
+assert(draftedOperator.includes("## Capture Route Checklist"), "operator draft should include capture route checklist");
+assert(draftedOperator.includes("http://field.local:8080/api-docs"), "operator capture checklist should include Swagger route");
+assert(draftedOperator.includes("http://field.local:8080/api/statistics/traffic?range=daily"), "operator capture checklist should include statistics API check");
 assert(
   validateManualEvidence("Operator UI Walkthrough", draftedOperator).includes("Operator account"),
   "drafted operator walkthrough must remain invalid until reviewer completes session values",
 );
+
+const operatorCaptureRows = buildOperatorWalkthroughCapturePlan({ baseUrl: "http://ops.local", baseApiUrl: "http://ops.local/api" });
+assert(operatorCaptureRows.length === 8, "operator walkthrough capture plan should cover all required screens");
+assert(operatorCaptureRows.some((row) => row.screen === "Control-board mode" && row.apiCheck.endsWith("/control-board/status")), "capture plan should include control-board status API check");
+assert(buildOperatorCapturePlanMarkdown(operatorCaptureRows).includes("Capture Route Checklist"), "capture plan markdown should include a checklist heading");
 
 const riskRows = buildRiskAcceptanceDraftRows({
   path: "artifacts/field-risk-register/latest/manifest.json",
@@ -145,8 +161,10 @@ try {
   assert(manifest.createdCount + manifest.skippedCount + manifest.missingTemplateCount === 2, "draft manifest should account for every item");
   assert(manifest.sourceFieldRiskRegister === "artifacts/field-risk-register/latest/manifest.json", "draft manifest should reference source field risk register");
   assert(manifest.riskAcceptanceDraftRowCount === 1, "draft manifest should count risk acceptance draft rows");
+  assert(manifest.operatorWalkthroughCapturePlan.length === 8, "draft manifest should include operator capture routes");
   assert(buildMarkdown(manifest).includes("Draft Targets"), "draft markdown should include target table");
   assert(buildMarkdown(manifest).includes("Risk Acceptance Draft Rows"), "draft markdown should include risk acceptance rows");
+  assert(buildMarkdown(manifest).includes("Operator Walkthrough Capture Routes"), "draft markdown should include operator capture routes");
 } finally {
   process.chdir(previousCwd);
   fs.rmSync(tempRoot, { recursive: true, force: true });

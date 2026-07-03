@@ -194,8 +194,12 @@ drafts and writes `artifacts/manual-evidence-drafts/<timestamp>/manifest.json`
 plus `manifest.md`. When a latest `field:risk-register` manifest exists, the
 draft report also carries its copyable `Risk Acceptance Draft Rows` and uses
 those rows to replace the generic accepted-item rows in a newly created
-`artifacts/manual/field-risk-acceptance.md` draft. Existing manual evidence
-files are preserved unless `--force` is used after backing up reviewer content.
+`artifacts/manual/field-risk-acceptance.md` draft. It also adds an operator UI
+capture route checklist for `/login`, dashboard, wrong-way/event/device views,
+settings control-board mode, statistics, and Swagger so reviewers can capture
+the required screenshot and browser/network notes consistently. Existing manual
+evidence files are preserved unless `--force` is used after backing up reviewer
+content.
 
 Then run
 `npm.cmd run manual:evidence-readiness -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`.
