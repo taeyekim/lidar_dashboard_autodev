@@ -259,9 +259,13 @@ const controlBoardStatus = swaggerSpec.components?.schemas?.ControlBoardStatusRe
 });
 
 const eventSummary = swaggerSpec.components?.schemas?.EventSummaryResponse;
-["vehiclesPassed", "vehicleTracks", "todayVehicleTracks", "newEvents"].forEach((field) => {
+["vehiclesPassed", "vehicleTracks", "todayVehicleTracks", "wrongwayVehicles", "wrongWayEvents", "newEvents"].forEach((field) => {
   assert(eventSummary?.properties?.[field]?.type === "integer", `EventSummaryResponse must expose ${field}`);
 });
+assert(
+  eventSummary?.properties?.wrongwayRate?.type === "number",
+  "EventSummaryResponse must expose wrongwayRate",
+);
 
 const trafficStatistics = swaggerSpec.components?.schemas?.TrafficStatisticsResponse;
 ["totals", "buckets", "zones"].forEach((field) => {

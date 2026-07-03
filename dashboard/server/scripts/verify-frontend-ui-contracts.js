@@ -110,6 +110,9 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
   "controlBoardModeLabel",
   "latestCommandSummary",
   "sendControlBoardTestCommand",
+  "wrongwayVehicles",
+  "역주행 차량",
+  "이벤트 {Number(kpi.wrongWayEvents || 0).toLocaleString()}건",
 ].forEach((token) => assertIncludes(dashboardPage, token, "Dashboard operations behavior"));
 
 [

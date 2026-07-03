@@ -103,6 +103,7 @@ export default function DashboardPage({
   const [kpi, setKpi] = useState({ 
     todaysEvents: 0, 
     vehiclesPassed: 0, 
+    wrongwayVehicles: 0,
     wrongWayEvents: 0, 
     unidentified: 0 
   }); 
@@ -370,6 +371,9 @@ export default function DashboardPage({
         todaysEvents: prev.todaysEvents + 1,
         newEvents: prev.newEvents + 1,
         wrongWayEvents: prev.wrongWayEvents + (isWrongWayEvent(event) ? 1 : 0),
+        wrongwayVehicles:
+          prev.wrongwayVehicles +
+          (isWrongWayEvent(event) && event.type !== "wrong-way-level-2" ? 1 : 0),
       }));
 
       if (eventModalEnabledRef.current && isWrongWayEvent(event)) {
@@ -508,7 +512,7 @@ export default function DashboardPage({
   const activeIncidentStage = Number(activeIncident?.stage || 0);
   const hasActiveIncident = Boolean(activeIncident);
   const wrongWayRate =
-    kpi.vehiclesPassed > 0 ? ((kpi.wrongWayEvents / kpi.vehiclesPassed) * 100).toFixed(2) : "0.00";
+    kpi.vehiclesPassed > 0 ? ((Number(kpi.wrongwayVehicles || 0) / kpi.vehiclesPassed) * 100).toFixed(2) : "0.00";
   const incidentTone = activeIncidentStage >= 2 ? "red" : hasActiveIncident ? "amber" : "green";
   const incidentStatusText = activeIncidentStage >= 2
     ? "2차 차단 필요"
@@ -903,13 +907,16 @@ export default function DashboardPage({
             <MoreHorizontal className="text-gray-300 w-5 h-5 group-hover:text-red-400" />
           </div>
           <div onClick={() => navigate("/dashboard/wrongway")}>
-            <div className="font-mono text-sm font-bold text-gray-700 mb-1">역주행 이벤트</div>
+            <div className="font-mono text-sm font-bold text-gray-700 mb-1">역주행 차량</div>
             <div className="flex items-center space-x-2">
-              <span className="text-2xl font-bold text-gray-900">{kpi.wrongWayEvents}</span>
+              <span className="text-2xl font-bold text-gray-900">{Number(kpi.wrongwayVehicles || 0)}</span>
               <div className="flex items-center text-xs text-red-600 bg-red-100 px-1 rounded">
                 <span className="animate-pulse mr-1">●</span>
                 <span>역주행률 {wrongWayRate}%</span>
               </div>
+            </div>
+            <div className="mt-1 text-xs font-semibold text-gray-500">
+              이벤트 {Number(kpi.wrongWayEvents || 0).toLocaleString()}건
             </div>
           </div>
         </Card>

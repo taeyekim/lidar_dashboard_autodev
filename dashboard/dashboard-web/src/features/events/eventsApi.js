@@ -146,6 +146,12 @@ export function normalizeSummary(summary = {}) {
     byEventType["wrong-way"] ??
     byEventType.wrongway ??
     ((byEventType["wrong-way-level-1"] || 0) + (byEventType["wrong-way-level-2"] || 0));
+  const wrongwayVehicles =
+    summary.wrongwayVehicles ??
+    summary.wrongWayVehicles ??
+    summary.uniqueWrongwayVehicles ??
+    wrongWayEvents;
+  const vehiclesPassed = summary.vehiclesPassed ?? summary.vehicleCount ?? summary.vehicles ?? 0;
 
   return {
     todaysEvents:
@@ -156,8 +162,13 @@ export function normalizeSummary(summary = {}) {
       summary.totalEvents ??
       0,
     newEvents: summary.newEvents ?? summary.pendingEvents ?? summary.pending ?? 0,
-    vehiclesPassed: summary.vehiclesPassed ?? summary.vehicleCount ?? summary.vehicles ?? 0,
+    vehiclesPassed,
+    wrongwayVehicles,
     wrongWayEvents,
+    wrongwayRate:
+      summary.wrongwayRate ??
+      summary.wrongWayRate ??
+      (vehiclesPassed > 0 ? Math.round((wrongwayVehicles / vehiclesPassed) * 10000) / 100 : 0),
     unidentified: summary.unidentified ?? summary.unidentifiedEvents ?? 0,
     hourlyEvents: Array.isArray(summary.hourlyEvents) ? summary.hourlyEvents : [],
   };

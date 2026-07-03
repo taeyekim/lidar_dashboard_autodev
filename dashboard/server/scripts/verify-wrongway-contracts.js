@@ -94,6 +94,8 @@ assertIncludes(
   "event.eventLogs.map(serializeLog)",
   "prisma.vehicleTrack.count()",
   "vehiclesPassed: vehicleTracks",
+  "wrongwayVehicles",
+  "wrongwayRate: percent(wrongwayVehicles, vehicleTracks)",
   "todayVehicleTracks",
 ].forEach((token) => assertIncludes(eventsService, token, "events service"));
 [

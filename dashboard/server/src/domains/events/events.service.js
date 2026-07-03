@@ -53,6 +53,15 @@ function serializeCommand(command) {
   };
 }
 
+function wrongwayVehicleKey(event) {
+  return event.trackId || event.vehicleTrackId || event.id;
+}
+
+function percent(part, total) {
+  if (!total) return 0;
+  return Math.round((part / total) * 10000) / 100;
+}
+
 function eventInclude() {
   return {
     zone: true,
@@ -144,6 +153,7 @@ async function getSummary() {
     todayVehicleTracks,
     byStatus,
     byEventType,
+    wrongwayEventRows,
     latest,
   ] = await Promise.all([
     prisma.trafficEvent.count(),
@@ -158,11 +168,19 @@ async function getSummary() {
       by: ["eventType"],
       _count: { _all: true },
     }),
+    prisma.trafficEvent.findMany({
+      where: { eventType: { in: ["wrong-way-level-1", "wrong-way-level-2"] } },
+      select: { id: true, trackId: true, vehicleTrackId: true },
+    }),
     prisma.trafficEvent.findFirst({
       orderBy: { receivedAt: "desc" },
       select: { id: true, receivedAt: true },
     }),
   ]);
+  const wrongwayVehicles = new Set(wrongwayEventRows.map(wrongwayVehicleKey)).size;
+  const wrongWayEvents =
+    (byEventType.find((item) => item.eventType === "wrong-way-level-1")?._count?._all || 0) +
+    (byEventType.find((item) => item.eventType === "wrong-way-level-2")?._count?._all || 0);
 
   return {
     ok: true,
@@ -171,6 +189,9 @@ async function getSummary() {
     vehiclesPassed: vehicleTracks,
     vehicleTracks,
     todayVehicleTracks,
+    wrongwayVehicles,
+    wrongWayEvents,
+    wrongwayRate: percent(wrongwayVehicles, vehicleTracks),
     newEvents: byStatus.find((item) => item.status === "NEW")?._count?._all || 0,
     byStatus: Object.fromEntries(byStatus.map((item) => [item.status, item._count._all])),
     byEventType: Object.fromEntries(byEventType.map((item) => [item.eventType, item._count._all])),
