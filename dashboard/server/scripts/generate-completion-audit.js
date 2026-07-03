@@ -113,6 +113,27 @@ function buildCompanionEvidenceMetadata(deliveryManifest) {
   }));
 }
 
+function buildFieldRehearsalFollowUps(deliveryManifest) {
+  const summaries = deliveryManifest?.data?.fieldRehearsalEvidence?.summaries;
+  if (!Array.isArray(summaries)) return [];
+  return summaries
+    .map((item) => {
+      const acceptance = item.metadata?.unavailableAcceptance;
+      if (!acceptance) return null;
+      return {
+        type: item.type || "unknown",
+        evidenceType: item.metadata?.evidenceType || "UNKNOWN",
+        manifestPath: item.manifestPath || null,
+        replacementOwner: acceptance.replacementOwner || "unknown",
+        targetRecheckDate: acceptance.targetRecheckDate || "unknown",
+        ownerStatus: acceptance.ownerStatus || "unknown",
+        recheckStatus: acceptance.recheckStatus || "unknown",
+        reason: acceptance.reason || "unknown",
+      };
+    })
+    .filter(Boolean);
+}
+
 function buildManualEvidenceSignals() {
   return manualEvidenceRefs();
 }
@@ -219,6 +240,7 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest) {
   const readinessSignals = buildReadinessSignals(fieldReadinessManifest);
   const requiredFieldValues = buildRequiredFieldValueSignals(fieldReadinessManifest);
   const companionEvidenceMetadata = buildCompanionEvidenceMetadata(deliveryManifest);
+  const fieldRehearsalFollowUps = buildFieldRehearsalFollowUps(deliveryManifest);
   const manualEvidenceSignals = buildManualEvidenceSignals();
   const completionBlockers = buildCompletionBlockers(deliveryManifest, fieldReadinessManifest, manualEvidenceSignals);
   const automatedBlockers = completionBlockers.filter((item) => item.category === "automated");
@@ -277,6 +299,7 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest) {
       : [],
     requiredFieldValues,
     companionEvidenceMetadata,
+    fieldRehearsalFollowUps,
     manualEvidenceSignals,
     handoverSummaryStatus: summary.status || null,
     decisionRule:
@@ -341,6 +364,17 @@ function buildMarkdown(manifest) {
     ...(manifest.companionEvidenceMetadata.length > 0
       ? manifest.companionEvidenceMetadata.map((item) => `| ${item.type} | ${item.manifestPath || "missing"} | ${item.reviewCount} | ${item.skippedCount} | ${formatMetadata(item.metadata)} |`)
       : ["| none | missing | 0 | 0 | none |"]),
+    "",
+    "## Field Rehearsal Follow-ups",
+    "",
+    "| Type | Evidence | Owner | Recheck Date | Owner Status | Recheck Status | Reason | Manifest |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    ...(manifest.fieldRehearsalFollowUps.length > 0
+      ? manifest.fieldRehearsalFollowUps.map(
+          (item) =>
+            `| ${item.type} | ${item.evidenceType} | ${item.replacementOwner} | ${item.targetRecheckDate} | ${item.ownerStatus} | ${item.recheckStatus} | ${item.reason} | ${item.manifestPath || "missing"} |`,
+        )
+      : ["| none | - | - | - | - | - | - | - |"]),
     "",
     "## Manual Evidence",
     "",
