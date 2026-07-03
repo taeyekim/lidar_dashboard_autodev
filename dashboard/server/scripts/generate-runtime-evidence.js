@@ -99,6 +99,8 @@ function buildMarkdown(manifest) {
     "",
     `- Generated at: ${manifest.generatedAt}`,
     `- Run compose smoke: ${manifest.options.runSmoke ? "yes" : "no"}`,
+    `- Smoke base URL: ${manifest.options.baseUrl}`,
+    `- Use existing stack: ${manifest.options.useExistingStack ? "yes" : "no"}`,
     `- .env exists: ${manifest.env.exists ? "yes" : "no"}`,
     `- .env keys recorded: ${manifest.env.presentKeys.length}`,
     `- .env.example keys recorded: ${manifest.env.exampleKeys.length}`,
@@ -162,6 +164,9 @@ function skipped(label, reason) {
 
 function main() {
   const runSmoke = process.argv.includes("--run-smoke");
+  const useExistingStack = process.argv.includes("--use-existing-stack");
+  const baseUrlArg = process.argv.find((arg) => arg.startsWith("--base-url="));
+  const baseUrl = baseUrlArg ? baseUrlArg.slice("--base-url=".length) : "http://localhost:8080";
   const outputRootArg = process.argv.find((arg) => arg.startsWith("--output-root="));
   const outputRoot = outputRootArg ? outputRootArg.slice("--output-root=".length) : "artifacts/runtime";
   const outputDir = path.join(root, outputRoot, timestampForPath());
@@ -182,10 +187,8 @@ function main() {
   }
 
   if (runSmoke) {
-    if (!daemonAvailable) {
-      commands.push(skipped("runtime smoke", "Docker daemon is not reachable; run again after Docker Desktop/engine is started"));
-    } else {
-      const shell = process.platform === "win32" ? "powershell.exe" : "pwsh";
+    const shell = process.platform === "win32" ? "powershell.exe" : "pwsh";
+    if (useExistingStack) {
       commands.push(
         runCommand("runtime smoke", shell, [
           "-NoProfile",
@@ -193,13 +196,34 @@ function main() {
           "Bypass",
           "-File",
           "scripts/runtime-smoke.ps1",
+          "-BaseUrl",
+          baseUrl,
+        ]),
+      );
+    } else if (!daemonAvailable) {
+      commands.push(skipped("runtime smoke", "Docker daemon is not reachable; run again after Docker Desktop/engine is started"));
+    } else {
+      commands.push(
+        runCommand("runtime smoke", shell, [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "scripts/runtime-smoke.ps1",
+          "-BaseUrl",
+          baseUrl,
           "-StartCompose",
           "-StopCompose",
         ]),
       );
     }
   } else {
-    commands.push(skipped("runtime smoke", "Run with --run-smoke to start Docker compose and execute scripts/runtime-smoke.ps1"));
+    commands.push(
+      skipped(
+        "runtime smoke",
+        "Run with --run-smoke to start Docker compose, or --run-smoke --use-existing-stack --base-url=<url> against an already running delivery stack",
+      ),
+    );
   }
 
   const env = buildEnvReadiness();
@@ -211,7 +235,7 @@ function main() {
 
   const manifest = {
     generatedAt: new Date().toISOString(),
-    options: { runSmoke },
+    options: { runSmoke, baseUrl, useExistingStack },
     env,
     notes,
     commands: commands.map((item) => {
