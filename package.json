@@ -24,6 +24,7 @@
     "verify:device-ingest-key": "node dashboard/server/scripts/verify-device-ingest-key.js",
     "verify:swagger-contracts": "node dashboard/server/scripts/verify-swagger-contracts.js",
     "verify:statistics-contracts": "node dashboard/server/scripts/verify-statistics-contracts.js",
+    "verify:frontend-ui-contracts": "node dashboard/server/scripts/verify-frontend-ui-contracts.js",
     "verify:frontend-settings-contracts": "node dashboard/server/scripts/verify-frontend-settings-contracts.js",
     "verify:realtime-contracts": "node dashboard/server/scripts/verify-realtime-contracts.js",
     "verify:wrongway-contracts": "node dashboard/server/scripts/verify-wrongway-contracts.js",
@@ -35,7 +36,7 @@
     "security:evidence": "node dashboard/server/scripts/generate-security-evidence.js",
     "runtime:evidence": "node dashboard/server/scripts/generate-runtime-evidence.js",
     "delivery:evidence": "node dashboard/server/scripts/generate-delivery-evidence.js",
-    "smoke": "npm run verify:control-board-protocol && npm run verify:control-board-tcp && npm run verify:auth-crypto && npm run verify:auth-cookie && npm run verify:device-ingest-key && npm run verify:swagger-contracts && npm run verify:statistics-contracts && npm run verify:frontend-settings-contracts && npm run verify:realtime-contracts && npm run verify:wrongway-contracts && npm run verify:delivery-proxy-contracts && npm run verify:env-contracts && npm run verify:github-actions-contracts && npm run check:server",
+    "smoke": "npm run verify:control-board-protocol && npm run verify:control-board-tcp && npm run verify:auth-crypto && npm run verify:auth-cookie && npm run verify:device-ingest-key && npm run verify:swagger-contracts && npm run verify:statistics-contracts && npm run verify:frontend-ui-contracts && npm run verify:frontend-settings-contracts && npm run verify:realtime-contracts && npm run verify:wrongway-contracts && npm run verify:delivery-proxy-contracts && npm run verify:env-contracts && npm run verify:github-actions-contracts && npm run check:server",
     "ci": "npm run build:web && npm run check:server",
     "delivery:verify": "npm run smoke && npm run server:test && npm --prefix dashboard/dashboard-web run lint && npm run ci && npm run verify:audit-policy && docker compose config --quiet",
     "setup:demo": "python -m venv dashboard/demo-server/venv && \"dashboard\\demo-server\\venv\\Scripts\\python.exe\" -m pip install -r dashboard/demo-server/requirements.txt"
