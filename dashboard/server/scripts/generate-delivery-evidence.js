@@ -170,6 +170,12 @@ function summarizeCompanionMetadata(type, data) {
   return {};
 }
 
+function isPlaceholderEvidenceText(value) {
+  return /^(?:-|n\/a|na|none|null|tbd|todo|pending|unknown|unspecified|field-reviewer|field-reviewer-name|field-site|delivery-site-name)$/i.test(
+    String(value || "").trim(),
+  );
+}
+
 function summarizeCompanionEvidence(type, outputRoot) {
   const manifest = readLatestJsonManifest(outputRoot);
   if (!manifest) {
@@ -237,6 +243,21 @@ function summarizeFieldRehearsal(type, outputRoot) {
         reviewItems.push(`${type}: PASS rehearsal manifest missing ${expected || field} metadata`);
       }
     });
+    ["reviewer", "siteName", "hostName"].forEach((field) => {
+      const value = manifest.data[field];
+      if (isPlaceholderEvidenceText(value)) {
+        reviewItems.push(`${type}: PASS rehearsal manifest has placeholder ${field} metadata`);
+      }
+    });
+    const unavailable = manifest.data.unavailableAcceptance || null;
+    if (unavailable) {
+      ["replacementOwner", "targetRecheckDate"].forEach((field) => {
+        const value = unavailable[field];
+        if (isPlaceholderEvidenceText(value)) {
+          reviewItems.push(`${type}: unavailable rehearsal acceptance has placeholder ${field}`);
+        }
+      });
+    }
   }
 
   return {
@@ -1000,6 +1021,7 @@ module.exports = {
   buildAutomatedEvidenceCoverage,
   buildHandoverSummary,
   extractBacktickTokens,
+  isPlaceholderEvidenceText,
   parseEvidenceMatrix,
   readLatestJsonManifest,
   summarizeCompanionEvidence,

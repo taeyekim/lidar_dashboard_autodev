@@ -1,6 +1,7 @@
 const {
   buildAutomatedEvidenceCoverage,
   buildHandoverSummary,
+  isPlaceholderEvidenceText,
   parseEvidenceMatrix,
   readLatestJsonManifest,
   summarizeCompanionEvidence,
@@ -164,7 +165,7 @@ fs.writeFileSync(
   JSON.stringify({
     evidenceType: "FIELD_REHEARSAL_PASS",
     baseUrl: "http://localhost:8080",
-    reviewer: "field-reviewer",
+    reviewer: "reviewer-a",
     siteName: "delivery-site",
     hostName: "field-host",
     unavailableAcceptance: {
@@ -186,6 +187,40 @@ fs.writeFileSync(
 const fieldRehearsalMetadataSummary = summarizeFieldRehearsal(
   "Lidar Ingest",
   "artifacts/delivery-summary-field-rehearsal-metadata",
+);
+const fieldRehearsalPlaceholderMetadataRoot = path.join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "artifacts",
+  "delivery-summary-field-rehearsal-placeholder-metadata",
+);
+const fieldRehearsalPlaceholderMetadataDir = path.join(fieldRehearsalPlaceholderMetadataRoot, "20260703-000000");
+fs.mkdirSync(fieldRehearsalPlaceholderMetadataDir, { recursive: true });
+fs.writeFileSync(
+  path.join(fieldRehearsalPlaceholderMetadataDir, "manifest.json"),
+  JSON.stringify({
+    evidenceType: "FIELD_REHEARSAL_PASS",
+    baseUrl: "http://localhost:8080",
+    reviewer: "field-reviewer",
+    siteName: "field-site",
+    hostName: "unknown",
+    unavailableAcceptance: {
+      replacementOwner: "pending",
+      targetRecheckDate: "TBD",
+    },
+    results: [
+      {
+        name: "field rehearsal pass vector with placeholder metadata",
+        status: "PASS",
+      },
+    ],
+  }),
+);
+const fieldRehearsalPlaceholderMetadataSummary = summarizeFieldRehearsal(
+  "Control Board TCP",
+  "artifacts/delivery-summary-field-rehearsal-placeholder-metadata",
 );
 const fieldRehearsalMissingMetadataRoot = path.join(
   __dirname,
@@ -419,7 +454,7 @@ assert(
   "field rehearsal summary should expose base URL",
 );
 assert(
-  fieldRehearsalMetadataSummary.metadata.reviewer === "field-reviewer",
+  fieldRehearsalMetadataSummary.metadata.reviewer === "reviewer-a",
   "field rehearsal summary should expose reviewer",
 );
 assert(
@@ -445,6 +480,28 @@ assert(
 assert(
   fieldRehearsalMetadataSummary.metadata.unavailableAcceptance.recheckStatus === "SCHEDULED",
   "field rehearsal summary should expose unavailable recheck status",
+);
+assert(isPlaceholderEvidenceText("field-reviewer") === true, "field-reviewer should be treated as placeholder evidence metadata");
+assert(isPlaceholderEvidenceText("reviewer-a") === false, "concrete reviewer should not be treated as placeholder evidence metadata");
+assert(
+  fieldRehearsalPlaceholderMetadataSummary.reviewItems.some((item) => item.includes("placeholder reviewer")),
+  "field rehearsal PASS summary should reject placeholder reviewer metadata",
+);
+assert(
+  fieldRehearsalPlaceholderMetadataSummary.reviewItems.some((item) => item.includes("placeholder siteName")),
+  "field rehearsal PASS summary should reject placeholder site metadata",
+);
+assert(
+  fieldRehearsalPlaceholderMetadataSummary.reviewItems.some((item) => item.includes("placeholder hostName")),
+  "field rehearsal PASS summary should reject placeholder host metadata",
+);
+assert(
+  fieldRehearsalPlaceholderMetadataSummary.reviewItems.some((item) => item.includes("placeholder replacementOwner")),
+  "field rehearsal PASS summary should reject placeholder unavailable owner",
+);
+assert(
+  fieldRehearsalPlaceholderMetadataSummary.reviewItems.some((item) => item.includes("placeholder targetRecheckDate")),
+  "field rehearsal PASS summary should reject placeholder unavailable recheck date",
 );
 assert(
   fieldRehearsalMissingMetadataSummary.reviewItems.some((item) => item.includes("FIELD_REHEARSAL_PASS")),
