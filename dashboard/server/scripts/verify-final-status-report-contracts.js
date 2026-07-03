@@ -30,6 +30,13 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "READY_TO_CLOSE", "final status report generator"],
   [generator, "FIELD_OR_SECURITY_REVIEW_REQUIRED", "final status report generator"],
   [generator, "remainingGates", "final status report generator"],
+  [generator, "gateSummary", "final status report generator"],
+  [generator, "gateActionRunbook", "final status report generator"],
+  [generator, "formatCompletionBlocker", "final status report generator"],
+  [generator, "MANUAL_EVIDENCE_REQUIRED", "final status report generator"],
+  [generator, "SECURITY_REVIEW_REQUIRED", "final status report generator"],
+  [generator, "FIELD_ACTION_REQUIRED", "final status report generator"],
+  [generator, "AUTOMATED_REFRESH_AVAILABLE", "final status report generator"],
   [generator, "Control Board TCP", "final status report generator"],
   [generator, "LIVE_TCP_READY", "final status report generator"],
   [generator, "requireScanners", "final status report generator"],
@@ -97,6 +104,7 @@ const ready = buildFinalStatusReport({
 assert(ready.status === "READY_TO_CLOSE", "complete fixture should be READY_TO_CLOSE");
 assert(ready.canMarkGoalComplete === true, "READY_TO_CLOSE should allow goal completion");
 assert(ready.remainingGates.length === 0, "complete fixture should have no remaining gates");
+assert(ready.gateSummary.total === 0, "complete fixture should have zero gate summary total");
 assert(buildMarkdown(ready).includes("READY_TO_CLOSE"), "markdown should include READY_TO_CLOSE");
 
 const missing = buildFinalStatusReport({
@@ -116,6 +124,10 @@ assert(
   missing.remainingGates.some((item) => item.category === "Security Evidence" && item.status === "MISSING"),
   "missing fixture should expose missing security evidence",
 );
+assert(
+  missing.gateActionRunbook.some((item) => item.actionType === "AUTOMATED_REFRESH_AVAILABLE"),
+  "missing fixture should expose automated refresh action type",
+);
 
 const blockedSecurity = buildFinalStatusReport({
   evidenceRefs: {
@@ -134,6 +146,10 @@ assert(blockedSecurity.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "blocked 
 assert(
   blockedSecurity.remainingGates.some((item) => item.category === "Security Evidence" && item.status === "BLOCKED"),
   "blocked security fixture should expose BLOCKED security evidence",
+);
+assert(
+  blockedSecurity.gateActionRunbook.some((item) => item.actionType === "SECURITY_REVIEW_REQUIRED"),
+  "blocked security fixture should expose security action type",
 );
 
 const stalePackage = buildFinalStatusReport({
@@ -159,6 +175,37 @@ assert(stalePackage.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "stale packa
 assert(
   stalePackage.remainingGates.some((item) => item.category === "Evidence Freshness" && item.message.includes("securityEvidence")),
   "stale package fixture should expose stale security evidence reference",
+);
+
+const objectBlocker = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    completionAudit: {
+      path: readyEvidence.completionAudit.path,
+      data: {
+        status: "FIELD_VERIFICATION_REQUIRED",
+        canMarkGoalComplete: false,
+        completionBlockers: [
+          {
+            category: "field",
+            message: "Field readiness status is REVIEW.",
+            nextAction: "Run npm run field:readiness.",
+          },
+        ],
+      },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  git: { branch: "dev", commit: "fixture", clean: true },
+});
+
+const objectBlockerMarkdown = buildMarkdown(objectBlocker);
+assert(!objectBlocker.remainingGates[0].message.includes("[object Object]"), "object completion blockers must be formatted");
+assert(objectBlockerMarkdown.includes("Field readiness status is REVIEW."), "object completion blocker message should be readable");
+assert(
+  objectBlocker.remainingGates.some((item) => item.category === "Completion Audit" && item.actionType === "REVIEW_REQUIRED"),
+  "aggregate completion audit gate should remain review action type",
 );
 
 console.log("final status report contracts ok");

@@ -49,8 +49,83 @@ function evidencePath(item) {
   return item?.path || null;
 }
 
+function actionTypeForGate(category, status, message) {
+  const text = `${category} ${status} ${message}`.toLowerCase();
+  if ((category === "Completion Audit" || category === "Handover Package") && status !== "MISSING") return "REVIEW_REQUIRED";
+  if (text.includes("manual evidence") || text.includes("operator ui walkthrough") || text.includes("field risk acceptance")) {
+    return "MANUAL_EVIDENCE_REQUIRED";
+  }
+  if (text.includes("security") || text.includes("scanner") || text.includes("zap") || text.includes("trivy") || text.includes("gitleaks")) {
+    return "SECURITY_REVIEW_REQUIRED";
+  }
+  if (
+    text.includes("control-board") ||
+    text.includes("live_tcp") ||
+    text.includes("field") ||
+    text.includes("hardware") ||
+    text.includes("delivery runtime") ||
+    text.includes("lidar pc") ||
+    text.includes("nginx entrypoint")
+  ) {
+    return "FIELD_ACTION_REQUIRED";
+  }
+  if (status === "MISSING" || status === "STALE") return "AUTOMATED_REFRESH_AVAILABLE";
+  return "REVIEW_REQUIRED";
+}
+
 function addGate(gates, category, status, message, closeWhen, evidence) {
-  gates.push({ category, status, message, closeWhen, evidence: evidence || null });
+  const normalizedMessage = String(message || "Gate requires review.").replace(/\s+/g, " ").trim();
+  gates.push({
+    category,
+    status,
+    actionType: actionTypeForGate(category, status, normalizedMessage),
+    message: normalizedMessage,
+    closeWhen,
+    evidence: evidence || null,
+  });
+}
+
+function formatCompletionBlocker(blocker) {
+  if (typeof blocker === "string") return blocker;
+  if (!blocker || typeof blocker !== "object") return String(blocker || "");
+  const parts = [
+    blocker.category ? `[${blocker.category}]` : "",
+    blocker.message || blocker.reason || blocker.status || "",
+    blocker.nextAction ? `Next: ${blocker.nextAction}` : "",
+  ].filter(Boolean);
+  return parts.join(" ");
+}
+
+function gateSummary(gates) {
+  return gates.reduce(
+    (summary, gate) => {
+      summary.total += 1;
+      summary.byActionType[gate.actionType] = (summary.byActionType[gate.actionType] || 0) + 1;
+      summary.byCategory[gate.category] = (summary.byCategory[gate.category] || 0) + 1;
+      return summary;
+    },
+    { total: 0, byActionType: {}, byCategory: {} },
+  );
+}
+
+function gateActionRunbook(gates) {
+  const runbooks = {
+    AUTOMATED_REFRESH_AVAILABLE:
+      "Refresh generated evidence with npm.cmd run delivery:evidence, npm.cmd run completion:audit, npm.cmd run handover:package, then rerun npm.cmd run final:status.",
+    FIELD_ACTION_REQUIRED:
+      "Run the field preflight, runtime smoke, DB/LiDAR/control-board rehearsals, field readiness, and field acceptance commands against the delivery Nginx entrypoint and approved hardware/network.",
+    MANUAL_EVIDENCE_REQUIRED:
+      "Fill the required manual evidence templates and attach the accepted copies under artifacts/manual/ before rerunning field acceptance and final status.",
+    SECURITY_REVIEW_REQUIRED:
+      "Run npm.cmd run security:evidence with --include-container-images --include-zap --require-scanners, or attach accepted risk evidence for unavailable scanners.",
+    REVIEW_REQUIRED:
+      "Review the referenced manifest, close the listed gate, and rerun npm.cmd run final:status.",
+  };
+  return Object.entries(gateSummary(gates).byActionType).map(([actionType, count]) => ({
+    actionType,
+    count,
+    nextAction: runbooks[actionType] || runbooks.REVIEW_REQUIRED,
+  }));
 }
 
 function buildSecuritySummary(security) {
@@ -114,7 +189,7 @@ function buildFinalStatusReport(input = {}) {
   } else {
     if (completionData.status !== "COMPLETE" || completionData.canMarkGoalComplete !== true) {
       const blockers = Array.isArray(completionData.completionBlockers)
-        ? completionData.completionBlockers.join("; ")
+        ? completionData.completionBlockers.map(formatCompletionBlocker).join("; ")
         : "completion audit is not COMPLETE.";
       addGate(gates, "Completion Audit", completionData.status || "REVIEW", blockers, "Close completionBlockers and rerun npm.cmd run completion:audit.", evidencePath(completion));
     }
@@ -170,6 +245,7 @@ function buildFinalStatusReport(input = {}) {
   }
 
   const status = gates.length === 0 ? "READY_TO_CLOSE" : "FIELD_OR_SECURITY_REVIEW_REQUIRED";
+  const summary = gateSummary(gates);
 
   return {
     generatedAt: input.generatedAt || new Date().toISOString(),
@@ -206,6 +282,8 @@ function buildFinalStatusReport(input = {}) {
     evidenceRefs: Object.fromEntries(Object.entries(evidenceRefs).map(([key, value]) => [key, evidencePath(value)])),
     referenceFreshness,
     manualEvidence: manualEvidenceSummary,
+    gateSummary: summary,
+    gateActionRunbook: gateActionRunbook(gates),
     remainingGates: gates,
   };
 }
@@ -236,17 +314,28 @@ function buildMarkdown(manifest) {
     `- Control-board safety: ${manifest.fieldReadiness.controlBoardSafetyStatus}`,
     `- Security evidence: ${manifest.securityEvidence.exists ? "present" : "missing"} (${manifest.securityEvidence.path || "missing"})`,
     `- Handover package: ${manifest.handoverPackage.status} (${manifest.handoverPackage.path || "missing"})`,
+    `- Remaining gate count: ${manifest.gateSummary.total}`,
+    "",
+    "## Gate Action Summary",
+    "",
+    "| Action Type | Count | Next Action |",
+    "| --- | --- | --- |",
+    ...(manifest.gateActionRunbook.length > 0
+      ? manifest.gateActionRunbook.map(
+          (item) => `| ${markdownCell(item.actionType)} | ${item.count} | ${markdownCell(item.nextAction)} |`,
+        )
+      : ["| none | 0 | No final gates remain. |"]),
     "",
     "## Remaining Gates",
     "",
-    "| Category | Status | Message | Close When | Evidence |",
-    "| --- | --- | --- | --- | --- |",
+    "| Category | Status | Action Type | Message | Close When | Evidence |",
+    "| --- | --- | --- | --- | --- | --- |",
     ...(manifest.remainingGates.length > 0
       ? manifest.remainingGates.map(
           (item) =>
-            `| ${markdownCell(item.category)} | ${markdownCell(item.status)} | ${markdownCell(item.message)} | ${markdownCell(item.closeWhen)} | ${item.evidence ? `\`${markdownCell(item.evidence)}\`` : "missing"} |`,
+            `| ${markdownCell(item.category)} | ${markdownCell(item.status)} | ${markdownCell(item.actionType)} | ${markdownCell(item.message)} | ${markdownCell(item.closeWhen)} | ${item.evidence ? `\`${markdownCell(item.evidence)}\`` : "missing"} |`,
         )
-      : ["| none | PASS | No remaining final gates. | - | - |"]),
+      : ["| none | PASS | REVIEW_REQUIRED | No remaining final gates. | - | - |"]),
     "",
     "## Evidence References",
     "",

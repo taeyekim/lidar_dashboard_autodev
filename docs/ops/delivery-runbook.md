@@ -197,7 +197,11 @@ Share this report as the final close/no-close decision. It reports
 `READY_TO_CLOSE` only when completion audit, field readiness, strict scanner
 security evidence, manual evidence, handover package readiness, residual field
 gates, and latest artifact references all agree; otherwise it lists the
-remaining gates under `FIELD_OR_SECURITY_REVIEW_REQUIRED`.
+remaining gates under `FIELD_OR_SECURITY_REVIEW_REQUIRED`. Start with the
+`Gate Action Summary` table: `AUTOMATED_REFRESH_AVAILABLE` items can usually be
+refreshed by Codex, while `FIELD_ACTION_REQUIRED`, `MANUAL_EVIDENCE_REQUIRED`,
+and `SECURITY_REVIEW_REQUIRED` need field runtime, reviewer evidence, or scanner
+evidence before final close.
 
 Default URLs:
 
