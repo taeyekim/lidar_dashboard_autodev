@@ -21,6 +21,10 @@ const settingsPage = readProjectFile("dashboard/dashboard-web/src/pages/Settings
   "LIVE_TCP",
   "vehicle_tracks",
   "X-CSRF-Token",
+  "TCP ACK 평균 응답",
+  "averageResponseMs",
+  "responseSampleCount",
+  "formatDurationMs",
 ].forEach((token) => {
   assert(settingsPage.includes(token), `Settings page must include ${token}`);
 });

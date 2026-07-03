@@ -1259,6 +1259,12 @@ const swaggerSpec = {
           responseHex: { type: "string", nullable: true },
           crcStatus: { type: "string", nullable: true, example: "VALID" },
           errorMessage: { type: "string", nullable: true },
+          responseDurationMs: {
+            type: "integer",
+            nullable: true,
+            example: 184,
+            description: "Latest command acknowledgement latency calculated from sentAt to acknowledgedAt.",
+          },
           requestedAt: { type: "string", format: "date-time" },
           sentAt: { type: "string", format: "date-time", nullable: true },
           acknowledgedAt: { type: "string", format: "date-time", nullable: true },
@@ -1294,6 +1300,13 @@ const swaggerSpec = {
           retryCount: { type: "integer", example: 1 },
           heartbeatIntervalMs: { type: "integer", example: 5000 },
           byStatus: { type: "object", additionalProperties: { type: "integer" } },
+          averageResponseMs: {
+            type: "integer",
+            nullable: true,
+            example: 184,
+            description: "Average acknowledgement latency from the latest ACK commands.",
+          },
+          responseSampleCount: { type: "integer", example: 5 },
           latestCommand: {
             nullable: true,
             oneOf: [{ $ref: "#/components/schemas/ControlBoardCommand" }],

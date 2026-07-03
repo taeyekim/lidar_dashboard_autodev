@@ -113,6 +113,15 @@ function formatDateTime(value) {
   return date.toLocaleString("ko-KR", { hour12: false });
 }
 
+function formatNumber(value) {
+  return Number(value || 0).toLocaleString();
+}
+
+function formatDurationMs(value) {
+  if (value === null || value === undefined) return "-";
+  return `${Number(value).toLocaleString()}ms`;
+}
+
 function getSystemTone(systemStatus = {}) {
   if (systemStatus.database?.ok === false) return "error";
   if (systemStatus.controlBoard?.mode === "LIVE_TCP") return "ok";
@@ -285,6 +294,12 @@ export default function SettingsPage() {
                 >
                   <StatusBadge tone={statusTone}>{controlMode}</StatusBadge>
                 </SettingRow>
+                <SettingRow
+                  icon={Clock}
+                  title="TCP ACK 평균 응답"
+                  description="최근 ACK 명령의 sentAt to acknowledgedAt 기준 평균 지연입니다."
+                  value={`${formatDurationMs(controlBoardStatus?.averageResponseMs)} · 샘플 ${formatNumber(controlBoardStatus?.responseSampleCount)}건`}
+                />
                 <SettingRow
                   icon={Database}
                   title="차량 수 기준"

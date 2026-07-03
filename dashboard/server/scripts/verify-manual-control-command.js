@@ -36,6 +36,10 @@ assertIncludes(controller, 'trigger: "MANUAL_TEST"', "control board controller")
   "TCP_SEND_ATTEMPT_FAILED",
   "TCP_RESPONSE_ACKNOWLEDGED",
   "TCP_SEND_FAILED",
+  "responseDurationMs",
+  "summarizeResponseLatency",
+  "averageResponseMs",
+  "responseSampleCount",
   "broadcastRealtime(\"control-command.created\"",
   "broadcastRealtime(\"control-command.updated\"",
 ].forEach((token) => assertIncludes(service, token, "control board service"));

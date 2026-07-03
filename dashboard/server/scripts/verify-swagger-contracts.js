@@ -178,6 +178,7 @@ const controlBoardCommand = swaggerSpec.components?.schemas?.ControlBoardCommand
   "packetHex",
   "responseHex",
   "crcStatus",
+  "responseDurationMs",
   "requestedAt",
   "completedAt",
 ].forEach((field) => {
@@ -191,6 +192,11 @@ assert(
 const controlCommandLog = swaggerSpec.components?.schemas?.ControlCommandLog;
 ["controlCommandId", "action", "message", "metadata", "createdAt"].forEach((field) => {
   assert(controlCommandLog?.properties?.[field], `ControlCommandLog schema must expose ${field}`);
+});
+
+const controlBoardStatus = swaggerSpec.components?.schemas?.ControlBoardStatusResponse;
+["averageResponseMs", "responseSampleCount", "latestCommand"].forEach((field) => {
+  assert(controlBoardStatus?.properties?.[field], `ControlBoardStatusResponse must expose ${field}`);
 });
 
 const eventSummary = swaggerSpec.components?.schemas?.EventSummaryResponse;
@@ -213,6 +219,7 @@ const trafficStatisticsMetrics = swaggerSpec.components?.schemas?.TrafficStatist
   "dryRunCommands",
   "liveCommands",
   "commandSuccessRate",
+  "averageResponseMs",
 ].forEach((field) => {
   assert(trafficStatisticsMetrics?.properties?.[field], `TrafficStatisticsMetrics must expose ${field}`);
 });

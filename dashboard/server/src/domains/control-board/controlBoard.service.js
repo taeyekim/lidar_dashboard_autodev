@@ -28,10 +28,19 @@ function serializeDate(value) {
   return value instanceof Date ? value.toISOString() : value;
 }
 
+function responseDurationMs(command) {
+  if (!command?.sentAt || !command?.acknowledgedAt) return null;
+  const sentAtMs = new Date(command.sentAt).getTime();
+  const acknowledgedAtMs = new Date(command.acknowledgedAt).getTime();
+  const durationMs = acknowledgedAtMs - sentAtMs;
+  return durationMs >= 0 ? durationMs : null;
+}
+
 function serializeCommand(command) {
   if (!command) return null;
   return {
     ...command,
+    responseDurationMs: responseDurationMs(command),
     requestedAt: serializeDate(command.requestedAt),
     sentAt: serializeDate(command.sentAt),
     acknowledgedAt: serializeDate(command.acknowledgedAt),
@@ -42,6 +51,16 @@ function serializeCommand(command) {
       ...log,
       createdAt: serializeDate(log.createdAt),
     })),
+  };
+}
+
+function summarizeResponseLatency(commands = []) {
+  const durations = commands.map(responseDurationMs).filter((duration) => duration !== null);
+  return {
+    averageResponseMs: durations.length
+      ? Math.round(durations.reduce((sum, duration) => sum + duration, 0) / durations.length)
+      : null,
+    responseSampleCount: durations.length,
   };
 }
 
@@ -326,7 +345,7 @@ async function listCommands(query = {}) {
 
 async function getStatus() {
   const config = getControlBoardConfig();
-  const [latestCommand, counts] = await Promise.all([
+  const [latestCommand, counts, recentAckCommands] = await Promise.all([
     prisma.controlCommand.findFirst({
       orderBy: { requestedAt: "desc" },
       include: { logs: { orderBy: { createdAt: "asc" } }, targetDevice: true },
@@ -335,7 +354,18 @@ async function getStatus() {
       by: ["status"],
       _count: { _all: true },
     }),
+    prisma.controlCommand.findMany({
+      where: {
+        status: COMMAND_STATUS.ACKNOWLEDGED,
+        sentAt: { not: null },
+        acknowledgedAt: { not: null },
+      },
+      orderBy: { acknowledgedAt: "desc" },
+      take: 20,
+      select: { sentAt: true, acknowledgedAt: true },
+    }),
   ]);
+  const latency = summarizeResponseLatency(recentAckCommands);
 
   return {
     ok: true,
@@ -348,6 +378,8 @@ async function getStatus() {
     retryCount: config.retryCount,
     heartbeatIntervalMs: config.heartbeatIntervalMs,
     byStatus: Object.fromEntries(counts.map((item) => [item.status, item._count._all])),
+    averageResponseMs: latency.averageResponseMs,
+    responseSampleCount: latency.responseSampleCount,
     latestCommand: serializeCommand(latestCommand),
   };
 }
