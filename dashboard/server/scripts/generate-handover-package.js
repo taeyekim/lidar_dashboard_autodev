@@ -165,6 +165,45 @@ function fieldEvidenceStrictFailures(fieldEvidenceSummary) {
     );
 }
 
+function fieldActionArtifactStrictFailures({
+  fieldRiskRegister,
+  fieldActionBoard,
+  fieldGateClosureMap,
+  fieldOwnerBriefs,
+}) {
+  const failures = [];
+  const riskData = fieldRiskRegister?.data || {};
+  const actionData = fieldActionBoard?.data || {};
+  const gateMapData = fieldGateClosureMap?.data || {};
+  const ownerBriefsData = fieldOwnerBriefs?.data || {};
+
+  if (!fieldRiskRegister) {
+    failures.push("field risk register manifest is missing.");
+  } else if (riskData.status !== "NO_OPEN_RISKS" || Number(riskData.openRiskCount || 0) > 0) {
+    failures.push(`field risk register has ${riskData.openRiskCount ?? "unknown"} open risk item(s).`);
+  }
+
+  if (!fieldActionBoard) {
+    failures.push("field action board manifest is missing.");
+  } else if (actionData.status !== "READY_TO_CLOSE" || Number(actionData.openActionCount || 0) > 0) {
+    failures.push(`field action board has ${actionData.openActionCount ?? "unknown"} open action item(s).`);
+  }
+
+  if (!fieldGateClosureMap) {
+    failures.push("field gate closure map manifest is missing.");
+  } else if (gateMapData.status !== "READY_TO_CLOSE" || Number(gateMapData.openGateCount || 0) > 0) {
+    failures.push(`field gate closure map has ${gateMapData.openGateCount ?? "unknown"} open gate(s).`);
+  }
+
+  if (!fieldOwnerBriefs) {
+    failures.push("field owner briefs manifest is missing.");
+  } else if (ownerBriefsData.status !== "READY_TO_CLOSE" || Number(ownerBriefsData.openItemCount || 0) > 0) {
+    failures.push(`field owner briefs have ${ownerBriefsData.openItemCount ?? "unknown"} open owner item(s).`);
+  }
+
+  return failures;
+}
+
 function fieldEvidenceNextAction(type) {
   const actions = {
     "Field Preflight":
@@ -419,7 +458,7 @@ function buildMarkdown(manifest) {
     "",
     "## Package Notes",
     "",
-    "- This command refreshes the final evidence chain in order: delivery evidence, manual evidence drafts, manual evidence readiness, field readiness, field risk register, field action board, field owner briefs, completion audit, field closure plan, then handover index.",
+    "- This command refreshes the final evidence chain in order: delivery evidence, manual evidence drafts, manual evidence readiness, field readiness, field risk register, field action board, field gate closure map, field owner briefs, completion audit, field closure plan, then handover index.",
     "- Attach this manifest together with the referenced evidence folders.",
     "- `canMarkGoalComplete=false` means field/runtime/hardware evidence is still open.",
     "- Strict security acceptance should attach `npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners --target-url=<delivery-url>` output so skipped scanners become blocking evidence.",
@@ -454,6 +493,10 @@ function main() {
   const evidenceRefs = latestEvidenceRefs();
   const completion = readLatestJsonManifest("artifacts/completion-audit");
   const handoverIndex = readLatestJsonManifest("artifacts/handover-index");
+  const fieldRiskRegister = readLatestJsonManifest("artifacts/field-risk-register");
+  const fieldActionBoard = readLatestJsonManifest("artifacts/field-action-board");
+  const fieldGateClosureMap = readLatestJsonManifest("artifacts/field-gate-closure-map");
+  const fieldOwnerBriefs = readLatestJsonManifest("artifacts/field-owner-briefs");
   const failedCommands = commands.filter((item) => item.exitCode !== 0);
   const packageStatus = failedCommands.length > 0 ? "FAILED" : handoverIndex?.data?.status || "UNKNOWN";
   const canMarkGoalComplete = Boolean(completion?.data?.canMarkGoalComplete);
@@ -481,6 +524,14 @@ function main() {
     );
   }
   strictFailureReasons.push(...fieldEvidenceStrictFailures(fieldEvidenceSummary));
+  strictFailureReasons.push(
+    ...fieldActionArtifactStrictFailures({
+      fieldRiskRegister,
+      fieldActionBoard,
+      fieldGateClosureMap,
+      fieldOwnerBriefs,
+    }),
+  );
   const residualFieldGates = buildResidualFieldGates({
     canMarkGoalComplete,
     strictFailureReasons,

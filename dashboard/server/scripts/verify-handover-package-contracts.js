@@ -36,6 +36,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "summarizeFieldPreflight",
   "summarizeFieldRehearsal",
   "fieldEvidenceStrictFailures",
+  "fieldActionArtifactStrictFailures",
   "fieldEvidenceNextAction",
   "fieldEvidenceDoneWhen",
   "buildFieldEvidenceOpenItems",
@@ -67,6 +68,10 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "manualEvidenceDrafts",
   "manualEvidenceReadiness",
   "fieldGateClosureMap",
+  "openRiskCount",
+  "openActionCount",
+  "openGateCount",
+  "openItemCount",
   "Manual Evidence References",
   "Manual evidence readiness",
   "Manual evidence drafts",
@@ -136,6 +141,10 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "Strict security acceptance",
   "--strict",
   "handover package strict gate failed",
+  "field risk register has",
+  "field action board has",
+  "field gate closure map has",
+  "field owner briefs have",
 ].forEach((token) => assertIncludes(generator, token, "handover package generator"));
 
 [
@@ -171,9 +180,11 @@ assert(
     generator.indexOf('["field gate closure map", ["run", "field:gate-closure-map"') &&
     generator.indexOf('["field gate closure map", ["run", "field:gate-closure-map"') <
     generator.indexOf('["field owner briefs", ["run", "field:owner-briefs"') &&
+    generator.indexOf("fieldActionArtifactStrictFailures") <
+    generator.indexOf("const residualFieldGates = buildResidualFieldGates") &&
     generator.indexOf('["field closure plan", ["run", "field:closure-plan"') <
     generator.indexOf('["handover index", ["run", "handover:index"'),
-  "handover package must refresh manual evidence drafts before readiness, manual evidence readiness before field readiness, action board before gate closure map before owner briefs, and field closure plan before handover index",
+  "handover package must refresh manual evidence drafts before readiness, manual evidence readiness before field readiness, action board before gate closure map before owner briefs, evaluate field action artifacts before residual gates, and field closure plan before handover index",
 );
 
 [
