@@ -223,7 +223,7 @@ export function TrafficStatisticsPanel() {
           <div className="space-y-2">
             {topZones.length === 0 && (
               <div className="rounded border border-dashed border-gray-200 bg-white p-4 text-sm font-semibold text-gray-400">
-                집계할 구역 데이터가 없습니다.
+                집계된 구역 데이터가 없습니다.
               </div>
             )}
             {topZones.map((zone) => (

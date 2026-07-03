@@ -106,6 +106,7 @@ assertIncludes(fieldRequirements, "zones", "field requirements statistics respon
   "역주행률",
   "구역별 위험도",
   "상위 구역",
+  "집계된 구역 데이터가 없습니다.",
   "normalVehicles",
   "wrongwayVehicles",
   "wrongwayRate",
@@ -117,8 +118,8 @@ assertIncludes(fieldRequirements, "zones", "field requirements statistics respon
   "TCP ACK",
 ].forEach((token) => assertIncludes(panel, token, "traffic statistics panel"));
 
-["Traffic operations", "Top zones"].forEach((token) => {
-  assert(!panel.includes(token), `traffic statistics panel must not expose English placeholder copy: ${token}`);
+["Traffic operations", "Top zones", "援먰넻", "?뺤＜", "??＜", "吏묎퀎"].forEach((token) => {
+  assert(!panel.includes(token), `traffic statistics panel must not expose placeholder or mojibake copy: ${token}`);
 });
 
 const operation = swaggerSpec.paths?.["/api/statistics/traffic"]?.get;
