@@ -18,27 +18,48 @@ function argValue(name, fallback) {
   return value ? value.slice(prefix.length) : fallback;
 }
 
-function buildResult(area, reason, requiredCommand, nextActions) {
+function buildResult(area, reason, requiredCommand, nextActions, replacementOwner, targetRecheckDate) {
   return {
     name: `${area} field rehearsal unavailable`,
     status: "REVIEW",
     reason,
     requiredCommand,
+    replacementOwner,
+    targetRecheckDate,
     nextActions,
   };
 }
 
-function writeManifest(config, runId, reason, reviewer, siteName) {
+function qualityStatus(value) {
+  return value && !["UNASSIGNED", "REQUIRED_BEFORE_HANDOVER"].includes(value) ? "RECORDED" : "REVIEW";
+}
+
+function writeManifest(config, runId, options) {
   const outputDir = path.join(root, config.outputRoot, runId);
   ensureDir(outputDir);
-  const result = buildResult(config.area, reason, config.requiredCommand, config.nextActions);
+  const result = buildResult(
+    config.area,
+    options.reason,
+    config.requiredCommand,
+    config.nextActions,
+    options.replacementOwner,
+    options.targetRecheckDate,
+  );
   const manifest = {
     generatedAt: new Date().toISOString(),
     evidenceType: "FIELD_REHEARSAL_UNAVAILABLE",
     area: config.area,
-    reviewer,
-    siteName,
+    reviewer: options.reviewer,
+    siteName: options.siteName,
     hostName: os.hostname(),
+    unavailableAcceptance: {
+      reason: options.reason,
+      replacementOwner: options.replacementOwner,
+      targetRecheckDate: options.targetRecheckDate,
+      approvalNote: options.approvalNote,
+      ownerStatus: qualityStatus(options.replacementOwner),
+      recheckStatus: qualityStatus(options.targetRecheckDate),
+    },
     results: [result],
   };
   fs.writeFileSync(path.join(outputDir, "manifest.json"), JSON.stringify(manifest, null, 2));
@@ -48,15 +69,20 @@ function writeManifest(config, runId, reason, reviewer, siteName) {
       `# ${config.area} Field Rehearsal Unavailable`,
       "",
       `- Generated at: ${manifest.generatedAt}`,
-      `- Reviewer: ${reviewer}`,
-      `- Site name: ${siteName}`,
+      `- Reviewer: ${options.reviewer}`,
+      `- Site name: ${options.siteName}`,
       `- Host name: ${manifest.hostName}`,
+      `- Replacement owner: ${options.replacementOwner}`,
+      `- Target recheck date: ${options.targetRecheckDate}`,
+      `- Approval note: ${options.approvalNote || "none"}`,
+      `- Owner status: ${manifest.unavailableAcceptance.ownerStatus}`,
+      `- Recheck status: ${manifest.unavailableAcceptance.recheckStatus}`,
       "",
       "## Result",
       "",
-      "| Status | Check | Reason | Required Command |",
-      "| --- | --- | --- | --- |",
-      `| REVIEW | ${result.name} | ${reason} | \`${config.requiredCommand}\` |`,
+      "| Status | Check | Reason | Required Command | Replacement Owner | Target Recheck Date |",
+      "| --- | --- | --- | --- | --- | --- |",
+      `| REVIEW | ${result.name} | ${options.reason} | \`${config.requiredCommand}\` | ${options.replacementOwner} | ${options.targetRecheckDate} |`,
       "",
       "## Next Actions",
       "",
@@ -75,6 +101,9 @@ function main() {
   );
   const reviewer = argValue("reviewer", process.env.USERNAME || process.env.USER || "Codex");
   const siteName = argValue("site-name", "Local development workstation");
+  const replacementOwner = argValue("replacement-owner", "UNASSIGNED");
+  const targetRecheckDate = argValue("target-recheck-date", "REQUIRED_BEFORE_HANDOVER");
+  const approvalNote = argValue("approval-note", "");
 
   const configs = [
     {
@@ -109,7 +138,16 @@ function main() {
     },
   ];
 
-  const manifests = configs.map((config) => writeManifest(config, runId, reason, reviewer, siteName));
+  const manifests = configs.map((config) =>
+    writeManifest(config, runId, {
+      reason,
+      reviewer,
+      siteName,
+      replacementOwner,
+      targetRecheckDate,
+      approvalNote,
+    }),
+  );
   console.log("field rehearsal unavailable evidence written:");
   manifests.forEach((manifest) => console.log(`- ${manifest}`));
 }

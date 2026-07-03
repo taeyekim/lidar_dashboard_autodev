@@ -43,7 +43,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-fi
 npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080
 npm.cmd run runtime:evidence -- --run-smoke
 npm.cmd run runtime:evidence -- --run-smoke --use-existing-stack --base-url=http://localhost:8080
-npm.cmd run field:rehearsal-unavailable -- --reason="Docker runtime or field hardware is unavailable on this workstation"
+npm.cmd run field:rehearsal-unavailable -- --reason="Docker runtime or field hardware is unavailable on this workstation" --replacement-owner="field-owner" --target-recheck-date="2026-08-01" --approval-note="temporary local workstation evidence"
 npm.cmd run delivery:evidence
 npm.cmd run completion:audit
 npm.cmd run handover:index
@@ -106,7 +106,9 @@ hardware is not available on the current workstation, run
 `artifacts/field-db-rehearsal/`, `artifacts/field-lidar-rehearsal/`, and
 `artifacts/field-control-board-rehearsal/` so the handover package records why
 field rehearsal is still open and which command must replace the placeholder
-with a PASS manifest.
+with a PASS manifest. Use `--replacement-owner` and `--target-recheck-date` to
+record who owns the replacement PASS rehearsal and when it must be rechecked;
+omitting them leaves owner/recheck status in REVIEW until final handover.
 
 Strict field acceptance example after the delivery stack is already running:
 

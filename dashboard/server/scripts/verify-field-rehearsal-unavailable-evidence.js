@@ -29,6 +29,15 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "Lidar Ingest",
   "Control Board TCP",
   "requiredCommand",
+  "replacementOwner",
+  "targetRecheckDate",
+  "approvalNote",
+  "unavailableAcceptance",
+  "ownerStatus",
+  "recheckStatus",
+  "UNASSIGNED",
+  "REQUIRED_BEFORE_HANDOVER",
+  "RECORDED",
   "nextActions",
   "status: \"REVIEW\"",
 ].forEach((token) => assertIncludes(generator, token, "field rehearsal unavailable generator"));
@@ -43,6 +52,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
 assertIncludes(serverPackageJson, "verify-field-rehearsal-unavailable-evidence.js", "server verify chain");
 assertIncludes(runbook, "npm.cmd run field:rehearsal-unavailable", "delivery runbook");
 assertIncludes(runbook, "FIELD_REHEARSAL_UNAVAILABLE", "delivery runbook");
+assertIncludes(runbook, "--replacement-owner", "delivery runbook");
+assertIncludes(runbook, "--target-recheck-date", "delivery runbook");
 assertIncludes(acceptance, "field:rehearsal-unavailable", "acceptance checklist");
 assertIncludes(matrix, "field:rehearsal-unavailable", "delivery evidence matrix");
 
