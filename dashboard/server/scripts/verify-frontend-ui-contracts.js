@@ -10,6 +10,13 @@ function readProjectFile(relativePath) {
 }
 
 const card = readProjectFile("dashboard/dashboard-web/src/shared/components/Card.jsx");
+const todaysEventsPath = path.join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "dashboard/dashboard-web/src/components/dashboard/TodaysEvents.jsx",
+);
 
 [
   "rounded border border-gray-200 bg-white p-4 shadow-sm",
@@ -22,5 +29,7 @@ const card = readProjectFile("dashboard/dashboard-web/src/shared/components/Card
 ["border-dashed", "border-2", "font-mono text-gray-500", "�"].forEach((token) => {
   assert(!card.includes(token), `Card component must not include mock/debug UI token: ${token}`);
 });
+
+assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component must not remain in frontend source");
 
 console.log("frontend UI contracts ok");
