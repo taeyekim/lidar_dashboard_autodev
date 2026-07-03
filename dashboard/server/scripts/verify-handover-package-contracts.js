@@ -71,6 +71,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "manualEvidenceDrafts",
   "manualEvidenceReadiness",
   "fieldGateClosureMap",
+  "ciStatus",
   "openRiskCount",
   "openActionCount",
   "openGateCount",
@@ -129,6 +130,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "canMarkGoalComplete",
   "controlBoardSafetyStatus",
   "Control-board safety status",
+  "CI status",
   "baseUrl",
   "--base-url",
   "Base URL",
@@ -159,6 +161,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "field action board has",
   "field gate closure map has",
   "field owner briefs have",
+  "CI status evidence",
 ].forEach((token) => assertIncludes(generator, token, "handover package generator"));
 
 [
@@ -219,5 +222,6 @@ assertIncludes(checklist, "gate-closure-map/owner-brief references", "acceptance
 assertIncludes(checklist, "Git commit", "acceptance checklist");
 assertIncludes(checklist, "Git pushed to origin/dev", "acceptance checklist");
 assertIncludes(matrix, "npm run handover:package", "delivery evidence matrix");
+assertIncludes(matrix, "npm run ci:status", "delivery evidence matrix");
 
 console.log("handover package contracts ok");

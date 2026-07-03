@@ -43,6 +43,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "source-revision-closeout", "final execution plan generator"],
   [generator, "docs-text-quality", "final execution plan generator"],
   [generator, "npm.cmd run verify:docs-text-quality", "final execution plan generator"],
+  [generator, "ci-status", "final execution plan generator"],
+  [generator, "npm.cmd run ci:status", "final execution plan generator"],
   [generator, "git push origin dev", "final execution plan generator"],
   [generator, "HEAD matches origin/dev", "final execution plan generator"],
   [generator, "manualEvidenceTargets", "final execution plan generator"],
@@ -68,6 +70,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [runbook, "FIELD_SITE_NAME", "delivery runbook"],
   [runbook, "source revision closeout", "delivery runbook"],
   [runbook, "verify:docs-text-quality", "delivery runbook"],
+  [runbook, "ci:status", "delivery runbook"],
   [runbook, "git push origin dev", "delivery runbook"],
   [runbook, "field:gate-closure-map", "delivery runbook"],
   [runbook, "completion:audit", "delivery runbook"],
@@ -78,6 +81,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [checklist, "npm run final:execution-plan", "acceptance checklist"],
   [checklist, "source revision closeout", "acceptance checklist"],
   [checklist, "verify:docs-text-quality", "acceptance checklist"],
+  [checklist, "ci:status", "acceptance checklist"],
   [checklist, "git push origin dev", "acceptance checklist"],
   [checklist, "Field Action Artifact Actions", "acceptance checklist"],
   [checklist, "Command Gate Coverage", "acceptance checklist"],
@@ -86,6 +90,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [matrix, "source-revision-closeout", "delivery evidence matrix"],
   [matrix, "docs-text-quality", "delivery evidence matrix"],
   [matrix, "verify:docs-text-quality", "delivery evidence matrix"],
+  [matrix, "ci:status", "delivery evidence matrix"],
   [matrix, "git push origin dev", "delivery evidence matrix"],
   [matrix, "Command Gate Coverage", "delivery evidence matrix"],
   [matrix, "strict `handover:package`", "delivery evidence matrix"],
@@ -170,11 +175,13 @@ assert(
   "open plan should refresh completion audit, handover index, closure plan, then handover package in order",
 );
 assert(
-  openPlan.orderedCommands.findIndex((item) => item.id === "source-revision-closeout") <
+    openPlan.orderedCommands.findIndex((item) => item.id === "source-revision-closeout") <
     openPlan.orderedCommands.findIndex((item) => item.id === "docs-text-quality") &&
     openPlan.orderedCommands.findIndex((item) => item.id === "docs-text-quality") <
+    openPlan.orderedCommands.findIndex((item) => item.id === "ci-status") &&
+    openPlan.orderedCommands.findIndex((item) => item.id === "ci-status") <
     openPlan.orderedCommands.findIndex((item) => item.id === "completion-audit"),
-  "open plan should close source revision and verify docs text quality before Git-bearing evidence refresh commands",
+  "open plan should close source revision, verify docs text quality, and record CI status before Git-bearing evidence refresh commands",
 );
 assert(openPlan.orderedCommands.some((item) => item.command.includes("http://field.local:8080")), "commands should use the requested base URL");
 assert(openPlan.sourceFieldGateClosureMap.includes("artifacts/field-gate-closure-map"), "execution plan should reference gate closure map");
@@ -258,6 +265,10 @@ assert(
 assert(
   automatedRefreshCommands.some((item) => item.id === "docs-text-quality"),
   "automated refresh gates should include docs text quality verification",
+);
+assert(
+  automatedRefreshCommands.some((item) => item.id === "ci-status"),
+  "automated refresh gates should include CI status evidence",
 );
 assert(
   automatedRefreshCommands.some((item) => item.id === "handover-index"),

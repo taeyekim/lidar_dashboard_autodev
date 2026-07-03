@@ -177,6 +177,14 @@ function commandCatalog(baseUrl) {
       doneWhen: "Docs text quality contracts pass.",
     },
     {
+      id: "ci-status",
+      phase: "Package Refresh",
+      actionTypes: ["AUTOMATED_REFRESH_AVAILABLE", "REVIEW_REQUIRED"],
+      command: `npm.cmd run ci:status -- --generated-by=${fieldReviewerArg}`,
+      purpose: "Record the latest GitHub Actions CI result for the final dev commit.",
+      doneWhen: "CI status evidence is PASS and matches the final pushed dev commit.",
+    },
+    {
       id: "completion-audit",
       phase: "Package Refresh",
       actionTypes: ["AUTOMATED_REFRESH_AVAILABLE", "FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED", "REVIEW_REQUIRED"],

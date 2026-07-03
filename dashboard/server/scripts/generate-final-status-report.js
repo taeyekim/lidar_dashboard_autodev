@@ -17,6 +17,7 @@ const REQUIRED_SOURCE_REVISION_EVIDENCE_KEYS = [
   "fieldActionBoard",
   "fieldGateClosureMap",
   "fieldOwnerBriefs",
+  "ciStatus",
   "handoverPackage",
 ];
 
@@ -85,6 +86,7 @@ function latestEvidenceRefs() {
     fieldActionBoard: readLatestJsonManifest("artifacts/field-action-board"),
     fieldGateClosureMap: readLatestJsonManifest("artifacts/field-gate-closure-map"),
     fieldOwnerBriefs: readLatestJsonManifest("artifacts/field-owner-briefs"),
+    ciStatus: readLatestJsonManifest("artifacts/ci-status"),
   };
 }
 
@@ -230,6 +232,7 @@ function refsAreFresh(handoverPackage, evidenceRefs) {
     fieldActionBoard: evidencePath(evidenceRefs.fieldActionBoard),
     fieldGateClosureMap: evidencePath(evidenceRefs.fieldGateClosureMap),
     fieldOwnerBriefs: evidencePath(evidenceRefs.fieldOwnerBriefs),
+    ciStatus: evidencePath(evidenceRefs.ciStatus),
     handoverIndex: evidencePath(evidenceRefs.handoverIndex),
     fieldClosurePlan: evidencePath(evidenceRefs.fieldClosurePlan),
   };
@@ -389,6 +392,7 @@ function buildFinalStatusReport(input = {}) {
   const fieldActionBoard = evidenceRefs.fieldActionBoard;
   const fieldGateClosureMap = evidenceRefs.fieldGateClosureMap;
   const fieldOwnerBriefs = evidenceRefs.fieldOwnerBriefs;
+  const ciStatus = evidenceRefs.ciStatus;
   const completionData = completion?.data || {};
   const readinessData = readiness?.data || {};
   const packageData = handoverPackage?.data || {};
@@ -396,6 +400,7 @@ function buildFinalStatusReport(input = {}) {
   const fieldActionBoardData = fieldActionBoard?.data || {};
   const fieldGateClosureMapData = fieldGateClosureMap?.data || {};
   const fieldOwnerBriefsData = fieldOwnerBriefs?.data || {};
+  const ciStatusData = ciStatus?.data || {};
   const manualReadiness = evidenceRefs.manualEvidenceReadiness;
   const manualReadinessData = manualReadiness?.data || {};
   const securitySummary = buildSecuritySummary(security);
@@ -752,6 +757,19 @@ function buildFinalStatusReport(input = {}) {
     );
   }
 
+  if (!ciStatus) {
+    addGate(gates, "CI Status", "MISSING", "Latest CI status evidence manifest is missing.", "Run npm.cmd run ci:status after the final dev push and GitHub Actions completion.", null);
+  } else if (ciStatusData.status !== "PASS" || ciStatusData.canUseForFinalClose !== true) {
+    addGate(
+      gates,
+      "CI Status",
+      ciStatusData.status || "REVIEW",
+      `CI status evidence is not PASS for the final source revision: ${(ciStatusData.reviewReasons || []).join("; ") || "review required"}.`,
+      "Confirm the GitHub Actions CI run for the final dev commit completed with conclusion=success, then rerun npm.cmd run ci:status and final:status.",
+      evidencePath(ciStatus),
+    );
+  }
+
   sourceRevisionFreshness
     .filter((item) => !item.hasGitMetadata || !item.fresh || !item.clean || !item.branchOk || !item.upstreamOk || !item.pushed)
     .forEach((item) => {
@@ -827,6 +845,13 @@ function buildFinalStatusReport(input = {}) {
       residualFieldGateCount: Array.isArray(packageData.residualFieldGates) ? packageData.residualFieldGates.length : null,
       strictFailureReasons: packageData.strictFailureReasons || [],
     },
+    ciStatus: {
+      path: evidencePath(ciStatus),
+      status: ciStatusData.status || "MISSING",
+      canUseForFinalClose: ciStatusData.canUseForFinalClose === true,
+      latestRun: ciStatusData.latestRun || null,
+      reviewReasons: ciStatusData.reviewReasons || [],
+    },
     evidenceRefs: Object.fromEntries(Object.entries(evidenceRefs).map(([key, value]) => [key, evidencePath(value)])),
     referenceFreshness,
     sourceRevisionFreshness,
@@ -873,6 +898,7 @@ function buildMarkdown(manifest) {
     `- Security scanner closeout open: ${manifest.securityEvidence.scannerCloseoutSummary.open}/${manifest.securityEvidence.scannerCloseoutSummary.total}`,
     `- Manual evidence readiness: ${manifest.manualEvidenceReadiness.status} (${manifest.manualEvidenceReadiness.path || "missing"})`,
     `- Handover package: ${manifest.handoverPackage.status} (${manifest.handoverPackage.path || "missing"})`,
+    `- CI status: ${manifest.ciStatus.status} (${manifest.ciStatus.path || "missing"})`,
     `- Remaining gate count: ${manifest.gateSummary.total}`,
     "",
     "## Gate Action Summary",

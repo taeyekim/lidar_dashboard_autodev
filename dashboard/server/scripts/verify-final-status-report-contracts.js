@@ -83,10 +83,12 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "fieldActionBoard", "final status report generator"],
   [generator, "fieldGateClosureMap", "final status report generator"],
   [generator, "fieldOwnerBriefs", "final status report generator"],
+  [generator, "ciStatus", "final status report generator"],
   [generator, "Field Risk Register", "final status report generator"],
   [generator, "Field Action Board", "final status report generator"],
   [generator, "Field Gate Closure Map", "final status report generator"],
   [generator, "Field Owner Briefs", "final status report generator"],
+  [generator, "CI Status", "final status report generator"],
   [generator, "openRiskCount", "final status report generator"],
   [generator, "openActionCount", "final status report generator"],
   [generator, "openGateCount", "final status report generator"],
@@ -299,6 +301,16 @@ const readyEvidence = {
     path: "artifacts/field-owner-briefs/20260101-000000/manifest.json",
     data: { status: "READY_TO_CLOSE", ownerCount: 0, openItemCount: 0, git: readyEvidenceGit },
   },
+  ciStatus: {
+    path: "artifacts/ci-status/20260101-000000/manifest.json",
+    data: {
+      status: "PASS",
+      canUseForFinalClose: true,
+      git: readyEvidenceGit,
+      latestRun: { headSha: "fixture", status: "completed", conclusion: "success" },
+      reviewReasons: [],
+    },
+  },
 };
 
 readyEvidence.handoverPackage = {
@@ -321,6 +333,7 @@ readyEvidence.handoverPackage = {
       fieldActionBoard: readyEvidence.fieldActionBoard.path,
       fieldGateClosureMap: readyEvidence.fieldGateClosureMap.path,
       fieldOwnerBriefs: readyEvidence.fieldOwnerBriefs.path,
+      ciStatus: readyEvidence.ciStatus.path,
       handoverIndex: readyEvidence.handoverIndex.path,
       fieldClosurePlan: readyEvidence.fieldClosurePlan.path,
     },
@@ -339,6 +352,7 @@ const ready = buildFinalStatusReport({
 
 assert(ready.status === "READY_TO_CLOSE", "complete fixture should be READY_TO_CLOSE");
 assert(ready.canMarkGoalComplete === true, "READY_TO_CLOSE should allow goal completion");
+assert(ready.ciStatus.status === "PASS", "complete fixture should expose PASS CI status");
 assert(ready.remainingGates.length === 0, "complete fixture should have no remaining gates");
 assert(ready.gateSummary.total === 0, "complete fixture should have zero gate summary total");
 assert(
@@ -377,6 +391,10 @@ assert(
   "complete fixture should verify fresh field owner briefs reference",
 );
 assert(
+  ready.referenceFreshness.some((item) => item.key === "ciStatus" && item.fresh === true),
+  "complete fixture should verify fresh CI status reference",
+);
+assert(
   ready.sourceRevisionFreshness.some((item) => item.key === "handoverPackage" && item.fresh === true && item.clean === true),
   "complete fixture should verify handover package source revision freshness",
 );
@@ -387,6 +405,10 @@ assert(
 assert(
   ready.sourceRevisionFreshness.some((item) => item.key === "manualEvidenceReadiness" && item.fresh === true && item.pushed === true),
   "complete fixture should verify manual evidence readiness source revision freshness",
+);
+assert(
+  ready.sourceRevisionFreshness.some((item) => item.key === "ciStatus" && item.fresh === true && item.pushed === true),
+  "complete fixture should verify CI status source revision freshness",
 );
 assert(
   ready.sourceRevisionFreshness.every((item) => item.branch === "dev" && item.branchOk === true),

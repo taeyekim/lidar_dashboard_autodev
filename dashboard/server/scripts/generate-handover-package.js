@@ -123,6 +123,7 @@ function latestEvidenceRefs() {
     fieldActionBoard: readLatestJsonManifest("artifacts/field-action-board")?.path || null,
     fieldGateClosureMap: readLatestJsonManifest("artifacts/field-gate-closure-map")?.path || null,
     fieldOwnerBriefs: readLatestJsonManifest("artifacts/field-owner-briefs")?.path || null,
+    ciStatus: readLatestJsonManifest("artifacts/ci-status")?.path || null,
   };
 }
 
@@ -409,6 +410,7 @@ function buildMarkdown(manifest) {
     `- Field action board: ${manifest.evidenceRefs.fieldActionBoard || "missing"}`,
     `- Field gate closure map: ${manifest.evidenceRefs.fieldGateClosureMap || "missing"}`,
     `- Field owner briefs: ${manifest.evidenceRefs.fieldOwnerBriefs || "missing"}`,
+    `- CI status: ${manifest.evidenceRefs.ciStatus || "missing"}`,
     "",
     "## Manual Evidence References",
     "",
@@ -485,7 +487,7 @@ function buildMarkdown(manifest) {
     "",
     "## Package Notes",
     "",
-    "- This command refreshes the final evidence chain in order: delivery evidence, manual evidence drafts, manual evidence readiness, field readiness, field risk register, field action board, field gate closure map, field owner briefs, completion audit, field closure plan, then handover index.",
+    "- This command refreshes the final evidence chain in order: delivery evidence, manual evidence drafts, manual evidence readiness, field readiness, field risk register, field action board, field gate closure map, field owner briefs, CI status, completion audit, field closure plan, then handover index.",
     "- Attach this manifest together with the referenced evidence folders.",
     "- `canMarkGoalComplete=false` means field/runtime/hardware evidence is still open.",
     "- Strict security acceptance should attach `npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners --target-url=<delivery-url>` output so skipped scanners become blocking evidence.",
@@ -512,6 +514,7 @@ function main() {
     ["field action board", ["run", "field:action-board", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["field gate closure map", ["run", "field:gate-closure-map", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["field owner briefs", ["run", "field:owner-briefs", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
+    ["CI status", ["run", "ci:status", "--", `--generated-by=${generatedBy}`]],
     ["completion audit", ["run", "completion:audit"]],
     ["field closure plan", ["run", "field:closure-plan", "--", `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["handover index", ["run", "handover:index", "--", `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
@@ -524,6 +527,7 @@ function main() {
   const fieldActionBoard = readLatestJsonManifest("artifacts/field-action-board");
   const fieldGateClosureMap = readLatestJsonManifest("artifacts/field-gate-closure-map");
   const fieldOwnerBriefs = readLatestJsonManifest("artifacts/field-owner-briefs");
+  const ciStatus = readLatestJsonManifest("artifacts/ci-status");
   const failedCommands = commands.filter((item) => item.exitCode !== 0);
   const packageStatus = failedCommands.length > 0 ? "FAILED" : handoverIndex?.data?.status || "UNKNOWN";
   const canMarkGoalComplete = Boolean(completion?.data?.canMarkGoalComplete);
@@ -564,6 +568,11 @@ function main() {
     strictFailureReasons.push(
       `${openManualEvidence.length} manual evidence item(s) are not PRESENT: ${openManualEvidence.map((item) => `${item.type}=${item.status}`).join(", ")}.`,
     );
+  }
+  if (!ciStatus) {
+    strictFailureReasons.push("CI status evidence manifest is missing.");
+  } else if (ciStatus.data?.status !== "PASS" || ciStatus.data?.canUseForFinalClose !== true) {
+    strictFailureReasons.push(`CI status evidence is ${ciStatus.data?.status || "REVIEW"}: ${(ciStatus.data?.reviewReasons || []).join("; ") || "review required"}.`);
   }
   strictFailureReasons.push(...fieldEvidenceStrictFailures(fieldEvidenceSummary));
   strictFailureReasons.push(
