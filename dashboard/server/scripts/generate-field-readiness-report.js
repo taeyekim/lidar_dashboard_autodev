@@ -70,7 +70,10 @@ function checkEvidenceCommand(name) {
     "control-board TCP mode": "Confirm CONTROL_BOARD_DRY_RUN, CONTROL_BOARD_HOST, and CONTROL_BOARD_PORT in .env before live TCP rehearsal.",
     "control-board live approval": "Confirm CONTROL_BOARD_LIVE_APPROVED=true only after the hardware owner approves live TCP testing.",
     "HTTPS cookie setting": "Confirm AUTH_COOKIE_SECURE=true in the HTTPS/TLS delivery topology.",
+    "SameSite cookie setting": "Confirm AUTH_COOKIE_SAMESITE matches the delivery topology; SameSite=None requires Secure cookies.",
     "Swagger allowlist": "Confirm NGINX_SWAGGER_ALLOW is restricted to the operator/internal CIDR.",
+    "Nginx wrong-way rate limit": "Confirm NGINX_WRONGWAY_RATE_LIMIT and NGINX_WRONGWAY_BURST match the expected lidar event rate.",
+    "Nginx content security policy": "Confirm NGINX_CONTENT_SECURITY_POLICY allows final media hosts while keeping script/object restrictions.",
     "Docker CLI": "docker --version",
     "Docker daemon": "docker compose ps --format json",
     "Docker compose config": "docker compose config --quiet",
@@ -91,7 +94,10 @@ function checkDoneWhen(name) {
     "control-board TCP mode": "Dry-run is explicitly accepted or live TCP host/port are configured with hardware approval.",
     "control-board live approval": "CONTROL_BOARD_LIVE_APPROVED=true is recorded after hardware owner approval.",
     "HTTPS cookie setting": "AUTH_COOKIE_SECURE=true for the HTTPS/TLS delivery route.",
+    "SameSite cookie setting": "AUTH_COOKIE_SAMESITE matches the same-site or cross-site HTTPS delivery route.",
     "Swagger allowlist": "NGINX_SWAGGER_ALLOW is restricted to the approved operator/internal CIDR.",
+    "Nginx wrong-way rate limit": "Wrong-way ingest rate limit and burst values match the expected lidar sender rate.",
+    "Nginx content security policy": "Content Security Policy is reviewed for the final camera/lidar/media hosts.",
     "Docker CLI": "Docker CLI version command exits successfully on the delivery host.",
     "Docker daemon": "Docker daemon responds and compose service state can be listed.",
     "Docker compose config": "Docker compose config validates without errors.",
@@ -133,7 +139,7 @@ function buildRequiredFieldValue(name, state, requiredForPass, completionGate, n
 }
 
 function fieldValueOwner(name) {
-  if (["JWT_SECRET", "SEED_ADMIN_PASSWORD", "AUTH_COOKIE_SECURE"].includes(name)) return "Auth/Security";
+  if (["JWT_SECRET", "SEED_ADMIN_PASSWORD", "AUTH_COOKIE_SECURE", "AUTH_COOKIE_SAMESITE"].includes(name)) return "Auth/Security";
   if (["DEVICE_INGEST_API_KEY"].includes(name)) return "LiDAR Ingest";
   if (name.startsWith("CONTROL_BOARD_")) return "Control-board TCP";
   if (name.startsWith("NGINX_")) return "Nginx Delivery";
@@ -214,9 +220,16 @@ function buildEnvChecks() {
   checks.push(buildCheck("control-board live approval", liveApproved ? "PASS" : "REVIEW", "critical", liveApproved ? "CONTROL_BOARD_LIVE_APPROVED=true." : "CONTROL_BOARD_LIVE_APPROVED is not true.", "Set CONTROL_BOARD_LIVE_APPROVED=true only after hardware owner approval is recorded."));
 
   const secureCookie = envValue(values, "AUTH_COOKIE_SECURE").toLowerCase();
+  const sameSiteCookie = envValue(values, "AUTH_COOKIE_SAMESITE").toLowerCase();
   const swaggerAllow = envValue(values, "NGINX_SWAGGER_ALLOW");
+  const wrongwayRateLimit = envValue(values, "NGINX_WRONGWAY_RATE_LIMIT");
+  const wrongwayBurst = envValue(values, "NGINX_WRONGWAY_BURST");
+  const contentSecurityPolicy = envValue(values, "NGINX_CONTENT_SECURITY_POLICY");
   checks.push(buildCheck("HTTPS cookie setting", secureCookie === "true" ? "PASS" : "REVIEW", "warning", secureCookie === "true" ? "AUTH_COOKIE_SECURE=true." : "AUTH_COOKIE_SECURE is not true.", "Set AUTH_COOKIE_SECURE=true when HTTPS/TLS is used."));
+  checks.push(buildCheck("SameSite cookie setting", ["lax", "strict", "none"].includes(sameSiteCookie) ? "PASS" : "REVIEW", "warning", sameSiteCookie ? "AUTH_COOKIE_SAMESITE is configured." : "AUTH_COOKIE_SAMESITE is missing.", "Set AUTH_COOKIE_SAMESITE to lax, strict, or none according to the delivery topology."));
   checks.push(buildCheck("Swagger allowlist", swaggerAllow && swaggerAllow !== "all" ? "PASS" : "REVIEW", "warning", swaggerAllow && swaggerAllow !== "all" ? "NGINX_SWAGGER_ALLOW is restricted." : "NGINX_SWAGGER_ALLOW is open or missing.", "Restrict Swagger to the operator/internal network before delivery."));
+  checks.push(buildCheck("Nginx wrong-way rate limit", wrongwayRateLimit && wrongwayBurst ? "PASS" : "REVIEW", "warning", wrongwayRateLimit && wrongwayBurst ? "Nginx wrong-way rate limit and burst are configured." : "Nginx wrong-way rate limit or burst is missing.", "Set NGINX_WRONGWAY_RATE_LIMIT and NGINX_WRONGWAY_BURST for the expected lidar event rate."));
+  checks.push(buildCheck("Nginx content security policy", contentSecurityPolicy ? "PASS" : "REVIEW", "warning", contentSecurityPolicy ? "NGINX_CONTENT_SECURITY_POLICY is configured." : "NGINX_CONTENT_SECURITY_POLICY is missing.", "Review and set NGINX_CONTENT_SECURITY_POLICY for final camera/lidar/media hosts."));
 
   const exampleKeys = Object.keys(example.values);
   const missingExampleKeys = local.exists ? exampleKeys.filter((key) => !(key in values)) : exampleKeys;
@@ -280,6 +293,38 @@ function buildEnvChecks() {
       "Set true when HTTPS/TLS is used through the delivery proxy.",
       "Blocks HTTPS cookie delivery posture when false or missing.",
       "Set AUTH_COOKIE_SECURE=true for the TLS delivery topology.",
+      false,
+    ),
+    buildRequiredFieldValue(
+      "AUTH_COOKIE_SAMESITE",
+      sameSiteCookie || "missing",
+      "Set lax/strict for same-site delivery, or none only for cross-site HTTPS delivery.",
+      "Blocks cookie topology acceptance when missing or invalid.",
+      "Set AUTH_COOKIE_SAMESITE to lax, strict, or none according to the delivery topology.",
+      false,
+    ),
+    buildRequiredFieldValue(
+      "NGINX_WRONGWAY_RATE_LIMIT",
+      wrongwayRateLimit ? "configured" : "missing",
+      "Set the wrong-way ingest rate limit for the expected lidar sender rate.",
+      "Blocks Nginx delivery posture review when missing.",
+      "Set NGINX_WRONGWAY_RATE_LIMIT after confirming the lidar PC event rate.",
+      false,
+    ),
+    buildRequiredFieldValue(
+      "NGINX_WRONGWAY_BURST",
+      wrongwayBurst ? "configured" : "missing",
+      "Set the wrong-way ingest burst for the expected lidar sender burst profile.",
+      "Blocks Nginx delivery posture review when missing.",
+      "Set NGINX_WRONGWAY_BURST after confirming the lidar PC burst profile.",
+      false,
+    ),
+    buildRequiredFieldValue(
+      "NGINX_CONTENT_SECURITY_POLICY",
+      contentSecurityPolicy ? "configured" : "missing",
+      "Review CSP for the final camera/lidar/media host topology.",
+      "Blocks Nginx security posture review when missing.",
+      "Set NGINX_CONTENT_SECURITY_POLICY after reviewing final media hosts.",
       false,
     ),
     buildRequiredFieldValue(
