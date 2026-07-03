@@ -53,13 +53,14 @@ function serializeCommand(command) {
   };
 }
 
-function wrongwayVehicleKey(event) {
-  return event.trackId || event.vehicleTrackId || event.id;
-}
-
 function percent(part, total) {
   if (!total) return 0;
   return Math.round((part / total) * 10000) / 100;
+}
+
+function countFromQueryRow(rows, field = "count") {
+  const value = Array.isArray(rows) ? rows[0]?.[field] : rows?.[field];
+  return Number(value || 0);
 }
 
 function eventInclude() {
@@ -153,7 +154,7 @@ async function getSummary() {
     todayVehicleTracks,
     byStatus,
     byEventType,
-    wrongwayEventRows,
+    wrongwayVehicleRows,
     latest,
   ] = await Promise.all([
     prisma.trafficEvent.count(),
@@ -168,16 +169,17 @@ async function getSummary() {
       by: ["eventType"],
       _count: { _all: true },
     }),
-    prisma.trafficEvent.findMany({
-      where: { eventType: { in: ["wrong-way-level-1", "wrong-way-level-2"] } },
-      select: { id: true, trackId: true, vehicleTrackId: true },
-    }),
+    prisma.$queryRaw`
+      SELECT COUNT(DISTINCT COALESCE(track_id, vehicle_track_id, id))::int AS count
+      FROM traffic_events
+      WHERE event_type IN ('wrong-way-level-1', 'wrong-way-level-2')
+    `,
     prisma.trafficEvent.findFirst({
       orderBy: { receivedAt: "desc" },
       select: { id: true, receivedAt: true },
     }),
   ]);
-  const wrongwayVehicles = new Set(wrongwayEventRows.map(wrongwayVehicleKey)).size;
+  const wrongwayVehicles = countFromQueryRow(wrongwayVehicleRows);
   const wrongWayEvents =
     (byEventType.find((item) => item.eventType === "wrong-way-level-1")?._count?._all || 0) +
     (byEventType.find((item) => item.eventType === "wrong-way-level-2")?._count?._all || 0);
