@@ -29,6 +29,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "handover:index",
   "field:closure-plan",
   "field:readiness",
+  "field:gate-closure-map",
   "manual:evidence-drafts",
   "manual:evidence-readiness",
   "summarizeFieldAcceptance",
@@ -65,6 +66,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "securityEvidence",
   "manualEvidenceDrafts",
   "manualEvidenceReadiness",
+  "fieldGateClosureMap",
   "Manual Evidence References",
   "Manual evidence readiness",
   "Manual evidence drafts",
@@ -165,9 +167,13 @@ assert(
     generator.indexOf('["manual evidence readiness", ["run", "manual:evidence-readiness"') &&
     generator.indexOf('["manual evidence readiness", ["run", "manual:evidence-readiness"') <
     generator.indexOf('["field readiness", ["run", "field:readiness"') &&
+    generator.indexOf('["field action board", ["run", "field:action-board"') <
+    generator.indexOf('["field gate closure map", ["run", "field:gate-closure-map"') &&
+    generator.indexOf('["field gate closure map", ["run", "field:gate-closure-map"') <
+    generator.indexOf('["field owner briefs", ["run", "field:owner-briefs"') &&
     generator.indexOf('["field closure plan", ["run", "field:closure-plan"') <
     generator.indexOf('["handover index", ["run", "handover:index"'),
-  "handover package must refresh manual evidence drafts before readiness, manual evidence readiness before field readiness, and field closure plan before handover index",
+  "handover package must refresh manual evidence drafts before readiness, manual evidence readiness before field readiness, action board before gate closure map before owner briefs, and field closure plan before handover index",
 );
 
 [

@@ -32,6 +32,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "Manual Evidence Readiness",
   "Manual Evidence Drafts",
   "Field Closure Plan",
+  "Field Gate Closure Map",
   "DB And Prisma Field Rehearsal",
   "Lidar Ingest Field Rehearsal",
   "Control Board Field Rehearsal",
@@ -76,6 +77,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "canMarkGoalComplete",
   "controlBoardSafetyStatus",
   "Control-board safety status",
+  "artifacts/field-gate-closure-map",
 ].forEach((token) => assertIncludes(generator, token, "handover index generator"));
 
 [

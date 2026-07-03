@@ -58,10 +58,12 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [finalStatusReport, "manualEvidenceReadiness", "final status report generator"],
   [finalStatusReport, "fieldRiskRegister", "final status report generator"],
   [finalStatusReport, "fieldActionBoard", "final status report generator"],
+  [finalStatusReport, "fieldGateClosureMap", "final status report generator"],
   [finalStatusReport, "fieldOwnerBriefs", "final status report generator"],
   [finalStatusReport, "artifacts/manual-evidence-readiness", "final status report generator"],
   [finalStatusReport, "artifacts/field-risk-register", "final status report generator"],
   [finalStatusReport, "artifacts/field-action-board", "final status report generator"],
+  [finalStatusReport, "artifacts/field-gate-closure-map", "final status report generator"],
   [finalStatusReport, "artifacts/field-owner-briefs", "final status report generator"],
   [finalStatusReport, "Do not mark the Codex goal complete", "final status report generator"],
   [handoverIndex, "canMarkGoalComplete", "handover index generator"],
@@ -89,6 +91,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [matrix, "latest referenced artifacts", "delivery evidence matrix"],
   [matrix, "field risk register", "delivery evidence matrix"],
   [matrix, "field action board", "delivery evidence matrix"],
+  [matrix, "field gate closure map", "delivery evidence matrix"],
   [matrix, "field owner briefs", "delivery evidence matrix"],
   [matrix, "no residual field gates", "delivery evidence matrix"],
   [matrix, "Final Status", "delivery evidence matrix"],
@@ -102,6 +105,7 @@ const latestSecurity = readLatestJsonManifest("artifacts/security");
 const latestManualReadiness = readLatestJsonManifest("artifacts/manual-evidence-readiness");
 const latestRiskRegister = readLatestJsonManifest("artifacts/field-risk-register");
 const latestActionBoard = readLatestJsonManifest("artifacts/field-action-board");
+const latestGateClosureMap = readLatestJsonManifest("artifacts/field-gate-closure-map");
 const latestOwnerBriefs = readLatestJsonManifest("artifacts/field-owner-briefs");
 const latestDelivery = readLatestJsonManifest("artifacts/delivery");
 const latestIndex = readLatestJsonManifest("artifacts/handover-index");
@@ -243,6 +247,11 @@ if (latestPackage) {
     assert(
       data.evidenceRefs?.fieldActionBoard === latestActionBoard.path,
       "READY package must reference latest field action board",
+    );
+    assert(latestGateClosureMap, "READY package requires latest field gate closure map");
+    assert(
+      data.evidenceRefs?.fieldGateClosureMap === latestGateClosureMap.path,
+      "READY package must reference latest field gate closure map",
     );
     assert(latestOwnerBriefs, "READY package requires latest field owner briefs");
     assert(

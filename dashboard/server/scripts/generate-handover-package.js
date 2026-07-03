@@ -97,6 +97,7 @@ function latestEvidenceRefs() {
     manualEvidenceReadiness: readLatestJsonManifest("artifacts/manual-evidence-readiness")?.path || null,
     fieldRiskRegister: readLatestJsonManifest("artifacts/field-risk-register")?.path || null,
     fieldActionBoard: readLatestJsonManifest("artifacts/field-action-board")?.path || null,
+    fieldGateClosureMap: readLatestJsonManifest("artifacts/field-gate-closure-map")?.path || null,
     fieldOwnerBriefs: readLatestJsonManifest("artifacts/field-owner-briefs")?.path || null,
   };
 }
@@ -340,6 +341,7 @@ function buildMarkdown(manifest) {
     `- Manual evidence readiness: ${manifest.evidenceRefs.manualEvidenceReadiness || "missing"}`,
     `- Field risk register: ${manifest.evidenceRefs.fieldRiskRegister || "missing"}`,
     `- Field action board: ${manifest.evidenceRefs.fieldActionBoard || "missing"}`,
+    `- Field gate closure map: ${manifest.evidenceRefs.fieldGateClosureMap || "missing"}`,
     `- Field owner briefs: ${manifest.evidenceRefs.fieldOwnerBriefs || "missing"}`,
     "",
     "## Manual Evidence References",
@@ -442,6 +444,7 @@ function main() {
     ["field readiness", ["run", "field:readiness", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["field risk register", ["run", "field:risk-register", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["field action board", ["run", "field:action-board", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
+    ["field gate closure map", ["run", "field:gate-closure-map", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["field owner briefs", ["run", "field:owner-briefs", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["completion audit", ["run", "completion:audit"]],
     ["field closure plan", ["run", "field:closure-plan", "--", `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],

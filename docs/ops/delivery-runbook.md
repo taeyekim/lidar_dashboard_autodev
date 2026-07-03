@@ -54,6 +54,7 @@ npm.cmd run manual:evidence-readiness
 npm.cmd run field:readiness -- --base-url=http://localhost:8080
 npm.cmd run field:risk-register -- --base-url=http://localhost:8080
 npm.cmd run field:action-board -- --base-url=http://localhost:8080
+npm.cmd run field:gate-closure-map -- --base-url=http://localhost:8080
 npm.cmd run field:owner-briefs -- --base-url=http://localhost:8080
 npm.cmd run handover:package
 npm.cmd run final:status -- --base-url=http://localhost:8080
@@ -207,6 +208,13 @@ action type, mapped command, evidence path, and done-when criteria. This board
 is an execution aid for field owners; it does not replace final field evidence.
 
 After the action board exists, run
+`npm.cmd run field:gate-closure-map -- --base-url=http://localhost:8080`.
+It writes `artifacts/field-gate-closure-map/<timestamp>/manifest.json` plus
+`manifest.md`, grouping the latest action board by command so reviewers can see
+which final-status gates, owners, phases, evidence paths, and close criteria
+each field command is expected to resolve.
+
+After the action board exists, run
 `npm.cmd run field:owner-briefs -- --base-url=http://localhost:8080`.
 It writes `artifacts/field-owner-briefs/<timestamp>/manifest.json`,
 `manifest.md`, and one markdown file per owner. These briefs split the latest
@@ -216,12 +224,12 @@ for field handoff; they do not replace reviewer-filled evidence.
 For the final attachment refresh, run
 `npm.cmd run handover:package -- --base-url=http://localhost:8080`. Replace
 the base URL with the delivery Nginx entrypoint when it is not localhost. It
-runs `delivery:evidence`, `manual:evidence-drafts`, `manual:evidence-readiness`, `field:readiness`, `field:risk-register`, `field:action-board`, `field:owner-briefs`, `completion:audit`,
+runs `delivery:evidence`, `manual:evidence-drafts`, `manual:evidence-readiness`, `field:readiness`, `field:risk-register`, `field:action-board`, `field:gate-closure-map`, `field:owner-briefs`, `completion:audit`,
 `field:closure-plan`, and `handover:index` in order, passing the same base URL
-into the refreshed manual draft report, readiness report, risk register, action board, and owner briefs and indexing the refreshed closure plan, then writes
+into the refreshed manual draft report, readiness report, risk register, action board, gate closure map, and owner briefs and indexing the refreshed closure plan, then writes
 `artifacts/handover-package/<timestamp>/manifest.json` plus `manifest.md` with
 the refreshed evidence references, command logs, base URL, strict gate reasons,
-manual evidence draft/readiness/risk-register/action-board/owner-brief references, and latest control-board safety status. The completion audit, handover index,
+manual evidence draft/readiness/risk-register/action-board/gate-closure-map/owner-brief references, and latest control-board safety status. The completion audit, handover index,
 closure plan, and handover package all surface this status so `DRY_RUN_SAFE` or
 `LIVE_TCP_REVIEW` cannot be mistaken for field-ready TCP operation. Use
 `npm.cmd run handover:package -- --base-url=http://localhost:8080 --strict`

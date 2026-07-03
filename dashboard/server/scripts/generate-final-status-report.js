@@ -45,6 +45,7 @@ function latestEvidenceRefs() {
     manualEvidenceReadiness: readLatestJsonManifest("artifacts/manual-evidence-readiness"),
     fieldRiskRegister: readLatestJsonManifest("artifacts/field-risk-register"),
     fieldActionBoard: readLatestJsonManifest("artifacts/field-action-board"),
+    fieldGateClosureMap: readLatestJsonManifest("artifacts/field-gate-closure-map"),
     fieldOwnerBriefs: readLatestJsonManifest("artifacts/field-owner-briefs"),
   };
 }
@@ -164,6 +165,7 @@ function refsAreFresh(handoverPackage, evidenceRefs) {
     manualEvidenceReadiness: evidencePath(evidenceRefs.manualEvidenceReadiness),
     fieldRiskRegister: evidencePath(evidenceRefs.fieldRiskRegister),
     fieldActionBoard: evidencePath(evidenceRefs.fieldActionBoard),
+    fieldGateClosureMap: evidencePath(evidenceRefs.fieldGateClosureMap),
     fieldOwnerBriefs: evidencePath(evidenceRefs.fieldOwnerBriefs),
     handoverIndex: evidencePath(evidenceRefs.handoverIndex),
     fieldClosurePlan: evidencePath(evidenceRefs.fieldClosurePlan),
