@@ -233,6 +233,47 @@ function buildFieldEvidenceFollowUps(fieldEvidenceSummary) {
     .filter(Boolean);
 }
 
+function buildResidualFieldGates({
+  strictFailureReasons,
+  openManualEvidence,
+  fieldEvidenceOpenItems,
+  fieldEvidenceFollowUps,
+  knownLimitations,
+}) {
+  return [
+    ...strictFailureReasons.map((reason) => ({
+      category: "Strict Gate",
+      status: "OPEN",
+      message: reason,
+      closeWhen: "Resolve the strict gate reason and rerun npm.cmd run handover:package -- --strict.",
+    })),
+    ...openManualEvidence.map((item) => ({
+      category: "Manual Evidence",
+      status: item.status,
+      message: `${item.type} evidence is ${item.status}.`,
+      closeWhen: item.doneWhen || item.requiredWhen || "Attach accepted manual evidence.",
+    })),
+    ...fieldEvidenceOpenItems.map((item) => ({
+      category: "Field Evidence",
+      status: item.status,
+      message: item.message,
+      closeWhen: item.doneWhen,
+    })),
+    ...fieldEvidenceFollowUps.map((item) => ({
+      category: "Rehearsal Follow-up",
+      status: `${item.ownerStatus}/${item.recheckStatus}`,
+      message: `${item.type} replacement rehearsal is assigned to ${item.replacementOwner} for ${item.targetRecheckDate}.`,
+      closeWhen: `${item.type} has a PASS manifest or approved replacement evidence after recheck.`,
+    })),
+    ...knownLimitations.map((item) => ({
+      category: "Known Limitation",
+      status: "FIELD_REVIEW",
+      message: `${item.area}: ${item.limitation}`,
+      closeWhen: item.closeWhen,
+    })),
+  ];
+}
+
 function markdownCell(value) {
   return String(value ?? "").replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
 }
@@ -249,6 +290,17 @@ function buildMarkdown(manifest) {
     `- Site name: ${manifest.siteName}`,
     `- Host name: ${manifest.hostName}`,
     `- Base URL: ${manifest.baseUrl}`,
+    "",
+    "## Residual Field Gates",
+    "",
+    "| Category | Status | Message | Close When |",
+    "| --- | --- | --- | --- |",
+    ...(manifest.residualFieldGates.length > 0
+      ? manifest.residualFieldGates.map(
+          (item) =>
+            `| ${markdownCell(item.category)} | ${markdownCell(item.status)} | ${markdownCell(item.message)} | ${markdownCell(item.closeWhen)} |`,
+        )
+      : ["| none | PASS | No residual field gates. | - |"]),
     "",
     "## Evidence References",
     "",
@@ -379,6 +431,7 @@ function main() {
   const fieldEvidenceFollowUps = buildFieldEvidenceFollowUps(fieldEvidenceSummary);
   const manualEvidence = manualEvidenceRefs();
   const openManualEvidence = manualEvidence.filter((item) => item.required && item.status !== "PRESENT");
+  const knownLimitations = knownFieldLimitations();
   const strictFailureReasons = [];
   if (failedCommands.length > 0) {
     strictFailureReasons.push(`${failedCommands.length} package command(s) failed.`);
@@ -395,6 +448,13 @@ function main() {
     );
   }
   strictFailureReasons.push(...fieldEvidenceStrictFailures(fieldEvidenceSummary));
+  const residualFieldGates = buildResidualFieldGates({
+    strictFailureReasons,
+    openManualEvidence,
+    fieldEvidenceOpenItems,
+    fieldEvidenceFollowUps,
+    knownLimitations,
+  });
   const manifest = {
     generatedAt: new Date().toISOString(),
     generatedBy,
@@ -416,7 +476,8 @@ function main() {
     })),
     evidenceRefs,
     manualEvidenceRefs: manualEvidence,
-    knownFieldLimitations: knownFieldLimitations(),
+    knownFieldLimitations: knownLimitations,
+    residualFieldGates,
     fieldEvidenceSummary,
     fieldEvidenceFollowUps,
     fieldEvidenceOpenItems,
