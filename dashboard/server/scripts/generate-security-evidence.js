@@ -518,4 +518,16 @@ function main() {
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  buildMarkdown,
+  buildScannerCloseout,
+  requiredScannerFailure,
+  scannerCloseoutDefinitions,
+  securityDisposition,
+  skipped,
+  summarizeDispositions,
+};
