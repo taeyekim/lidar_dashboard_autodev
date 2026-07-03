@@ -105,6 +105,15 @@ function buildFieldEvidenceSummary() {
   ];
 }
 
+function fieldEvidenceStrictFailures(fieldEvidenceSummary) {
+  return fieldEvidenceSummary
+    .filter((item) => (item.reviewCount || 0) > 0 || (item.skippedCount || 0) > 0)
+    .map(
+      (item) =>
+        `${item.type} field evidence has ${item.reviewCount || 0} REVIEW and ${item.skippedCount || 0} SKIPPED item(s).`,
+    );
+}
+
 function buildMarkdown(manifest) {
   return [
     "# Handover Package",
@@ -202,6 +211,7 @@ function main() {
   if (!canMarkGoalComplete) {
     strictFailureReasons.push("canMarkGoalComplete is false.");
   }
+  strictFailureReasons.push(...fieldEvidenceStrictFailures(fieldEvidenceSummary));
   const manifest = {
     generatedAt: new Date().toISOString(),
     generatedBy,
