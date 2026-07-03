@@ -3,10 +3,10 @@ const { requireAuth } = require("../auth/auth.middleware");
 const { requireDeviceIngestKey } = require("../../middleware/security");
 const controller = require("./externalIngest.controller");
 
-// router는 /api 아래에 붙을 external-ingest URL들을 한 곳에 모은다.
+// Mounted under /api. These routes cover device ingest and operator diagnostics.
 const router = express.Router();
 
-// 외부 장비 연동 전까지 Swagger/curl로 수신 흐름을 검증하기 위한 ingest API 묶음이다.
+// Device ingest endpoints are optionally protected by X-Device-Key when configured.
 router.post("/ingest/lidar", requireDeviceIngestKey, controller.receiveLidar);
 router.post("/ingest/lidar/mock", requireDeviceIngestKey, controller.receiveLidarMock);
 router.post("/ingest/control-board", requireDeviceIngestKey, controller.receiveControlBoard);

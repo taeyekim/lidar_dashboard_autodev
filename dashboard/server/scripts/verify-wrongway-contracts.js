@@ -138,6 +138,7 @@ assert(stableIdEvent.message === "LiDAR wrong-way event received", "lidar adapte
 const replacementChar = String.fromCharCode(0xfffd);
 const knownMojibakeChars = [0xf9e4, 0xb97c, 0xbcf4, 0xae38].map((code) => String.fromCharCode(code));
 [replacementChar, ...knownMojibakeChars].forEach((token) => {
+  assert(!externalIngestRoutes.includes(token), `external ingest routes must not contain mojibake token: ${token}`);
   assert(!externalIngestController.includes(token), `external ingest controller must not contain mojibake token: ${token}`);
   assert(!externalEventModel.includes(token), `external event model must not contain mojibake token: ${token}`);
   assert(!lidarHttpAdapter.includes(token), `lidar HTTP adapter must not contain mojibake token: ${token}`);
@@ -151,6 +152,7 @@ const knownMojibakeChars = [0xf9e4, 0xb97c, 0xbcf4, 0xae38].map((code) => String
   "媛",
   "理",
 ].forEach((token) => {
+  assert(!externalIngestRoutes.includes(token), `external ingest routes must not contain mojibake fragment: ${token}`);
   assert(!externalIngestController.includes(token), `external ingest controller must not contain mojibake fragment: ${token}`);
 });
 assert(!externalIngestService.includes("temporary"), "external ingest service comments must not read like unfinished temporary code");
