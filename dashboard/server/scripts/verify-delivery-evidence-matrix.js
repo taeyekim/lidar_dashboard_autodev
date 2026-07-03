@@ -45,6 +45,7 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "npm run verify:control-board-latency",
   "npm run verify:frontend-ui-contracts",
   "npm run verify:realtime-contracts",
+  "npm run verify:statistics-metrics",
   "npm run verify:statistics-contracts",
   "npm run verify:auth-cookie",
   "npm run verify:delivery-proxy-contracts",
@@ -63,6 +64,8 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "averageResponseMs",
   "responseSampleCount",
   "responseDurationMs",
+  "executable KPI vectors",
+  "DRY_RUN/LIVE command separation",
 ].forEach((token) => {
   assert(matrix.includes(token), `delivery evidence matrix is missing token: ${token}`);
 });
@@ -70,9 +73,12 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
 [
   [packageJson, "verify:delivery-evidence-matrix", "root package scripts"],
   [packageJson, "verify:delivery-evidence-matrix", "root smoke chain"],
+  [packageJson, "verify:statistics-metrics", "root statistics metric script"],
+  [packageJson, "verify-statistics-metrics.js", "root smoke chain"],
   [packageJson, "verify:control-board-latency", "root package scripts"],
   [packageJson, "verify-control-board-latency.js", "root smoke chain"],
   [serverPackageJson, "verify-control-board-latency.js", "server verify chain"],
+  [serverPackageJson, "verify-statistics-metrics.js", "server verify chain"],
   [serverPackageJson, "verify-delivery-evidence-matrix.js", "server verify chain"],
   [deliveryEvidence, "Delivery Evidence Matrix", "delivery evidence generator"],
   [deliveryEvidence, "delivery-evidence-matrix.md", "delivery evidence generator"],

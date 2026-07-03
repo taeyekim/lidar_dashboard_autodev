@@ -1,9 +1,14 @@
 const { prisma } = require("../../prisma/client");
+const {
+  WRONGWAY_EVENT_TYPES,
+  createMetricAccumulator,
+  applyWrongwayEvent,
+  applyControlCommand,
+  mergeMetricAccumulator,
+  finalizeMetricStat,
+} = require("./statisticsMetrics");
 
 const RANGE_OPTIONS = new Set(["daily", "weekly", "monthly", "yearly"]);
-const WRONGWAY_EVENT_TYPES = ["wrong-way-level-1", "wrong-way-level-2"];
-const LIVE_SUCCESS_STATUSES = new Set(["ACKNOWLEDGED"]);
-const LIVE_FAILURE_STATUSES = new Set(["FAILED"]);
 
 function parseDate(value) {
   if (!value) return null;
@@ -47,11 +52,6 @@ function startOfYear(date) {
 
 function isoDate(date) {
   return date.toISOString();
-}
-
-function percent(part, total) {
-  if (!total) return 0;
-  return Math.round((part / total) * 10000) / 100;
 }
 
 function normalizeRange(query = {}) {
@@ -105,18 +105,7 @@ function createBucket(start, end, unit, index) {
     label: formatBucketLabel(start, unit),
     start,
     end,
-    vehicleTrackIds: new Set(),
-    wrongwayVehicleKeys: new Set(),
-    stage1Events: 0,
-    stage2Events: 0,
-    wrongwayEvents: 0,
-    controlCommands: 0,
-    dryRunCommands: 0,
-    liveCommands: 0,
-    acknowledgedCommands: 0,
-    failedCommands: 0,
-    responseDurationTotalMs: 0,
-    responseDurationSamples: 0,
+    ...createMetricAccumulator(),
   };
 }
 
@@ -154,18 +143,7 @@ function createZoneStat(key, name) {
     key,
     zoneCode: key === "UNKNOWN" ? null : key,
     name,
-    vehicleTrackIds: new Set(),
-    wrongwayVehicleKeys: new Set(),
-    stage1Events: 0,
-    stage2Events: 0,
-    wrongwayEvents: 0,
-    controlCommands: 0,
-    dryRunCommands: 0,
-    liveCommands: 0,
-    acknowledgedCommands: 0,
-    failedCommands: 0,
-    responseDurationTotalMs: 0,
-    responseDurationSamples: 0,
+    ...createMetricAccumulator(),
   };
 }
 
@@ -177,69 +155,13 @@ function getZoneStat(zoneStats, record) {
   return zoneStats.get(key);
 }
 
-function wrongwayVehicleKey(event) {
-  return event.trackId || event.vehicleTrackId || event.id;
-}
-
-function applyWrongwayEvent(target, event) {
-  target.wrongwayEvents += 1;
-  if (event.eventType === "wrong-way-level-1") target.stage1Events += 1;
-  if (event.eventType === "wrong-way-level-2") target.stage2Events += 1;
-  target.wrongwayVehicleKeys.add(wrongwayVehicleKey(event));
-}
-
-function applyControlCommand(target, command) {
-  target.controlCommands += 1;
-  if (command.status === "DRY_RUN") {
-    target.dryRunCommands += 1;
-  } else {
-    target.liveCommands += 1;
-  }
-  if (LIVE_SUCCESS_STATUSES.has(command.status)) target.acknowledgedCommands += 1;
-  if (LIVE_FAILURE_STATUSES.has(command.status)) target.failedCommands += 1;
-
-  if (command.sentAt && command.acknowledgedAt) {
-    const durationMs = new Date(command.acknowledgedAt).getTime() - new Date(command.sentAt).getTime();
-    if (durationMs >= 0) {
-      target.responseDurationTotalMs += durationMs;
-      target.responseDurationSamples += 1;
-    }
-  }
-}
-
-function finalizeStat(stat) {
-  const vehiclesTotal = stat.vehicleTrackIds.size;
-  const wrongwayVehicles = stat.wrongwayVehicleKeys.size;
-  const normalVehicles = Math.max(vehiclesTotal - wrongwayVehicles, 0);
-  const liveCompleted = stat.acknowledgedCommands + stat.failedCommands;
-
-  return {
-    vehiclesTotal,
-    normalVehicles,
-    wrongwayVehicles,
-    wrongwayEvents: stat.wrongwayEvents,
-    wrongwayRate: percent(wrongwayVehicles, vehiclesTotal),
-    stage1Events: stat.stage1Events,
-    stage2Events: stat.stage2Events,
-    controlCommands: stat.controlCommands,
-    dryRunCommands: stat.dryRunCommands,
-    liveCommands: stat.liveCommands,
-    acknowledgedCommands: stat.acknowledgedCommands,
-    failedCommands: stat.failedCommands,
-    commandSuccessRate: liveCompleted ? percent(stat.acknowledgedCommands, liveCompleted) : null,
-    averageResponseMs: stat.responseDurationSamples
-      ? Math.round(stat.responseDurationTotalMs / stat.responseDurationSamples)
-      : null,
-  };
-}
-
 function finalizeBucket(bucket) {
   return {
     key: bucket.key,
     label: bucket.label,
     start: isoDate(bucket.start),
     end: isoDate(bucket.end),
-    ...finalizeStat(bucket),
+    ...finalizeMetricStat(bucket),
   };
 }
 
@@ -247,7 +169,7 @@ function finalizeZone(stat) {
   return {
     zoneCode: stat.zoneCode,
     name: stat.name,
-    ...finalizeStat(stat),
+    ...finalizeMetricStat(stat),
   };
 }
 
@@ -337,21 +259,10 @@ async function getTrafficStatistics(query = {}) {
     }
   });
 
-  const totals = buckets.reduce((accumulator, bucket) => {
-    bucket.vehicleTrackIds.forEach((id) => accumulator.vehicleTrackIds.add(id));
-    bucket.wrongwayVehicleKeys.forEach((id) => accumulator.wrongwayVehicleKeys.add(id));
-    accumulator.stage1Events += bucket.stage1Events;
-    accumulator.stage2Events += bucket.stage2Events;
-    accumulator.wrongwayEvents += bucket.wrongwayEvents;
-    accumulator.controlCommands += bucket.controlCommands;
-    accumulator.dryRunCommands += bucket.dryRunCommands;
-    accumulator.liveCommands += bucket.liveCommands;
-    accumulator.acknowledgedCommands += bucket.acknowledgedCommands;
-    accumulator.failedCommands += bucket.failedCommands;
-    accumulator.responseDurationTotalMs += bucket.responseDurationTotalMs;
-    accumulator.responseDurationSamples += bucket.responseDurationSamples;
-    return accumulator;
-  }, createBucket(start, end, bucketUnit, "total"));
+  const totals = buckets.reduce(
+    (accumulator, bucket) => mergeMetricAccumulator(accumulator, bucket),
+    createMetricAccumulator(),
+  );
 
   return {
     ok: true,
@@ -362,7 +273,7 @@ async function getTrafficStatistics(query = {}) {
       start: isoDate(start),
       end: isoDate(end),
     },
-    totals: finalizeStat(totals),
+    totals: finalizeMetricStat(totals),
     buckets: buckets.map(finalizeBucket),
     zones: Array.from(zoneStats.values())
       .map(finalizeZone)

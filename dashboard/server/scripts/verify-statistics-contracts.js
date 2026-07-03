@@ -15,31 +15,54 @@ function assertIncludes(content, token, label) {
 }
 
 const service = readProjectFile("dashboard/server/src/domains/statistics/statistics.service.js");
+const metricsModule = readProjectFile("dashboard/server/src/domains/statistics/statisticsMetrics.js");
 const routes = readProjectFile("dashboard/server/src/domains/statistics/statistics.routes.js");
 const routeIndex = readProjectFile("dashboard/server/src/routes/index.js");
 const panel = readProjectFile("dashboard/dashboard-web/src/components/dashboard/TrafficStatisticsPanel.jsx");
 const api = readProjectFile("dashboard/dashboard-web/src/features/statistics/statisticsApi.js");
 const evidenceMatrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
 const fieldRequirements = readProjectFile("docs/ai/field-system-requirements.md");
+const packageJson = readProjectFile("package.json");
+const serverPackageJson = readProjectFile("dashboard/server/package.json");
 const expectedRanges = ["daily", "weekly", "monthly", "yearly"];
 
 [
   "prisma.vehicleTrack.findMany",
   "prisma.trafficEvent.findMany",
   "prisma.controlCommand.findMany",
+  "statisticsMetrics",
+  "createMetricAccumulator",
+  "applyWrongwayEvent",
+  "applyControlCommand",
+  "mergeMetricAccumulator",
+  "finalizeMetricStat",
   "vehicleTrackIds",
+  "sentAt: true",
+  "acknowledgedAt: true",
+].forEach((token) => assertIncludes(service, token, "statistics service"));
+
+[
+  "WRONGWAY_EVENT_TYPES",
+  "createMetricAccumulator",
+  "applyWrongwayEvent",
+  "applyControlCommand",
+  "mergeMetricAccumulator",
+  "finalizeMetricStat",
   "wrongwayVehicleKeys",
   "wrongwayRate",
   "commandSuccessRate",
   "dryRunCommands",
   "liveCommands",
   "ACKNOWLEDGED",
-  "sentAt: true",
-  "acknowledgedAt: true",
   "responseDurationTotalMs",
   "responseDurationSamples",
   "averageResponseMs",
-].forEach((token) => assertIncludes(service, token, "statistics service"));
+  "Math.round((part / total) * 10000) / 100",
+].forEach((token) => assertIncludes(metricsModule, token, "statistics metrics module"));
+
+assertIncludes(packageJson, "verify:statistics-metrics", "root package statistics metric verification");
+assertIncludes(packageJson, "verify-statistics-metrics.js", "root package statistics metric verification");
+assertIncludes(serverPackageJson, "verify-statistics-metrics.js", "server package statistics metric verification");
 
 expectedRanges.forEach((range) => {
   assertIncludes(service, `"${range}"`, "statistics service range options");
