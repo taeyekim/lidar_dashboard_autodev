@@ -156,6 +156,34 @@ function summarizeCompanionEvidence(type, outputRoot) {
   };
 }
 
+function summarizeFieldRehearsal(type, outputRoot) {
+  const manifest = readLatestJsonManifest(outputRoot);
+  if (!manifest) {
+    return {
+      type,
+      outputRoot,
+      manifestPath: null,
+      reviewCount: 1,
+      passCount: 0,
+      reviewItems: [`${type}: field rehearsal manifest not found`],
+    };
+  }
+
+  const results = Array.isArray(manifest.data.results) ? manifest.data.results : [];
+  const reviewItems = results
+    .filter((item) => item.status !== "PASS")
+    .map((item) => `${type}: ${item.name || "unnamed check"}`);
+
+  return {
+    type,
+    outputRoot,
+    manifestPath: manifest.path,
+    reviewCount: reviewItems.length,
+    passCount: results.filter((item) => item.status === "PASS").length,
+    reviewItems,
+  };
+}
+
 function buildAutomatedEvidenceCoverage(rows, commands) {
   const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
   const scripts = packageJson.scripts || {};
@@ -281,10 +309,11 @@ function buildAutomatedEvidenceCoverage(rows, commands) {
   );
 }
 
-function buildHandoverSummary(matrixRows, commands, automatedEvidenceCoverage, companionSummaries = []) {
+function buildHandoverSummary(matrixRows, commands, automatedEvidenceCoverage, companionSummaries = [], fieldRehearsalSummaries = []) {
   const failedCommands = commands.filter((item) => item.exitCode !== 0);
   const companionReviewItems = companionSummaries.flatMap((item) => item.reviewItems || []);
   const companionSkippedItems = companionSummaries.flatMap((item) => item.skippedItems || []);
+  const fieldRehearsalReviewItems = fieldRehearsalSummaries.flatMap((item) => item.reviewItems || []);
   const coverageCounts = automatedEvidenceCoverage.reduce((accumulator, item) => {
     accumulator[item.coverage] = (accumulator[item.coverage] || 0) + 1;
     return accumulator;
@@ -296,7 +325,10 @@ function buildHandoverSummary(matrixRows, commands, automatedEvidenceCoverage, c
 
   return {
     status:
-      failedCommands.length === 0 && companionReviewItems.length === 0 && companionSkippedItems.length === 0
+      failedCommands.length === 0 &&
+      companionReviewItems.length === 0 &&
+      companionSkippedItems.length === 0 &&
+      fieldRehearsalReviewItems.length === 0
         ? "AUTOMATED_CHECKS_PASS"
         : "AUTOMATED_CHECKS_REVIEW",
     failedCommandCount: failedCommands.length,
@@ -305,6 +337,8 @@ function buildHandoverSummary(matrixRows, commands, automatedEvidenceCoverage, c
     companionReviewItems,
     companionSkippedCount: companionSkippedItems.length,
     companionSkippedItems,
+    fieldRehearsalReviewCount: fieldRehearsalReviewItems.length,
+    fieldRehearsalReviewItems,
     requirementAreaCount: matrixRows.length,
     automatedEvidenceItemCount: automatedEvidenceCoverage.length,
     coverageCounts,
@@ -314,6 +348,7 @@ function buildHandoverSummary(matrixRows, commands, automatedEvidenceCoverage, c
       "Automated evidence proves local contract/build/security gates only.",
       "Field verification remains required for hardware IP/port, live TCP control-board test, lidar PC payload, and delivery-network runtime smoke.",
       "Companion runtime/security evidence is summarized here so REVIEW/SKIPPED items are not hidden inside nested manifests.",
+      "Field rehearsal evidence is summarized here so missing or failing field manifests remain visible in the handover.",
     ],
   };
 }
@@ -333,6 +368,7 @@ function buildMarkdown(manifest) {
     `- Failed automated commands: ${manifest.handoverSummary.failedCommandCount}`,
     `- Companion review items: ${manifest.handoverSummary.companionReviewCount}`,
     `- Companion skipped items: ${manifest.handoverSummary.companionSkippedCount}`,
+    `- Field rehearsal review items: ${manifest.handoverSummary.fieldRehearsalReviewCount}`,
     `- Requirement areas: ${manifest.handoverSummary.requirementAreaCount}`,
     `- Automated evidence items: ${manifest.handoverSummary.automatedEvidenceItemCount}`,
     `- Field verification required areas: ${manifest.handoverSummary.fieldVerificationRequiredCount}`,
@@ -361,6 +397,12 @@ function buildMarkdown(manifest) {
     "",
     ...(manifest.handoverSummary.companionSkippedItems.length > 0
       ? manifest.handoverSummary.companionSkippedItems.map((item) => `- ${item}`)
+      : ["- none"]),
+    "",
+    "Field rehearsal review items:",
+    "",
+    ...(manifest.handoverSummary.fieldRehearsalReviewItems.length > 0
+      ? manifest.handoverSummary.fieldRehearsalReviewItems.map((item) => `- ${item}`)
       : ["- none"]),
     "",
     "## Verification Commands",
@@ -420,6 +462,18 @@ function buildMarkdown(manifest) {
 
   lines.push(
     "",
+    "## Field Rehearsal Evidence",
+    "",
+    "| Type | Output Root | Manifest | PASS | Review |",
+    "| --- | --- | --- | --- | --- |",
+    ...manifest.fieldRehearsalEvidence.summaries.map(
+      (item) =>
+        `| ${item.type} | \`${item.outputRoot}\` | ${item.manifestPath ? `\`${item.manifestPath}\`` : "missing"} | ${item.passCount} | ${item.reviewCount} |`,
+    ),
+  );
+
+  lines.push(
+    "",
     "Additional field gates:",
     "",
     "- Optional external tools such as gitleaks, Trivy, and OWASP ZAP are captured by `npm run security:evidence` or `scripts/security-scan.ps1` when installed.",
@@ -450,6 +504,10 @@ function main() {
       outputRoot: toOutputRootArg(path.join(outputDir, "security")),
     },
   };
+  const fieldRehearsalEvidence = {
+    lidar: { outputRoot: "artifacts/field-lidar-rehearsal" },
+    controlBoard: { outputRoot: "artifacts/field-control-board-rehearsal" },
+  };
 
   const commands = [
     ["smoke", npmCommand, ["run", "smoke"]],
@@ -466,6 +524,10 @@ function main() {
     summarizeCompanionEvidence("Runtime", companionEvidence.runtime.outputRoot),
     summarizeCompanionEvidence("Security", companionEvidence.security.outputRoot),
   ];
+  fieldRehearsalEvidence.summaries = [
+    summarizeFieldRehearsal("Lidar Ingest", fieldRehearsalEvidence.lidar.outputRoot),
+    summarizeFieldRehearsal("Control Board TCP", fieldRehearsalEvidence.controlBoard.outputRoot),
+  ];
 
   const evidenceMatrix = readDeliveryEvidenceMatrix();
   const matrixRows = parseEvidenceMatrix(evidenceMatrix);
@@ -476,6 +538,7 @@ function main() {
     commands,
     automatedEvidenceCoverage,
     companionEvidence.summaries,
+    fieldRehearsalEvidence.summaries,
   );
 
   const manifest = {
@@ -500,6 +563,7 @@ function main() {
       rows: matrixRows,
     },
     companionEvidence,
+    fieldRehearsalEvidence,
     automatedEvidenceCoverage,
     handoverSummary,
     fieldVerificationStillRequired: matrixRows.map((row) => ({

@@ -65,6 +65,12 @@ const skippedOnlyCompanionSummary = buildHandoverSummary(rows, commands.slice(0,
     skippedItems: ["Security: OWASP ZAP baseline"],
   },
 ]);
+const fieldReviewSummary = buildHandoverSummary(rows, commands.slice(0, 3), coverage, [], [
+  {
+    type: "Lidar Ingest",
+    reviewItems: ["Lidar Ingest: field rehearsal manifest not found"],
+  },
+]);
 
 assert(rows.length === 3, "delivery evidence summary vector should parse three matrix rows");
 assert(summary.status === "AUTOMATED_CHECKS_REVIEW", "failed commands should force review status");
@@ -116,6 +122,10 @@ assert(
   skippedOnlyCompanionSummary.status === "AUTOMATED_CHECKS_REVIEW",
   "companion SKIPPED items should force handover summary review status",
 );
+assert(
+  fieldReviewSummary.status === "AUTOMATED_CHECKS_REVIEW",
+  "field rehearsal review items should force handover summary review status",
+);
 assert(companionSummary.failedCommandCount === 0, "companion-only review should not create failed commands");
 assert(companionSummary.companionReviewCount === 1, "summary should count companion REVIEW items");
 assert(companionSummary.companionSkippedCount === 2, "summary should count companion SKIPPED items");
@@ -132,6 +142,16 @@ assertIncludes(
 assert(
   companionSummary.notes.some((note) => note.includes("REVIEW/SKIPPED")),
   "summary should explain nested companion evidence visibility",
+);
+assert(fieldReviewSummary.fieldRehearsalReviewCount === 1, "summary should count field rehearsal review items");
+assertIncludes(
+  fieldReviewSummary.fieldRehearsalReviewItems,
+  "Lidar Ingest: field rehearsal manifest not found",
+  "summary should expose missing field rehearsal manifest",
+);
+assert(
+  fieldReviewSummary.notes.some((note) => note.includes("Field rehearsal evidence")),
+  "summary should explain field rehearsal visibility",
 );
 
 console.log("delivery evidence summary vectors ok");
