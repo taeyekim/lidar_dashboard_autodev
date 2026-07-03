@@ -86,6 +86,27 @@ function latestEvidenceRefs() {
   };
 }
 
+function manualEvidenceRefs() {
+  const refs = [
+    {
+      type: "Operator UI Walkthrough",
+      path: "artifacts/manual/operator-ui-walkthrough.md",
+      template: "docs/ops/operator-ui-walkthrough-template.md",
+      requiredWhen: "Field acceptance uses -OperatorUiWalkthroughEvidence or reviewer requires browser walkthrough proof.",
+    },
+    {
+      type: "Field Risk Acceptance",
+      path: "artifacts/manual/field-risk-acceptance.md",
+      template: "docs/ops/field-risk-acceptance-template.md",
+      requiredWhen: "A trusted-LAN, scanner, Swagger, HTTPS cookie, dry-run, or unavailable-hardware risk is accepted instead of resolved.",
+    },
+  ];
+  return refs.map((item) => ({
+    ...item,
+    status: fs.existsSync(path.join(root, item.path)) ? "PRESENT" : "MISSING",
+  }));
+}
+
 function latestControlBoardSafetyStatus() {
   return (
     readLatestJsonManifest("artifacts/field-readiness")?.data?.env?.controlBoardSafetyStatus ||
@@ -210,6 +231,15 @@ function buildMarkdown(manifest) {
     `- Runtime evidence: ${manifest.evidenceRefs.runtimeEvidence || "missing"}`,
     `- Security evidence: ${manifest.evidenceRefs.securityEvidence || "missing"}`,
     "",
+    "## Manual Evidence References",
+    "",
+    "| Type | Status | Path | Template | Required When |",
+    "| --- | --- | --- | --- | --- |",
+    ...manifest.manualEvidenceRefs.map(
+      (item) =>
+        `| ${markdownCell(item.type)} | ${markdownCell(item.status)} | \`${markdownCell(item.path)}\` | \`${markdownCell(item.template)}\` | ${markdownCell(item.requiredWhen)} |`,
+    ),
+    "",
     "## Field Evidence Summary",
     "",
     "| Type | Manifest | PASS | REVIEW | SKIPPED |",
@@ -323,6 +353,7 @@ function main() {
       logFile: writeCommandLog(outputDir, item),
     })),
     evidenceRefs,
+    manualEvidenceRefs: manualEvidenceRefs(),
     fieldEvidenceSummary,
     fieldEvidenceOpenItems,
     fieldEvidenceCommandRunbook,
