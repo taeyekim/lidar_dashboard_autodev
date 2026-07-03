@@ -19,6 +19,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 ## Startup
 
 - [ ] `docker compose config --quiet` passes.
+- [ ] `npm run delivery:evidence` creates `artifacts/delivery/<timestamp>/manifest.md` and `manifest.json`.
 - [ ] `docker compose up --build` starts DB, backend, frontend, and reverse proxy.
 - [ ] `curl http://localhost:8080/healthz` returns `ok`.
 - [ ] `curl http://localhost:8080/api/health` returns `ok: true`.
@@ -97,6 +98,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Runtime smoke confirms `Content-Security-Policy` through the Nginx entrypoint.
 - [ ] If `DEVICE_INGEST_API_KEY` is configured, ingest without `X-Device-Key` returns `401`.
 - [ ] `scripts/security-scan.ps1` evidence exists under `artifacts/security/`, or skipped tools are documented with reasons.
+- [ ] Delivery evidence manifest exists under `artifacts/delivery/` and links raw command logs.
 - [ ] Secret scan result is documented or marked unverified with reason.
 - [ ] Container scan result is documented or marked unverified with reason.
 - [ ] ZAP passive baseline result is documented or marked unverified with reason.

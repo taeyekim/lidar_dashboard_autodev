@@ -27,6 +27,8 @@ const deliveryRunbook = readProjectFile("docs/ops/delivery-runbook.md");
 const securityChecklist = readProjectFile("docs/ops/security-scan-checklist.md");
 const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
 const runtimeSmoke = readProjectFile("scripts/runtime-smoke.ps1");
+const packageJson = readProjectFile("package.json");
+const evidenceScript = readProjectFile("dashboard/server/scripts/generate-delivery-evidence.js");
 const env = parseEnvExample(envExample);
 
 const requiredEnvKeys = [
@@ -123,6 +125,13 @@ assert(
   [acceptanceChecklist, "vehiclesPassed", "acceptance checklist"],
   [acceptanceChecklist, "X-Device-Key", "acceptance checklist"],
   [acceptanceChecklist, "scripts/security-scan.ps1", "acceptance checklist"],
+  [acceptanceChecklist, "delivery:evidence", "acceptance checklist"],
+  [deliveryRunbook, "delivery:evidence", "delivery runbook"],
+  [packageJson, "delivery:evidence", "package scripts"],
+  [evidenceScript, "artifacts/delivery", "delivery evidence script"],
+  [evidenceScript, "manifest.md", "delivery evidence script"],
+  [evidenceScript, "manifest.json", "delivery evidence script"],
+  [evidenceScript, "Field Verification Still Required", "delivery evidence script"],
   [runtimeSmoke, "DEVICE_INGEST_API_KEY", "runtime smoke script"],
   [runtimeSmoke, "X-Device-Key", "runtime smoke script"],
   [runtimeSmoke, "controlCommands", "runtime smoke script"],
