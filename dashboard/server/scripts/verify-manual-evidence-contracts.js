@@ -95,10 +95,38 @@ assert(
   "operator evidence must reject PASS walkthroughs without screenshot or artifact references",
 );
 
+const placeholderSessionOperatorEvidence = validOperatorEvidence.replace(
+  "| Site name | delivery-site |",
+  "| Site name | TBD |",
+);
+assert(
+  validateManualEvidence("Operator UI Walkthrough", placeholderSessionOperatorEvidence).includes("placeholder 'Site name'"),
+  "operator evidence must reject placeholder session values",
+);
+
+const placeholderDecisionOperatorEvidence = validOperatorEvidence.replace(
+  "| Reviewer signature/name | reviewer |",
+  "| Reviewer signature/name | pending |",
+);
+assert(
+  validateManualEvidence("Operator UI Walkthrough", placeholderDecisionOperatorEvidence).includes("placeholder 'Reviewer signature/name'"),
+  "operator evidence must reject placeholder decision values",
+);
+
+const placeholderEvidenceReferenceOperatorEvidence = validOperatorEvidence.replace(
+  "| Screenshot | artifacts/manual/screenshots/operator-ui-dashboard.png | Dashboard, event detail, devices, statistics, and Swagger captures. |",
+  "| Screenshot | N/A | Dashboard, event detail, devices, statistics, and Swagger captures. |",
+);
+assert(
+  validateManualEvidence("Operator UI Walkthrough", placeholderEvidenceReferenceOperatorEvidence).includes("placeholder path or reference"),
+  "operator evidence must reject placeholder screenshot or artifact references",
+);
+
 [
   "liveApproved",
   "LIVE_TCP_APPROVAL_REQUIRED",
   "At least one `Evidence Files` path or reference",
+  "Placeholder values",
 ].forEach((token) => assertIncludes(operatorTemplate, token, "operator UI walkthrough template"));
 
 const riskTemplateReason = validateManualEvidence("Field Risk Acceptance", riskTemplate);

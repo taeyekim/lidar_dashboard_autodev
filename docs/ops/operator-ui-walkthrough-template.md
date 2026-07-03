@@ -8,6 +8,8 @@ handover audience, or other secret values.
 Empty session or reviewer decision values are not valid field evidence.
 At least one `Evidence Files` path or reference must be filled before final
 acceptance.
+Placeholder values such as `TBD`, `N/A`, `none`, `pending`, or `unknown` are not
+valid operator walkthrough evidence.
 
 ## Session
 

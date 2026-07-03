@@ -97,6 +97,17 @@ function validateManualEvidence(type, content) {
       "Captured at",
     ]);
     if (emptySessionField) return `Evidence has an empty '${emptySessionField}' session value.`;
+    const placeholderSessionField = [
+      "Site name",
+      "Reviewer",
+      "Operator account",
+      "Browser and version",
+      "Delivery display resolution",
+      "Entry URL",
+      "Base API URL",
+      "Captured at",
+    ].find((field) => isPlaceholderMarkdownCell(markdownTableValue(content, field)));
+    if (placeholderSessionField) return `Evidence has a placeholder '${placeholderSessionField}' session value.`;
     if (/\|\s*TODO\s*\|/.test(content)) return "Evidence still contains TODO screen rows.";
     if (!/\|\s*Walkthrough result\s*\|\s*PASS\s*\|/.test(content)) {
       return "Evidence must record '| Walkthrough result | PASS |'.";
@@ -106,10 +117,18 @@ function validateManualEvidence(type, content) {
       "Decision timestamp",
     ]);
     if (emptyDecisionField) return `Evidence has an empty '${emptyDecisionField}' decision value.`;
+    const placeholderDecisionField = [
+      "Reviewer signature/name",
+      "Decision timestamp",
+    ].find((field) => isPlaceholderMarkdownCell(markdownTableValue(content, field)));
+    if (placeholderDecisionField) return `Evidence has a placeholder '${placeholderDecisionField}' decision value.`;
     const evidenceRows = markdownRowsAfterHeader(content, "Path Or Reference");
     const filledEvidenceRows = evidenceRows.filter((row) => row[1] && row[1].trim() !== "");
     if (filledEvidenceRows.length === 0) {
       return "Evidence must include at least one screenshot, browser note, field acceptance manifest, or handover package reference.";
+    }
+    if (filledEvidenceRows.some((row) => isPlaceholderMarkdownCell(row[1]))) {
+      return "Evidence file rows must not use placeholder path or reference values such as TBD, N/A, none, pending, or unknown.";
     }
   }
 
