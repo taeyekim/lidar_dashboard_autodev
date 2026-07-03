@@ -156,7 +156,7 @@ const readyEvidence = {
       handover: {
         readyForHandover: true,
         requiresFieldReview: false,
-        reviewer: "field-reviewer",
+        reviewer: "reviewer-a",
         siteName: "delivery-site",
         latestPreflightStatus: "PASS",
         latestPreflightPassed: true,
@@ -296,7 +296,9 @@ assert(ready.fieldAcceptance.reviewerReady === true, "complete fixture should ex
 assert(ready.fieldAcceptance.siteNameReady === true, "complete fixture should expose concrete field acceptance site name");
 assert(isPlaceholderFieldText("field-reviewer-name") === true, "field reviewer placeholder should be recognized");
 assert(isPlaceholderFieldText("delivery-site-name") === true, "delivery site placeholder should be recognized");
-assert(isPlaceholderFieldText("field-reviewer") === false, "concrete reviewer should not be treated as placeholder");
+assert(isPlaceholderFieldText("field-reviewer") === true, "field reviewer shorthand placeholder should be recognized");
+assert(isPlaceholderFieldText("field-site") === true, "field site shorthand placeholder should be recognized");
+assert(isPlaceholderFieldText("reviewer-a") === false, "concrete reviewer should not be treated as placeholder");
 assert(
   ready.referenceFreshness.some((item) => item.key === "fieldActionBoard" && item.fresh === true),
   "complete fixture should verify fresh field action board reference",
@@ -591,8 +593,8 @@ const placeholderFieldAcceptanceMetadata = buildFinalStatusReport({
         ...readyEvidence.fieldAcceptance.data,
         handover: {
           ...readyEvidence.fieldAcceptance.data.handover,
-          reviewer: "field-reviewer-name",
-          siteName: "delivery-site-name",
+          reviewer: "field-reviewer",
+          siteName: "field-site",
         },
       },
     },

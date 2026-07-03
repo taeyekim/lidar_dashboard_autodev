@@ -132,7 +132,7 @@ function formatCompletionBlocker(blocker) {
 }
 
 function isPlaceholderFieldText(value) {
-  return /^(?:-|n\/a|na|none|null|tbd|todo|pending|unknown|unspecified|field-reviewer-name|delivery-site-name)$/i.test(
+  return /^(?:-|n\/a|na|none|null|tbd|todo|pending|unknown|unspecified|field-reviewer|field-reviewer-name|field-site|delivery-site-name)$/i.test(
     String(value || "").trim(),
   );
 }
