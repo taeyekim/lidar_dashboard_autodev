@@ -46,6 +46,18 @@ const commands = [
 const rows = parseEvidenceMatrix(matrix);
 const coverage = buildAutomatedEvidenceCoverage(rows, commands);
 const summary = buildHandoverSummary(rows, commands, coverage);
+const companionSummary = buildHandoverSummary(rows, commands.slice(0, 3), coverage, [
+  {
+    type: "Runtime",
+    reviewItems: ["Runtime: docker compose daemon check"],
+    skippedItems: ["Runtime: runtime smoke"],
+  },
+  {
+    type: "Security",
+    reviewItems: [],
+    skippedItems: ["Security: gitleaks secret scan"],
+  },
+]);
 
 assert(rows.length === 3, "delivery evidence summary vector should parse three matrix rows");
 assert(summary.status === "AUTOMATED_CHECKS_REVIEW", "failed commands should force review status");
@@ -88,6 +100,27 @@ assert(
 assert(
   summary.notes.some((note) => note.includes("Field verification remains required")),
   "summary should preserve field verification warning",
+);
+assert(
+  companionSummary.status === "AUTOMATED_CHECKS_REVIEW",
+  "companion REVIEW items should force handover summary review status",
+);
+assert(companionSummary.failedCommandCount === 0, "companion-only review should not create failed commands");
+assert(companionSummary.companionReviewCount === 1, "summary should count companion REVIEW items");
+assert(companionSummary.companionSkippedCount === 2, "summary should count companion SKIPPED items");
+assertIncludes(
+  companionSummary.companionReviewItems,
+  "Runtime: docker compose daemon check",
+  "summary should expose runtime companion review item",
+);
+assertIncludes(
+  companionSummary.companionSkippedItems,
+  "Security: gitleaks secret scan",
+  "summary should expose security companion skipped item",
+);
+assert(
+  companionSummary.notes.some((note) => note.includes("REVIEW/SKIPPED")),
+  "summary should explain nested companion evidence visibility",
 );
 
 console.log("delivery evidence summary vectors ok");

@@ -104,6 +104,58 @@ function toOutputRootArg(dir) {
   return path.relative(root, dir).replace(/\\/g, "/");
 }
 
+function readLatestJsonManifest(outputRoot) {
+  const absoluteRoot = path.join(root, outputRoot);
+  if (!fs.existsSync(absoluteRoot)) return null;
+
+  const manifests = fs
+    .readdirSync(absoluteRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(absoluteRoot, entry.name, "manifest.json"))
+    .filter((manifestPath) => fs.existsSync(manifestPath))
+    .sort()
+    .reverse();
+
+  if (manifests.length === 0) return null;
+  return {
+    path: path.relative(root, manifests[0]).replace(/\\/g, "/"),
+    data: JSON.parse(fs.readFileSync(manifests[0], "utf8")),
+  };
+}
+
+function summarizeCompanionEvidence(type, outputRoot) {
+  const manifest = readLatestJsonManifest(outputRoot);
+  if (!manifest) {
+    return {
+      type,
+      outputRoot,
+      manifestPath: null,
+      reviewCount: 1,
+      skippedCount: 0,
+      reviewItems: [`${type}: manifest not found`],
+      skippedItems: [],
+    };
+  }
+
+  const items = manifest.data.commands || manifest.data.checks || [];
+  const reviewItems = items
+    .filter((item) => item.status !== "skipped" && item.exitCode !== 0)
+    .map((item) => `${type}: ${item.label}`);
+  const skippedItems = items
+    .filter((item) => item.status === "skipped")
+    .map((item) => `${type}: ${item.label}`);
+
+  return {
+    type,
+    outputRoot,
+    manifestPath: manifest.path,
+    reviewCount: reviewItems.length,
+    skippedCount: skippedItems.length,
+    reviewItems,
+    skippedItems,
+  };
+}
+
 function buildAutomatedEvidenceCoverage(rows, commands) {
   const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
   const scripts = packageJson.scripts || {};
@@ -229,8 +281,10 @@ function buildAutomatedEvidenceCoverage(rows, commands) {
   );
 }
 
-function buildHandoverSummary(matrixRows, commands, automatedEvidenceCoverage) {
+function buildHandoverSummary(matrixRows, commands, automatedEvidenceCoverage, companionSummaries = []) {
   const failedCommands = commands.filter((item) => item.exitCode !== 0);
+  const companionReviewItems = companionSummaries.flatMap((item) => item.reviewItems || []);
+  const companionSkippedItems = companionSummaries.flatMap((item) => item.skippedItems || []);
   const coverageCounts = automatedEvidenceCoverage.reduce((accumulator, item) => {
     accumulator[item.coverage] = (accumulator[item.coverage] || 0) + 1;
     return accumulator;
@@ -241,9 +295,16 @@ function buildHandoverSummary(matrixRows, commands, automatedEvidenceCoverage) {
   });
 
   return {
-    status: failedCommands.length === 0 ? "AUTOMATED_CHECKS_PASS" : "AUTOMATED_CHECKS_REVIEW",
+    status:
+      failedCommands.length === 0 && companionReviewItems.length === 0
+        ? "AUTOMATED_CHECKS_PASS"
+        : "AUTOMATED_CHECKS_REVIEW",
     failedCommandCount: failedCommands.length,
     failedCommands: failedCommands.map((item) => item.label),
+    companionReviewCount: companionReviewItems.length,
+    companionReviewItems,
+    companionSkippedCount: companionSkippedItems.length,
+    companionSkippedItems,
     requirementAreaCount: matrixRows.length,
     automatedEvidenceItemCount: automatedEvidenceCoverage.length,
     coverageCounts,
@@ -252,6 +313,7 @@ function buildHandoverSummary(matrixRows, commands, automatedEvidenceCoverage) {
     notes: [
       "Automated evidence proves local contract/build/security gates only.",
       "Field verification remains required for hardware IP/port, live TCP control-board test, lidar PC payload, and delivery-network runtime smoke.",
+      "Companion runtime/security evidence is summarized here so REVIEW/SKIPPED items are not hidden inside nested manifests.",
     ],
   };
 }
@@ -269,6 +331,8 @@ function buildMarkdown(manifest) {
     "",
     `- Status: ${manifest.handoverSummary.status}`,
     `- Failed automated commands: ${manifest.handoverSummary.failedCommandCount}`,
+    `- Companion review items: ${manifest.handoverSummary.companionReviewCount}`,
+    `- Companion skipped items: ${manifest.handoverSummary.companionSkippedCount}`,
     `- Requirement areas: ${manifest.handoverSummary.requirementAreaCount}`,
     `- Automated evidence items: ${manifest.handoverSummary.automatedEvidenceItemCount}`,
     `- Field verification required areas: ${manifest.handoverSummary.fieldVerificationRequiredCount}`,
@@ -286,6 +350,18 @@ function buildMarkdown(manifest) {
     "Notes:",
     "",
     ...manifest.handoverSummary.notes.map((note) => `- ${note}`),
+    "",
+    "Companion review items:",
+    "",
+    ...(manifest.handoverSummary.companionReviewItems.length > 0
+      ? manifest.handoverSummary.companionReviewItems.map((item) => `- ${item}`)
+      : ["- none"]),
+    "",
+    "Companion skipped items:",
+    "",
+    ...(manifest.handoverSummary.companionSkippedItems.length > 0
+      ? manifest.handoverSummary.companionSkippedItems.map((item) => `- ${item}`)
+      : ["- none"]),
     "",
     "## Verification Commands",
     "",
@@ -334,10 +410,12 @@ function buildMarkdown(manifest) {
     "",
     "## Companion Evidence",
     "",
-    "| Type | Output Root |",
-    "| --- | --- |",
-    `| Runtime | \`${manifest.companionEvidence.runtime.outputRoot}\` |`,
-    `| Security | \`${manifest.companionEvidence.security.outputRoot}\` |`,
+    "| Type | Output Root | Manifest | Review | Skipped |",
+    "| --- | --- | --- | --- | --- |",
+    ...manifest.companionEvidence.summaries.map(
+      (item) =>
+        `| ${item.type} | \`${item.outputRoot}\` | ${item.manifestPath ? `\`${item.manifestPath}\`` : "missing"} | ${item.reviewCount} | ${item.skippedCount} |`,
+    ),
   );
 
   lines.push(
@@ -384,11 +462,21 @@ function main() {
     ["security evidence", npmCommand, ["run", "security:evidence", "--", `--output-root=${companionEvidence.security.outputRoot}`]],
   ].map(([label, command, args]) => runCommand(label, command, args));
 
+  companionEvidence.summaries = [
+    summarizeCompanionEvidence("Runtime", companionEvidence.runtime.outputRoot),
+    summarizeCompanionEvidence("Security", companionEvidence.security.outputRoot),
+  ];
+
   const evidenceMatrix = readDeliveryEvidenceMatrix();
   const matrixRows = parseEvidenceMatrix(evidenceMatrix);
   const requirementAreas = matrixRows.map((row) => row.area);
   const automatedEvidenceCoverage = buildAutomatedEvidenceCoverage(matrixRows, commands);
-  const handoverSummary = buildHandoverSummary(matrixRows, commands, automatedEvidenceCoverage);
+  const handoverSummary = buildHandoverSummary(
+    matrixRows,
+    commands,
+    automatedEvidenceCoverage,
+    companionEvidence.summaries,
+  );
 
   const manifest = {
     generatedAt: new Date().toISOString(),
@@ -440,6 +528,8 @@ module.exports = {
   buildHandoverSummary,
   extractBacktickTokens,
   parseEvidenceMatrix,
+  readLatestJsonManifest,
+  summarizeCompanionEvidence,
   statusLabel,
   timestampForPath,
   unique,
