@@ -2,6 +2,7 @@ const { spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
+const scriptsRoot = __dirname;
 const serverRoot = path.resolve(__dirname, "..");
 const targets = [path.join(serverRoot, "server.js")];
 
@@ -24,6 +25,7 @@ function collectJsFiles(dir) {
 }
 
 collectJsFiles(path.join(serverRoot, "src"));
+collectJsFiles(scriptsRoot);
 
 let hasError = false;
 
