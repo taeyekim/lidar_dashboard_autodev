@@ -18,6 +18,7 @@ const runbook = readProjectFile("docs/ops/delivery-runbook.md");
 const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
 const acceptance = readProjectFile("docs/ops/acceptance-checklist.md");
 const packageJson = readProjectFile("package.json");
+const serverPackageJson = readProjectFile("dashboard/server/package.json");
 
 [
   "BaseUrl",
@@ -88,5 +89,6 @@ const packageJson = readProjectFile("package.json");
 
 assertIncludes(packageJson, "verify:lidar-rehearsal", "package scripts");
 assertIncludes(packageJson, "verify-lidar-rehearsal-contracts.js", "package scripts");
+assertIncludes(serverPackageJson, "verify-lidar-rehearsal-contracts.js", "server package verify chain");
 
 console.log("lidar rehearsal contracts ok");

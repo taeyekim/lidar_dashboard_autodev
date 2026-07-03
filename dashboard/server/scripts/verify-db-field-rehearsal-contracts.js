@@ -19,6 +19,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
 const acceptance = readProjectFile("docs/ops/acceptance-checklist.md");
 const deliveryEvidence = readProjectFile("dashboard/server/scripts/generate-delivery-evidence.js");
 const packageJson = readProjectFile("package.json");
+const serverPackageJson = readProjectFile("dashboard/server/package.json");
 
 [
   "BaseUrl",
@@ -83,5 +84,6 @@ assertIncludes(deliveryEvidence, "field-db-rehearsal", "delivery evidence genera
 assertIncludes(deliveryEvidence, "DB And Prisma", "delivery evidence generator");
 assertIncludes(packageJson, "verify:db-field-rehearsal", "package scripts");
 assertIncludes(packageJson, "verify-db-field-rehearsal-contracts.js", "package scripts");
+assertIncludes(serverPackageJson, "verify-db-field-rehearsal-contracts.js", "server package verify chain");
 
 console.log("DB field rehearsal contracts ok");
