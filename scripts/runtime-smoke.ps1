@@ -199,6 +199,10 @@ try {
   Assert-HttpStatus -Response $healthHeaders -Expected 200 -Label "healthz header smoke"
   Assert-ResponseHeader -Response $healthHeaders -Name "X-Content-Type-Options" -Expected "nosniff" -Label "healthz security header smoke"
   Assert-ResponseHeader -Response $healthHeaders -Name "X-Frame-Options" -Expected "SAMEORIGIN" -Label "healthz security header smoke"
+  $cspHeader = $healthHeaders.headers["content-security-policy"]
+  if (!$cspHeader -or !$cspHeader.Contains("default-src 'self'") -or !$cspHeader.Contains("object-src 'none'")) {
+    throw "healthz security header smoke expected Content-Security-Policy with default-src 'self' and object-src 'none'."
+  }
 
   $unauthMutation = Invoke-CurlStatus -Method "PATCH" -Url "$BaseUrl/api/events/runtime-smoke-missing/status" -Body @{
     status = "RESOLVED"

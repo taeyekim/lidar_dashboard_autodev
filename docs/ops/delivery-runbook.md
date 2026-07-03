@@ -7,10 +7,11 @@ This runbook describes the field rehearsal flow for the lidar wrong-way preventi
 - Confirm the dashboard PC, lidar PC, and integrated control board are on the expected internal network.
 - Copy `.env.example` to `.env` and fill only local/field values in `.env`.
 - Set a long random `JWT_SECRET`.
+- Keep operator authentication on HttpOnly cookie mode; set `AUTH_COOKIE_SECURE=true` when HTTPS/TLS is used.
 - Set `DEVICE_INGEST_API_KEY` if the lidar PC and control-board bridge can send the `X-Device-Key` header.
 - Keep `CONTROL_BOARD_DRY_RUN=true` until the TCP host/port is confirmed with the hardware owner.
 - Confirm `CONTROL_BOARD_HOST`, `CONTROL_BOARD_PORT`, timeout, retry, and heartbeat values with the field network plan.
-- Confirm `NGINX_WRONGWAY_RATE_LIMIT`, `NGINX_WRONGWAY_BURST`, and `NGINX_SWAGGER_ALLOW` match the field network and Swagger exposure policy.
+- Confirm `NGINX_WRONGWAY_RATE_LIMIT`, `NGINX_WRONGWAY_BURST`, `NGINX_CONTENT_SECURITY_POLICY`, and `NGINX_SWAGGER_ALLOW` match the field network, media host topology, and Swagger exposure policy.
 
 ## 2. Build And Start
 
@@ -94,9 +95,10 @@ SEED_ADMIN_NAME=System Administrator
 
 After first login, confirm:
 
-- `/api/auth/login` returns a Bearer token.
-- `/api/auth/me` returns the operator profile with the Bearer token.
-- Mutation APIs reject missing/expired tokens with `401`.
+- `/api/auth/login` sets the `lidar_dashboard_access` HttpOnly cookie and does not expose the JWT in the response body.
+- `/api/auth/me` returns the operator profile with that cookie.
+- Mutation APIs reject missing/expired cookies with `401`.
+- Bearer JWT is kept only as backend compatibility for scripted clients.
 
 ## 5. Lidar PC Ingest Smoke
 
@@ -117,6 +119,7 @@ or `.env` and sends this header automatically.
 The same runtime smoke checks baseline delivery security behavior:
 
 - Nginx/security headers include `X-Content-Type-Options: nosniff` and `X-Frame-Options: SAMEORIGIN`.
+- Nginx/security headers include `Content-Security-Policy` with `default-src 'self'` and `object-src 'none'`.
 - Mutation APIs without an operator token return `401`.
 - Non-JSON mutation requests return `415`.
 - When `DEVICE_INGEST_API_KEY` is configured, ingest without `X-Device-Key` returns `401`.

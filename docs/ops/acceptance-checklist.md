@@ -9,7 +9,10 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `DEVICE_INGEST_API_KEY` is set when the lidar PC or bridge can send `X-Device-Key`, or the trusted-LAN exception is documented.
 - [ ] `CONTROL_BOARD_DRY_RUN=true` before real hardware approval.
 - [ ] `CORS_ORIGINS` only includes trusted operator UI origins.
+- [ ] `AUTH_COOKIE_SECURE=true` is set when HTTPS/TLS is used through the delivery proxy.
+- [ ] `AUTH_COOKIE_SAMESITE` matches the deployment topology (`lax` for same-site Nginx entrypoint, `none` only when cross-site HTTPS is required).
 - [ ] `NGINX_WRONGWAY_RATE_LIMIT` and `NGINX_WRONGWAY_BURST` match the expected lidar event rate.
+- [ ] `NGINX_CONTENT_SECURITY_POLICY` is reviewed for the final camera/lidar/media host topology.
 - [ ] `NGINX_SWAGGER_ALLOW` is restricted to the operator/internal network if Swagger should not be open to all internal clients.
 - [ ] Nginx entrypoint is reachable at `http://<host>:<NGINX_PORT>`.
 
@@ -27,9 +30,10 @@ Use this checklist during delivery rehearsal and field acceptance.
 ## Authentication
 
 - [ ] Operator can log in through the UI.
-- [ ] `/api/auth/login` returns a Bearer token.
-- [ ] `/api/auth/me` returns the current operator with the token.
-- [ ] Mutation API without token returns `401`.
+- [ ] `/api/auth/login` sets the `lidar_dashboard_access` HttpOnly cookie and does not expose the JWT in the response body.
+- [ ] `/api/auth/me` returns the current operator with the HttpOnly cookie.
+- [ ] Bearer JWT remains available only as backend compatibility for scripted clients.
+- [ ] Mutation API without an auth cookie or compatible Bearer token returns `401`.
 - [ ] Non-JSON mutation request returns `415`.
 - [ ] Manual control command records `requestedByUserId`.
 
@@ -73,7 +77,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 ## Swagger/API
 
 - [ ] Swagger opens through Nginx at `/api-docs`.
-- [ ] Auth schemas and Bearer scheme are visible.
+- [ ] Auth schemas show `cookieAuth` as the primary scheme and Bearer as compatibility.
 - [ ] Wrong-way request/response schema matches implementation.
 - [ ] Wrong-way and external ingest endpoints document optional `X-Device-Key` security.
 - [ ] Control board command endpoints are documented.
@@ -90,6 +94,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `npm run verify:audit-policy` passes.
 - [ ] Raw `npm audit --workspaces` result is documented.
 - [ ] Runtime smoke confirms security headers through the Nginx entrypoint.
+- [ ] Runtime smoke confirms `Content-Security-Policy` through the Nginx entrypoint.
 - [ ] If `DEVICE_INGEST_API_KEY` is configured, ingest without `X-Device-Key` returns `401`.
 - [ ] `scripts/security-scan.ps1` evidence exists under `artifacts/security/`, or skipped tools are documented with reasons.
 - [ ] Secret scan result is documented or marked unverified with reason.

@@ -33,6 +33,11 @@ assert(
   "Nginx template must expose a Swagger allowlist control",
 );
 assert(
+  nginxTemplate.includes('add_header Content-Security-Policy "${NGINX_CONTENT_SECURITY_POLICY}" always') &&
+    nginxTemplate.includes('add_header X-Permitted-Cross-Domain-Policies "none" always'),
+  "Nginx template must emit delivery security headers for CSP and cross-domain policy",
+);
+assert(
   nginxTemplate.includes("proxy_set_header Upgrade $http_upgrade") &&
     nginxTemplate.includes("proxy_set_header Connection $connection_upgrade"),
   "Nginx template must preserve WebSocket upgrade headers",
@@ -48,8 +53,9 @@ assert(
 assert(
   envExample.includes("NGINX_WRONGWAY_RATE_LIMIT=30r/s") &&
     envExample.includes("NGINX_WRONGWAY_BURST=60") &&
-    envExample.includes("NGINX_SWAGGER_ALLOW=all"),
-  ".env.example must document Nginx wrongway rate limit and Swagger allowlist knobs",
+    envExample.includes("NGINX_SWAGGER_ALLOW=all") &&
+    envExample.includes("NGINX_CONTENT_SECURITY_POLICY="),
+  ".env.example must document Nginx wrongway rate limit, Swagger allowlist, and CSP knobs",
 );
 
 console.log("delivery proxy contracts ok");

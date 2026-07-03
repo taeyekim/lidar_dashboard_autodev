@@ -86,6 +86,7 @@ services:
       NGINX_PROXY_CONNECT_TIMEOUT: ${NGINX_PROXY_CONNECT_TIMEOUT:-5s}
       NGINX_PROXY_SEND_TIMEOUT: ${NGINX_PROXY_SEND_TIMEOUT:-30s}
       NGINX_PROXY_READ_TIMEOUT: ${NGINX_PROXY_READ_TIMEOUT:-65s}
+      NGINX_CONTENT_SECURITY_POLICY: "${NGINX_CONTENT_SECURITY_POLICY:-default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; media-src 'self' blob: http: https:; connect-src 'self' http: https: ws: wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'}"
       NGINX_WRONGWAY_RATE_LIMIT: ${NGINX_WRONGWAY_RATE_LIMIT:-30r/s}
       NGINX_WRONGWAY_BURST: ${NGINX_WRONGWAY_BURST:-60}
       NGINX_SWAGGER_ALLOW: ${NGINX_SWAGGER_ALLOW:-all}
