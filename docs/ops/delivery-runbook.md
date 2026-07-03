@@ -34,6 +34,7 @@ Windows PowerShell rehearsal:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/delivery-verify.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/runtime-smoke.ps1 -StartCompose -StopCompose
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl http://localhost:8080
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080
 npm.cmd run runtime:evidence -- --run-smoke
 npm.cmd run runtime:evidence -- --run-smoke --use-existing-stack --base-url=http://localhost:8080
 npm.cmd run delivery:evidence
@@ -226,12 +227,25 @@ Before real TCP:
 npm run verify:control-board-protocol
 ```
 
+Focused command lifecycle rehearsal:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080
+```
+
+The script logs in with the seeded operator credentials, sends `STAGE_1_ON`,
+`STAGE_2_ON`, and `STAGE_2_RETURN` through `/api/control-board/commands/test`,
+checks `packetHex`, `DRY_RUN` status, `averageResponseMs`, and
+`responseSampleCount`, and writes
+`artifacts/field-control-board-rehearsal/<timestamp>/manifest.json` plus
+`manifest.md`.
+
 When moving to live TCP:
 
 1. Set `CONTROL_BOARD_HOST` and `CONTROL_BOARD_PORT`.
 2. Confirm the network path with the hardware owner.
 3. Set `CONTROL_BOARD_DRY_RUN=false`.
-4. Send `STAGE_1_ON` from the operator UI manual command panel.
+4. Re-run `scripts/control-board-field-rehearsal.ps1` with `-AllowLiveTcp`, or send `STAGE_1_ON` from the operator UI manual command panel.
 5. Confirm packet/response in `control_commands` and `control_command_logs`.
 6. Restore `CONTROL_BOARD_DRY_RUN=true` after the test unless continuing field validation.
 
@@ -306,6 +320,7 @@ Evidence package:
 - `npm.cmd run security:evidence` manifest under `artifacts/security/<timestamp>/`
 - `scripts/runtime-smoke.ps1` result when Docker runtime smoke is available
 - `artifacts/field-lidar-rehearsal/<timestamp>/manifest.json` and `manifest.md` from `scripts/lidar-ingest-rehearsal.ps1`
+- `artifacts/field-control-board-rehearsal/<timestamp>/manifest.json` and `manifest.md` from `scripts/control-board-field-rehearsal.ps1`
 - raw `npm audit --workspaces` result
 - `artifacts/security/**` security scan evidence, with skipped checks explained
 - Swagger screenshots or exported API list

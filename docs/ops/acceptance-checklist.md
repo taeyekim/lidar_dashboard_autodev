@@ -64,6 +64,8 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Return packet equals `02 A1 10 02 02 02 00 1C 03 0D`.
 - [ ] Reset packet equals `02 A1 10 00 00 02 00 E6 03 0D`.
 - [ ] Dry-run command does not open a TCP socket.
+- [ ] `scripts/control-board-field-rehearsal.ps1` records `DRY_RUN` command lifecycle evidence before live hardware approval.
+- [ ] `scripts/control-board-field-rehearsal.ps1 -AllowLiveTcp` is used only after live `CONTROL_BOARD_HOST`/`PORT` and hardware approval are confirmed.
 - [ ] Live TCP command records response hex and CRC status.
 - [ ] Connect timeout and response timeout are distinguishable in error messages.
 - [ ] Timeout/failure records `FAILED` status, final error message, and per-attempt retry logs.
