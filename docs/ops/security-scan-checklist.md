@@ -21,6 +21,7 @@ This checklist is for delivery rehearsals before connecting to the real control 
 
 ```bash
 npm run verify:audit-policy
+npm run verify:security-runtime
 npm run ci
 npm --prefix dashboard/dashboard-web run lint
 docker compose config --quiet
@@ -30,6 +31,7 @@ Windows PowerShell:
 
 ```powershell
 npm.cmd run verify:audit-policy
+npm.cmd run verify:security-runtime
 npm.cmd run ci
 npm.cmd --prefix dashboard/dashboard-web run lint
 docker compose config --quiet
@@ -68,4 +70,5 @@ The `artifacts/` directory is intentionally ignored by Git.
 - Do not run active DAST or fuzzing against the real integrated control board.
 - Swagger may remain enabled during internal test; restrict or remove external access before delivery if the network is not fully trusted.
 - API mutation endpoints should return `429` after rate-limit thresholds and `415` for non-JSON mutation requests.
+- `npm run verify:security-runtime` checks Express security headers, non-JSON mutation rejection, and login rate limiting without touching the field DB or hardware.
 - Record all skipped checks with the reason, tool version, date, and operator.
