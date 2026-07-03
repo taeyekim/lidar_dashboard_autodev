@@ -71,6 +71,10 @@ remains available for Windows field rehearsals.
 Use `--require-scanners` or `-RequireScanners` during strict field acceptance
 when skipped gitleaks, Trivy, or OWASP ZAP checks should become `차단` evidence
 instead of being recorded as review-only `미검증` skipped items.
+When a scanner skip is intentionally accepted for delivery, fill
+`docs/ops/field-risk-acceptance-template.md` and attach the field copy as
+`artifacts/manual/field-risk-acceptance.md` with the reviewer, compensating
+control, owner, and recheck date.
 The `artifacts/` directory is intentionally ignored by Git.
 
 ## Notes

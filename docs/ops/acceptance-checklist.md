@@ -7,6 +7,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `.env` exists locally and is not committed.
 - [ ] `JWT_SECRET` is unique and not the example value.
 - [ ] `DEVICE_INGEST_API_KEY` is set when the lidar PC or bridge can send `X-Device-Key`, or the trusted-LAN exception is documented.
+- [ ] Accepted trusted-LAN, scanner, Swagger, HTTPS cookie, dry-run, or unavailable-hardware exceptions use `docs/ops/field-risk-acceptance-template.md` and are attached as `artifacts/manual/field-risk-acceptance.md`.
 - [ ] `CONTROL_BOARD_DRY_RUN=true` before real hardware approval.
 - [ ] `CORS_ORIGINS` only includes trusted operator UI origins.
 - [ ] `AUTH_COOKIE_SECURE=true` is set when HTTPS/TLS is used through the delivery proxy.
@@ -146,5 +147,6 @@ Use this checklist during delivery rehearsal and field acceptance.
 
 - [ ] `wrong-way-level-2` dashboard-side escalation criteria are still field-measurement dependent.
 - [ ] If `DEVICE_INGEST_API_KEY` is not used, lidar/device network authentication remains a documented follow-up or accepted trusted-LAN risk.
+- [ ] If any field risk is accepted instead of resolved, the reviewer decision, compensating control, expiry/recheck date, and owner are recorded.
 - [ ] Real integrated control board TCP test requires field IP/port and hardware approval.
 - [ ] Docker Desktop/PostgreSQL availability is recorded for the test machine.

@@ -20,6 +20,7 @@ const runbook = readProjectFile("docs/ops/delivery-runbook.md");
 const acceptance = readProjectFile("docs/ops/acceptance-checklist.md");
 const envContracts = readProjectFile("dashboard/server/scripts/verify-env-contracts.js");
 const deliveryEvidence = readProjectFile("dashboard/server/scripts/generate-delivery-evidence.js");
+const riskAcceptanceTemplate = readProjectFile("docs/ops/field-risk-acceptance-template.md");
 
 [
   "BaseUrl",
@@ -74,6 +75,8 @@ assert(
   "-RequireSwaggerAllowlist",
   "-StrictPreflight",
   "artifacts/field-preflight",
+  "docs/ops/field-risk-acceptance-template.md",
+  "artifacts/manual/field-risk-acceptance.md",
 ].forEach((token) => assertIncludes(runbook, token, "delivery runbook"));
 
 [
@@ -81,7 +84,24 @@ assert(
   "JWT_SECRET",
   "NGINX_SWAGGER_ALLOW",
   "DEVICE_INGEST_API_KEY",
+  "docs/ops/field-risk-acceptance-template.md",
+  "artifacts/manual/field-risk-acceptance.md",
 ].forEach((token) => assertIncludes(acceptance, token, "acceptance checklist"));
+
+[
+  "Field Risk Acceptance Evidence Template",
+  "artifacts/manual/field-risk-acceptance.md",
+  "DEVICE_INGEST_API_KEY",
+  "trusted-LAN exception",
+  "Security scanners",
+  "Swagger exposure",
+  "HTTPS cookie posture",
+  "Control-board live TCP",
+  "Runtime/hardware rehearsal",
+  "Compensating Control",
+  "Expiry Or Recheck",
+  "Reviewer Decision",
+].forEach((token) => assertIncludes(riskAcceptanceTemplate, token, "field risk acceptance template"));
 
 assertIncludes(envContracts, "field:preflight", "environment contract verifier");
 assertIncludes(envContracts, "scripts/field-preflight.ps1", "environment contract verifier");

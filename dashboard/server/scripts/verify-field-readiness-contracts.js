@@ -19,6 +19,7 @@ const serverPackageJson = readProjectFile("dashboard/server/package.json");
 const runbook = readProjectFile("docs/ops/delivery-runbook.md");
 const checklist = readProjectFile("docs/ops/acceptance-checklist.md");
 const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
+const riskAcceptanceTemplate = readProjectFile("docs/ops/field-risk-acceptance-template.md");
 
 [
   "artifacts/field-readiness",
@@ -60,7 +61,20 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
 
 assertIncludes(serverPackageJson, "verify-field-readiness-contracts.js", "server verify chain");
 assertIncludes(runbook, "npm.cmd run field:readiness", "delivery runbook");
+assertIncludes(runbook, "docs/ops/field-risk-acceptance-template.md", "delivery runbook");
+assertIncludes(runbook, "artifacts/manual/field-risk-acceptance.md", "delivery runbook");
 assertIncludes(checklist, "npm run field:readiness", "acceptance checklist");
+assertIncludes(checklist, "docs/ops/field-risk-acceptance-template.md", "acceptance checklist");
+assertIncludes(checklist, "artifacts/manual/field-risk-acceptance.md", "acceptance checklist");
 assertIncludes(matrix, "npm run field:readiness", "delivery evidence matrix");
+
+[
+  "Field Risk Acceptance Evidence Template",
+  "Security scanners",
+  "Swagger exposure",
+  "HTTPS cookie posture",
+  "Runtime/hardware rehearsal",
+  "Reviewer Decision",
+].forEach((token) => assertIncludes(riskAcceptanceTemplate, token, "field risk acceptance template"));
 
 console.log("field readiness contracts ok");

@@ -9,6 +9,10 @@ This runbook describes the field rehearsal flow for the lidar wrong-way preventi
 - Set a long random `JWT_SECRET`.
 - Keep operator authentication on HttpOnly cookie mode; keep the readable CSRF cookie name aligned with the frontend default and set `AUTH_COOKIE_SECURE=true` when HTTPS/TLS is used.
 - Set `DEVICE_INGEST_API_KEY` if the lidar PC and control-board bridge can send the `X-Device-Key` header.
+- If `DEVICE_INGEST_API_KEY`, scanner evidence, Swagger restriction, HTTPS cookie
+  posture, or live hardware rehearsal cannot pass directly, fill
+  `docs/ops/field-risk-acceptance-template.md` and attach the field copy as
+  `artifacts/manual/field-risk-acceptance.md`.
 - Keep `CONTROL_BOARD_DRY_RUN=true` until the TCP host/port is confirmed with the hardware owner.
 - Confirm `CONTROL_BOARD_HOST`, `CONTROL_BOARD_PORT`, timeout, retry, and heartbeat values with the field network plan.
 - Confirm `NGINX_WRONGWAY_RATE_LIMIT`, `NGINX_WRONGWAY_BURST`, `NGINX_CONTENT_SECURITY_POLICY`, and `NGINX_SWAGGER_ALLOW` match the field network, media host topology, and Swagger exposure policy.
