@@ -23,6 +23,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `npm run field:preflight` or `scripts/field-preflight.ps1` records field preflight evidence for `.env`, `JWT_SECRET`, `DEVICE_INGEST_API_KEY`, control-board dry-run/live TCP readiness, cookie security, and `NGINX_SWAGGER_ALLOW`.
 - [ ] `npm run runtime:evidence` records Docker CLI, daemon availability, compose config, and `.env` key inventory.
 - [ ] `npm run delivery:evidence` creates `artifacts/delivery/<timestamp>/manifest.md`, `manifest.json`, and companion `runtime/` and `security/` evidence folders.
+- [ ] `npm run completion:audit` creates `artifacts/completion-audit/<timestamp>/manifest.json` plus `artifacts/completion-audit/<timestamp>/manifest.md` and keeps `canMarkGoalComplete=false` while field verification or skipped/review evidence remains.
 - [ ] `npm run field:acceptance` or `scripts/field-acceptance.ps1` runs the field acceptance orchestrator and creates `artifacts/field-acceptance/<timestamp>/manifest.json` plus `manifest.md`.
 - [ ] Field acceptance manifest records the field reviewer, site name, handover readiness, skipped/review step counts, and next actions.
 - [ ] `docker compose up --build` starts DB, backend, frontend, and reverse proxy.
