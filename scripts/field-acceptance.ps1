@@ -103,6 +103,88 @@ function Add-ArgumentIf {
   return $Arguments
 }
 
+function New-AcceptanceManifest {
+  param(
+    [string]$Status,
+    [object[]]$Steps
+  )
+
+  return [pscustomobject]@{
+    generatedAt = (Get-Date).ToUniversalTime().ToString("o")
+    baseUrl = $BaseUrl
+    outputDir = $outputDir
+    status = $Status
+    safety = @{
+      runDbDeploy = [bool]$RunDbDeploy
+      runDbSeed = [bool]$RunDbSeed
+      allowLiveTcp = [bool]$AllowLiveTcp
+      includeContainerImages = [bool]$IncludeContainerImages
+      includeZap = [bool]$IncludeZap
+      requireScanners = [bool]$RequireScanners
+      startCompose = [bool]$StartCompose
+      stopCompose = [bool]$StopCompose
+    }
+    steps = $Steps
+  }
+}
+
+function Write-AcceptanceManifest {
+  param(
+    [string]$Status,
+    [object[]]$Steps
+  )
+
+  $reviewSteps = @($Steps | Where-Object { $_.status -eq "REVIEW" })
+  $skippedSteps = @($Steps | Where-Object { $_.status -eq "SKIPPED" })
+  $manifest = New-AcceptanceManifest -Status $Status -Steps $Steps
+
+  $manifest | ConvertTo-Json -Depth 20 | Out-File -LiteralPath (Join-Path $outputDir "manifest.json") -Encoding utf8
+
+  $markdownLines = @(
+    "# Field Acceptance Orchestrator",
+    "",
+    "- Generated at: $($manifest.generatedAt)",
+    "- Base URL: $BaseUrl",
+    "- Status: $Status",
+    "- Output directory: $outputDir",
+    "",
+    "## Safety Switches",
+    "",
+    "| Switch | Enabled |",
+    "| --- | --- |",
+    "| RunDbDeploy | $([bool]$RunDbDeploy) |",
+    "| RunDbSeed | $([bool]$RunDbSeed) |",
+    "| AllowLiveTcp | $([bool]$AllowLiveTcp) |",
+    "| IncludeContainerImages | $([bool]$IncludeContainerImages) |",
+    "| IncludeZap | $([bool]$IncludeZap) |",
+    "| RequireScanners | $([bool]$RequireScanners) |",
+    "| StartCompose | $([bool]$StartCompose) |",
+    "| StopCompose | $([bool]$StopCompose) |",
+    "",
+    "## Steps",
+    "",
+    "| Status | Step | Command | Log |",
+    "| --- | --- | --- | --- |"
+  ) + ($Steps | ForEach-Object {
+    "| $($_.status) | $($_.name) | ``$($_.command)`` | $($_.logPath) |"
+  }) + @(
+    "",
+    "## Review Notes",
+    ""
+  ) + ($(if ($reviewSteps.Count -gt 0) {
+    $reviewSteps | ForEach-Object { "- REVIEW: $($_.name) - $($_.reason)" }
+  } else {
+    "- No REVIEW steps."
+  })) + ($(if ($skippedSteps.Count -gt 0) {
+    @("", "## Skipped Steps", "") + ($skippedSteps | ForEach-Object { "- SKIPPED: $($_.name) - $($_.reason)" })
+  } else {
+    @("")
+  }))
+
+  $markdownLines | Out-File -LiteralPath (Join-Path $outputDir "manifest.md") -Encoding utf8
+  return $manifest
+}
+
 $outputDir = New-AcceptanceDirectory
 $steps = @()
 
@@ -175,6 +257,8 @@ if ($SkipSecurity) {
   }
 }
 
+Write-AcceptanceManifest -Status "IN_PROGRESS" -Steps $steps | Out-Null
+
 $steps += Invoke-AcceptanceStep -Name "delivery evidence package" -Command "npm.cmd run delivery:evidence" -LogFile (Join-Path $outputDir "07-delivery-evidence.log") -Script {
   npm.cmd run delivery:evidence
 }
@@ -183,68 +267,7 @@ $reviewSteps = @($steps | Where-Object { $_.status -eq "REVIEW" })
 $skippedSteps = @($steps | Where-Object { $_.status -eq "SKIPPED" })
 $overallStatus = if ($reviewSteps.Count -gt 0) { "REVIEW" } elseif ($skippedSteps.Count -gt 0) { "PASS_WITH_SKIPS" } else { "PASS" }
 
-$manifest = [pscustomobject]@{
-  generatedAt = (Get-Date).ToUniversalTime().ToString("o")
-  baseUrl = $BaseUrl
-  outputDir = $outputDir
-  status = $overallStatus
-  safety = @{
-    runDbDeploy = [bool]$RunDbDeploy
-    runDbSeed = [bool]$RunDbSeed
-    allowLiveTcp = [bool]$AllowLiveTcp
-    includeContainerImages = [bool]$IncludeContainerImages
-    includeZap = [bool]$IncludeZap
-    requireScanners = [bool]$RequireScanners
-    startCompose = [bool]$StartCompose
-    stopCompose = [bool]$StopCompose
-  }
-  steps = $steps
-}
-
-$manifest | ConvertTo-Json -Depth 20 | Out-File -LiteralPath (Join-Path $outputDir "manifest.json") -Encoding utf8
-
-$markdownLines = @(
-  "# Field Acceptance Orchestrator",
-  "",
-  "- Generated at: $($manifest.generatedAt)",
-  "- Base URL: $BaseUrl",
-  "- Status: $overallStatus",
-  "- Output directory: $outputDir",
-  "",
-  "## Safety Switches",
-  "",
-  "| Switch | Enabled |",
-  "| --- | --- |",
-  "| RunDbDeploy | $([bool]$RunDbDeploy) |",
-  "| RunDbSeed | $([bool]$RunDbSeed) |",
-  "| AllowLiveTcp | $([bool]$AllowLiveTcp) |",
-  "| IncludeContainerImages | $([bool]$IncludeContainerImages) |",
-  "| IncludeZap | $([bool]$IncludeZap) |",
-  "| RequireScanners | $([bool]$RequireScanners) |",
-  "| StartCompose | $([bool]$StartCompose) |",
-  "| StopCompose | $([bool]$StopCompose) |",
-  "",
-  "## Steps",
-  "",
-  "| Status | Step | Command | Log |",
-  "| --- | --- | --- | --- |"
-) + ($steps | ForEach-Object {
-  "| $($_.status) | $($_.name) | ``$($_.command)`` | $($_.logPath) |"
-}) + @(
-  "",
-  "## Review Notes",
-  ""
-) + ($(if ($reviewSteps.Count -gt 0) {
-  $reviewSteps | ForEach-Object { "- REVIEW: $($_.name) - $($_.reason)" }
-} else {
-  "- No REVIEW steps."
-})) + ($(if ($skippedSteps.Count -gt 0) {
-  @("", "## Skipped Steps", "") + ($skippedSteps | ForEach-Object { "- SKIPPED: $($_.name) - $($_.reason)" })
-} else {
-  @("")
-}))
-
-$markdownLines | Out-File -LiteralPath (Join-Path $outputDir "manifest.md") -Encoding utf8
+Write-AcceptanceManifest -Status $overallStatus -Steps $steps | Out-Null
 
 Write-Host "field acceptance evidence written to $outputDir"
 Write-Host "field acceptance status: $overallStatus"

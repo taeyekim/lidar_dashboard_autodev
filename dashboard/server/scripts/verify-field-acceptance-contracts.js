@@ -48,6 +48,7 @@ const deliveryEvidence = readProjectFile("dashboard/server/scripts/generate-deli
   "artifacts/field-acceptance",
   "manifest.json",
   "manifest.md",
+  "IN_PROGRESS",
   "PASS_WITH_SKIPS",
   "Field Acceptance Orchestrator",
 ].forEach((token) => assertIncludes(script, token, "field acceptance script"));
