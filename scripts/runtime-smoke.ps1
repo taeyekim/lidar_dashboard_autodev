@@ -396,6 +396,21 @@ try {
     }
   }
 
+  $tcpFrameTest = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/ingest/control-board/tcp/test" -Body @{
+    host = "127.0.0.1"
+    port = 5001
+    samplePacket = "02 A1 20 01 01 02 00 CD 03 0D"
+  } -DeviceKey $deviceIngestKey
+  if (!$tcpFrameTest.ok -or $tcpFrameTest.mode -ne "TCP_FRAME_TEST") {
+    throw "Control-board TCP frame parser smoke did not return TCP_FRAME_TEST mode."
+  }
+  if (!$tcpFrameTest.tcp -or $tcpFrameTest.tcp.transport -ne "tcp") {
+    throw "Control-board TCP frame parser smoke did not report tcp transport."
+  }
+  if (!$tcpFrameTest.event -or $tcpFrameTest.event.rawSummary.crcStatus -ne "VALID") {
+    throw "Control-board TCP frame parser smoke did not validate the sample packet CRC."
+  }
+
   Invoke-CurlJson -Url "$BaseUrl/api/events/recent?limit=5" | Out-Null
   $summary = Invoke-CurlJson -Url "$BaseUrl/api/events/summary"
   if ($null -eq $summary.vehiclesPassed) {

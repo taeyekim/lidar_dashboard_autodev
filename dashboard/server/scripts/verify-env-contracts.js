@@ -149,6 +149,8 @@ assert(
   [securityEvidenceScript, "OWASP ZAP", "security evidence script"],
   [runtimeSmoke, "DEVICE_INGEST_API_KEY", "runtime smoke script"],
   [runtimeSmoke, "X-Device-Key", "runtime smoke script"],
+  [runtimeSmoke, "/api/ingest/control-board/tcp/test", "runtime smoke script"],
+  [runtimeSmoke, "TCP_FRAME_TEST", "runtime smoke script"],
   [runtimeSmoke, "controlCommands", "runtime smoke script"],
   [runtimeSmoke, "packetHex", "runtime smoke script"],
   [runtimeSmoke, "rawPayload", "runtime smoke script"],
