@@ -39,6 +39,10 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "workflow list", "CI status generator"],
   [generator, "workflowDispatchConfigured", "CI status generator"],
   [generator, "workflowState", "CI status generator"],
+  [generator, "closeoutCommands", "CI status generator"],
+  [generator, "Read-only status refresh", "CI status generator"],
+  [generator, "Approved CI closeout dispatch", "CI status generator"],
+  [generator, "Underlying GitHub workflow dispatch", "CI status generator"],
   [generator, "artifacts/ci-status", "CI status generator"],
   [generator, "Git pushed to origin/dev", "CI status generator"],
   [runbook, "npm.cmd run ci:status", "delivery runbook"],
@@ -80,6 +84,9 @@ assert(passManifest.status === "PASS", "matching successful CI run should PASS")
 assert(passManifest.canUseForFinalClose === true, "PASS CI evidence should be usable for final close");
 assert(passManifest.workflowState.state === "active", "PASS CI evidence should expose active workflow state");
 assert(passManifest.workflowState.dispatchConfigured === true, "PASS CI evidence should expose workflow_dispatch support");
+assert(passManifest.closeoutCommands.readOnlyStatus === "npm.cmd run ci:status -- --generated-by=reviewer-a", "CI evidence should expose the read-only refresh command");
+assert(passManifest.closeoutCommands.intentionalDispatch === "npm.cmd run ci:closeout -- --dispatch --generated-by=reviewer-a", "CI evidence should expose the approved dispatch closeout command");
+assert(passManifest.closeoutCommands.manualWorkflowDispatch === "gh workflow run CI --ref dev", "CI evidence should expose the underlying workflow dispatch command");
 assert(passManifest.reviewReasons.length === 0, "PASS CI evidence should have no review reasons");
 
 const staleManifest = buildCiStatusEvidence({
@@ -121,7 +128,7 @@ assert(failedToolManifest.nextAction.includes("ci:closeout -- --dispatch"), "mis
 assert(failedToolManifest.nextAction.includes("approved CI closeout window"), "missing CI evidence should require an approved CI closeout window");
 
 const markdown = buildMarkdown(passManifest);
-["CI Status Evidence", "GitHub Actions Run", "Can use for final close", "Workflow dispatch configured", "Git pushed to origin/dev"].forEach((token) =>
+["CI Status Evidence", "GitHub Actions Run", "Can use for final close", "Workflow dispatch configured", "Git pushed to origin/dev", "Closeout Commands"].forEach((token) =>
   assert(markdown.includes(token), `CI status markdown should include ${token}`),
 );
 

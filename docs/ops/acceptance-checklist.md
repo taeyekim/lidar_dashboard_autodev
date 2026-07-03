@@ -146,7 +146,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `npm --prefix dashboard/server test` passes for backend protocol and contract checks.
 - [ ] GitHub Actions on `dev` runs smoke, server tests, DB checks, frontend lint/build, audit policy, and `docker compose config --quiet`.
 - [ ] If no automatic CI run exists for the final `dev` commit, `npm run ci:status` is run first as a read-only check, then `npm run ci:closeout -- --dispatch --generated-by="$env:FIELD_REVIEWER"` is used only during the approved external CI closeout window to run `gh workflow run CI --ref dev`, wait for completion, and regenerate CI status evidence.
-- [ ] `npm run ci:status` records `artifacts/ci-status/<timestamp>/manifest.json` for the final pushed `dev` commit; final close requires status `PASS`.
+- [ ] `npm run ci:status` records `artifacts/ci-status/<timestamp>/manifest.json` for the final pushed `dev` commit, including read-only status, approved closeout dispatch, and underlying `gh workflow run CI --ref dev` commands; final close requires status `PASS`.
 - [ ] `npm run ci` passes.
 - [ ] `npm --prefix dashboard/dashboard-web run lint` passes.
 - [ ] `npm run verify:audit-policy` passes.

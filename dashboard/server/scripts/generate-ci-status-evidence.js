@@ -88,6 +88,7 @@ function buildCiStatusEvidence(input = {}) {
   const git = input.git || buildGitState();
   const workflow = input.workflow || "CI";
   const branch = input.branch || "dev";
+  const generatedBy = input.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
   const workflowListResult = input.workflowListResult || run("gh", ["workflow", "list", "--all"]);
   const workflowInfo = input.workflowInfo || parseWorkflowList(workflowListResult.stdout, workflow);
   const dispatchConfigured =
@@ -130,7 +131,7 @@ function buildCiStatusEvidence(input = {}) {
 
   return {
     generatedAt: input.generatedAt || new Date().toISOString(),
-    generatedBy: input.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
+    generatedBy,
     hostName: input.hostName || os.hostname(),
     workflow,
     branch,
@@ -170,6 +171,11 @@ function buildCiStatusEvidence(input = {}) {
     runCompleted,
     runSucceeded,
     reviewReasons,
+    closeoutCommands: {
+      readOnlyStatus: `npm.cmd run ci:status -- --generated-by=${generatedBy}`,
+      intentionalDispatch: `npm.cmd run ci:closeout -- --dispatch --generated-by=${generatedBy}`,
+      manualWorkflowDispatch: `gh workflow run ${workflow} --ref ${branch}`,
+    },
     nextAction:
       status === "PASS"
         ? "Attach this CI status evidence to the final handover package."
@@ -226,6 +232,14 @@ function buildMarkdown(manifest) {
     "## Next Action",
     "",
     `- ${manifest.nextAction}`,
+    "",
+    "## Closeout Commands",
+    "",
+    "| Purpose | Command |",
+    "| --- | --- |",
+    `| Read-only status refresh | \`${markdownCell(manifest.closeoutCommands.readOnlyStatus)}\` |`,
+    `| Approved CI closeout dispatch | \`${markdownCell(manifest.closeoutCommands.intentionalDispatch)}\` |`,
+    `| Underlying GitHub workflow dispatch | \`${markdownCell(manifest.closeoutCommands.manualWorkflowDispatch)}\` |`,
     "",
   ].join("\n");
 }
