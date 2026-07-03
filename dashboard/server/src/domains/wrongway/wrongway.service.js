@@ -397,10 +397,14 @@ function toDashboardEvent(data, event, vehicleTrack) {
   };
 }
 
-function applyDashboardEffects(data, event, vehicleTrack) {
+function applyDashboardEffects(data, event, vehicleTrack, options = {}) {
   if (data.type === PAYLOAD_TYPES.NORMAL_DRIVING) {
-    mockLidarService.increaseVehiclePassed();
-    mockLidarService.pushLog(`[WRONGWAY] normal-driving ${data.externalZoneId || "UNKNOWN"}`);
+    if (options.vehicleTrackCreated) {
+      mockLidarService.increaseVehiclePassed();
+      mockLidarService.pushLog(`[WRONGWAY] normal-driving unique track ${data.externalZoneId || "UNKNOWN"}`);
+    } else {
+      mockLidarService.pushLog(`[WRONGWAY] normal-driving update ${data.externalZoneId || "UNKNOWN"}`);
+    }
     return;
   }
 
@@ -445,7 +449,9 @@ async function ingestWrongwayPayload(payload, options = {}) {
     };
   });
 
-  applyDashboardEffects(data, result.event, result.vehicleTrack);
+  applyDashboardEffects(data, result.event, result.vehicleTrack, {
+    vehicleTrackCreated: result.vehicleTrackCreated,
+  });
 
   let controlCommand = null;
   try {

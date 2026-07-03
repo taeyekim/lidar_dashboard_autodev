@@ -46,6 +46,9 @@ const runbook = readProjectFile("docs/ops/delivery-runbook.md");
   "eventReused",
   "resolvedEventIds",
   "resolvedEventCount",
+  "vehicleTrackCreated: result.vehicleTrackCreated",
+  "normal-driving unique track",
+  "normal-driving update",
   "status: { notIn: CLOSED_EVENT_STATUSES }",
   "rawPayload: data.rawPayload",
   "vehicleTrackCreated",
@@ -60,6 +63,10 @@ assert(
 assert(
   /data\.type === PAYLOAD_TYPES\.NORMAL_DRIVING && !vehicleTrackState\?\.created/.test(service),
   "repeated normal-driving tracks must not create duplicate event logs",
+);
+assert(
+  /if \(options\.vehicleTrackCreated\) \{\s+mockLidarService\.increaseVehiclePassed\(\);/.test(service),
+  "normal-driving realtime KPI must increment vehiclesPassed only for newly created unique tracks",
 );
 assertIncludes(
   service,
