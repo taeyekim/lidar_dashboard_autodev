@@ -184,6 +184,42 @@ function summarizeFieldRehearsal(type, outputRoot) {
   };
 }
 
+function summarizeFieldAcceptance(type, outputRoot) {
+  const manifest = readLatestJsonManifest(outputRoot);
+  if (!manifest) {
+    return {
+      type,
+      outputRoot,
+      manifestPath: null,
+      reviewCount: 1,
+      skippedCount: 0,
+      passCount: 0,
+      reviewItems: [`${type}: field acceptance manifest not found`],
+      skippedItems: [],
+    };
+  }
+
+  const steps = Array.isArray(manifest.data.steps) ? manifest.data.steps : [];
+  const reviewItems = steps
+    .filter((item) => item.status === "REVIEW")
+    .map((item) => `${type}: ${item.name || "unnamed step"}`);
+  const skippedItems = steps
+    .filter((item) => item.status === "SKIPPED")
+    .map((item) => `${type}: ${item.name || "unnamed step"}`);
+
+  return {
+    type,
+    outputRoot,
+    manifestPath: manifest.path,
+    status: manifest.data.status || null,
+    reviewCount: reviewItems.length,
+    skippedCount: skippedItems.length,
+    passCount: steps.filter((item) => item.status === "PASS").length,
+    reviewItems,
+    skippedItems,
+  };
+}
+
 function buildAutomatedEvidenceCoverage(rows, commands) {
   const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
   const scripts = packageJson.scripts || {};
@@ -272,6 +308,15 @@ function buildAutomatedEvidenceCoverage(rows, commands) {
         };
       }
 
+      if (normalizedToken.includes("artifacts/field-acceptance/<timestamp>/")) {
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: "FIELD_ACCEPTANCE_EVIDENCE",
+          coveredBy: "manifest.fieldAcceptanceEvidence.outputRoot",
+        };
+      }
+
       if (normalizedToken === "scripts/security-scan.ps1") {
         return {
           area: row.area,
@@ -309,11 +354,20 @@ function buildAutomatedEvidenceCoverage(rows, commands) {
   );
 }
 
-function buildHandoverSummary(matrixRows, commands, automatedEvidenceCoverage, companionSummaries = [], fieldRehearsalSummaries = []) {
+function buildHandoverSummary(
+  matrixRows,
+  commands,
+  automatedEvidenceCoverage,
+  companionSummaries = [],
+  fieldRehearsalSummaries = [],
+  fieldAcceptanceSummaries = [],
+) {
   const failedCommands = commands.filter((item) => item.exitCode !== 0);
   const companionReviewItems = companionSummaries.flatMap((item) => item.reviewItems || []);
   const companionSkippedItems = companionSummaries.flatMap((item) => item.skippedItems || []);
   const fieldRehearsalReviewItems = fieldRehearsalSummaries.flatMap((item) => item.reviewItems || []);
+  const fieldAcceptanceReviewItems = fieldAcceptanceSummaries.flatMap((item) => item.reviewItems || []);
+  const fieldAcceptanceSkippedItems = fieldAcceptanceSummaries.flatMap((item) => item.skippedItems || []);
   const coverageCounts = automatedEvidenceCoverage.reduce((accumulator, item) => {
     accumulator[item.coverage] = (accumulator[item.coverage] || 0) + 1;
     return accumulator;
@@ -328,7 +382,8 @@ function buildHandoverSummary(matrixRows, commands, automatedEvidenceCoverage, c
       failedCommands.length === 0 &&
       companionReviewItems.length === 0 &&
       companionSkippedItems.length === 0 &&
-      fieldRehearsalReviewItems.length === 0
+      fieldRehearsalReviewItems.length === 0 &&
+      fieldAcceptanceReviewItems.length === 0
         ? "AUTOMATED_CHECKS_PASS"
         : "AUTOMATED_CHECKS_REVIEW",
     failedCommandCount: failedCommands.length,
@@ -339,6 +394,10 @@ function buildHandoverSummary(matrixRows, commands, automatedEvidenceCoverage, c
     companionSkippedItems,
     fieldRehearsalReviewCount: fieldRehearsalReviewItems.length,
     fieldRehearsalReviewItems,
+    fieldAcceptanceReviewCount: fieldAcceptanceReviewItems.length,
+    fieldAcceptanceReviewItems,
+    fieldAcceptanceSkippedCount: fieldAcceptanceSkippedItems.length,
+    fieldAcceptanceSkippedItems,
     requirementAreaCount: matrixRows.length,
     automatedEvidenceItemCount: automatedEvidenceCoverage.length,
     coverageCounts,
@@ -349,6 +408,7 @@ function buildHandoverSummary(matrixRows, commands, automatedEvidenceCoverage, c
       "Field verification remains required for hardware IP/port, live TCP control-board test, lidar PC payload, and delivery-network runtime smoke.",
       "Companion runtime/security evidence is summarized here so REVIEW/SKIPPED items are not hidden inside nested manifests.",
       "Field rehearsal evidence is summarized here so missing or failing field manifests remain visible in the handover.",
+      "Field acceptance orchestrator evidence is summarized here so the ordered on-site acceptance pass is visible in the delivery package.",
     ],
   };
 }
@@ -369,6 +429,8 @@ function buildMarkdown(manifest) {
     `- Companion review items: ${manifest.handoverSummary.companionReviewCount}`,
     `- Companion skipped items: ${manifest.handoverSummary.companionSkippedCount}`,
     `- Field rehearsal review items: ${manifest.handoverSummary.fieldRehearsalReviewCount}`,
+    `- Field acceptance review items: ${manifest.handoverSummary.fieldAcceptanceReviewCount}`,
+    `- Field acceptance skipped items: ${manifest.handoverSummary.fieldAcceptanceSkippedCount}`,
     `- Requirement areas: ${manifest.handoverSummary.requirementAreaCount}`,
     `- Automated evidence items: ${manifest.handoverSummary.automatedEvidenceItemCount}`,
     `- Field verification required areas: ${manifest.handoverSummary.fieldVerificationRequiredCount}`,
@@ -403,6 +465,18 @@ function buildMarkdown(manifest) {
     "",
     ...(manifest.handoverSummary.fieldRehearsalReviewItems.length > 0
       ? manifest.handoverSummary.fieldRehearsalReviewItems.map((item) => `- ${item}`)
+      : ["- none"]),
+    "",
+    "Field acceptance review items:",
+    "",
+    ...(manifest.handoverSummary.fieldAcceptanceReviewItems.length > 0
+      ? manifest.handoverSummary.fieldAcceptanceReviewItems.map((item) => `- ${item}`)
+      : ["- none"]),
+    "",
+    "Field acceptance skipped items:",
+    "",
+    ...(manifest.handoverSummary.fieldAcceptanceSkippedItems.length > 0
+      ? manifest.handoverSummary.fieldAcceptanceSkippedItems.map((item) => `- ${item}`)
       : ["- none"]),
     "",
     "## Verification Commands",
@@ -474,6 +548,18 @@ function buildMarkdown(manifest) {
 
   lines.push(
     "",
+    "## Field Acceptance Evidence",
+    "",
+    "| Type | Output Root | Manifest | PASS | Review | Skipped |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ...manifest.fieldAcceptanceEvidence.summaries.map(
+      (item) =>
+        `| ${item.type} | \`${item.outputRoot}\` | ${item.manifestPath ? `\`${item.manifestPath}\`` : "missing"} | ${item.passCount} | ${item.reviewCount} | ${item.skippedCount} |`,
+    ),
+  );
+
+  lines.push(
+    "",
     "Additional field gates:",
     "",
     "- Optional external tools such as gitleaks, Trivy, and OWASP ZAP are captured by `npm run security:evidence` or `scripts/security-scan.ps1` when installed.",
@@ -509,6 +595,9 @@ function main() {
     lidar: { outputRoot: "artifacts/field-lidar-rehearsal" },
     controlBoard: { outputRoot: "artifacts/field-control-board-rehearsal" },
   };
+  const fieldAcceptanceEvidence = {
+    outputRoot: "artifacts/field-acceptance",
+  };
 
   const commands = [
     ["smoke", npmCommand, ["run", "smoke"]],
@@ -530,6 +619,9 @@ function main() {
     summarizeFieldRehearsal("Lidar Ingest", fieldRehearsalEvidence.lidar.outputRoot),
     summarizeFieldRehearsal("Control Board TCP", fieldRehearsalEvidence.controlBoard.outputRoot),
   ];
+  fieldAcceptanceEvidence.summaries = [
+    summarizeFieldAcceptance("Field Acceptance", fieldAcceptanceEvidence.outputRoot),
+  ];
 
   const evidenceMatrix = readDeliveryEvidenceMatrix();
   const matrixRows = parseEvidenceMatrix(evidenceMatrix);
@@ -541,6 +633,7 @@ function main() {
     automatedEvidenceCoverage,
     companionEvidence.summaries,
     fieldRehearsalEvidence.summaries,
+    fieldAcceptanceEvidence.summaries,
   );
 
   const manifest = {
@@ -566,6 +659,7 @@ function main() {
     },
     companionEvidence,
     fieldRehearsalEvidence,
+    fieldAcceptanceEvidence,
     automatedEvidenceCoverage,
     handoverSummary,
     fieldVerificationStillRequired: matrixRows.map((row) => ({
@@ -596,6 +690,7 @@ module.exports = {
   parseEvidenceMatrix,
   readLatestJsonManifest,
   summarizeCompanionEvidence,
+  summarizeFieldAcceptance,
   statusLabel,
   timestampForPath,
   unique,

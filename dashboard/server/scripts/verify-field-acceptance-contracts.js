@@ -20,6 +20,7 @@ const runbook = readProjectFile("docs/ops/delivery-runbook.md");
 const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
 const acceptance = readProjectFile("docs/ops/acceptance-checklist.md");
 const envContracts = readProjectFile("dashboard/server/scripts/verify-env-contracts.js");
+const deliveryEvidence = readProjectFile("dashboard/server/scripts/generate-delivery-evidence.js");
 
 [
   "BaseUrl",
@@ -91,5 +92,8 @@ assert(
 
 assertIncludes(envContracts, "field:acceptance", "environment contract verifier");
 assertIncludes(envContracts, "scripts/field-acceptance.ps1", "environment contract verifier");
+assertIncludes(deliveryEvidence, "fieldAcceptanceEvidence", "delivery evidence generator");
+assertIncludes(deliveryEvidence, "artifacts/field-acceptance", "delivery evidence generator");
+assertIncludes(deliveryEvidence, "Field Acceptance Evidence", "delivery evidence generator");
 
 console.log("field acceptance contracts ok");

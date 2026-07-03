@@ -2,6 +2,7 @@ const {
   buildAutomatedEvidenceCoverage,
   buildHandoverSummary,
   parseEvidenceMatrix,
+  summarizeFieldAcceptance,
 } = require("./generate-delivery-evidence");
 
 function assert(condition, message) {
@@ -17,7 +18,7 @@ const matrix = `
 | --- | --- | --- | --- |
 | Control Board TCP | Sends raw command frames. | \`npm run verify:control-board-protocol\`, \`GET /api/control-board/status\` | Live integrated control-board TCP test |
 | Traffic Statistics | KPI vectors remain executable. | \`npm run verify:statistics-metrics\`, \`scripts/runtime-smoke.ps1\` | Field acceptance of period labels |
-| Delivery Evidence | Manifest packaging remains reproducible. | \`npm run delivery:evidence\`, \`artifacts/delivery/<timestamp>/runtime/\` | none |
+| Delivery Evidence | Manifest packaging remains reproducible. | \`npm run delivery:evidence\`, \`artifacts/delivery/<timestamp>/runtime/\`, \`artifacts/field-acceptance/<timestamp>/manifest.json\` | none |
 `;
 
 const commands = [
@@ -71,6 +72,14 @@ const fieldReviewSummary = buildHandoverSummary(rows, commands.slice(0, 3), cove
     reviewItems: ["Lidar Ingest: field rehearsal manifest not found"],
   },
 ]);
+const fieldAcceptanceReviewSummary = buildHandoverSummary(rows, commands.slice(0, 3), coverage, [], [], [
+  {
+    type: "Field Acceptance",
+    reviewItems: ["Field Acceptance: runtime smoke"],
+    skippedItems: ["Field Acceptance: security evidence"],
+  },
+]);
+const missingFieldAcceptance = summarizeFieldAcceptance("Field Acceptance", "artifacts/missing-field-acceptance-vector");
 
 assert(rows.length === 3, "delivery evidence summary vector should parse three matrix rows");
 assert(summary.status === "AUTOMATED_CHECKS_REVIEW", "failed commands should force review status");
@@ -152,6 +161,44 @@ assertIncludes(
 assert(
   fieldReviewSummary.notes.some((note) => note.includes("Field rehearsal evidence")),
   "summary should explain field rehearsal visibility",
+);
+assert(
+  coverage.some(
+    (item) =>
+      item.evidence === "artifacts/field-acceptance/<timestamp>/manifest.json" &&
+      item.coverage === "FIELD_ACCEPTANCE_EVIDENCE",
+  ),
+  "coverage should classify field acceptance manifest output",
+);
+assert(
+  fieldAcceptanceReviewSummary.status === "AUTOMATED_CHECKS_REVIEW",
+  "field acceptance REVIEW items should force handover summary review status",
+);
+assert(
+  fieldAcceptanceReviewSummary.fieldAcceptanceReviewCount === 1,
+  "summary should count field acceptance REVIEW items",
+);
+assert(
+  fieldAcceptanceReviewSummary.fieldAcceptanceSkippedCount === 1,
+  "summary should count field acceptance SKIPPED items",
+);
+assertIncludes(
+  fieldAcceptanceReviewSummary.fieldAcceptanceReviewItems,
+  "Field Acceptance: runtime smoke",
+  "summary should expose field acceptance review item",
+);
+assertIncludes(
+  fieldAcceptanceReviewSummary.fieldAcceptanceSkippedItems,
+  "Field Acceptance: security evidence",
+  "summary should expose field acceptance skipped item",
+);
+assert(
+  fieldAcceptanceReviewSummary.notes.some((note) => note.includes("Field acceptance orchestrator evidence")),
+  "summary should explain field acceptance evidence visibility",
+);
+assert(
+  missingFieldAcceptance.reviewItems.includes("Field Acceptance: field acceptance manifest not found"),
+  "missing field acceptance manifest should be review-visible",
 );
 
 console.log("delivery evidence summary vectors ok");
