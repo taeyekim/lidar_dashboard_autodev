@@ -3,12 +3,31 @@ param(
   [string]$OutputRoot = "artifacts/field-db-rehearsal",
   [string]$Reviewer = "",
   [string]$SiteName = "unspecified",
+  [string]$UserId = "",
+  [string]$Password = "",
   [switch]$RunDeploy,
   [switch]$RunSeed
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+function Read-DotEnv {
+  param([string]$Path)
+
+  $values = @{}
+  if (!(Test-Path $Path)) { return $values }
+
+  Get-Content -LiteralPath $Path | ForEach-Object {
+    $line = $_.Trim()
+    if (!$line -or $line.StartsWith("#")) { return }
+    $index = $line.IndexOf("=")
+    if ($index -lt 0) { return }
+    $values[$line.Substring(0, $index)] = $line.Substring($index + 1)
+  }
+
+  return $values
+}
 
 function Invoke-RecordedCommand {
   param(
@@ -41,12 +60,28 @@ function Invoke-RecordedCommand {
 }
 
 function Invoke-CurlJson {
-  param([string]$Url)
+  param(
+    [string]$Method = "GET",
+    [string]$Url,
+    [object]$Body = $null,
+    [string]$CookieJar = ""
+  )
 
-  $output = & curl.exe -sS -f $Url
-  if ($LASTEXITCODE -ne 0) {
-    throw "HTTP GET $Url failed with exit code $LASTEXITCODE"
+  $curlArgs = @("-sS", "-f", "-X", $Method)
+  if ($CookieJar) {
+    $curlArgs += @("-b", $CookieJar, "-c", $CookieJar)
   }
+  if ($null -ne $Body) {
+    $json = $Body | ConvertTo-Json -Depth 12 -Compress
+    $curlArgs += @("-H", "Content-Type: application/json", "-d", $json)
+  }
+  $curlArgs += $Url
+
+  $output = & curl.exe @curlArgs
+  if ($LASTEXITCODE -ne 0) {
+    throw "HTTP $Method $Url failed with exit code $LASTEXITCODE"
+  }
+  if (!$output) { return $null }
   return ($output | ConvertFrom-Json)
 }
 
@@ -73,106 +108,134 @@ if (!$Reviewer) {
   $Reviewer = if ($env:USERNAME) { $env:USERNAME } elseif ($env:USER) { $env:USER } else { "field-reviewer" }
 }
 
+$envValues = Read-DotEnv ".env"
+if (!$UserId -and $env:SEED_ADMIN_USER_ID) { $UserId = $env:SEED_ADMIN_USER_ID }
+if (!$Password -and $env:SEED_ADMIN_PASSWORD) { $Password = $env:SEED_ADMIN_PASSWORD }
+if (!$UserId -and $envValues.ContainsKey("SEED_ADMIN_USER_ID")) { $UserId = $envValues["SEED_ADMIN_USER_ID"] }
+if (!$Password -and $envValues.ContainsKey("SEED_ADMIN_PASSWORD")) { $Password = $envValues["SEED_ADMIN_PASSWORD"] }
+if (!$UserId -or !$Password) {
+  throw "SEED_ADMIN_USER_ID and SEED_ADMIN_PASSWORD are required for DB Prisma field rehearsal."
+}
+
+$cookieJar = Join-Path $env:TEMP "lidar-db-rehearsal-cookies-$([guid]::NewGuid().ToString('N')).txt"
+
 $results = @()
-if ($RunDeploy) {
-  $results += Invoke-RecordedCommand -Name "npm run db:deploy" -Command { npm.cmd run db:deploy }
-}
-if ($RunSeed) {
-  $results += Invoke-RecordedCommand -Name "npm run db:seed" -Command { npm.cmd run db:seed }
-}
-$results += Invoke-RecordedCommand -Name "npm run db:status" -Command { npm.cmd run db:status }
+try {
+  if ($RunDeploy) {
+    $results += Invoke-RecordedCommand -Name "npm run db:deploy" -Command { npm.cmd run db:deploy }
+  }
+  if ($RunSeed) {
+    $results += Invoke-RecordedCommand -Name "npm run db:seed" -Command { npm.cmd run db:seed }
+  }
+  $results += Invoke-RecordedCommand -Name "npm run db:status" -Command { npm.cmd run db:status }
 
-$databaseHealth = Invoke-CurlJson -Url "$BaseUrl/api/database/health"
-if (!$databaseHealth.ok -or $databaseHealth.database -ne "postgresql" -or !$databaseHealth.tables) {
-  throw "Database health endpoint did not report PostgreSQL table health."
-}
-@("users", "sites", "zones", "devices", "vehicleTracks", "trafficEvents", "eventLogs", "controlCommands", "controlCommandLogs", "deviceStatusLogs") |
-  ForEach-Object { Assert-NumberProperty -Object $databaseHealth.tables -Name $_ -Label "Database health tables" }
+  $login = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/auth/login" -CookieJar $cookieJar -Body @{
+    userId = $UserId
+    password = $Password
+  }
+  if ($login.token) { throw "Login response exposed token; expected HttpOnly cookie auth." }
 
-$systemStatus = Invoke-CurlJson -Url "$BaseUrl/api/status"
-if (!$systemStatus.ok -or !$systemStatus.database -or !$systemStatus.devices -or !$systemStatus.controlBoard) {
-  throw "System status endpoint did not include database, devices, and controlBoard sections."
-}
+  $databaseHealth = Invoke-CurlJson -Url "$BaseUrl/api/database/health" -CookieJar $cookieJar
+  if (!$databaseHealth.ok -or $databaseHealth.database -ne "postgresql" -or !$databaseHealth.tables) {
+    throw "Database health endpoint did not report PostgreSQL table health."
+  }
+  @("users", "sites", "zones", "devices", "vehicleTracks", "trafficEvents", "eventLogs", "controlCommands", "controlCommandLogs", "deviceStatusLogs") |
+    ForEach-Object { Assert-NumberProperty -Object $databaseHealth.tables -Name $_ -Label "Database health tables" }
 
-$deviceStatus = Invoke-CurlJson -Url "$BaseUrl/api/devices/status"
-if (!$deviceStatus.ok -or $null -eq $deviceStatus.PSObject.Properties["total"]) {
-  throw "Device status endpoint did not include device totals."
-}
+  $systemStatus = Invoke-CurlJson -Url "$BaseUrl/api/status" -CookieJar $cookieJar
+  if (!$systemStatus.ok -or !$systemStatus.database -or !$systemStatus.devices -or !$systemStatus.controlBoard) {
+    throw "System status endpoint did not include database, devices, and controlBoard sections."
+  }
 
-$sites = Invoke-CurlJson -Url "$BaseUrl/api/sites"
-if (!$sites.items -or $sites.items.Count -lt 1) {
-  throw "Sites endpoint did not return any configured site."
-}
-$zones = Invoke-CurlJson -Url "$BaseUrl/api/zones"
-if (!$zones.items -or $zones.items.Count -lt 1) {
-  throw "Zones endpoint did not return any configured zone."
-}
-$devices = Invoke-CurlJson -Url "$BaseUrl/api/devices"
-if (!$devices.items -or $devices.items.Count -lt 1) {
-  throw "Devices endpoint did not return any configured device."
-}
+  $deviceStatus = Invoke-CurlJson -Url "$BaseUrl/api/devices/status" -CookieJar $cookieJar
+  if (!$deviceStatus.ok -or $null -eq $deviceStatus.PSObject.Properties["total"]) {
+    throw "Device status endpoint did not include device totals."
+  }
 
-$results += [pscustomobject]@{
-  name = "database health api"
-  status = "PASS"
-  response = $databaseHealth
-}
-$results += [pscustomobject]@{
-  name = "system and configured device api"
-  status = "PASS"
-  response = @{
-    systemStatus = $systemStatus
-    deviceStatus = $deviceStatus
-    sites = $sites.total
-    zones = $zones.total
-    devices = $devices.total
+  $sites = Invoke-CurlJson -Url "$BaseUrl/api/sites" -CookieJar $cookieJar
+  if (!$sites.items -or $sites.items.Count -lt 1) {
+    throw "Sites endpoint did not return any configured site."
+  }
+  $zones = Invoke-CurlJson -Url "$BaseUrl/api/zones" -CookieJar $cookieJar
+  if (!$zones.items -or $zones.items.Count -lt 1) {
+    throw "Zones endpoint did not return any configured zone."
+  }
+  $devices = Invoke-CurlJson -Url "$BaseUrl/api/devices" -CookieJar $cookieJar
+  if (!$devices.items -or $devices.items.Count -lt 1) {
+    throw "Devices endpoint did not return any configured device."
+  }
+
+  $results += [pscustomobject]@{
+    name = "operator cookie auth login"
+    status = "PASS"
+    response = @{ ok = $login.ok; authMode = $login.authMode; user = $login.user }
+  }
+  $results += [pscustomobject]@{
+    name = "database health api"
+    status = "PASS"
+    response = $databaseHealth
+  }
+  $results += [pscustomobject]@{
+    name = "system and configured device api"
+    status = "PASS"
+    response = @{
+      systemStatus = $systemStatus
+      deviceStatus = $deviceStatus
+      sites = $sites.total
+      zones = $zones.total
+      devices = $devices.total
+    }
+  }
+
+  $manifest = [pscustomobject]@{
+    generatedAt = (Get-Date).ToUniversalTime().ToString("o")
+    evidenceType = "FIELD_REHEARSAL_PASS"
+    baseUrl = $BaseUrl
+    reviewer = $Reviewer
+    siteName = $SiteName
+    hostName = [System.Net.Dns]::GetHostName()
+    runDeploy = [bool]$RunDeploy
+    runSeed = [bool]$RunSeed
+    results = $results
+    databaseHealth = $databaseHealth
+  }
+
+  $manifest | ConvertTo-Json -Depth 20 | Out-File -LiteralPath (Join-Path $outputDir "manifest.json") -Encoding utf8
+  $markdownLines = @(
+    "# DB Prisma Field Rehearsal",
+    "",
+    "- Generated at: $($manifest.generatedAt)",
+    "- Evidence type: $($manifest.evidenceType)",
+    "- Base URL: $BaseUrl",
+    "- Reviewer: $Reviewer",
+    "- Site name: $SiteName",
+    "- Host name: $($manifest.hostName)",
+    "- Run deploy: $($manifest.runDeploy)",
+    "- Run seed: $($manifest.runSeed)",
+    "",
+    "## Results",
+    "",
+    "| Status | Check |",
+    "| --- | --- |"
+  ) + ($results | ForEach-Object { "| $($_.status) | $($_.name) |" }) + @(
+    "",
+    "## Database Tables",
+    "",
+    '```json',
+    ($databaseHealth.tables | ConvertTo-Json -Depth 10),
+    '```',
+    ""
+  )
+  $markdownLines | Out-File -LiteralPath (Join-Path $outputDir "manifest.md") -Encoding utf8
+
+  if (($results | Where-Object { $_.status -ne "PASS" }).Count -gt 0) {
+    throw "DB Prisma field rehearsal completed with REVIEW items."
+  }
+
+  Write-Host "db prisma field rehearsal ok"
+  Write-Host "evidence written to $outputDir"
+} finally {
+  if (Test-Path $cookieJar) {
+    Remove-Item -LiteralPath $cookieJar -Force
   }
 }
-
-$manifest = [pscustomobject]@{
-  generatedAt = (Get-Date).ToUniversalTime().ToString("o")
-  evidenceType = "FIELD_REHEARSAL_PASS"
-  baseUrl = $BaseUrl
-  reviewer = $Reviewer
-  siteName = $SiteName
-  hostName = [System.Net.Dns]::GetHostName()
-  runDeploy = [bool]$RunDeploy
-  runSeed = [bool]$RunSeed
-  results = $results
-  databaseHealth = $databaseHealth
-}
-
-$manifest | ConvertTo-Json -Depth 20 | Out-File -LiteralPath (Join-Path $outputDir "manifest.json") -Encoding utf8
-$markdownLines = @(
-  "# DB Prisma Field Rehearsal",
-  "",
-  "- Generated at: $($manifest.generatedAt)",
-  "- Evidence type: $($manifest.evidenceType)",
-  "- Base URL: $BaseUrl",
-  "- Reviewer: $Reviewer",
-  "- Site name: $SiteName",
-  "- Host name: $($manifest.hostName)",
-  "- Run deploy: $($manifest.runDeploy)",
-  "- Run seed: $($manifest.runSeed)",
-  "",
-  "## Results",
-  "",
-  "| Status | Check |",
-  "| --- | --- |"
-) + ($results | ForEach-Object { "| $($_.status) | $($_.name) |" }) + @(
-  "",
-  "## Database Tables",
-  "",
-  '```json',
-  ($databaseHealth.tables | ConvertTo-Json -Depth 10),
-  '```',
-  ""
-)
-$markdownLines | Out-File -LiteralPath (Join-Path $outputDir "manifest.md") -Encoding utf8
-
-if (($results | Where-Object { $_.status -ne "PASS" }).Count -gt 0) {
-  throw "DB Prisma field rehearsal completed with REVIEW items."
-}
-
-Write-Host "db prisma field rehearsal ok"
-Write-Host "evidence written to $outputDir"

@@ -220,9 +220,10 @@ Manual verification:
 ```bash
 npm run db:status
 npm run ci:db
-curl http://localhost:8080/api/database/health
-curl http://localhost:8080/api/status
-curl http://localhost:8080/api/devices/status
+curl -c field-cookies.txt -b field-cookies.txt -H "Content-Type: application/json" -d "{\"userId\":\"<operator>\",\"password\":\"<password>\"}" http://localhost:8080/api/auth/login
+curl -b field-cookies.txt http://localhost:8080/api/database/health
+curl -b field-cookies.txt http://localhost:8080/api/status
+curl -b field-cookies.txt http://localhost:8080/api/devices/status
 ```
 
 Focused DB/Prisma field evidence:
@@ -233,8 +234,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-field-rehears
 
 Use `-RunDeploy` and `-RunSeed` only when the field PostgreSQL target is
 confirmed for migration/seed rehearsal. The script always records `db:status`,
-`/api/database/health`, `/api/status`, `/api/devices/status`, and configured
-site/zone/device API results under
+operator cookie auth, `/api/database/health`, `/api/status`, `/api/devices/status`,
+and configured site/zone/device API results under
 `artifacts/field-db-rehearsal/<timestamp>/manifest.json` plus `manifest.md`.
 
 Field topology verification:

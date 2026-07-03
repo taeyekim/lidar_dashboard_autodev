@@ -48,6 +48,18 @@ function assertOperatorAuth(operation, label) {
   );
 }
 
+function assertOperatorReadAuth(operation, label) {
+  const security = operation.security || [];
+  assert(
+    security.some((item) => Array.isArray(item.cookieAuth)),
+    `${label} must declare cookieAuth security`,
+  );
+  assert(
+    security.some((item) => Array.isArray(item.bearerAuth)),
+    `${label} must keep bearerAuth compatibility security`,
+  );
+}
+
 function assertOptionalDeviceKey(operation, label) {
   const security = operation.security || [];
   assert(
@@ -113,6 +125,29 @@ assert(
     swaggerSpec.components?.schemas?.DatabaseHealthResponse?.properties?.tables?.properties?.[field]?.type === "integer",
     `DatabaseHealthResponse tables must expose ${field}`,
   );
+});
+
+[
+  ["/api/database/health", "get"],
+  ["/api/status", "get"],
+  ["/api/state", "get"],
+  ["/api/logs", "get"],
+  ["/api/sites", "get"],
+  ["/api/zones", "get"],
+  ["/api/devices", "get"],
+  ["/api/devices/status", "get"],
+  ["/api/control/status", "get"],
+  ["/api/control-board/status", "get"],
+  ["/api/control-board/commands", "get"],
+  ["/api/wrongway/history", "get"],
+  ["/api/events", "get"],
+  ["/api/events/recent", "get"],
+  ["/api/events/summary", "get"],
+  ["/api/events/{id}", "get"],
+  ["/api/events/{id}/logs", "get"],
+  ["/api/statistics/traffic", "get"],
+].forEach(([path, method]) => {
+  assertOperatorReadAuth(assertPath(method, path), `${method.toUpperCase()} ${path}`);
 });
 
 [

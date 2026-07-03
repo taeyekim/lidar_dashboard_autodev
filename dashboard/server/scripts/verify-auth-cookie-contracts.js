@@ -32,6 +32,14 @@ const controller = readProjectFile("dashboard/server/src/domains/auth/auth.contr
 const middleware = readProjectFile("dashboard/server/src/domains/auth/auth.middleware.js");
 const service = readProjectFile("dashboard/server/src/domains/auth/auth.service.js");
 const routes = readProjectFile("dashboard/server/src/domains/auth/auth.routes.js");
+const databaseRoutes = readProjectFile("dashboard/server/src/domains/database/database.routes.js");
+const systemRoutes = readProjectFile("dashboard/server/src/domains/system/system.routes.js");
+const sitesRoutes = readProjectFile("dashboard/server/src/domains/sites/sites.routes.js");
+const eventsRoutes = readProjectFile("dashboard/server/src/domains/events/events.routes.js");
+const statisticsRoutes = readProjectFile("dashboard/server/src/domains/statistics/statistics.routes.js");
+const controlBoardRoutes = readProjectFile("dashboard/server/src/domains/control-board/controlBoard.routes.js");
+const wrongwayRoutes = readProjectFile("dashboard/server/src/domains/wrongway/wrongway.routes.js");
+const mockLidarRoutes = readProjectFile("dashboard/server/src/domains/mock-lidar/mockLidar.routes.js");
 const http = readProjectFile("dashboard/dashboard-web/src/shared/api/http.js");
 const frontendConfig = readProjectFile("dashboard/dashboard-web/src/shared/api/config.js");
 const authContext = readProjectFile("dashboard/dashboard-web/src/context/AuthContext.jsx");
@@ -76,6 +84,27 @@ assert(!http.includes("Authorization: `Bearer"), "frontend http client must not 
 assert(!http.includes("localStorage"), "frontend http client must not read or write auth tokens in localStorage");
 assertAscii(http, "frontend http client");
 assertAscii(frontendConfig, "frontend API config");
+
+[
+  [databaseRoutes, 'router.get("/database/health", requireAuth', "database health route"],
+  [systemRoutes, 'router.get("/status", requireAuth', "system status route"],
+  [sitesRoutes, 'router.get("/sites", requireAuth', "sites route"],
+  [sitesRoutes, 'router.get("/zones", requireAuth', "zones route"],
+  [sitesRoutes, 'router.get("/devices/status", requireAuth', "device status route"],
+  [sitesRoutes, 'router.get("/devices", requireAuth', "devices route"],
+  [eventsRoutes, 'router.get("/events/recent", requireAuth', "recent events route"],
+  [eventsRoutes, 'router.get("/events/summary", requireAuth', "event summary route"],
+  [eventsRoutes, 'router.get("/events/:id/logs", requireAuth', "event logs route"],
+  [eventsRoutes, 'router.get("/events/:id", requireAuth', "event detail route"],
+  [eventsRoutes, 'router.get("/events", requireAuth', "events route"],
+  [statisticsRoutes, 'router.get("/statistics/traffic", requireAuth', "statistics route"],
+  [controlBoardRoutes, 'router.get("/control-board/status", requireAuth', "control-board status route"],
+  [controlBoardRoutes, 'router.get("/control-board/commands", requireAuth', "control-board command list route"],
+  [wrongwayRoutes, 'router.get("/wrongway/history", requireAuth', "wrongway history route"],
+  [mockLidarRoutes, 'router.get("/state", requireAuth', "mock dashboard state route"],
+  [mockLidarRoutes, 'router.get("/control/status", requireAuth', "mock control status route"],
+  [mockLidarRoutes, 'router.get("/logs", requireAuth', "mock dashboard logs route"],
+].forEach(([content, token, label]) => assertIncludes(content, token, label));
 
 const cookie = buildAuthCookie("jwt-token");
 assert(cookie.includes("HttpOnly"), "auth cookie must be HttpOnly");

@@ -257,9 +257,6 @@ try {
 
   Invoke-CurlJson -Url "$BaseUrl/healthz" | Out-Null
   Invoke-CurlJson -Url "$BaseUrl/api/health" | Out-Null
-  Invoke-CurlJson -Url "$BaseUrl/api/database/health" | Out-Null
-  Invoke-CurlJson -Url "$BaseUrl/api/status" | Out-Null
-  Invoke-CurlJson -Url "$BaseUrl/api/devices/status" | Out-Null
   Invoke-CurlJson -Url "$BaseUrl/api-docs.json" | Out-Null
   $swaggerUi = Invoke-CurlStatus -Url "$BaseUrl/api-docs"
   Assert-HttpStatus -Response $swaggerUi -Expected 200 -Label "Swagger UI path smoke"
@@ -331,6 +328,9 @@ try {
     Assert-HttpStatus -Response $missingDeviceKey -Expected 401 -Label "missing X-Device-Key smoke"
   }
 
+  $cookieJar = ""
+  $csrfToken = ""
+
   if ($adminUser -and $adminPassword) {
     $cookieJar = Join-Path $env:TEMP "lidar-runtime-smoke-cookies-$([guid]::NewGuid().ToString('N')).txt"
     $login = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/auth/login" -Body @{
@@ -342,6 +342,14 @@ try {
     $csrfToken = Get-CookieJarValue -CookieJar $cookieJar -Name $csrfCookieName
     if (!$csrfToken) { throw "Login did not set the CSRF cookie" }
     Invoke-CurlJson -Url "$BaseUrl/api/auth/me" -CookieJar $cookieJar | Out-Null
+
+    $unauthRead = Invoke-CurlStatus -Url "$BaseUrl/api/events/summary"
+    Assert-HttpStatus -Response $unauthRead -Expected 401 -Label "unauthenticated operator read smoke"
+
+    Invoke-CurlJson -Url "$BaseUrl/api/database/health" -CookieJar $cookieJar | Out-Null
+    Invoke-CurlJson -Url "$BaseUrl/api/status" -CookieJar $cookieJar | Out-Null
+    Invoke-CurlJson -Url "$BaseUrl/api/devices/status" -CookieJar $cookieJar | Out-Null
+
     $missingCsrfMutation = Invoke-CurlStatus -Method "PATCH" -Url "$BaseUrl/api/events/runtime-smoke-missing/status" -Body @{
       status = "ACKNOWLEDGED"
     } -CookieJar $cookieJar
@@ -350,12 +358,8 @@ try {
       status = "ACKNOWLEDGED"
     } -CookieJar $cookieJar -CsrfToken $csrfToken
     Assert-HttpStatus -Response $csrfMutation -Expected 404 -Label "cookie-auth mutation with CSRF smoke"
-    Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/auth/logout" -Body @{} -CookieJar $cookieJar | Out-Null
-    if (Test-Path $cookieJar) {
-      Remove-Item -LiteralPath $cookieJar -Force
-    }
   } else {
-    Write-Warning "Skipping auth smoke because SEED_ADMIN_USER_ID or SEED_ADMIN_PASSWORD is not available."
+    throw "Runtime smoke requires SEED_ADMIN_USER_ID and SEED_ADMIN_PASSWORD for protected operator API checks."
   }
 
   $timestampPrefix = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss")
@@ -443,7 +447,7 @@ try {
   }
 
   foreach ($eventId in $wrongwayEventIds) {
-    $detail = Invoke-CurlJson -Url "$BaseUrl/api/events/$eventId"
+    $detail = Invoke-CurlJson -Url "$BaseUrl/api/events/$eventId" -CookieJar $cookieJar
     if (!$detail.ok -or !$detail.event) {
       throw "Event detail smoke failed for $eventId"
     }
@@ -473,13 +477,13 @@ try {
     throw "Control-board TCP frame parser smoke did not validate the sample packet CRC."
   }
 
-  Invoke-CurlJson -Url "$BaseUrl/api/events/recent?limit=5" | Out-Null
-  $summary = Invoke-CurlJson -Url "$BaseUrl/api/events/summary"
+  Invoke-CurlJson -Url "$BaseUrl/api/events/recent?limit=5" -CookieJar $cookieJar | Out-Null
+  $summary = Invoke-CurlJson -Url "$BaseUrl/api/events/summary" -CookieJar $cookieJar
   Assert-NumberProperty -Object $summary -Name "vehiclesPassed" -Label "Event summary unique track count"
   Assert-NumberProperty -Object $summary -Name "wrongwayVehicles" -Label "Event summary unique wrong-way vehicle count"
   Assert-NumberProperty -Object $summary -Name "wrongWayEvents" -Label "Event summary raw wrong-way event count"
   Assert-NumberProperty -Object $summary -Name "wrongwayRate" -Label "Event summary wrong-way rate"
-  $statistics = Invoke-CurlJson -Url "$BaseUrl/api/statistics/traffic?range=daily"
+  $statistics = Invoke-CurlJson -Url "$BaseUrl/api/statistics/traffic?range=daily" -CookieJar $cookieJar
   if (!$statistics.ok -or !$statistics.totals -or !$statistics.buckets -or !$statistics.zones) {
     throw "Traffic statistics smoke did not include ok, totals, buckets, and zones."
   }
@@ -490,7 +494,7 @@ try {
   }
   Assert-PropertyExists -Object $statistics.totals -Name "averageResponseMs" -Label "Traffic statistics totals"
 
-  $controlBoardStatus = Invoke-CurlJson -Url "$BaseUrl/api/control-board/status"
+  $controlBoardStatus = Invoke-CurlJson -Url "$BaseUrl/api/control-board/status" -CookieJar $cookieJar
   if (!$controlBoardStatus.ok -or !$controlBoardStatus.byStatus) {
     throw "Control-board status smoke did not include ok and byStatus."
   }
@@ -513,6 +517,11 @@ try {
   }
   if ($controlBoardStatus.latestCommand -and !($controlBoardStatus.latestCommand.PSObject.Properties.Name -contains "responseDurationMs")) {
     throw "Control-board status latestCommand did not expose responseDurationMs."
+  }
+
+  Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/auth/logout" -Body @{} -CookieJar $cookieJar -CsrfToken $csrfToken | Out-Null
+  if (Test-Path $cookieJar) {
+    Remove-Item -LiteralPath $cookieJar -Force
   }
 
   Write-Host "runtime smoke ok"

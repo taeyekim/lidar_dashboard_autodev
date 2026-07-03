@@ -3,7 +3,9 @@ param(
   [string]$DeviceKey = "",
   [string]$OutputRoot = "artifacts/field-lidar-rehearsal",
   [string]$Reviewer = "",
-  [string]$SiteName = "unspecified"
+  [string]$SiteName = "unspecified",
+  [string]$UserId = "",
+  [string]$Password = ""
 )
 
 Set-StrictMode -Version Latest
@@ -31,12 +33,16 @@ function Invoke-CurlJson {
     [string]$Method = "GET",
     [string]$Url,
     [object]$Body = $null,
-    [string]$DeviceKey = ""
+    [string]$DeviceKey = "",
+    [string]$CookieJar = ""
   )
 
   $curlArgs = @("-sS", "-f", "-X", $Method)
   if ($DeviceKey) {
     $curlArgs += @("-H", "X-Device-Key: $DeviceKey")
+  }
+  if ($CookieJar) {
+    $curlArgs += @("-b", $CookieJar, "-c", $CookieJar)
   }
   if ($null -ne $Body) {
     $json = $Body | ConvertTo-Json -Depth 12 -Compress
@@ -124,6 +130,13 @@ if (!$DeviceKey -and $envValues.ContainsKey("DEVICE_INGEST_API_KEY")) {
 if ($DeviceKey -and $DeviceKey.Contains(",")) {
   $DeviceKey = $DeviceKey.Split(",")[0].Trim()
 }
+if (!$UserId -and $env:SEED_ADMIN_USER_ID) { $UserId = $env:SEED_ADMIN_USER_ID }
+if (!$Password -and $env:SEED_ADMIN_PASSWORD) { $Password = $env:SEED_ADMIN_PASSWORD }
+if (!$UserId -and $envValues.ContainsKey("SEED_ADMIN_USER_ID")) { $UserId = $envValues["SEED_ADMIN_USER_ID"] }
+if (!$Password -and $envValues.ContainsKey("SEED_ADMIN_PASSWORD")) { $Password = $envValues["SEED_ADMIN_PASSWORD"] }
+if (!$UserId -or !$Password) {
+  throw "SEED_ADMIN_USER_ID and SEED_ADMIN_PASSWORD are required for LiDAR ingest field rehearsal."
+}
 
 $timestamp = (Get-Date).ToUniversalTime()
 $timestampPrefix = $timestamp.ToString("yyyy-MM-ddTHH:mm:ss")
@@ -137,8 +150,21 @@ if (!$Reviewer) {
 $normalTrackId = "field-normal-$([guid]::NewGuid().ToString('N'))"
 $wrongTrackId = "field-wrong-$([guid]::NewGuid().ToString('N'))"
 $results = @()
+$cookieJar = Join-Path $env:TEMP "lidar-ingest-rehearsal-cookies-$([guid]::NewGuid().ToString('N')).txt"
 
-$normalFirst = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -DeviceKey $DeviceKey -Body @{
+try {
+  $login = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/auth/login" -CookieJar $cookieJar -Body @{
+    userId = $UserId
+    password = $Password
+  }
+  if ($login.token) { throw "Login response exposed token; expected HttpOnly cookie auth." }
+  $results = Add-Result -Results $results -Name "operator cookie auth login" -Status "PASS" -Response @{
+    ok = $login.ok
+    authMode = $login.authMode
+    user = $login.user
+  }
+
+  $normalFirst = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -DeviceKey $DeviceKey -Body @{
   type = "normal-driving"
   zone_id = "ROUNDABOUT-01"
   track_id = $normalTrackId
@@ -148,9 +174,9 @@ $normalFirst = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -Devi
 if (!$normalFirst.ok -or !$normalFirst.vehicleTrackCreated) {
   throw "First normal-driving payload did not create a unique vehicle track."
 }
-$results = Add-Result -Results $results -Name "normal-driving first unique track" -Status "PASS" -Response $normalFirst
+  $results = Add-Result -Results $results -Name "normal-driving first unique track" -Status "PASS" -Response $normalFirst
 
-$normalDuplicate = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -DeviceKey $DeviceKey -Body @{
+  $normalDuplicate = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -DeviceKey $DeviceKey -Body @{
   type = "normal-driving"
   zone_id = "ROUNDABOUT-01"
   track_id = $normalTrackId
@@ -160,9 +186,9 @@ $normalDuplicate = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -
 if (!$normalDuplicate.ok -or $normalDuplicate.vehicleTrackCreated) {
   throw "Repeated normal-driving payload created a duplicate vehicle track."
 }
-$results = Add-Result -Results $results -Name "normal-driving duplicate track update" -Status "PASS" -Response $normalDuplicate
+  $results = Add-Result -Results $results -Name "normal-driving duplicate track update" -Status "PASS" -Response $normalDuplicate
 
-$stage1 = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -DeviceKey $DeviceKey -Body @{
+  $stage1 = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -DeviceKey $DeviceKey -Body @{
   type = "wrong-way-level-1"
   zone_id = "ROUNDABOUT-01"
   track_id = $wrongTrackId
@@ -175,9 +201,9 @@ if (!$stage1.ok -or !$stage1.eventId -or !$stage1.controlCommand) {
   throw "wrong-way-level-1 payload did not create an event and control command."
 }
 Assert-ControlCommandType -Command $stage1.controlCommand -Expected "STAGE_1_ON" -Label "wrong-way-level-1 payload"
-$results = Add-Result -Results $results -Name "wrong-way-level-1 event and command" -Status "PASS" -Response $stage1
+  $results = Add-Result -Results $results -Name "wrong-way-level-1 event and command" -Status "PASS" -Response $stage1
 
-$stage1Duplicate = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -DeviceKey $DeviceKey -Body @{
+  $stage1Duplicate = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -DeviceKey $DeviceKey -Body @{
   type = "wrong-way-level-1"
   zone_id = "ROUNDABOUT-01"
   track_id = $wrongTrackId
@@ -189,9 +215,9 @@ $stage1Duplicate = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -
 if (!$stage1Duplicate.ok -or !$stage1Duplicate.eventReused -or $stage1Duplicate.eventId -ne $stage1.eventId) {
   throw "Repeated wrong-way-level-1 payload did not reuse the active event."
 }
-$results = Add-Result -Results $results -Name "wrong-way-level-1 duplicate event reuse" -Status "PASS" -Response $stage1Duplicate
+  $results = Add-Result -Results $results -Name "wrong-way-level-1 duplicate event reuse" -Status "PASS" -Response $stage1Duplicate
 
-$stage2 = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -DeviceKey $DeviceKey -Body @{
+  $stage2 = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -DeviceKey $DeviceKey -Body @{
   type = "wrong-way-level-2"
   zone_id = "ROUNDABOUT-01"
   track_id = $wrongTrackId
@@ -204,9 +230,9 @@ if (!$stage2.ok -or !$stage2.eventId -or !$stage2.controlCommand) {
   throw "wrong-way-level-2 payload did not create or update an event and control command."
 }
 Assert-ControlCommandType -Command $stage2.controlCommand -Expected "STAGE_2_ON" -Label "wrong-way-level-2 payload"
-$results = Add-Result -Results $results -Name "wrong-way-level-2 event and command" -Status "PASS" -Response $stage2
+  $results = Add-Result -Results $results -Name "wrong-way-level-2 event and command" -Status "PASS" -Response $stage2
 
-$ended = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -DeviceKey $DeviceKey -Body @{
+  $ended = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -DeviceKey $DeviceKey -Body @{
   type = "situation-ended"
   zone_id = "ROUNDABOUT-01"
   track_id = $wrongTrackId
@@ -218,14 +244,14 @@ if (!$ended.ok -or !$ended.resolvedEventIds -or $ended.resolvedEventIds.Count -l
   throw "situation-ended payload did not resolve an active wrong-way event."
 }
 Assert-ControlCommandType -Command $ended.controlCommand -Expected "STAGE_2_RETURN" -Label "situation-ended payload"
-$results = Add-Result -Results $results -Name "situation-ended resolves active events" -Status "PASS" -Response $ended
+  $results = Add-Result -Results $results -Name "situation-ended resolves active events" -Status "PASS" -Response $ended
 
 foreach ($eventSpec in @(
   @{ eventId = $stage1.eventId; commandType = "STAGE_1_ON"; label = "Stage 1 event detail" },
   @{ eventId = $stage2.eventId; commandType = "STAGE_2_ON"; label = "Stage 2 event detail" }
 )) {
   $eventId = $eventSpec.eventId
-  $detail = Invoke-CurlJson -Url "$BaseUrl/api/events/$eventId"
+  $detail = Invoke-CurlJson -Url "$BaseUrl/api/events/$eventId" -CookieJar $cookieJar
   if (!$detail.ok -or !$detail.event -or !$detail.event.rawPayload) {
     throw "Event detail $eventId did not expose rawPayload."
   }
@@ -235,7 +261,7 @@ foreach ($eventSpec in @(
   Assert-EventDetailCommandType -Detail $detail -Expected $eventSpec.commandType -Label $eventSpec.label
 }
 
-$summary = Invoke-CurlJson -Url "$BaseUrl/api/events/summary"
+  $summary = Invoke-CurlJson -Url "$BaseUrl/api/events/summary" -CookieJar $cookieJar
 Assert-NumberProperty -Object $summary -Name "vehiclesPassed" -Label "Event summary"
 Assert-NumberProperty -Object $summary -Name "wrongwayVehicles" -Label "Event summary"
 Assert-NumberProperty -Object $summary -Name "wrongWayEvents" -Label "Event summary"
@@ -285,5 +311,10 @@ $markdownLines = @(
 )
 $markdownLines | Out-File -LiteralPath (Join-Path $outputDir "manifest.md") -Encoding utf8
 
-Write-Host "lidar ingest field rehearsal ok"
-Write-Host "evidence written to $outputDir"
+  Write-Host "lidar ingest field rehearsal ok"
+  Write-Host "evidence written to $outputDir"
+} finally {
+  if (Test-Path $cookieJar) {
+    Remove-Item -LiteralPath $cookieJar -Force
+  }
+}

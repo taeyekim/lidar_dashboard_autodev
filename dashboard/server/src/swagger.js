@@ -1,3 +1,5 @@
+const OPERATOR_READ_SECURITY = [{ cookieAuth: [] }, { bearerAuth: [] }];
+
 const swaggerSpec = {
   openapi: "3.0.0",
   info: {
@@ -133,6 +135,7 @@ const swaggerSpec = {
       get: {
         tags: ["Database"],
         summary: "DB 연결 상태 확인",
+        security: OPERATOR_READ_SECURITY,
         description:
           "Prisma가 PostgreSQL에 접속할 수 있는지 확인하고, 기본 테이블별 데이터 수를 반환합니다. 마이그레이션과 seed 적용 여부를 Swagger에서 빠르게 점검하기 위한 API입니다.",
         responses: {
@@ -159,6 +162,7 @@ const swaggerSpec = {
       get: {
         tags: ["Dashboard"],
         summary: "현재 대시보드 상태 조회",
+        security: OPERATOR_READ_SECURITY,
         responses: {
           200: {
             description: "메모리에 저장된 현재 대시보드 상태",
@@ -175,6 +179,7 @@ const swaggerSpec = {
       get: {
         tags: ["Dashboard"],
         summary: "최근 대시보드 로그 조회",
+        security: OPERATOR_READ_SECURITY,
         responses: {
           200: {
             description: "최근 로그 목록",
@@ -194,6 +199,7 @@ const swaggerSpec = {
       get: {
         tags: ["System"],
         summary: "통합 시스템 상태 조회",
+        security: OPERATOR_READ_SECURITY,
         description:
           "서버, DB, 라이다 수신, WebSocket, 장비, 통합제어보드 상태를 한 번에 조회합니다.",
         responses: {
@@ -212,6 +218,7 @@ const swaggerSpec = {
       get: {
         tags: ["Sites"],
         summary: "현장 목록 조회",
+        security: OPERATOR_READ_SECURITY,
         responses: {
           200: {
             description: "현장 목록",
@@ -228,6 +235,7 @@ const swaggerSpec = {
       get: {
         tags: ["Sites"],
         summary: "구역 목록 조회",
+        security: OPERATOR_READ_SECURITY,
         parameters: [
           { name: "siteId", in: "query", schema: { type: "string" } },
           { name: "type", in: "query", schema: { type: "string", example: "ROUNDABOUT" } },
@@ -248,6 +256,7 @@ const swaggerSpec = {
       get: {
         tags: ["Sites"],
         summary: "장비 목록 조회",
+        security: OPERATOR_READ_SECURITY,
         parameters: [
           { name: "zoneId", in: "query", schema: { type: "string" } },
           { name: "deviceType", in: "query", schema: { type: "string", example: "CONTROL_BOARD" } },
@@ -270,6 +279,7 @@ const swaggerSpec = {
       get: {
         tags: ["Sites"],
         summary: "장비 상태 요약 조회",
+        security: OPERATOR_READ_SECURITY,
         responses: {
           200: {
             description: "장비 상태 요약",
@@ -345,6 +355,7 @@ const swaggerSpec = {
       get: {
         tags: ["Control"],
         summary: "제어 상태 조회",
+        security: OPERATOR_READ_SECURITY,
         description:
           "현장 연동 테스트 중 차단기, 전광판, 라이다 표시 상태를 한 번에 확인하기 위한 API입니다. 현재는 DB 없이 메모리 상태를 반환합니다.",
         responses: {
@@ -363,6 +374,7 @@ const swaggerSpec = {
       get: {
         tags: ["Control"],
         summary: "통합 제어보드 TCP 상태 조회",
+        security: OPERATOR_READ_SECURITY,
         description:
           "통합 제어보드 전송 방식, DRY_RUN/LIVE_TCP 상태, 명령 집계, 최근 명령과 ACK 지연 정보를 조회합니다.",
         responses: {
@@ -381,6 +393,7 @@ const swaggerSpec = {
       get: {
         tags: ["Control"],
         summary: "통합 제어보드 명령 이력 조회",
+        security: OPERATOR_READ_SECURITY,
         parameters: [
           { name: "limit", in: "query", schema: { type: "integer", example: 20 } },
           { name: "status", in: "query", schema: { type: "string", example: "DRY_RUN" } },
@@ -457,6 +470,7 @@ const swaggerSpec = {
       get: {
         tags: ["Wrongway"],
         summary: "Recent wrong-way dashboard history",
+        security: OPERATOR_READ_SECURITY,
         description:
           "Returns the recent in-memory dashboard history used by the legacy wrong-way view. DB-backed event detail should use /api/events/{id}.",
         responses: {
@@ -478,6 +492,7 @@ const swaggerSpec = {
       get: {
         tags: ["Events"],
         summary: "저장된 이벤트 목록 조회",
+        security: OPERATOR_READ_SECURITY,
         parameters: [
           { name: "limit", in: "query", schema: { type: "integer", example: 20 } },
           { name: "offset", in: "query", schema: { type: "integer", example: 0 } },
@@ -502,6 +517,7 @@ const swaggerSpec = {
       get: {
         tags: ["Events"],
         summary: "최근 이벤트 조회",
+        security: OPERATOR_READ_SECURITY,
         responses: {
           200: {
             description: "최근 이벤트 목록",
@@ -518,6 +534,7 @@ const swaggerSpec = {
       get: {
         tags: ["Events"],
         summary: "이벤트 요약 조회",
+        security: OPERATOR_READ_SECURITY,
         responses: {
           200: {
             description: "이벤트 집계 요약",
@@ -534,6 +551,7 @@ const swaggerSpec = {
       get: {
         tags: ["Statistics"],
         summary: "교통 운영 통계 조회",
+        security: OPERATOR_READ_SECURITY,
         description:
           "vehicle_tracks의 unique track 기준 차량 수, wrong-way 이벤트 기준 역주행 수, 통합 제어보드 명령 성공률을 기간별로 집계합니다.",
         parameters: [
@@ -564,6 +582,7 @@ const swaggerSpec = {
       get: {
         tags: ["Events"],
         summary: "이벤트 상세 조회",
+        security: OPERATOR_READ_SECURITY,
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         responses: {
           200: {
@@ -662,6 +681,7 @@ const swaggerSpec = {
       get: {
         tags: ["Events"],
         summary: "이벤트 로그 조회",
+        security: OPERATOR_READ_SECURITY,
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
         responses: {
           200: {

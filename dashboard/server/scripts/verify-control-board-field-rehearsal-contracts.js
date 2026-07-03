@@ -31,6 +31,7 @@ const packageJson = readProjectFile("package.json");
   "AUTH_CSRF_COOKIE_NAME",
   "/api/auth/login",
   "/api/control-board/status",
+  'Invoke-CurlJson -Url "$BaseUrl/api/control-board/status" -CookieJar $cookieJar',
   "/api/control-board/commands/test",
   "STAGE_1_ON",
   "STAGE_2_ON",

@@ -139,6 +139,27 @@ async function main() {
     });
     assert(meWithBearer.status === 200, "Bearer-compatible /api/auth/me must return 200");
 
+    const protectedReadPaths = [
+      "/api/database/health",
+      "/api/status",
+      "/api/events/recent",
+      "/api/events/summary",
+      "/api/statistics/traffic?range=daily",
+      "/api/control-board/status",
+      "/api/control-board/commands",
+      "/api/sites",
+      "/api/zones",
+      "/api/devices/status",
+      "/api/wrongway/history",
+      "/api/state",
+      "/api/control/status",
+      "/api/logs",
+    ];
+    for (const path of protectedReadPaths) {
+      const unauthenticatedRead = await request(server, { path });
+      assert(unauthenticatedRead.status === 401, `${path} must require operator authentication`);
+    }
+
     const missingCsrf = await request(server, {
       method: "POST",
       path: "/api/control-board/commands/test",

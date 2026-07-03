@@ -4,8 +4,8 @@ const controller = require("./controlBoard.controller");
 
 const router = express.Router();
 
-router.get("/control-board/status", controller.getStatus);
-router.get("/control-board/commands", controller.listCommands);
+router.get("/control-board/status", requireAuth, controller.getStatus);
+router.get("/control-board/commands", requireAuth, controller.listCommands);
 router.post("/control-board/commands/test", requireAuth, controller.sendTestCommand);
 
 module.exports = router;

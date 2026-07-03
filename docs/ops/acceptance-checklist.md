@@ -42,9 +42,9 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `docker compose up --build` starts DB, backend, frontend, and reverse proxy.
 - [ ] `curl http://localhost:8080/healthz` returns `ok`.
 - [ ] `curl http://localhost:8080/api/health` returns `ok: true`.
-- [ ] `curl http://localhost:8080/api/database/health` returns table counts.
-- [ ] `curl http://localhost:8080/api/status` returns server, database, ingest, websocket, devices, and control board sections.
-- [ ] `curl http://localhost:8080/api/devices/status` returns configured device counts.
+- [ ] Authenticated operator curl with the login cookie checks `/api/database/health` and returns table counts.
+- [ ] Authenticated operator curl with the login cookie checks `/api/status` and returns server, database, ingest, websocket, devices, and control board sections.
+- [ ] Authenticated operator curl with the login cookie checks `/api/devices/status` and returns configured device counts.
 - [ ] `scripts/db-field-rehearsal.ps1` records DB/Prisma field evidence; `-RunDeploy` and `-RunSeed` are used only after the field PostgreSQL target is confirmed.
 - [ ] If the delivery runtime or field hardware is unavailable, `npm run field:rehearsal-unavailable` records `FIELD_REHEARSAL_UNAVAILABLE` REVIEW manifests instead of leaving field rehearsal evidence missing, and `--replacement-owner` plus `--target-recheck-date` are reflected in delivery evidence, completion audit, handover index, field closure plan, and handover package follow-up tables.
 - [ ] Re-running Prisma seed refreshes the default 월출산휴게소 site, `ROUNDABOUT-01/02`, lidar PC, and control board names without mojibake.

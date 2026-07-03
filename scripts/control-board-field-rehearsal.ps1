@@ -171,17 +171,6 @@ $cookieJar = Join-Path $env:TEMP "lidar-control-board-rehearsal-cookies-$([guid]
 $results = @()
 
 try {
-  $initialStatus = Invoke-CurlJson -Url "$BaseUrl/api/control-board/status"
-  Assert-ControlBoardSafetyStatus -Status $initialStatus -AllowLiveTcp ([bool]$AllowLiveTcp)
-  $mode = [string]$initialStatus.mode
-  if ($mode -eq "LIVE_TCP" -and !$AllowLiveTcp) {
-    throw "Control board is LIVE_TCP. Re-run with -AllowLiveTcp only after field hardware approval."
-  }
-  if ($mode -eq "LIVE_TCP" -and $liveApproved.ToLowerInvariant() -ne "true") {
-    throw "Control board is LIVE_TCP but CONTROL_BOARD_LIVE_APPROVED is not true. Record hardware owner approval before live TCP rehearsal."
-  }
-  $results = Add-Result -Results $results -Name "initial control-board status" -Status "PASS" -Response $initialStatus
-
   $login = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/auth/login" -CookieJar $cookieJar -Body @{
     userId = $UserId
     password = $Password
@@ -194,6 +183,17 @@ try {
     authMode = $login.authMode
     user = $login.user
   }
+
+  $initialStatus = Invoke-CurlJson -Url "$BaseUrl/api/control-board/status" -CookieJar $cookieJar
+  Assert-ControlBoardSafetyStatus -Status $initialStatus -AllowLiveTcp ([bool]$AllowLiveTcp)
+  $mode = [string]$initialStatus.mode
+  if ($mode -eq "LIVE_TCP" -and !$AllowLiveTcp) {
+    throw "Control board is LIVE_TCP. Re-run with -AllowLiveTcp only after field hardware approval."
+  }
+  if ($mode -eq "LIVE_TCP" -and $liveApproved.ToLowerInvariant() -ne "true") {
+    throw "Control board is LIVE_TCP but CONTROL_BOARD_LIVE_APPROVED is not true. Record hardware owner approval before live TCP rehearsal."
+  }
+  $results = Add-Result -Results $results -Name "initial control-board status" -Status "PASS" -Response $initialStatus
 
   $commands = @("STAGE_1_ON", "STAGE_2_ON", "STAGE_2_RETURN")
   foreach ($commandType in $commands) {
@@ -210,7 +210,7 @@ try {
     $results = Add-Result -Results $results -Name "$commandType command rehearsal" -Status "PASS" -Response $response
   }
 
-  $finalStatus = Invoke-CurlJson -Url "$BaseUrl/api/control-board/status"
+  $finalStatus = Invoke-CurlJson -Url "$BaseUrl/api/control-board/status" -CookieJar $cookieJar
   Assert-ControlBoardSafetyStatus -Status $finalStatus -AllowLiveTcp ([bool]$AllowLiveTcp)
   if ($null -eq $finalStatus.PSObject.Properties["responseSampleCount"]) {
     throw "Control-board status did not expose responseSampleCount."
