@@ -118,6 +118,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Runtime smoke confirms `GET /api/control-board/status` exposes `averageResponseMs`, `responseSampleCount`, and latest-command `responseDurationMs`.
 - [ ] If `DEVICE_INGEST_API_KEY` is configured, ingest without `X-Device-Key` returns `401`.
 - [ ] `scripts/security-scan.ps1` evidence exists under `artifacts/security/`, or skipped tools are documented with reasons.
+- [ ] Strict security acceptance uses `--require-scanners` or `-RequireScanners` so skipped gitleaks, Trivy, and OWASP ZAP checks fail the evidence run.
 - [ ] Delivery evidence manifest exists under `artifacts/delivery/` and links raw command logs.
 - [ ] Secret scan result is documented or marked unverified with reason.
 - [ ] Container scan result is documented or marked unverified with reason.

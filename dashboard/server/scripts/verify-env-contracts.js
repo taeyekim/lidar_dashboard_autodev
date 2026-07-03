@@ -32,6 +32,7 @@ const packageJson = readProjectFile("package.json");
 const evidenceScript = readProjectFile("dashboard/server/scripts/generate-delivery-evidence.js");
 const securityEvidenceScript = readProjectFile("dashboard/server/scripts/generate-security-evidence.js");
 const runtimeEvidenceScript = readProjectFile("dashboard/server/scripts/generate-runtime-evidence.js");
+const securityScanScript = readProjectFile("scripts/security-scan.ps1");
 const env = parseEnvExample(envExample);
 
 const requiredEnvKeys = [
@@ -131,6 +132,8 @@ assert(
   [acceptanceChecklist, "X-Device-Key", "acceptance checklist"],
   [acceptanceChecklist, "/api/ingest/control-board/tcp/test", "acceptance checklist"],
   [acceptanceChecklist, "scripts/security-scan.ps1", "acceptance checklist"],
+  [acceptanceChecklist, "--require-scanners", "acceptance checklist"],
+  [acceptanceChecklist, "-RequireScanners", "acceptance checklist"],
   [acceptanceChecklist, "npm run verify:statistics-metrics", "acceptance checklist"],
   [acceptanceChecklist, "unique track counts", "acceptance checklist"],
   [acceptanceChecklist, "average TCP ACK response vectors", "acceptance checklist"],
@@ -148,6 +151,8 @@ assert(
   [deliveryRunbook, "scripts/db-field-rehearsal.ps1", "delivery runbook"],
   [deliveryRunbook, "npm run verify:statistics-metrics", "delivery runbook"],
   [deliveryRunbook, "security:evidence", "delivery runbook"],
+  [deliveryRunbook, "--require-scanners", "delivery runbook"],
+  [deliveryRunbook, "-RequireScanners", "delivery runbook"],
   [deliveryRunbook, "delivery:evidence", "delivery runbook"],
   [deliveryRunbook, "delivery-evidence-matrix.md", "delivery runbook"],
   [deliveryRunbook, "/api/ingest/control-board/tcp/test", "delivery runbook"],
@@ -160,6 +165,8 @@ assert(
   [deliveryEvidenceMatrix, "Security", "delivery evidence matrix"],
   [deliveryEvidenceMatrix, "Delivery Evidence", "delivery evidence matrix"],
   [securityChecklist, "security:evidence", "security checklist"],
+  [securityChecklist, "--require-scanners", "security checklist"],
+  [securityChecklist, "-RequireScanners", "security checklist"],
   [packageJson, "runtime:evidence", "package scripts"],
   [packageJson, "security:evidence", "package scripts"],
   [packageJson, "delivery:evidence", "package scripts"],
@@ -178,6 +185,9 @@ assert(
   [securityEvidenceScript, "gitleaks", "security evidence script"],
   [securityEvidenceScript, "trivy", "security evidence script"],
   [securityEvidenceScript, "OWASP ZAP", "security evidence script"],
+  [securityEvidenceScript, "requireScanners", "security evidence script"],
+  [securityEvidenceScript, "--require-scanners", "security evidence script"],
+  [securityScanScript, "RequireScanners", "security scan powershell script"],
   [runtimeEvidenceScript, "artifacts/runtime", "runtime evidence script"],
   [runtimeEvidenceScript, "manifest.md", "runtime evidence script"],
   [runtimeEvidenceScript, "manifest.json", "runtime evidence script"],

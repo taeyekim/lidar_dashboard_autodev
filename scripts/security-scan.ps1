@@ -2,6 +2,7 @@ param(
   [string]$TargetUrl = "http://localhost:8080",
   [switch]$IncludeContainerImages,
   [switch]$IncludeZap,
+  [switch]$RequireScanners,
   [string]$OutputRoot = "artifacts/security"
 )
 
@@ -24,10 +25,14 @@ function Add-Skip {
   param(
     [string]$FilePath,
     [string]$Name,
-    [string]$Reason
+    [string]$Reason,
+    [switch]$Required
   )
 
   Add-Content -LiteralPath $FilePath -Value "- ${Name}: 미검증 - ${Reason}"
+  if ($Required) {
+    throw "${Name} is required but skipped: ${Reason}"
+  }
 }
 
 function Invoke-RecordedCommand {
@@ -74,7 +79,7 @@ if (Test-CommandExists "gitleaks") {
     gitleaks detect --source . --redact --report-format json --report-path (Join-Path $scanDir "gitleaks.json")
   }
 } else {
-  Add-Skip -FilePath $skippedPath -Name "gitleaks" -Reason "gitleaks command not installed on this PC"
+  Add-Skip -FilePath $skippedPath -Name "gitleaks" -Reason "gitleaks command not installed on this PC" -Required:$RequireScanners
 }
 
 if (Test-CommandExists "trivy") {
@@ -90,10 +95,10 @@ if (Test-CommandExists "trivy") {
       trivy image --format json --output (Join-Path $scanDir "trivy-frontend-image.json") lidar_dashboard_autodev-frontend
     }
   } else {
-    Add-Skip -FilePath $skippedPath -Name "trivy image" -Reason "IncludeContainerImages switch was not provided"
+    Add-Skip -FilePath $skippedPath -Name "trivy image" -Reason "IncludeContainerImages switch was not provided" -Required:$RequireScanners
   }
 } else {
-  Add-Skip -FilePath $skippedPath -Name "trivy" -Reason "trivy command not installed on this PC"
+  Add-Skip -FilePath $skippedPath -Name "trivy" -Reason "trivy command not installed on this PC" -Required:$RequireScanners
 }
 
 if ($IncludeZap) {
@@ -102,10 +107,10 @@ if ($IncludeZap) {
       zap-baseline.py -t $TargetUrl -r (Join-Path $scanDir "zap-baseline.html")
     }
   } else {
-    Add-Skip -FilePath $skippedPath -Name "zap-baseline.py" -Reason "OWASP ZAP baseline command not installed on this PC"
+    Add-Skip -FilePath $skippedPath -Name "zap-baseline.py" -Reason "OWASP ZAP baseline command not installed on this PC" -Required:$RequireScanners
   }
 } else {
-  Add-Skip -FilePath $skippedPath -Name "OWASP ZAP baseline" -Reason "IncludeZap switch was not provided"
+  Add-Skip -FilePath $skippedPath -Name "OWASP ZAP baseline" -Reason "IncludeZap switch was not provided" -Required:$RequireScanners
 }
 
 Add-Content -LiteralPath $summaryPath -Value "- Raw command log: commands.log`n- Skipped checks: skipped-checks.md`n"

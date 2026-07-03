@@ -128,6 +128,7 @@ function buildMarkdown(manifest) {
     `- Target URL: ${manifest.targetUrl}`,
     `- Include container images: ${manifest.options.includeContainerImages ? "yes" : "no"}`,
     `- Include ZAP baseline: ${manifest.options.includeZap ? "yes" : "no"}`,
+    `- Require scanners: ${manifest.options.requireScanners ? "yes" : "no"}`,
     "",
     "## Tool Inventory",
     "",
@@ -162,6 +163,7 @@ function buildMarkdown(manifest) {
     "- `npm audit raw json` is captured as evidence and may report the documented Prisma development-tooling exception.",
     "- `npm audit policy gate` is the required automated pass/fail gate for dependency audit findings.",
     "- Optional tools are recorded as `SKIPPED` when not installed or when image/ZAP switches are not provided.",
+    "- `--require-scanners` treats skipped gitleaks, Trivy, and OWASP ZAP checks as required failures for field acceptance.",
     "- Do not run active scans against the real integrated control board.",
     "",
   );
@@ -183,9 +185,15 @@ function skipped(label, reason) {
   };
 }
 
+function requiredScannerFailure(item, requireScanners) {
+  if (!requireScanners || item.status !== "skipped") return false;
+  return ["gitleaks secret scan", "trivy filesystem scan", "trivy image scan", "OWASP ZAP baseline"].includes(item.label);
+}
+
 function main() {
   const includeContainerImages = process.argv.includes("--include-container-images");
   const includeZap = process.argv.includes("--include-zap");
+  const requireScanners = process.argv.includes("--require-scanners");
   const targetUrlArg = process.argv.find((arg) => arg.startsWith("--target-url="));
   const outputRootArg = process.argv.find((arg) => arg.startsWith("--output-root="));
   const targetUrl = targetUrlArg ? targetUrlArg.slice("--target-url=".length) : "http://localhost:8080";
@@ -285,6 +293,7 @@ function main() {
     options: {
       includeContainerImages,
       includeZap,
+      requireScanners,
     },
     toolInventory,
     checks: checks.map((item) => {
@@ -307,7 +316,9 @@ function main() {
   fs.writeFileSync(path.join(outputDir, "manifest.md"), buildMarkdown(manifest));
 
   const requiredFailures = manifest.checks.filter(
-    (item) => item.status !== "skipped" && item.label === "npm audit policy gate" && item.exitCode !== 0,
+    (item) =>
+      (item.status !== "skipped" && item.label === "npm audit policy gate" && item.exitCode !== 0) ||
+      requiredScannerFailure(item, requireScanners),
   );
 
   console.log(`security evidence written to ${path.relative(root, outputDir)}`);

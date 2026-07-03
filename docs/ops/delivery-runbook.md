@@ -305,7 +305,11 @@ For container image and ZAP evidence after the delivery stack is running:
 
 ```powershell
 npm.cmd run security:evidence -- --include-container-images --include-zap --target-url=http://localhost:8080
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/security-scan.ps1 -IncludeContainerImages -IncludeZap -RequireScanners
 ```
+
+Use `--require-scanners` with `npm.cmd run security:evidence` when skipped
+gitleaks, Trivy, or OWASP ZAP checks should fail strict field acceptance.
 
 Do not run active DAST/fuzzing against the real control board.
 

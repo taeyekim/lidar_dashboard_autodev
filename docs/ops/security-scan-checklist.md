@@ -55,8 +55,9 @@ Windows evidence script:
 
 ```powershell
 npm.cmd run security:evidence
+npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners --target-url=http://localhost:8080
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/security-scan.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/security-scan.ps1 -IncludeContainerImages -IncludeZap
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/security-scan.ps1 -IncludeContainerImages -IncludeZap -RequireScanners
 ```
 
 The Node evidence script is the preferred cross-platform path. It writes
@@ -65,6 +66,10 @@ inventory, raw command logs, and skipped-check reasons under
 `artifacts/security/`. Set `SECURITY_EVIDENCE_OPERATOR` before running it when
 the handover package must show the field reviewer name. The PowerShell script
 remains available for Windows field rehearsals.
+
+Use `--require-scanners` or `-RequireScanners` during strict field acceptance
+when skipped gitleaks, Trivy, or OWASP ZAP checks should fail the evidence run
+instead of being recorded as review-only skipped items.
 The `artifacts/` directory is intentionally ignored by Git.
 
 ## Notes
