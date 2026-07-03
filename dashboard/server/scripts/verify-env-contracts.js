@@ -198,6 +198,8 @@ assert(
   [securityEvidenceScript, "DELIVERY_FIX", "security evidence script"],
   [securityEvidenceScript, "RISK_ACCEPTED", "security evidence script"],
   [securityEvidenceScript, "UNVERIFIED", "security evidence script"],
+  [securityEvidenceScript, "통과", "security evidence script"],
+  [securityEvidenceScript, "차단", "security evidence script"],
   [securityEvidenceScript, "위험 수용", "security evidence script"],
   [securityEvidenceScript, "납품 전 수정", "security evidence script"],
   [securityEvidenceScript, "미검증", "security evidence script"],

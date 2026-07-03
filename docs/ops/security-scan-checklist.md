@@ -69,8 +69,8 @@ the handover package must show the field reviewer name. The PowerShell script
 remains available for Windows field rehearsals.
 
 Use `--require-scanners` or `-RequireScanners` during strict field acceptance
-when skipped gitleaks, Trivy, or OWASP ZAP checks should fail the evidence run
-instead of being recorded as review-only skipped items.
+when skipped gitleaks, Trivy, or OWASP ZAP checks should become `차단` evidence
+instead of being recorded as review-only `미검증` skipped items.
 The `artifacts/` directory is intentionally ignored by Git.
 
 ## Notes
