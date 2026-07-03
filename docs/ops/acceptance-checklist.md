@@ -151,7 +151,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Runtime smoke confirms CSRF rejection for cookie-authenticated mutation requests without `X-CSRF-Token`.
 - [ ] Runtime smoke confirms `GET /api/statistics/traffic?range=daily` counters and `averageResponseMs`.
 - [ ] Runtime smoke confirms `GET /api/control-board/status` exposes `averageResponseMs`, `responseSampleCount`, `liveApproved`, and latest-command `responseDurationMs`.
-- [ ] If `DEVICE_INGEST_API_KEY` is configured, ingest without `X-Device-Key` returns `401`.
+- [ ] If `DEVICE_INGEST_API_KEY` is configured, `/api/wrongway`, `/api/ingest/lidar`, and `/api/ingest/control-board` without `X-Device-Key` return `401`.
 - [ ] `scripts/security-scan.ps1` evidence exists under `artifacts/security/`, or skipped tools are documented with reasons.
 - [ ] Strict security acceptance uses `--require-scanners` or `-RequireScanners` so skipped gitleaks, Trivy, and OWASP ZAP checks fail the evidence run.
 - [ ] `artifacts/security/<timestamp>/manifest.md` includes the `Scanner Closeout Matrix`, and every scanner row is either `EVIDENCE_READY`, documented `RISK_ACCEPTED`, or assigned for recheck in `artifacts/manual/field-risk-acceptance.md`.

@@ -297,7 +297,11 @@ assert(
   [runtimeSmoke, "Content-Security-Policy", "runtime smoke script"],
   [runtimeSmoke, "unauthenticated mutation smoke", "runtime smoke script"],
   [runtimeSmoke, "non-json mutation smoke", "runtime smoke script"],
-  [runtimeSmoke, "missing X-Device-Key smoke", "runtime smoke script"],
+  [runtimeSmoke, "missing X-Device-Key wrongway smoke", "runtime smoke script"],
+  [runtimeSmoke, "missing X-Device-Key lidar ingest smoke", "runtime smoke script"],
+  [runtimeSmoke, "missing X-Device-Key control-board ingest smoke", "runtime smoke script"],
+  [runtimeSmoke, "/api/ingest/lidar", "runtime smoke script"],
+  [runtimeSmoke, "/api/ingest/control-board", "runtime smoke script"],
 ].forEach(([content, token, label]) => {
   assert(content.includes(token), `${label} is missing ${token}`);
 });

@@ -319,13 +319,41 @@ try {
   }
 
   if ($deviceIngestKey) {
-    $missingDeviceKey = Invoke-CurlStatus -Method "POST" -Url "$BaseUrl/api/wrongway" -Body @{
-      type = "normal-driving"
-      zone_id = "ROUNDABOUT-01"
-      track_id = "smoke-missing-device-key"
-      timestamp = "$(Get-Date -Format o)"
+    $missingDeviceKeyCases = @(
+      @{
+        label = "missing X-Device-Key wrongway smoke"
+        path = "/api/wrongway"
+        body = @{
+          type = "normal-driving"
+          zone_id = "ROUNDABOUT-01"
+          track_id = "smoke-missing-device-key"
+          timestamp = "$(Get-Date -Format o)"
+        }
+      },
+      @{
+        label = "missing X-Device-Key lidar ingest smoke"
+        path = "/api/ingest/lidar"
+        body = @{
+          type = "normal-driving"
+          zone_id = "ROUNDABOUT-01"
+          track_id = "smoke-missing-device-key-lidar"
+          timestamp = "$(Get-Date -Format o)"
+        }
+      },
+      @{
+        label = "missing X-Device-Key control-board ingest smoke"
+        path = "/api/ingest/control-board"
+        body = @{
+          packet = "02 A1 20 01 01 02 00 CD 03 0D"
+          source = "runtime-smoke"
+        }
+      }
+    )
+
+    foreach ($case in $missingDeviceKeyCases) {
+      $missingDeviceKey = Invoke-CurlStatus -Method "POST" -Url "$BaseUrl$($case.path)" -Body $case.body
+      Assert-HttpStatus -Response $missingDeviceKey -Expected 401 -Label $case.label
     }
-    Assert-HttpStatus -Response $missingDeviceKey -Expected 401 -Label "missing X-Device-Key smoke"
   }
 
   $cookieJar = ""
