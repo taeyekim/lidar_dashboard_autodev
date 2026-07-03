@@ -121,6 +121,7 @@ function hasOpenRequiredFieldValue(item) {
   return [
     "missing",
     "open-or-missing",
+    "open-or-wildcard",
     "missing-or-trusted-lan-exception-required",
     "not-approved",
     "change-this-to-a-long-random-secret",

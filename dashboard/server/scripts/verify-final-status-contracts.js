@@ -124,6 +124,7 @@ function hasOpenRequiredFieldValue(item) {
   return [
     "missing",
     "open-or-missing",
+    "open-or-wildcard",
     "missing-or-trusted-lan-exception-required",
     "not-approved",
     "change-this-to-a-long-random-secret",
@@ -170,6 +171,10 @@ if (latestCompletion) {
       "complete audit requires no open required field values",
     );
     assert(
+      requiredFieldState(data.requiredFieldValues, "CORS_ORIGINS") === "trusted-only",
+      "complete audit requires CORS_ORIGINS to be trusted-only",
+    );
+    assert(
       requiredFieldState(data.requiredFieldValues, "CONTROL_BOARD_LIVE_APPROVED") === "approved",
       "complete audit requires CONTROL_BOARD_LIVE_APPROVED to be approved",
     );
@@ -194,6 +199,10 @@ if (latestReadiness) {
     assert(
       requiredFieldValues.every((item) => !hasOpenRequiredFieldValue(item)),
       "PASS field readiness requires no open required field values",
+    );
+    assert(
+      requiredFieldState(requiredFieldValues, "CORS_ORIGINS") === "trusted-only",
+      "PASS field readiness requires CORS_ORIGINS trusted-only state",
     );
     assert(
       requiredFieldState(requiredFieldValues, "CONTROL_BOARD_LIVE_APPROVED") === "approved",

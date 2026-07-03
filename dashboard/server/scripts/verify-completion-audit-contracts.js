@@ -16,6 +16,7 @@ function readProjectFile(relativePath) {
 const packageJson = readProjectFile("package.json");
 const serverPackageJson = readProjectFile("dashboard/server/package.json");
 const completionAudit = readProjectFile("dashboard/server/scripts/generate-completion-audit.js");
+const fieldReadiness = readProjectFile("dashboard/server/scripts/generate-field-readiness-report.js");
 const manualEvidence = readProjectFile("dashboard/server/scripts/manual-evidence.js");
 const deliveryMatrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
 const deliveryRunbook = readProjectFile("docs/ops/delivery-runbook.md");
@@ -116,6 +117,14 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "goal remains active",
 ].forEach((token) => {
   assert(completionAudit.includes(token), `completion audit generator is missing ${token}`);
+});
+
+[
+  "CORS_ORIGINS",
+  "open-or-wildcard",
+  "CORS trusted origins",
+].forEach((token) => {
+  assert(fieldReadiness.includes(token), `field readiness generator is missing ${token}`);
 });
 
 [
