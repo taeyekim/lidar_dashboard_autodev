@@ -1020,7 +1020,7 @@ const swaggerSpec = {
         required: ["userId", "password"],
         properties: {
           userId: { type: "string", example: "admin" },
-          password: { type: "string", example: "admin1234!" },
+          password: { type: "string", example: "<operator-password>" },
         },
       },
       AuthUser: {

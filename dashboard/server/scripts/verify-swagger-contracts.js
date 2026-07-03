@@ -210,6 +210,9 @@ assert(
 const authLogin = swaggerSpec.components?.schemas?.AuthLoginResponse;
 assert(authLogin?.properties?.authMode?.example === "httpOnlyCookie", "AuthLoginResponse must expose httpOnlyCookie mode");
 assert(!authLogin?.properties?.token, "AuthLoginResponse must not expose the JWT token body field");
+const authLoginRequest = swaggerSpec.components?.schemas?.AuthLoginRequest;
+assert(authLoginRequest?.properties?.password?.example === "<operator-password>", "AuthLoginRequest password example must be a non-secret placeholder");
+assert(authLoginRequest?.properties?.password?.example !== "admin1234!", "AuthLoginRequest password example must not expose seed/default-looking credentials");
 
 const wrongwayIngest = assertPath("post", "/api/wrongway");
 assert(
