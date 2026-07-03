@@ -87,6 +87,7 @@ assertIncludes(
 ].forEach((token) => assertIncludes(securityMiddleware, token, "security middleware"));
 assertIncludes(wrongwayRoutes, "requireDeviceIngestKey", "wrongway routes");
 assertIncludes(externalIngestRoutes, "requireDeviceIngestKey", "external ingest routes");
+assertIncludes(externalIngestRoutes, "/ingest/control-board/tcp/test", "external ingest routes");
 assertIncludes(schema, "model VehicleTrack", "prisma schema");
 assertIncludes(schema, "trackId                      String         @unique", "prisma schema");
 assertIncludes(schema, "rawPayload               Json", "prisma schema");

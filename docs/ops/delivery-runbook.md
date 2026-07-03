@@ -160,6 +160,14 @@ curl -X POST http://localhost:8080/api/wrongway \
   -d "{\"type\":\"wrong-way-level-2\",\"zone_id\":\"ROUNDABOUT-01\",\"track_id\":\"track-wrong-001\",\"timestamp\":\"2026-07-02T10:00:07+09:00\",\"warning_level\":2,\"confidence\":0.97,\"description\":\"Wrong-way escalation confirmed\"}"
 ```
 
+Control-board TCP frame parser smoke:
+
+```bash
+curl -X POST http://localhost:8080/api/ingest/control-board/tcp/test \
+  -H "Content-Type: application/json" \
+  -d "{\"host\":\"192.168.0.50\",\"port\":5001,\"samplePacket\":\"02 A1 20 01 01 02 00 CD 03 0D\"}"
+```
+
 Situation-ended smoke:
 
 ```bash

@@ -10,6 +10,7 @@ router.post("/ingest/lidar", requireDeviceIngestKey, controller.receiveLidar);
 router.post("/ingest/lidar/mock", requireDeviceIngestKey, controller.receiveLidarMock);
 router.post("/ingest/control-board", requireDeviceIngestKey, controller.receiveControlBoard);
 router.post("/ingest/control-board/mock", requireDeviceIngestKey, controller.receiveControlBoardMock);
+router.post("/ingest/control-board/tcp/test", requireDeviceIngestKey, controller.testControlBoardTcp);
 router.post("/ingest/control-board/serial/test", requireDeviceIngestKey, controller.testControlBoardSerial);
 router.get("/ingest/status", controller.getIngestStatus);
 router.get("/ingest/events/recent", controller.getRecentEvents);

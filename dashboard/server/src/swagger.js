@@ -773,6 +773,33 @@ const swaggerSpec = {
         },
       },
     },
+    "/api/ingest/control-board/tcp/test": {
+      post: {
+        tags: ["External Ingest"],
+        summary: "Integrated control board TCP frame test",
+        description:
+          "Tests the UTP Ethernet/TCP raw 10-byte frame parser without opening a live socket. `samplePacket` is parsed with the same Byte 1~6 CRC-8/SMBUS validation used by live control-board ingest. DEVICE_INGEST_API_KEY requires the X-Device-Key header when configured.",
+        security: [{ deviceKeyAuth: [] }, {}],
+        requestBody: {
+          required: false,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/ControlBoardTcpFrameTestRequest" },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "TCP frame test request accepted",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ControlBoardTcpFrameTestResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
     "/api/ingest/events/recent": {
       get: {
         tags: ["External Ingest"],
@@ -1638,6 +1665,15 @@ const swaggerSpec = {
           command: { type: "string", example: "STAGE_1_ON" },
         },
       },
+      ControlBoardTcpFrameTestRequest: {
+        type: "object",
+        properties: {
+          host: { type: "string", example: "192.168.0.50" },
+          port: { type: "integer", example: 5001 },
+          samplePacket: { type: "string", example: "02 A1 20 01 01 02 00 CD 03 0D" },
+          command: { type: "string", example: "STAGE_1_ON" },
+        },
+      },
       ExternalIngestResponse: {
         type: "object",
         properties: {
@@ -1657,6 +1693,22 @@ const swaggerSpec = {
             properties: {
               port: { type: "string", example: "COM3" },
               baudRate: { type: "integer", example: 9600 },
+            },
+          },
+          event: { $ref: "#/components/schemas/ExternalEvent" },
+        },
+      },
+      ControlBoardTcpFrameTestResponse: {
+        type: "object",
+        properties: {
+          ok: { type: "boolean", example: true },
+          mode: { type: "string", example: "TCP_FRAME_TEST" },
+          tcp: {
+            type: "object",
+            properties: {
+              host: { type: "string", example: "192.168.0.50" },
+              port: { type: "integer", example: 5001 },
+              transport: { type: "string", example: "tcp" },
             },
           },
           event: { $ref: "#/components/schemas/ExternalEvent" },

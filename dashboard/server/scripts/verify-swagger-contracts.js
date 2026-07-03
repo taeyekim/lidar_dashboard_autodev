@@ -67,6 +67,7 @@ function assertOptionalDeviceKey(operation, label) {
   ["/api/ingest/lidar/mock", "post"],
   ["/api/ingest/control-board", "post"],
   ["/api/ingest/control-board/mock", "post"],
+  ["/api/ingest/control-board/tcp/test", "post"],
   ["/api/ingest/control-board/serial/test", "post"],
 ].forEach(([path, method]) => {
   assertOptionalDeviceKey(assertPath(method, path), `${method.toUpperCase()} ${path}`);
@@ -101,6 +102,18 @@ const controlBoardSerialPacket =
 assert(
   controlBoardSerialPacket === "02 A1 20 01 01 02 00 CD 03 0D",
   "ControlBoardSerialTestRequest samplePacket example must use the 10-byte control board response frame",
+);
+
+const controlBoardTcpPacket =
+  swaggerSpec.components?.schemas?.ControlBoardTcpFrameTestRequest?.properties?.samplePacket?.example;
+assert(
+  controlBoardTcpPacket === "02 A1 20 01 01 02 00 CD 03 0D",
+  "ControlBoardTcpFrameTestRequest samplePacket example must use the 10-byte control board response frame",
+);
+assert(
+  swaggerSpec.components?.schemas?.ControlBoardTcpFrameTestResponse?.properties?.tcp?.properties?.transport?.example ===
+    "tcp",
+  "ControlBoardTcpFrameTestResponse must document TCP transport",
 );
 
 const trafficEvent = swaggerSpec.components?.schemas?.TrafficEvent;

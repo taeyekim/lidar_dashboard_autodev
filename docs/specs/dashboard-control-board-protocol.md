@@ -100,5 +100,7 @@
 - 실제 차단기/전광판/스피커 제어는 통합제어보드가 담당합니다.
 - 제어 기능은 권한, 로그, 실패 처리, 우선권 정책이 정의된 뒤 구현합니다.
 - command packet 생성/송신, 응답 packet 수신/검증, 운영 로그 저장은 하나의 명령 lifecycle로 관리합니다.
-- 실제 장비 연결 전에는 mock, loopback, serial test, bridge 프로그램 단계를 분리해 검증합니다.
+- 실제 장비 연결 전에는 mock, loopback, TCP frame test, bridge 프로그램 단계를 분리해 검증합니다.
+- 납품 기준 parser 검증 endpoint는 `/api/ingest/control-board/tcp/test`입니다.
+- 기존 `/api/ingest/control-board/serial/test`는 초기 RS-485/serial 검토 시기의 하위 호환 alias로만 유지합니다.
 - CRC-8 검증 실패 packet은 운영 이벤트로 전파하지 않고 진단 로그로 남깁니다.

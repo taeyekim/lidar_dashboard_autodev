@@ -61,6 +61,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Dry-run command does not open a TCP socket.
 - [ ] Live TCP command records response hex and CRC status.
 - [ ] Timeout/failure records `FAILED` status and error message.
+- [ ] `/api/ingest/control-board/tcp/test` validates the 10-byte TCP frame sample and CRC parser.
 - [ ] Control board ingest creates a `device_status_logs` row and updates the Devices page.
 - [ ] Event detail exposes linked `controlCommands`, `packetHex`, response hex, CRC status, and command logs.
 

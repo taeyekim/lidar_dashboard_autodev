@@ -69,6 +69,18 @@ async function testControlBoardSerial(req, res) {
   }
 }
 
+async function testControlBoardTcp(req, res) {
+  try {
+    const result = await externalIngestService.createTcpFrameTest(req.body || {});
+    res.json({ ok: true, ...result });
+  } catch (error) {
+    res.status(error.status || 500).json({
+      ok: false,
+      error: error.status ? error.message : "Failed to test control board TCP frame input.",
+    });
+  }
+}
+
 // 최근 외부 수신 이벤트 목록을 반환한다.
 function getRecentEvents(req, res) {
   // 최근 수신 이벤트 조회는 현장 테스트 중 수신 여부를 빠르게 확인하기 위한 임시 조회 기능이다.
@@ -87,6 +99,7 @@ module.exports = {
   receiveLidarMock,
   receiveControlBoard,
   receiveControlBoardMock,
+  testControlBoardTcp,
   testControlBoardSerial,
   getRecentEvents,
   getIngestStatus,
