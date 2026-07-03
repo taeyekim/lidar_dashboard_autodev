@@ -129,16 +129,20 @@ security scanner availability without printing secret values. The control-board
 safety status is recorded as `DRY_RUN_SAFE`, `LIVE_TCP_READY`, or
 `LIVE_TCP_REVIEW`.
 
-For the final attachment refresh, run `npm.cmd run handover:package`. It runs
-`delivery:evidence`, `field:readiness`, `completion:audit`,
-`handover:index`, and `field:closure-plan` in order, then writes
+For the final attachment refresh, run
+`npm.cmd run handover:package -- --base-url=http://localhost:8080`. Replace
+the base URL with the delivery Nginx entrypoint when it is not localhost. It
+runs `delivery:evidence`, `field:readiness`, `completion:audit`,
+`handover:index`, and `field:closure-plan` in order, passing the same base URL
+into the refreshed readiness report, then writes
 `artifacts/handover-package/<timestamp>/manifest.json` plus `manifest.md` with
-the refreshed evidence references, command logs, and latest control-board safety
-status. The completion audit, handover index, closure plan, and handover package
-all surface this status so `DRY_RUN_SAFE` or `LIVE_TCP_REVIEW` cannot be
-mistaken for field-ready TCP operation. Use
-`npm.cmd run handover:package -- --strict` when the command should fail unless
-the package status is `READY` and `canMarkGoalComplete=true`.
+the refreshed evidence references, command logs, base URL, strict gate reasons,
+and latest control-board safety status. The completion audit, handover index,
+closure plan, and handover package all surface this status so `DRY_RUN_SAFE` or
+`LIVE_TCP_REVIEW` cannot be mistaken for field-ready TCP operation. Use
+`npm.cmd run handover:package -- --base-url=http://localhost:8080 --strict`
+when the command should fail unless the package status is `READY` and
+`canMarkGoalComplete=true`.
 The handover index marks completion audit evidence as `STALE` if it does not
 reference the latest delivery evidence or the latest field readiness report.
 
