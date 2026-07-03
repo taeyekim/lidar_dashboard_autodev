@@ -73,8 +73,11 @@ assertIncludes(
 ].forEach((token) => assertIncludes(controlBoardService, token, "control board service"));
 [
   "controlCommands:",
+  "eventLogs:",
+  "logs: { orderBy: { createdAt: \"asc\" } }",
   "targetDevice: true",
   "event.controlCommands.map(serializeCommand)",
+  "event.eventLogs.map(serializeLog)",
   "prisma.vehicleTrack.count()",
   "vehiclesPassed: vehicleTracks",
   "todayVehicleTracks",

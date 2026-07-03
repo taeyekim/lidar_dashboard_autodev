@@ -1265,8 +1265,20 @@ const swaggerSpec = {
           completedAt: { type: "string", format: "date-time", nullable: true },
           logs: {
             type: "array",
-            items: { $ref: "#/components/schemas/EventLog" },
+            items: { $ref: "#/components/schemas/ControlCommandLog" },
           },
+        },
+      },
+      ControlCommandLog: {
+        type: "object",
+        additionalProperties: true,
+        properties: {
+          id: { type: "string" },
+          controlCommandId: { type: "string" },
+          action: { type: "string", example: "TCP_RESPONSE_ACKNOWLEDGED" },
+          message: { type: "string", nullable: true },
+          metadata: { type: "object", additionalProperties: true, nullable: true },
+          createdAt: { type: "string", format: "date-time" },
         },
       },
       ControlBoardStatusResponse: {

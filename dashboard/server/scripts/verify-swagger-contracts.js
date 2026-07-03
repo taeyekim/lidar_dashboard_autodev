@@ -159,6 +159,26 @@ assert(
   "TrafficEvent schema must expose linked eventLogs",
 );
 
+const controlBoardCommand = swaggerSpec.components?.schemas?.ControlBoardCommand;
+[
+  "packetHex",
+  "responseHex",
+  "crcStatus",
+  "requestedAt",
+  "completedAt",
+].forEach((field) => {
+  assert(controlBoardCommand?.properties?.[field], `ControlBoardCommand schema must expose ${field}`);
+});
+assert(
+  controlBoardCommand?.properties?.logs?.items?.$ref === "#/components/schemas/ControlCommandLog",
+  "ControlBoardCommand schema must expose linked ControlCommandLog entries",
+);
+
+const controlCommandLog = swaggerSpec.components?.schemas?.ControlCommandLog;
+["controlCommandId", "action", "message", "metadata", "createdAt"].forEach((field) => {
+  assert(controlCommandLog?.properties?.[field], `ControlCommandLog schema must expose ${field}`);
+});
+
 const eventSummary = swaggerSpec.components?.schemas?.EventSummaryResponse;
 ["vehiclesPassed", "vehicleTracks", "todayVehicleTracks", "newEvents"].forEach((field) => {
   assert(eventSummary?.properties?.[field]?.type === "integer", `EventSummaryResponse must expose ${field}`);
