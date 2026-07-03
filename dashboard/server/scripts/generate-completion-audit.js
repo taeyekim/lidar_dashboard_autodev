@@ -79,6 +79,19 @@ function buildRequiredFieldValueSignals(fieldReadinessManifest) {
   }));
 }
 
+function buildCompanionEvidenceMetadata(deliveryManifest) {
+  const summaries = deliveryManifest?.data?.companionEvidence?.summaries;
+  if (!Array.isArray(summaries)) return [];
+  return summaries.map((item) => ({
+    type: item.type || "unknown",
+    manifestPath: item.manifestPath || null,
+    outputRoot: item.outputRoot || null,
+    reviewCount: normalizeNumber(item.reviewCount),
+    skippedCount: normalizeNumber(item.skippedCount),
+    metadata: item.metadata || {},
+  }));
+}
+
 function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest) {
   if (!deliveryManifest) {
     return [{
@@ -146,6 +159,7 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest) {
   const summary = deliveryManifest?.data?.handoverSummary || {};
   const readinessSignals = buildReadinessSignals(fieldReadinessManifest);
   const requiredFieldValues = buildRequiredFieldValueSignals(fieldReadinessManifest);
+  const companionEvidenceMetadata = buildCompanionEvidenceMetadata(deliveryManifest);
   const completionBlockers = buildCompletionBlockers(deliveryManifest, fieldReadinessManifest);
   const automatedBlockers = completionBlockers.filter((item) => item.category === "automated");
   const fieldBlockers = completionBlockers.filter((item) => item.category === "field");
@@ -201,6 +215,7 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest) {
       ? summary.fieldVerificationRequiredAreas
       : [],
     requiredFieldValues,
+    companionEvidenceMetadata,
     handoverSummaryStatus: summary.status || null,
     decisionRule:
       "canMarkGoalComplete is true only when automated delivery checks pass and no field readiness, companion, acceptance, preflight, skipped, or required verification item remains.",
@@ -208,6 +223,11 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest) {
 }
 
 function buildMarkdown(manifest) {
+  const formatMetadata = (metadata) =>
+    Object.entries(metadata || {})
+      .map(([key, value]) => `${key}=${typeof value === "object" && value !== null ? JSON.stringify(value) : value}`)
+      .join("<br>") || "none";
+
   return [
     "# Completion Audit",
     "",
@@ -250,6 +270,14 @@ function buildMarkdown(manifest) {
     ...(manifest.requiredFieldValues.length > 0
       ? manifest.requiredFieldValues.map((item) => `| ${item.name} | ${item.state} | ${item.completionGate || ""} | ${item.nextAction || ""} | ${item.redacted} |`)
       : ["| none | n/a | n/a | n/a | true |"]),
+    "",
+    "## Companion Evidence Metadata",
+    "",
+    "| Type | Manifest | Review | Skipped | Metadata |",
+    "| --- | --- | --- | --- | --- |",
+    ...(manifest.companionEvidenceMetadata.length > 0
+      ? manifest.companionEvidenceMetadata.map((item) => `| ${item.type} | ${item.manifestPath || "missing"} | ${item.reviewCount} | ${item.skippedCount} | ${formatMetadata(item.metadata)} |`)
+      : ["| none | missing | 0 | 0 | none |"]),
     "",
     "## Completion Blockers",
     "",
