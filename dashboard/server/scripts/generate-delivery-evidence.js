@@ -64,6 +64,11 @@ function statusLabel(exitCode) {
   return exitCode === 0 ? "PASS" : "FAIL";
 }
 
+function readDeliveryEvidenceMatrix() {
+  const matrixPath = path.join(root, "docs", "ops", "delivery-evidence-matrix.md");
+  return fs.existsSync(matrixPath) ? fs.readFileSync(matrixPath, "utf8") : "";
+}
+
 function buildMarkdown(manifest) {
   const lines = [
     "# Delivery Evidence Manifest",
@@ -81,6 +86,17 @@ function buildMarkdown(manifest) {
 
   manifest.commands.forEach((item) => {
     lines.push(`| ${statusLabel(item.exitCode)} | \`${item.command}\` | \`${item.logFile}\` |`);
+  });
+
+  lines.push(
+    "",
+    "## Delivery Evidence Matrix",
+    "",
+    "- Source: `docs/ops/delivery-evidence-matrix.md`",
+    "- Requirement areas covered:",
+  );
+  manifest.evidenceMatrix.requirementAreas.forEach((area) => {
+    lines.push(`  - ${area}`);
   });
 
   lines.push(
@@ -119,6 +135,11 @@ function main() {
     ["docker compose config", "docker", ["compose", "config", "--quiet"]],
   ].map(([label, command, args]) => runCommand(label, command, args));
 
+  const evidenceMatrix = readDeliveryEvidenceMatrix();
+  const requirementAreas = Array.from(evidenceMatrix.matchAll(/^\| ([^|]+) \|/gm))
+    .map((match) => match[1].trim())
+    .filter((area) => area && !["Requirement Area", "---"].includes(area));
+
   const manifest = {
     generatedAt: new Date().toISOString(),
     git: {
@@ -135,6 +156,10 @@ function main() {
       error: item.error,
       logFile: writeCommandLog(outputDir, item),
     })),
+    evidenceMatrix: {
+      source: "docs/ops/delivery-evidence-matrix.md",
+      requirementAreas,
+    },
     fieldVerificationStillRequired: [
       "Real integrated control board TCP test requires field IP/port and hardware approval.",
       "Dashboard-side wrong-way level-2 escalation criteria remain field-measurement dependent.",

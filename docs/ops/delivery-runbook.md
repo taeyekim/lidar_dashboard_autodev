@@ -268,6 +268,7 @@ docker compose down
 
 Evidence package:
 
+- `docs/ops/delivery-evidence-matrix.md` requirement-to-evidence coverage reference
 - `.env` values redacted summary
 - `artifacts/delivery/<timestamp>/manifest.md` and `manifest.json` from `npm run delivery:evidence`
 - `artifacts/runtime/<timestamp>/manifest.md` and `manifest.json` from `npm run runtime:evidence`

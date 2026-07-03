@@ -1,0 +1,23 @@
+# Delivery Evidence Matrix
+
+This matrix maps the delivery requirements for the lidar wrong-way prevention dashboard to the automated and field evidence that should be attached to the acceptance package.
+
+| Requirement Area | Delivery Requirement | Automated Evidence | Field Evidence Still Required |
+| --- | --- | --- | --- |
+| Requirements | Field context, lidar payload rules, control-board TCP assumptions, and known unresolved field decisions are documented. | `docs/ai/field-system-requirements.md`, `docs/specs/lidar-dashboard-payload.md`, `docs/specs/dashboard-control-board-protocol.md`, `npm run verify:env-contracts` | Final control-board IP/port, heartbeat/ack criteria, and level-2 escalation thresholds from field measurement |
+| API And Swagger | Operator, ingest, event, statistics, device, status, and control-board APIs are documented with auth and device-key contracts. | `npm run verify:swagger-contracts`, `GET /api-docs.json`, `docs/ops/acceptance-checklist.md` | Swagger access policy confirmed through the field Nginx allowlist |
+| DB And Prisma | Vehicle tracks, traffic events, command logs, device status logs, sites, zones, and devices are represented in Prisma and seeded/migrated. | `npm run ci:db`, `npm run db:status`, `GET /api/database/health`, `GET /api/status` | Field seed data reviewed for actual site, zone, and device names |
+| Lidar Ingest | `normal-driving` updates unique vehicle tracks without duplicate events; wrong-way stages create/reuse events; raw payload is retained. | `npm run verify:wrongway-contracts`, `scripts/runtime-smoke.ps1`, `/api/events/summary` `vehiclesPassed` | Lidar PC sends representative JSON over the internal network |
+| Control Board TCP | Dashboard sends raw 10-byte TCP command frames with CRC-8 vectors, dry-run default, retry/timeout logging, and response parsing. | `npm run verify:control-board-protocol`, `npm run verify:control-board-tcp`, `/api/ingest/control-board/tcp/test` | Live integrated control-board TCP test with field IP/port and hardware approval |
+| Frontend Control UI | Operator UI shows current status, event detail, raw payload, linked commands, packet hex, device status, and DRY_RUN/LIVE_TCP state. | `npm run verify:frontend-ui-contracts`, `npm run verify:frontend-settings-contracts`, `npm --prefix dashboard/dashboard-web run lint`, `npm run build:web` | Browser walkthrough on the delivery display resolution |
+| Traffic Statistics | Daily, weekly, monthly, and yearly statistics use DB unique track counts, wrong-way counts, wrong-way rate, and command metrics. | `npm run verify:statistics-contracts`, Swagger statistics schemas, dashboard statistics panels | Field acceptance of period labels and operational KPI wording |
+| Authentication | JWT login uses HttpOnly access cookies, readable CSRF cookie for mutations, Bearer compatibility for scripts, and logout cookie clearing. | `npm run verify:auth-cookie`, `npm run verify:auth-crypto`, `scripts/runtime-smoke.ps1` auth checks | HTTPS/TLS topology confirms `AUTH_COOKIE_SECURE` and `AUTH_COOKIE_SAMESITE` values |
+| Nginx And Runtime | Nginx proxies UI/API/WebSocket/Swagger, applies security headers, rate-limits wrong-way ingest, and sets SPA/asset cache policy. | `npm run verify:delivery-proxy-contracts`, `docker compose config --quiet`, `scripts/runtime-smoke.ps1` header checks | Runtime smoke against the delivery PC Nginx entrypoint |
+| Security | Dependency audit policy, secret/container/ZAP evidence paths, skipped-check reasons, and active-scan restrictions are documented. | `npm run verify:audit-policy`, `npm run security:evidence`, `scripts/security-scan.ps1` | Optional gitleaks, Trivy image scan, and ZAP baseline outputs when tools are installed |
+| Delivery Evidence | Build, lint, smoke, server tests, audit policy, Docker compose config, and field limitations are packaged with raw logs. | `npm run delivery:evidence`, `artifacts/delivery/<timestamp>/manifest.md`, `artifacts/delivery/<timestamp>/manifest.json` | Attach generated artifacts and live runtime smoke logs to the handover package |
+
+## Acceptance Rule
+
+- Every automated evidence command listed above must be either passing in `npm run delivery:verify` or explicitly captured in `npm run delivery:evidence`.
+- Every field evidence item that cannot be executed on the development PC must remain visible as a field verification item rather than being reported as complete.
+- Real integrated control-board live TCP tests require field IP/port values and hardware approval before `CONTROL_BOARD_DRY_RUN=false`.

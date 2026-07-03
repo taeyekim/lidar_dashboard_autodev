@@ -26,6 +26,7 @@ const dockerCompose = readProjectFile("docker-compose.yml");
 const deliveryRunbook = readProjectFile("docs/ops/delivery-runbook.md");
 const securityChecklist = readProjectFile("docs/ops/security-scan-checklist.md");
 const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
+const deliveryEvidenceMatrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
 const runtimeSmoke = readProjectFile("scripts/runtime-smoke.ps1");
 const packageJson = readProjectFile("package.json");
 const evidenceScript = readProjectFile("dashboard/server/scripts/generate-delivery-evidence.js");
@@ -133,10 +134,17 @@ assert(
   [acceptanceChecklist, "runtime:evidence", "acceptance checklist"],
   [acceptanceChecklist, "security:evidence", "acceptance checklist"],
   [acceptanceChecklist, "delivery:evidence", "acceptance checklist"],
+  [acceptanceChecklist, "delivery-evidence-matrix.md", "acceptance checklist"],
   [deliveryRunbook, "runtime:evidence", "delivery runbook"],
   [deliveryRunbook, "security:evidence", "delivery runbook"],
   [deliveryRunbook, "delivery:evidence", "delivery runbook"],
+  [deliveryRunbook, "delivery-evidence-matrix.md", "delivery runbook"],
   [deliveryRunbook, "/api/ingest/control-board/tcp/test", "delivery runbook"],
+  [deliveryEvidenceMatrix, "Control Board TCP", "delivery evidence matrix"],
+  [deliveryEvidenceMatrix, "Authentication", "delivery evidence matrix"],
+  [deliveryEvidenceMatrix, "Nginx And Runtime", "delivery evidence matrix"],
+  [deliveryEvidenceMatrix, "Security", "delivery evidence matrix"],
+  [deliveryEvidenceMatrix, "Delivery Evidence", "delivery evidence matrix"],
   [securityChecklist, "security:evidence", "security checklist"],
   [packageJson, "runtime:evidence", "package scripts"],
   [packageJson, "security:evidence", "package scripts"],

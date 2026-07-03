@@ -18,6 +18,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 
 ## Startup
 
+- [ ] `docs/ops/delivery-evidence-matrix.md` is reviewed as the requirement-to-evidence coverage map.
 - [ ] `docker compose config --quiet` passes.
 - [ ] `npm run runtime:evidence` records Docker CLI, daemon availability, compose config, and `.env` key inventory.
 - [ ] `npm run delivery:evidence` creates `artifacts/delivery/<timestamp>/manifest.md` and `manifest.json`.
