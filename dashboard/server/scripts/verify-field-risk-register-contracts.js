@@ -40,6 +40,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "copyToRiskAcceptance",
   "Security scanners",
   "DEVICE_INGEST_API_KEY trusted-LAN exception",
+  "CORS trusted origins",
   "Swagger exposure",
   "HTTPS cookie posture",
   "Cookie SameSite posture",
@@ -99,6 +100,12 @@ const fieldReadiness = {
               state: "missing",
               priority: "REVIEW",
               nextAction: "Set AUTH_COOKIE_SAMESITE.",
+            },
+            {
+              name: "CORS_ORIGINS",
+              state: "open-or-wildcard",
+              priority: "REVIEW",
+              nextAction: "Set CORS_ORIGINS.",
             },
           ],
         },
@@ -179,7 +186,7 @@ const finalStatus = {
   },
 };
 
-assert(buildFieldValueRisks(fieldReadiness).length === 5, "field value risks should include open field values");
+assert(buildFieldValueRisks(fieldReadiness).length === 6, "field value risks should include open field values");
 assert(
   buildFieldValueRisks(fieldReadiness).some((item) => item.area === "Cookie SameSite posture"),
   "field value risks should map AUTH_COOKIE_SAMESITE to Cookie SameSite posture",
@@ -191,6 +198,10 @@ assert(
 assert(
   buildFieldValueRisks(fieldReadiness).some((item) => item.area === "Nginx content security policy"),
   "field value risks should map Nginx CSP to a reviewer-readable area",
+);
+assert(
+  buildFieldValueRisks(fieldReadiness).some((item) => item.area === "CORS trusted origins" && item.owner === "Auth/Security"),
+  "field value risks should map CORS trusted origins to Auth/Security",
 );
 assert(buildSecurityRisks(security).length === 2, "security risks should include blocking and delivery-fix scanner checks");
 assert(

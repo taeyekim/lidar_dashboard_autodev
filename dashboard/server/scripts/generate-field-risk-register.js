@@ -33,7 +33,7 @@ function evidencePath(manifest) {
 
 function ownerForArea(area) {
   const text = String(area || "").toLowerCase();
-  if (text.includes("security") || text.includes("scanner") || text.includes("cookie") || text.includes("jwt")) return "Auth/Security";
+  if (text.includes("security") || text.includes("scanner") || text.includes("cookie") || text.includes("jwt") || text.includes("cors")) return "Auth/Security";
   if (text.includes("device") || text.includes("ingest") || text.includes("lidar")) return "LiDAR Ingest";
   if (text.includes("control") || text.includes("tcp") || text.includes("hardware")) return "Control-board TCP";
   if (text.includes("swagger") || text.includes("nginx")) return "Nginx Delivery";
@@ -44,6 +44,7 @@ function ownerForArea(area) {
 function riskAreaForFieldValue(name) {
   const mapping = {
     DEVICE_INGEST_API_KEY: "DEVICE_INGEST_API_KEY trusted-LAN exception",
+    CORS_ORIGINS: "CORS trusted origins",
     AUTH_COOKIE_SECURE: "HTTPS cookie posture",
     AUTH_COOKIE_SAMESITE: "Cookie SameSite posture",
     NGINX_SWAGGER_ALLOW: "Swagger exposure",

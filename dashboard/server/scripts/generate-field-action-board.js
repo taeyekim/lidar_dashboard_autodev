@@ -28,10 +28,10 @@ function gitValue(args) {
 
 function ownerForGate(gate) {
   const text = `${gate.category || ""} ${gate.message || ""} ${gate.closeWhen || ""}`.toLowerCase();
-  if (text.includes("security") || text.includes("scanner") || text.includes("cookie") || text.includes("jwt") || text.includes("password")) return "Auth/Security";
+  if (text.includes("security") || text.includes("scanner") || text.includes("cookie") || text.includes("jwt") || text.includes("password") || text.includes("cors")) return "Auth/Security";
   if (text.includes("lidar") || text.includes("ingest") || text.includes("device")) return "LiDAR Ingest";
   if (text.includes("control-board") || text.includes("live_tcp") || text.includes("tcp") || text.includes("hardware")) return "Control-board TCP";
-  if (text.includes("swagger") || text.includes("nginx")) return "Nginx Delivery";
+  if (text.includes("swagger") || text.includes("nginx") || text.includes("rate limit") || text.includes("burst") || text.includes("content security") || text.includes("csp")) return "Nginx Delivery";
   if (text.includes("operator") || text.includes("manual") || text.includes("walkthrough") || text.includes("risk acceptance")) return "PM/QA";
   if (text.includes("db") || text.includes("prisma") || text.includes("runtime")) return "Backend/Runtime";
   return "Field Operations";
@@ -48,8 +48,8 @@ function priorityForGate(gate) {
 function phaseForGate(gate) {
   const text = `${gate.category || ""} ${gate.status || ""} ${gate.actionType || ""} ${gate.message || ""} ${gate.closeWhen || ""}`.toLowerCase();
   if (text.includes("manual evidence") || text.includes("operator ui walkthrough") || text.includes("field risk acceptance")) return "Manual Evidence";
+  if (text.includes("preflight") || text.includes("jwt") || text.includes("cookie") || text.includes("cors") || text.includes("swagger") || text.includes("rate limit") || text.includes("burst") || text.includes("content security") || text.includes("csp") || text.includes("device ingest key")) return "Field Preflight";
   if (text.includes("security") || text.includes("scanner") || text.includes("zap") || text.includes("trivy") || text.includes("gitleaks")) return "Security Evidence";
-  if (text.includes("preflight") || text.includes("jwt") || text.includes("cookie") || text.includes("swagger") || text.includes("device ingest key")) return "Field Preflight";
   if (text.includes("db") || text.includes("prisma") || text.includes("lidar") || text.includes("control-board") || text.includes("tcp") || text.includes("hardware")) return "Field Rehearsal";
   if (text.includes("field acceptance") || text.includes("readiness") || text.includes("runtime smoke")) return "Field Acceptance";
   if (text.includes("handover")) return "Handover Package";
@@ -62,11 +62,11 @@ function commandForGate(gate, baseUrl) {
   if (text.includes("manual evidence") || text.includes("operator ui walkthrough") || text.includes("field risk acceptance")) {
     return "npm.cmd run manual:evidence-readiness";
   }
+  if (text.includes("preflight") || text.includes("jwt") || text.includes("cookie") || text.includes("cors") || text.includes("swagger") || text.includes("rate limit") || text.includes("burst") || text.includes("content security") || text.includes("csp")) {
+    return `npm.cmd run field:preflight -- -BaseUrl ${baseUrl} -Reviewer "field-reviewer-name" -SiteName "delivery-site-name" -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -StrictPreflight`;
+  }
   if (text.includes("security") || text.includes("scanner") || text.includes("zap") || text.includes("trivy") || text.includes("gitleaks")) {
     return `npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners --target-url=${baseUrl}`;
-  }
-  if (text.includes("preflight") || text.includes("jwt") || text.includes("cookie") || text.includes("swagger")) {
-    return `npm.cmd run field:preflight -- -BaseUrl ${baseUrl} -Reviewer "field-reviewer-name" -SiteName "delivery-site-name" -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -StrictPreflight`;
   }
   if (text.includes("db") || text.includes("prisma")) {
     return `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-field-rehearsal.ps1 -BaseUrl ${baseUrl} -Reviewer "field-reviewer-name" -SiteName "delivery-site-name"`;

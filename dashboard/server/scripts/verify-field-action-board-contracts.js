@@ -101,25 +101,37 @@ const gates = [
     closeWhen: "Operator UI walkthrough evidence is attached.",
     evidence: "artifacts/manual/operator-ui-walkthrough.md",
   },
+  {
+    actionType: "FIELD_ACTION_REQUIRED",
+    category: "Field Readiness",
+    status: "REVIEW",
+    message: "CORS_ORIGINS is open-or-wildcard and Nginx content security policy needs review.",
+    closeWhen: "Set CORS_ORIGINS to explicit operator UI origins and refresh field preflight.",
+    evidence: "artifacts/field-readiness/example/manifest.json",
+  },
 ];
 
 assert(ownerForGate(gates[0]) === "Auth/Security", "security gate should map to Auth/Security");
 assert(ownerForGate(gates[1]) === "Control-board TCP", "control-board gate should map to Control-board TCP");
 assert(ownerForGate(gates[2]) === "PM/QA", "manual operator gate should map to PM/QA");
+assert(ownerForGate(gates[3]) === "Auth/Security", "CORS gate should map to Auth/Security");
 assert(priorityForGate(gates[0]) === "P0", "blocked security gate should be P0");
 assert(phaseForGate(gates[0]) === "Security Evidence", "security gate should map to Security Evidence phase");
 assert(phaseForGate(gates[1]) === "Field Rehearsal", "control-board gate should map to Field Rehearsal phase");
 assert(phaseForGate(gates[2]) === "Manual Evidence", "manual gate should map to Manual Evidence phase");
+assert(phaseForGate(gates[3]) === "Field Preflight", "CORS/CSP gate should map to Field Preflight phase");
 assert(commandForGate(gates[1], "http://field.local:8080").includes("control-board-field-rehearsal.ps1"), "control-board gate should map to control-board rehearsal command");
 assert(commandForGate(gates[0], "http://field.local:8080").includes("security:evidence"), "delivery-fix security gate should map to security evidence command");
+assert(commandForGate(gates[3], "http://field.local:8080").includes("field:preflight"), "CORS/CSP gate should map to field preflight command");
 
 const actionItems = buildActionItems({ data: { remainingGates: gates } }, "http://field.local:8080");
-assert(actionItems.length === 3, "action items should preserve gate count");
+assert(actionItems.length === 4, "action items should preserve gate count");
 assert(actionItems.every((item) => item.id.startsWith("GATE-")), "action item ids should be stable gate ids");
 assert(actionItems.every((item) => item.phase), "action items should expose execution phase");
-assert(groupByOwner(actionItems).some((group) => group.owner === "Auth/Security" && group.total === 1), "owner grouping should count security owner");
+assert(groupByOwner(actionItems).some((group) => group.owner === "Auth/Security" && group.total === 2), "owner grouping should count security/CORS owner");
 assert(groupByOwner(actionItems).some((group) => group.byPhase["Security Evidence"] === 1), "owner grouping should count phases");
 assert(groupByPhase(actionItems).some((group) => group.phase === "Security Evidence" && group.total === 1), "phase grouping should count security phase");
+assert(groupByPhase(actionItems).some((group) => group.phase === "Field Preflight" && group.total === 1), "phase grouping should count CORS/CSP preflight phase");
 
 const manifest = buildManifest({
   generatedAt: "2026-01-01T00:00:00.000Z",
@@ -136,9 +148,9 @@ const manifest = buildManifest({
 });
 
 assert(manifest.status === "OPEN", "fixture with gates should produce OPEN board");
-assert(manifest.openActionCount === 3, "manifest should preserve open action count");
+assert(manifest.openActionCount === 4, "manifest should preserve open action count");
 assert(manifest.ownerGroups.length === 3, "manifest should group by owner");
-assert(manifest.phaseGroups.length === 3, "manifest should group by phase");
+assert(manifest.phaseGroups.length === 4, "manifest should group by phase");
 assert(manifest.sourceFinalStatus.includes("artifacts/final-status"), "manifest should reference final status");
 
 const markdown = buildMarkdown(manifest);
@@ -147,6 +159,7 @@ assert(markdown.includes("Owner Summary"), "markdown should include owner summar
 assert(markdown.includes("Owner Commands"), "markdown should include owner commands");
 assert(markdown.includes("Phase Summary"), "markdown should include phase summary");
 assert(markdown.includes("control-board-field-rehearsal.ps1"), "markdown should include mapped field command");
+assert(markdown.includes("field:preflight"), "markdown should include mapped preflight command");
 
 const ready = buildManifest({
   generatedAt: "2026-01-01T00:00:00.000Z",
