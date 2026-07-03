@@ -42,6 +42,7 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "npm run verify:wrongway-contracts",
   "npm run verify:control-board-protocol",
   "npm run verify:control-board-tcp",
+  "npm run verify:control-board-latency",
   "npm run verify:frontend-ui-contracts",
   "npm run verify:realtime-contracts",
   "npm run verify:statistics-contracts",
@@ -69,6 +70,9 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
 [
   [packageJson, "verify:delivery-evidence-matrix", "root package scripts"],
   [packageJson, "verify:delivery-evidence-matrix", "root smoke chain"],
+  [packageJson, "verify:control-board-latency", "root package scripts"],
+  [packageJson, "verify-control-board-latency.js", "root smoke chain"],
+  [serverPackageJson, "verify-control-board-latency.js", "server verify chain"],
   [serverPackageJson, "verify-delivery-evidence-matrix.js", "server verify chain"],
   [deliveryEvidence, "Delivery Evidence Matrix", "delivery evidence generator"],
   [deliveryEvidence, "delivery-evidence-matrix.md", "delivery evidence generator"],
