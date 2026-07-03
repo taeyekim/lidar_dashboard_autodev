@@ -194,7 +194,14 @@ function buildIndexManifest(options = {}) {
     generatedBy: options.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
     siteName: options.siteName || "unspecified",
     hostName: os.hostname(),
-    status: missingRequired.length > 0 ? "INCOMPLETE" : staleEntries.length > 0 ? "STALE" : reviewEntries.length > 0 ? "REVIEW" : "READY",
+    status:
+      missingRequired.length > 0
+        ? "INCOMPLETE"
+        : staleEntries.length > 0
+          ? "STALE"
+          : reviewEntries.length > 0 || missingManualEvidence.length > 0
+            ? "REVIEW"
+            : "READY",
     canMarkGoalComplete: Boolean(completionManifest?.data?.canMarkGoalComplete),
     controlBoardSafetyStatus,
     counts: {

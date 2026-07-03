@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { buildIndexManifest } = require("./generate-handover-index");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -45,6 +46,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "validationReason",
   "Validation",
   "status !== \"PRESENT\"",
+  "missingManualEvidence.length > 0",
   "missingRequiredAreas",
   "staleAreas",
   "reviewAreas",
@@ -83,5 +85,13 @@ assertIncludes(runbook, "npm.cmd run handover:index", "delivery runbook");
 assertIncludes(runbook, "artifacts/handover-index/<timestamp>/manifest.json", "delivery runbook");
 assertIncludes(checklist, "npm run handover:index", "acceptance checklist");
 assertIncludes(matrix, "npm run handover:index", "delivery evidence matrix");
+
+const vectorManifest = buildIndexManifest({ generatedBy: "contract-vector", siteName: "contract-vector" });
+if (vectorManifest.counts.missingManualEvidenceCount > 0) {
+  assert(
+    vectorManifest.status !== "READY",
+    "handover index must not be READY while manual evidence is MISSING or INVALID",
+  );
+}
 
 console.log("handover index contracts ok");

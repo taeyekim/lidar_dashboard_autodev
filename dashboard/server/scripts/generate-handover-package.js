@@ -346,6 +346,8 @@ function main() {
   const fieldEvidenceSummary = buildFieldEvidenceSummary();
   const fieldEvidenceOpenItems = buildFieldEvidenceOpenItems(fieldEvidenceSummary);
   const fieldEvidenceCommandRunbook = buildFieldEvidenceCommandRunbook(fieldEvidenceOpenItems);
+  const manualEvidence = manualEvidenceRefs();
+  const openManualEvidence = manualEvidence.filter((item) => item.required && item.status !== "PRESENT");
   const strictFailureReasons = [];
   if (failedCommands.length > 0) {
     strictFailureReasons.push(`${failedCommands.length} package command(s) failed.`);
@@ -355,6 +357,11 @@ function main() {
   }
   if (!canMarkGoalComplete) {
     strictFailureReasons.push("canMarkGoalComplete is false.");
+  }
+  if (openManualEvidence.length > 0) {
+    strictFailureReasons.push(
+      `${openManualEvidence.length} manual evidence item(s) are not PRESENT: ${openManualEvidence.map((item) => `${item.type}=${item.status}`).join(", ")}.`,
+    );
   }
   strictFailureReasons.push(...fieldEvidenceStrictFailures(fieldEvidenceSummary));
   const manifest = {
@@ -377,7 +384,7 @@ function main() {
       logFile: writeCommandLog(outputDir, item),
     })),
     evidenceRefs,
-    manualEvidenceRefs: manualEvidenceRefs(),
+    manualEvidenceRefs: manualEvidence,
     knownFieldLimitations: knownFieldLimitations(),
     fieldEvidenceSummary,
     fieldEvidenceOpenItems,
