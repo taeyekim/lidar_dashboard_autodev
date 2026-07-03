@@ -101,6 +101,21 @@ function buildFieldRehearsalFollowUpActions(completion) {
   }));
 }
 
+function buildFieldActionArtifactActions(completion) {
+  const artifacts = completion?.data?.fieldActionArtifactSignals;
+  if (!Array.isArray(artifacts)) return [];
+  return artifacts
+    .filter((item) => item.ready !== true)
+    .map((item) => ({
+      artifact: item.label || item.key || "unknown",
+      status: item.status || "UNKNOWN",
+      openCount: Number.isFinite(Number(item.openCount)) ? Number(item.openCount) : 0,
+      path: item.path || null,
+      nextAction: "Close the related field action items and refresh field:risk-register, field:action-board, field:gate-closure-map, field:owner-briefs, completion:audit, and field:closure-plan.",
+      doneWhen: `${item.label || "Field action artifact"} is ${item.readyStatus || "READY"} with open count 0.`,
+    }));
+}
+
 function hasOpenRequiredFieldValue(item) {
   const state = String(item.state || "").toLowerCase();
   return [
@@ -119,6 +134,7 @@ function closurePlanStatusFromCounts(counts) {
     counts.completionBlockerCount +
     counts.openRequiredFieldValueCount +
     counts.fieldReadinessOpenCheckCount +
+    counts.fieldActionArtifactOpenCount +
     counts.fieldRehearsalFollowUpCount +
     counts.manualEvidenceMissingCount;
   return openCount > 0 ? "OPEN" : "READY";
@@ -140,6 +156,7 @@ function buildClosurePlan(options = {}) {
   const fieldReadinessOpenChecks = buildFieldReadinessOpenChecks(fieldReadiness);
   const manualEvidenceActions = buildManualEvidenceActions();
   const fieldRehearsalFollowUpActions = buildFieldRehearsalFollowUpActions(completion);
+  const fieldActionArtifactActions = buildFieldActionArtifactActions(completion);
   const actions = openEntries.map(actionForEntry);
   const counts = {
     openActionCount: actions.length,
@@ -147,6 +164,7 @@ function buildClosurePlan(options = {}) {
     requiredFieldValueCount: requiredFieldValues.length,
     openRequiredFieldValueCount: requiredFieldValues.filter(hasOpenRequiredFieldValue).length,
     fieldReadinessOpenCheckCount: fieldReadinessOpenChecks.length,
+    fieldActionArtifactOpenCount: fieldActionArtifactActions.length,
     fieldRehearsalFollowUpCount: fieldRehearsalFollowUpActions.length,
     manualEvidenceMissingCount: manualEvidenceActions.filter((item) => item.status !== "PRESENT").length,
   };
@@ -169,6 +187,7 @@ function buildClosurePlan(options = {}) {
     completionBlockers,
     requiredFieldValues,
     fieldReadinessOpenChecks,
+    fieldActionArtifactActions,
     fieldRehearsalFollowUpActions,
     manualEvidenceActions,
     actions,
@@ -205,6 +224,7 @@ function buildMarkdown(manifest) {
     `- Required field values: ${manifest.counts.requiredFieldValueCount}`,
     `- Open required field values: ${manifest.counts.openRequiredFieldValueCount}`,
     `- Field readiness open checks: ${manifest.counts.fieldReadinessOpenCheckCount}`,
+    `- Field action artifact open: ${manifest.counts.fieldActionArtifactOpenCount}`,
     `- Field rehearsal follow-ups: ${manifest.counts.fieldRehearsalFollowUpCount}`,
     `- Manual evidence missing: ${manifest.counts.manualEvidenceMissingCount}`,
     "",
@@ -247,6 +267,17 @@ function buildMarkdown(manifest) {
             `| ${tableValue(check.status)} | ${tableValue(check.severity)} | ${tableValue(check.name)} | ${tableValue(check.message)} | ${tableValue(check.nextAction)} | ${tableValue(check.evidenceCommand)} | ${tableValue(check.doneWhen)} |`,
         )
       : ["| none | n/a | n/a | n/a | n/a | n/a | n/a |"]),
+    "",
+    "## Field Action Artifact Actions",
+    "",
+    "| Artifact | Status | Open Count | Next Action | Done When | Manifest |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ...(manifest.fieldActionArtifactActions.length > 0
+      ? manifest.fieldActionArtifactActions.map(
+          (item) =>
+            `| ${tableValue(item.artifact)} | ${tableValue(item.status)} | ${item.openCount} | ${tableValue(item.nextAction)} | ${tableValue(item.doneWhen)} | ${item.path ? `\`${tableValue(item.path)}\`` : "missing"} |`,
+        )
+      : ["| none | PASS | 0 | n/a | n/a | n/a |"]),
     "",
     "## Field Rehearsal Follow-up Actions",
     "",
@@ -296,6 +327,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  buildFieldActionArtifactActions,
   buildClosurePlan,
   closurePlanStatusFromCounts,
   hasOpenRequiredFieldValue,

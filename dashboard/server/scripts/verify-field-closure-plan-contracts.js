@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const {
+  buildFieldActionArtifactActions,
   closurePlanStatusFromCounts,
   hasOpenRequiredFieldValue,
 } = require("./generate-field-closure-plan");
@@ -40,6 +41,15 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "fieldReadinessOpenChecks",
   "fieldReadinessOpenCheckCount",
   "buildFieldReadinessOpenChecks",
+  "fieldActionArtifactActions",
+  "fieldActionArtifactOpenCount",
+  "buildFieldActionArtifactActions",
+  "Field Action Artifact Actions",
+  "| Artifact | Status | Open Count | Next Action | Done When | Manifest |",
+  "field:risk-register",
+  "field:action-board",
+  "field:gate-closure-map",
+  "field:owner-briefs",
   "fieldRehearsalFollowUpActions",
   "fieldRehearsalFollowUpCount",
   "buildFieldRehearsalFollowUpActions",
@@ -113,6 +123,7 @@ assert(
     completionBlockerCount: 1,
     openRequiredFieldValueCount: 0,
     fieldReadinessOpenCheckCount: 0,
+    fieldActionArtifactOpenCount: 0,
     fieldRehearsalFollowUpCount: 0,
     manualEvidenceMissingCount: 0,
   }) === "OPEN",
@@ -124,11 +135,51 @@ assert(
     completionBlockerCount: 0,
     openRequiredFieldValueCount: 0,
     fieldReadinessOpenCheckCount: 0,
+    fieldActionArtifactOpenCount: 0,
     fieldRehearsalFollowUpCount: 0,
     manualEvidenceMissingCount: 1,
   }) === "OPEN",
   "field closure plan must stay OPEN while manual evidence is missing",
 );
+assert(
+  closurePlanStatusFromCounts({
+    openActionCount: 0,
+    completionBlockerCount: 0,
+    openRequiredFieldValueCount: 0,
+    fieldReadinessOpenCheckCount: 0,
+    fieldActionArtifactOpenCount: 1,
+    fieldRehearsalFollowUpCount: 0,
+    manualEvidenceMissingCount: 0,
+  }) === "OPEN",
+  "field closure plan must stay OPEN while field action artifacts are open",
+);
+const fieldActionArtifactActions = buildFieldActionArtifactActions({
+  data: {
+    fieldActionArtifactSignals: [
+      {
+        key: "fieldRiskRegister",
+        label: "Field risk register",
+        status: "OPEN",
+        openCount: 1,
+        ready: false,
+        readyStatus: "NO_OPEN_RISKS",
+        path: "artifacts/field-risk-register/example/manifest.json",
+      },
+      {
+        key: "fieldActionBoard",
+        label: "Field action board",
+        status: "READY_TO_CLOSE",
+        openCount: 0,
+        ready: true,
+        readyStatus: "READY_TO_CLOSE",
+        path: "artifacts/field-action-board/example/manifest.json",
+      },
+    ],
+  },
+});
+assert(fieldActionArtifactActions.length === 1, "field closure plan should expose only open field action artifacts");
+assert(fieldActionArtifactActions[0].artifact === "Field risk register", "field closure plan should preserve artifact labels");
+assert(fieldActionArtifactActions[0].openCount === 1, "field closure plan should preserve artifact open counts");
 assert(hasOpenRequiredFieldValue({ state: "not-approved" }), "not-approved field values must remain open");
 assert(!hasOpenRequiredFieldValue({ state: "configured" }), "configured field values must not remain open");
 
