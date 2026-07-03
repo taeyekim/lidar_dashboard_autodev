@@ -53,6 +53,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "manualEvidenceTargets", "final execution plan generator"],
   [generator, "isPlaceholderFieldText", "final execution plan generator"],
   [generator, "Final Execution Plan Metadata", "final execution plan generator"],
+  [generator, "Create missing reviewer-fillable manual evidence drafts after the latest risk register rows are available", "final execution plan generator"],
+  [generator, "risk-acceptance drafts include the latest copyable register rows", "final execution plan generator"],
   [generator, "manual:evidence-readiness -- --generated-by", "final execution plan generator"],
   [generator, "This execution plan does not prove field completion", "final execution plan generator"],
   [generator, "npm.cmd run final:status", "final execution plan generator"],
@@ -156,6 +158,15 @@ assert(
 assert(
   openPlan.commandGateCoverage.some((item) => item.id === "manual-evidence-readiness" && item.categories.includes("Manual Evidence")),
   "manual evidence readiness coverage should expose manual evidence gates",
+);
+assert(openPlan.orderedCommands.some((item) => item.id === "field-risk-register"), "manual gate should include field risk register command");
+assert(openPlan.orderedCommands.some((item) => item.id === "manual-evidence-drafts"), "manual gate should include manual evidence draft command");
+assert(
+  openPlan.orderedCommands.findIndex((item) => item.id === "field-risk-register") <
+    openPlan.orderedCommands.findIndex((item) => item.id === "manual-evidence-drafts") &&
+    openPlan.orderedCommands.findIndex((item) => item.id === "manual-evidence-drafts") <
+    openPlan.orderedCommands.findIndex((item) => item.id === "manual-evidence-readiness"),
+  "open plan should create the risk register before manual evidence drafts, then validate manual evidence readiness",
 );
 assert(openPlan.orderedCommands.some((item) => item.id === "manual-evidence-readiness"), "manual gate should include manual evidence readiness command");
 assert(

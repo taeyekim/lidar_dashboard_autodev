@@ -59,12 +59,20 @@ function buildGitState(inputGit) {
 function commandCatalog(baseUrl) {
   return [
     {
+      id: "field-risk-register",
+      phase: "Manual Evidence",
+      actionTypes: ["FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED"],
+      command: `npm.cmd run field:risk-register -- --base-url=${baseUrl} --site-name=${fieldSiteArg} --generated-by=${fieldReviewerArg}`,
+      purpose: "Collect open field/security/manual gates into reviewer-copyable risk acceptance rows.",
+      doneWhen: "The register identifies every risk that must be resolved directly or copied into artifacts/manual/field-risk-acceptance.md.",
+    },
+    {
       id: "manual-evidence-drafts",
       phase: "Manual Evidence",
       actionTypes: ["MANUAL_EVIDENCE_REQUIRED"],
       command: `npm.cmd run manual:evidence-drafts -- --base-url=${baseUrl} --site-name=${fieldSiteArg} --reviewer=${fieldReviewerArg}`,
-      purpose: "Create missing reviewer-fillable manual evidence drafts without overwriting existing evidence.",
-      doneWhen: "Draft files exist under artifacts/manual/ and are ready for reviewer completion.",
+      purpose: "Create missing reviewer-fillable manual evidence drafts after the latest risk register rows are available.",
+      doneWhen: "Draft files exist under artifacts/manual/ and risk-acceptance drafts include the latest copyable register rows when applicable.",
     },
     {
       id: "manual-evidence-readiness",
@@ -73,14 +81,6 @@ function commandCatalog(baseUrl) {
       command: `npm.cmd run manual:evidence-readiness -- --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg}`,
       purpose: "Validate reviewer-filled manual evidence targets before final close.",
       doneWhen: "Manual evidence readiness is READY and required manual evidence files are PRESENT.",
-    },
-    {
-      id: "field-risk-register",
-      phase: "Manual Evidence",
-      actionTypes: ["FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED"],
-      command: `npm.cmd run field:risk-register -- --base-url=${baseUrl} --site-name=${fieldSiteArg} --generated-by=${fieldReviewerArg}`,
-      purpose: "Collect open field/security/manual gates into reviewer-copyable risk acceptance rows.",
-      doneWhen: "The register identifies every risk that must be resolved directly or copied into artifacts/manual/field-risk-acceptance.md.",
     },
     {
       id: "field-action-board",
