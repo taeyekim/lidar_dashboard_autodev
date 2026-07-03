@@ -170,6 +170,8 @@ export default function SettingsPage() {
   const statusTone = getSystemTone(systemStatus || {});
   const operatorName = user?.name || user?.userId || "Operator";
   const controlMode = controlBoardStatus?.mode || systemStatus?.controlBoard?.mode || "UNKNOWN";
+  const controlSafetyStatus = controlBoardStatus?.safetyStatus || systemStatus?.controlBoard?.safetyStatus || "UNKNOWN";
+  const controlLiveApproved = Boolean(controlBoardStatus?.liveApproved || systemStatus?.controlBoard?.liveApproved);
   const csrfEnabled =
     typeof document !== "undefined" && document.cookie.includes("lidar_dashboard_csrf=");
 
@@ -294,6 +296,12 @@ export default function SettingsPage() {
                 >
                   <StatusBadge tone={statusTone}>{controlMode}</StatusBadge>
                 </SettingRow>
+                <SettingRow
+                  icon={Shield}
+                  title="LIVE_TCP 승인 상태"
+                  description="CONTROL_BOARD_LIVE_APPROVED=true가 아니면 LIVE_TCP_APPROVAL_REQUIRED로 실제 TCP 전송을 차단합니다."
+                  value={`${controlLiveApproved ? "승인됨" : "미승인"} · ${controlSafetyStatus}`}
+                />
                 <SettingRow
                   icon={Clock}
                   title="TCP ACK 평균 응답"

@@ -91,8 +91,12 @@ assertIncludes(controller, 'trigger: "MANUAL_TEST"', "control board controller")
   "pendingCommand",
   "controlBoardBusy",
   "controlBoardLiveReady",
+  "controlBoardLiveApproved",
   "controlBoardReviewRequired",
   "LIVE_TCP_READY",
+  "LIVE_TCP_APPROVAL_REQUIRED",
+  "liveApproved",
+  "safetyStatus",
   "DRY_RUN_SAFE",
 ].forEach((token) => assertIncludes(dashboard, token, "dashboard manual command UI"));
 

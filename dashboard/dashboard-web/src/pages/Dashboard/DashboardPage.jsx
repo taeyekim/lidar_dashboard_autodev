@@ -508,6 +508,7 @@ export default function DashboardPage({
   const controlBoardMode = controlBoardModeLabel(controlBoardStatus || {});
   const latestControlCommand = controlBoardStatus?.latestCommand || null;
   const controlBoardLiveReady = Boolean(controlBoardStatus?.liveTcpReady);
+  const controlBoardLiveApproved = Boolean(controlBoardStatus?.liveApproved);
   const controlBoardReviewRequired = controlBoardMode === "LIVE_TCP" && !controlBoardLiveReady;
   const controlBoardBadgeClass = controlBoardLiveReady
     ? "bg-emerald-100 text-emerald-700"
@@ -814,6 +815,14 @@ export default function DashboardPage({
               <span className="font-bold text-gray-700">Port</span>{" "}
               {controlBoardStatus?.portConfigured ? "설정됨" : "미설정"}
             </div>
+            <div>
+              <span className="font-bold text-gray-700">liveApproved</span>{" "}
+              {controlBoardLiveApproved ? "승인됨" : "미승인"}
+            </div>
+            <div>
+              <span className="font-bold text-gray-700">safetyStatus</span>{" "}
+              {controlBoardStatus?.safetyStatus || "-"}
+            </div>
           </div>
           {controlBoardError && (
             <div className="mt-2 truncate text-xs font-semibold text-red-600">{controlBoardError}</div>
@@ -867,7 +876,7 @@ export default function DashboardPage({
               : controlBoardLiveReady
                 ? "LIVE_TCP_READY: host/port 설정 후 실제 TCP 전송 모드입니다."
                 : controlBoardReviewRequired
-                  ? "LIVE_TCP_REVIEW: host/port 또는 현장 승인 확인이 필요합니다."
+                  ? "LIVE_TCP_REVIEW: host/port 또는 현장 승인 확인이 필요합니다. LIVE_TCP_APPROVAL_REQUIRED 상태에서는 TCP 전송을 차단합니다."
                   : "DRY_RUN_SAFE: LIVE_TCP 전환 전에는 dry-run 명령으로 기록됩니다."}
           </div>
         </Card>
