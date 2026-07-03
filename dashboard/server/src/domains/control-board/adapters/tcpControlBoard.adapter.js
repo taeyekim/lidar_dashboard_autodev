@@ -16,10 +16,12 @@ function sendRawPacket(packetBuffer, config) {
     const socket = new net.Socket();
     let settled = false;
     let responseBuffer = Buffer.alloc(0);
+    let connectTimer = null;
 
     function finish(error, result) {
       if (settled) return;
       settled = true;
+      if (connectTimer) clearTimeout(connectTimer);
       socket.destroy();
       if (error) {
         reject(error);
@@ -28,10 +30,17 @@ function sendRawPacket(packetBuffer, config) {
       resolve(result);
     }
 
-    socket.setTimeout(config.responseTimeoutMs);
+    const connectTimeoutMs = Number(config.connectTimeoutMs) || 0;
+    const responseTimeoutMs = Number(config.responseTimeoutMs) || 0;
+    if (connectTimeoutMs > 0) {
+      connectTimer = setTimeout(() => {
+        finish(new Error(`Timed out connecting to control board after ${connectTimeoutMs}ms.`));
+      }, connectTimeoutMs);
+      connectTimer.unref?.();
+    }
 
     socket.once("error", (error) => finish(error));
-    socket.once("timeout", () => finish(new Error("Timed out waiting for control board response.")));
+    socket.once("timeout", () => finish(new Error(`Timed out waiting for control board response after ${responseTimeoutMs}ms.`)));
     socket.on("data", (data) => {
       responseBuffer = Buffer.concat([responseBuffer, data]);
       if (responseBuffer.length < CONTROL_BOARD_FRAME_LENGTH) return;
@@ -46,7 +55,12 @@ function sendRawPacket(packetBuffer, config) {
       });
     });
 
-    socket.connect({ host: config.host, port: config.port, timeout: config.connectTimeoutMs }, () => {
+    socket.connect({ host: config.host, port: config.port }, () => {
+      if (connectTimer) {
+        clearTimeout(connectTimer);
+        connectTimer = null;
+      }
+      if (responseTimeoutMs > 0) socket.setTimeout(responseTimeoutMs);
       socket.write(packetBuffer);
     });
   });

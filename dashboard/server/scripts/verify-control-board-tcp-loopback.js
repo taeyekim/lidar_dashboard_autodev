@@ -10,6 +10,10 @@ const {
 
 const EXPECTED_COMMAND_HEX = "02 A1 10 01 01 02 00 9B 03 0D";
 const RESPONSE_HEX = "02 A1 20 01 01 02 00 CD 03 0D";
+const adapterSource = require("fs").readFileSync(
+  require("path").join(__dirname, "..", "src", "domains", "control-board", "adapters", "tcpControlBoard.adapter.js"),
+  "utf8",
+);
 
 function hexToBuffer(hex) {
   return Buffer.from(hex.split(/\s+/).map((token) => Number.parseInt(token, 16)));
@@ -102,6 +106,33 @@ async function main() {
     assert(response.trailingByteCount === 2, "coalesced TCP response should report trailing bytes");
     assert(response.trailingHex === "AA BB", `unexpected trailing bytes ${response.trailingHex}`);
   });
+
+  await withLoopbackServer(() => {
+    // Keep the socket open without sending a response frame so responseTimeoutMs is exercised.
+  }, async (port) => {
+    const packet = buildControlBoardCommandPacket("STAGE_1_ON");
+    let timeoutError = null;
+    try {
+      await sendRawPacket(packet.buffer, {
+        host: "127.0.0.1",
+        port,
+        connectTimeoutMs: 1000,
+        responseTimeoutMs: 30,
+      });
+    } catch (error) {
+      timeoutError = error;
+    }
+
+    assert(timeoutError, "missing control board response must time out");
+    assert(
+      timeoutError.message.includes("Timed out waiting for control board response after 30ms"),
+      `unexpected response timeout message: ${timeoutError.message}`,
+    );
+  });
+
+  assert(adapterSource.includes("Timed out connecting to control board after"), "adapter must distinguish connect timeout errors");
+  assert(adapterSource.includes("connectTimeoutMs"), "adapter must use connectTimeoutMs explicitly");
+  assert(adapterSource.includes("responseTimeoutMs"), "adapter must use responseTimeoutMs explicitly");
 
   console.log("control board TCP loopback ok");
 }

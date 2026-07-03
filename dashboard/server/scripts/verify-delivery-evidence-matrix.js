@@ -51,6 +51,7 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "artifacts/delivery/<timestamp>/runtime/",
   "artifacts/delivery/<timestamp>/security/",
   "scripts/runtime-smoke.ps1",
+  "distinct connect/response timeout handling",
   "TCP_SEND_ATTEMPT_FAILED",
   "CONTROL_BOARD_DRY_RUN=false",
 ].forEach((token) => {
