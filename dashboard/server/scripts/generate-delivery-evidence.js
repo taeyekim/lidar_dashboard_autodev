@@ -117,9 +117,10 @@ function readLatestJsonManifest(outputRoot) {
     .reverse();
 
   if (manifests.length === 0) return null;
+  const manifestContent = fs.readFileSync(manifests[0], "utf8").replace(/^\uFEFF/, "");
   return {
     path: path.relative(root, manifests[0]).replace(/\\/g, "/"),
-    data: JSON.parse(fs.readFileSync(manifests[0], "utf8")),
+    data: JSON.parse(manifestContent),
   };
 }
 

@@ -1,6 +1,9 @@
 param(
   [string]$BaseUrl = "http://localhost:8080",
   [string]$OutputRoot = "artifacts/field-acceptance",
+  [string]$Reviewer = "",
+  [string]$SiteName = "",
+  [string]$DecisionNote = "",
   [switch]$SkipRuntime,
   [switch]$SkipDb,
   [switch]$SkipLidar,
@@ -65,7 +68,7 @@ function Invoke-AcceptanceStep {
   $startedAt = (Get-Date).ToUniversalTime().ToString("o")
   $exitCode = 0
   try {
-    & $Script *>&1 | Tee-Object -FilePath $LogFile
+    & $Script *>&1 | Tee-Object -FilePath $LogFile | Out-Null
     $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
   } catch {
     $_ | Out-String | Tee-Object -FilePath $LogFile | Out-Null
@@ -103,17 +106,86 @@ function Add-ArgumentIf {
   return $Arguments
 }
 
+function ConvertTo-StepList {
+  param([object[]]$Steps)
+
+  $items = New-Object System.Collections.ArrayList
+  foreach ($item in $Steps) {
+    if ($null -eq $item) { continue }
+    if ($item -is [System.Array]) {
+      foreach ($nested in $item) {
+        if ($null -ne $nested) {
+          [void]$items.Add($nested)
+        }
+      }
+    } else {
+      [void]$items.Add($item)
+    }
+  }
+  return $items.ToArray()
+}
+
+function Get-StepsByStatus {
+  param(
+    [object[]]$Steps,
+    [string]$Status
+  )
+
+  $stepList = ConvertTo-StepList -Steps $Steps
+  return @($stepList | Where-Object {
+    $statusProperty = $_.PSObject.Properties["status"]
+    $null -ne $statusProperty -and $statusProperty.Value -eq $Status
+  })
+}
+
 function New-AcceptanceManifest {
   param(
     [string]$Status,
     [object[]]$Steps
   )
 
+  $stepList = ConvertTo-StepList -Steps $Steps
+  $reviewSteps = @(Get-StepsByStatus -Steps $stepList -Status "REVIEW")
+  $skippedSteps = @(Get-StepsByStatus -Steps $stepList -Status "SKIPPED")
+  $readyForHandover = $Status -eq "PASS"
+  $requiresFieldReview = $Status -eq "REVIEW" -or $Status -eq "IN_PROGRESS" -or $skippedSteps.Count -gt 0
+  $nextActions = @()
+  if ($Status -eq "IN_PROGRESS") {
+    $nextActions += "Wait for the field acceptance orchestrator to complete and confirm the final manifest status."
+  }
+  if ($reviewSteps.Count -gt 0) {
+    $nextActions += "Review failed step logs and rerun the field acceptance orchestrator after correction."
+  }
+  if ($skippedSteps.Count -gt 0) {
+    $nextActions += "Confirm each skipped step is accepted by the field reviewer or rerun without skip switches."
+  }
+  if (!$Reviewer) {
+    $nextActions += "Record the field reviewer name with -Reviewer before attaching the evidence package."
+  }
+  if (!$SiteName) {
+    $nextActions += "Record the delivery site name with -SiteName before final handover."
+  }
+  if ($nextActions.Count -eq 0) {
+    $nextActions += "Attach this manifest, delivery evidence, and raw logs to the handover package."
+  }
+
   return [pscustomobject]@{
     generatedAt = (Get-Date).ToUniversalTime().ToString("o")
     baseUrl = $BaseUrl
     outputDir = $outputDir
     status = $Status
+    handover = @{
+      readyForHandover = $readyForHandover
+      requiresFieldReview = $requiresFieldReview
+      reviewer = $Reviewer
+      siteName = $SiteName
+      decisionNote = $DecisionNote
+      hostName = $env:COMPUTERNAME
+      operatorUser = $env:USERNAME
+      reviewStepCount = $reviewSteps.Count
+      skippedStepCount = $skippedSteps.Count
+      nextActions = $nextActions
+    }
     safety = @{
       runDbDeploy = [bool]$RunDbDeploy
       runDbSeed = [bool]$RunDbSeed
@@ -124,7 +196,7 @@ function New-AcceptanceManifest {
       startCompose = [bool]$StartCompose
       stopCompose = [bool]$StopCompose
     }
-    steps = $Steps
+    steps = $stepList
   }
 }
 
@@ -134,9 +206,10 @@ function Write-AcceptanceManifest {
     [object[]]$Steps
   )
 
-  $reviewSteps = @($Steps | Where-Object { $_.status -eq "REVIEW" })
-  $skippedSteps = @($Steps | Where-Object { $_.status -eq "SKIPPED" })
-  $manifest = New-AcceptanceManifest -Status $Status -Steps $Steps
+  $stepList = ConvertTo-StepList -Steps $Steps
+  $reviewSteps = @(Get-StepsByStatus -Steps $stepList -Status "REVIEW")
+  $skippedSteps = @(Get-StepsByStatus -Steps $stepList -Status "SKIPPED")
+  $manifest = New-AcceptanceManifest -Status $Status -Steps $stepList
 
   $manifest | ConvertTo-Json -Depth 20 | Out-File -LiteralPath (Join-Path $outputDir "manifest.json") -Encoding utf8
 
@@ -147,6 +220,28 @@ function Write-AcceptanceManifest {
     "- Base URL: $BaseUrl",
     "- Status: $Status",
     "- Output directory: $outputDir",
+    "- Reviewer: $($manifest.handover.reviewer)",
+    "- Site name: $($manifest.handover.siteName)",
+    "- Ready for handover: $($manifest.handover.readyForHandover)",
+    "- Requires field review: $($manifest.handover.requiresFieldReview)",
+    "",
+    "## Field Acceptance Decision",
+    "",
+    "| Item | Value |",
+    "| --- | --- |",
+    "| Reviewer | $($manifest.handover.reviewer) |",
+    "| Site name | $($manifest.handover.siteName) |",
+    "| Operator user | $($manifest.handover.operatorUser) |",
+    "| Host name | $($manifest.handover.hostName) |",
+    "| Decision note | $($manifest.handover.decisionNote) |",
+    "| Review steps | $($manifest.handover.reviewStepCount) |",
+    "| Skipped steps | $($manifest.handover.skippedStepCount) |",
+    "| Ready for handover | $($manifest.handover.readyForHandover) |",
+    "| Requires field review | $($manifest.handover.requiresFieldReview) |",
+    "",
+    "Next actions:",
+    "",
+    ($manifest.handover.nextActions | ForEach-Object { "- $_" }),
     "",
     "## Safety Switches",
     "",
@@ -165,7 +260,7 @@ function Write-AcceptanceManifest {
     "",
     "| Status | Step | Command | Log |",
     "| --- | --- | --- | --- |"
-  ) + ($Steps | ForEach-Object {
+  ) + ($stepList | ForEach-Object {
     "| $($_.status) | $($_.name) | ``$($_.command)`` | $($_.logPath) |"
   }) + @(
     "",
@@ -263,8 +358,8 @@ $steps += Invoke-AcceptanceStep -Name "delivery evidence package" -Command "npm.
   npm.cmd run delivery:evidence
 }
 
-$reviewSteps = @($steps | Where-Object { $_.status -eq "REVIEW" })
-$skippedSteps = @($steps | Where-Object { $_.status -eq "SKIPPED" })
+$reviewSteps = @(Get-StepsByStatus -Steps $steps -Status "REVIEW")
+$skippedSteps = @(Get-StepsByStatus -Steps $steps -Status "SKIPPED")
 $overallStatus = if ($reviewSteps.Count -gt 0) { "REVIEW" } elseif ($skippedSteps.Count -gt 0) { "PASS_WITH_SKIPS" } else { "PASS" }
 
 Write-AcceptanceManifest -Status $overallStatus -Steps $steps | Out-Null

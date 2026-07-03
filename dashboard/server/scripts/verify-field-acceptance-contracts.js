@@ -25,6 +25,11 @@ const deliveryEvidence = readProjectFile("dashboard/server/scripts/generate-deli
 [
   "BaseUrl",
   "OutputRoot",
+  "Reviewer",
+  "SiteName",
+  "DecisionNote",
+  "ConvertTo-StepList",
+  "Get-StepsByStatus",
   "SkipRuntime",
   "SkipDb",
   "SkipLidar",
@@ -50,6 +55,10 @@ const deliveryEvidence = readProjectFile("dashboard/server/scripts/generate-deli
   "manifest.md",
   "IN_PROGRESS",
   "PASS_WITH_SKIPS",
+  "readyForHandover",
+  "requiresFieldReview",
+  "nextActions",
+  "Field Acceptance Decision",
   "Field Acceptance Orchestrator",
 ].forEach((token) => assertIncludes(script, token, "field acceptance script"));
 
@@ -75,6 +84,8 @@ assert(
   "-IncludeContainerImages",
   "-IncludeZap",
   "-RequireScanners",
+  "-Reviewer",
+  "-SiteName",
   "artifacts/field-acceptance",
 ].forEach((token) => assertIncludes(runbook, token, "delivery runbook"));
 
@@ -88,6 +99,7 @@ assert(
   "npm run field:acceptance",
   "scripts/field-acceptance.ps1",
   "field acceptance orchestrator",
+  "field reviewer",
   "artifacts/field-acceptance",
 ].forEach((token) => assertIncludes(acceptance, token, "acceptance checklist"));
 

@@ -2,8 +2,11 @@ const {
   buildAutomatedEvidenceCoverage,
   buildHandoverSummary,
   parseEvidenceMatrix,
+  readLatestJsonManifest,
   summarizeFieldAcceptance,
 } = require("./generate-delivery-evidence");
+const fs = require("fs");
+const path = require("path");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -80,6 +83,11 @@ const fieldAcceptanceReviewSummary = buildHandoverSummary(rows, commands.slice(0
   },
 ]);
 const missingFieldAcceptance = summarizeFieldAcceptance("Field Acceptance", "artifacts/missing-field-acceptance-vector");
+const bomVectorRoot = path.join(__dirname, "..", "..", "..", "artifacts", "delivery-summary-vector-bom");
+const bomVectorDir = path.join(bomVectorRoot, "20260703-000000");
+fs.mkdirSync(bomVectorDir, { recursive: true });
+fs.writeFileSync(path.join(bomVectorDir, "manifest.json"), `\uFEFF${JSON.stringify({ checks: [] })}`);
+const bomManifest = readLatestJsonManifest("artifacts/delivery-summary-vector-bom");
 
 assert(rows.length === 3, "delivery evidence summary vector should parse three matrix rows");
 assert(summary.status === "AUTOMATED_CHECKS_REVIEW", "failed commands should force review status");
@@ -200,5 +208,6 @@ assert(
   missingFieldAcceptance.reviewItems.includes("Field Acceptance: field acceptance manifest not found"),
   "missing field acceptance manifest should be review-visible",
 );
+assert(bomManifest.data.checks.length === 0, "latest manifest reader should tolerate UTF-8 BOM");
 
 console.log("delivery evidence summary vectors ok");

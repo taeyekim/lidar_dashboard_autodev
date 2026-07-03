@@ -49,7 +49,7 @@ For a single ordered field acceptance pass, use the orchestrator:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/field-acceptance.ps1 -BaseUrl http://localhost:8080
-npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080
+npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -Reviewer "field-reviewer-name" -SiteName "delivery-site-name"
 ```
 
 The orchestrator runs `scripts/delivery-verify.ps1`, `scripts/runtime-smoke.ps1`,
@@ -57,6 +57,9 @@ The orchestrator runs `scripts/delivery-verify.ps1`, `scripts/runtime-smoke.ps1`
 `scripts/control-board-field-rehearsal.ps1`, `npm.cmd run security:evidence`,
 and `npm.cmd run delivery:evidence` in order, then records
 `artifacts/field-acceptance/<timestamp>/manifest.json` plus `manifest.md`.
+The manifest includes a `Field Acceptance Decision` summary with `-Reviewer`,
+`-SiteName`, optional `-DecisionNote`, PASS/REVIEW/SKIPPED counts, handover
+readiness, and next actions for the handover package.
 Use `-RunDbDeploy` and `-RunDbSeed` only after the field PostgreSQL target is
 confirmed. Use `-AllowLiveTcp` only after hardware approval. Use
 `-IncludeContainerImages`, `-IncludeZap`, and `-RequireScanners` for strict
