@@ -61,7 +61,12 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
   "라이다 PC, 통합제어보드",
   "등록 장비",
   "제어보드",
-  "TCP 대상 설정됨",
+  "대상 설정됨",
+  "대상 미설정",
+  "ACK 평균",
+  "averageResponseMs",
+  "responseSampleCount",
+  "formatDurationMs",
   "등록된 장비가 없습니다.",
 ].forEach((token) => {
   assert(devicesPage.includes(token), `Devices page must include production operations copy: ${token}`);

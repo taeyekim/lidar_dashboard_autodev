@@ -26,6 +26,11 @@ function formatDateTime(value) {
   return date.toLocaleString("ko-KR", { hour12: false });
 }
 
+function formatDurationMs(value) {
+  if (value === null || value === undefined) return "-";
+  return `${Number(value).toLocaleString()}ms`;
+}
+
 function statusTone(status = "", healthStatus = "") {
   const value = `${status} ${healthStatus}`.toUpperCase();
   if (value.includes("ERROR") || value.includes("FAILED") || value.includes("OFFLINE")) {
@@ -186,7 +191,7 @@ export default function DevicesPage() {
           icon={HardDrive}
           title="제어보드"
           value={systemStatus.controlBoard?.mode || "UNKNOWN"}
-          subText={systemStatus.controlBoard?.hostConfigured ? "TCP 대상 설정됨" : "TCP 대상 미설정"}
+          subText={`TCP ${systemStatus.controlBoard?.hostConfigured ? "대상 설정됨" : "대상 미설정"} · ACK 평균 ${formatDurationMs(systemStatus.controlBoard?.averageResponseMs)} / 샘플 ${Number(systemStatus.controlBoard?.responseSampleCount || 0).toLocaleString()}건`}
           tone={systemStatus.controlBoard?.mode === "LIVE_TCP" ? "green" : "amber"}
         />
       </div>
