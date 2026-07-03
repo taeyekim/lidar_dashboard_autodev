@@ -57,8 +57,8 @@ function assertOptionalDeviceKey(operation, label) {
   );
 }
 
-const swaggerText = JSON.stringify(swaggerSpec);
-[
+const MOJIBAKE_FORBIDDEN_TOKENS = [
+  // Common fragments produced when Korean UTF-8 text is decoded with the wrong code page.
   "占",
   "沃",
   "筌",
@@ -70,7 +70,10 @@ const swaggerText = JSON.stringify(swaggerSpec);
   "??＜",
   "?쇱",
   "?",
-].forEach((token) => {
+];
+
+const swaggerText = JSON.stringify(swaggerSpec);
+MOJIBAKE_FORBIDDEN_TOKENS.forEach((token) => {
   assert(!swaggerText.includes(token), `Swagger must not expose mojibake token: ${token}`);
 });
 

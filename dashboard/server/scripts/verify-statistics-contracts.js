@@ -127,7 +127,17 @@ assertIncludes(fieldRequirements, "zones", "field requirements statistics respon
   "TCP ACK",
 ].forEach((token) => assertIncludes(panel, token, "traffic statistics panel"));
 
-["Traffic operations", "Top zones", "援먰넻", "吏묎퀎", "??＜", "?뺤＜"].forEach((token) => {
+const STATISTICS_FORBIDDEN_COPY_TOKENS = [
+  "Traffic operations",
+  "Top zones",
+  // Common fragments produced when Korean UTF-8 text is decoded with the wrong code page.
+  "援먰넻",
+  "吏묎퀎",
+  "??＜",
+  "?뺤＜",
+];
+
+STATISTICS_FORBIDDEN_COPY_TOKENS.forEach((token) => {
   assert(!panel.includes(token), `traffic statistics panel must not expose placeholder or mojibake copy: ${token}`);
 });
 

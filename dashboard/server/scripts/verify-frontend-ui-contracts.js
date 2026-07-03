@@ -195,7 +195,8 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
   "command failed",
 ].forEach((token) => assertExcludes(dashboardPage, token, "Dashboard sample or placeholder copy"));
 
-[
+const MOJIBAKE_FORBIDDEN_TOKENS = [
+  // Common fragments produced when Korean UTF-8 text is decoded with the wrong code page.
   "占",
   "沃",
   "筌",
@@ -207,7 +208,9 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
   "援먰넻",
   "吏묎퀎",
   "??＜",
-].forEach((token) => {
+];
+
+MOJIBAKE_FORBIDDEN_TOKENS.forEach((token) => {
   assertExcludes(devicesPage, token, "Devices page mojibake copy");
   assertExcludes(eventLogPage, token, "Event log mojibake copy");
   assertExcludes(wrongwayLogPage, token, "Wrongway log mojibake copy");
