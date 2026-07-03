@@ -66,6 +66,9 @@ function buildClosurePlan(options = {}) {
   );
 
   const completionBlockers = completion?.data?.completionBlockers || [];
+  const requiredFieldValues = Array.isArray(completion?.data?.requiredFieldValues)
+    ? completion.data.requiredFieldValues
+    : [];
   const actions = openEntries.map(actionForEntry);
 
   return {
@@ -85,8 +88,10 @@ function buildClosurePlan(options = {}) {
     counts: {
       openActionCount: actions.length,
       completionBlockerCount: completionBlockers.length,
+      requiredFieldValueCount: requiredFieldValues.length,
     },
     completionBlockers,
+    requiredFieldValues,
     actions,
     finalCommands: [
       "npm.cmd run delivery:evidence",
@@ -94,6 +99,7 @@ function buildClosurePlan(options = {}) {
       "npm.cmd run completion:audit",
       "npm.cmd run handover:index",
       "npm.cmd run field:closure-plan",
+      "npm.cmd run handover:package -- --base-url=http://localhost:8080 --strict",
     ],
   };
 }
@@ -116,6 +122,7 @@ function buildMarkdown(manifest) {
     "",
     `- Open actions: ${manifest.counts.openActionCount}`,
     `- Completion blockers: ${manifest.counts.completionBlockerCount}`,
+    `- Required field values: ${manifest.counts.requiredFieldValueCount}`,
     "",
     "## Actions",
     "",
@@ -137,6 +144,14 @@ function buildMarkdown(manifest) {
     ...(manifest.completionBlockers.length > 0
       ? manifest.completionBlockers.map((blocker) => `- [${blocker.category || "unknown"}] ${blocker.message || blocker}`)
       : ["- none"]),
+    "",
+    "## Required Field Values",
+    "",
+    "| Name | State | Completion Gate | Next Action | Redacted |",
+    "| --- | --- | --- | --- | --- |",
+    ...(manifest.requiredFieldValues.length > 0
+      ? manifest.requiredFieldValues.map((item) => `| ${item.name || "unknown"} | ${item.state || "unknown"} | ${item.completionGate || ""} | ${item.nextAction || ""} | ${item.redacted !== false} |`)
+      : ["| none | n/a | n/a | n/a | true |"]),
     "",
     "## Final Refresh Commands",
     "",

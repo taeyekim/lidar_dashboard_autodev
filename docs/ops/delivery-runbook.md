@@ -121,7 +121,8 @@ index reports `STALE`; run `npm.cmd run completion:audit` and
 After `npm.cmd run handover:index`, run `npm.cmd run field:closure-plan`.
 The closure plan writes `artifacts/field-closure-plan/<timestamp>/manifest.json`
 and `manifest.md`, translating REVIEW, STALE, MISSING, and PASS_WITH_SKIPS
-areas into ordered field commands and done-when criteria.
+areas into ordered field commands, redacted required field value states, and
+done-when criteria.
 
 Before strict completion, run `npm.cmd run field:readiness -- --base-url=http://localhost:8080`.
 The readiness report writes `artifacts/field-readiness/<timestamp>/manifest.json`

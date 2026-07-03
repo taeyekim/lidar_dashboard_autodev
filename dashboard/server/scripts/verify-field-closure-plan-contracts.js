@@ -25,6 +25,11 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "sourceHandoverIndex",
   "sourceCompletionAudit",
   "completionBlockers",
+  "requiredFieldValues",
+  "Required Field Values",
+  "requiredFieldValueCount",
+  "completionGate",
+  "redacted",
   "controlBoardSafetyStatus",
   "Control-board safety status",
   "finalCommands",
@@ -36,6 +41,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "npm.cmd run completion:audit",
   "npm.cmd run handover:index",
   "npm.cmd run field:readiness",
+  "handover:package",
+  "--strict",
 ].forEach((token) => assertIncludes(generator, token, "field closure plan generator"));
 
 [
