@@ -296,7 +296,7 @@ function buildHandoverSummary(matrixRows, commands, automatedEvidenceCoverage, c
 
   return {
     status:
-      failedCommands.length === 0 && companionReviewItems.length === 0
+      failedCommands.length === 0 && companionReviewItems.length === 0 && companionSkippedItems.length === 0
         ? "AUTOMATED_CHECKS_PASS"
         : "AUTOMATED_CHECKS_REVIEW",
     failedCommandCount: failedCommands.length,
