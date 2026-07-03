@@ -314,3 +314,89 @@ CONTROL_BOARD_DRY_RUN=true
 - `wrong-way-level-2` 승격 측량 기준
 - 정주행 객체 ID 외 보조 dedupe key 조합: `track_id + zone_id`, `uuid`, timestamp bucket 등
 - 실제 장비 연결 시 현장 안전 절차와 운영자 승인 절차
+
+## 14. 관제 대시보드 고도화 방향: 운영 통계 레이어
+
+이 항목은 프로젝트 방향을 `교통 운영 분석 플랫폼`으로 전환하는 것이 아니다. 기존 목표인 역주행 방지 관제 시스템을 유지하되, 관제자가 상황을 더 빠르고 부드럽게 해석할 수 있도록 운영 통계 레이어를 추가하는 고도화 범위다.
+
+### 14.1 목적
+
+- 관제 첫 화면에서 현재 위험, 차량 흐름, 장비 조치 상태를 함께 판단할 수 있게 한다.
+- DB에 저장되는 `vehicle_tracks`, `traffic_events`, `control_commands`를 활용해 일간/주간/월간/연간 흐름을 보여준다.
+- 정주행 수와 역주행 수를 분리하고, 역주행률을 과장 없이 표시한다.
+- 분석 도구처럼 무겁게 만들지 않고, 관제 화면 안에서 자연스럽게 읽히는 KPI와 작은 차트 중심으로 구성한다.
+
+### 14.2 핵심 지표
+
+| 지표 | 기준 데이터 | 설명 |
+| --- | --- | --- |
+| 정주행 차량 수 | `vehicle_tracks` unique track | 라이다 raw count가 아니라 DB unique track count를 기본 지표로 사용한다. |
+| 역주행 감지 수 | `traffic_events` wrong-way level 1/2 | 중복 수신은 dedupe된 이벤트 기준으로 계산한다. |
+| 역주행률 | wrong-way events / total unique tracks | 기간별 전체 unique track 대비 역주행 감지 비율이다. |
+| 1차 경고 수 | `control_commands.commandType=STAGE_1_ON` | 자동/수동 구분을 metadata로 확인할 수 있어야 한다. |
+| 2차 차단 수 | `control_commands.commandType=STAGE_2_ON` | stage 2 조치 흐름을 표시한다. |
+| 명령 성공률 | ACK/DRY_RUN/FAILED 상태 | DRY_RUN과 LIVE_TCP는 반드시 구분해서 표시한다. |
+| 평균 응답 시간 | `sentAt` to `acknowledgedAt` | 실장비 연동 후에만 신뢰 지표로 사용한다. |
+| 데이터 신뢰도 | status API, WebSocket, lastSeenAt | 라이다/DB/제어보드/WS 상태를 한 줄로 표시한다. |
+
+### 14.3 기간별 화면 범위
+
+- 일간: 시간대별 정주행 수, 역주행 수, 역주행률, 최근 위험 이벤트.
+- 주간: 요일별 추이, 전주 대비 증감, 위험 시간대.
+- 월간: 일자별 추이, 반복 위험 구간, 구역별 ranking.
+- 연간: 월별 추이, 장기적인 위험률 변화.
+
+기간 전환은 segmented control로 제공한다. 통계 패널은 관제 화면을 압도하지 않도록 KPI 카드, compact line/area chart, 작은 heatmap 또는 ranking list 중심으로 구성한다.
+
+### 14.4 프론트엔드 UX 원칙
+
+- 첫 화면은 여전히 관제 화면이어야 한다. 통계는 관제 판단을 돕는 보조 레이어다.
+- 숫자만 나열하지 않고 `정상 흐름`, `주의 필요`, `반복 역주행 감지`, `차단 조치 진행 중`, `장비 응답 지연` 같은 상태 요약을 제공한다.
+- 역주행률은 작은 비율도 읽히도록 소수점 표시 정책을 정한다.
+- 정주행 DB unique count와 라이다 raw `normal_moving_vehicle_count`는 출처를 분리한다.
+- 빈 데이터는 `데이터 수집 전`, `기간 내 이벤트 없음`, `장비 미연동`처럼 원인을 구분한다.
+- DRY_RUN/LIVE_TCP, ACK/FAILED/timeout은 색상과 문구로 명확히 구분한다.
+
+### 14.5 백엔드/API 제안
+
+초기 구현은 아래 API 중 최소 세트를 우선한다.
+
+```text
+GET /api/statistics/traffic?range=daily|weekly|monthly|yearly
+GET /api/statistics/wrongway-rate?range=daily|weekly|monthly|yearly
+GET /api/statistics/control-commands?range=daily|weekly|monthly|yearly
+GET /api/statistics/zones?range=daily|weekly|monthly|yearly
+```
+
+응답은 프론트 차트가 바로 사용할 수 있도록 bucket 배열을 포함한다.
+
+```json
+{
+  "range": "daily",
+  "buckets": [
+    {
+      "label": "09:00",
+      "normalVehicles": 120,
+      "wrongwayEvents": 1,
+      "wrongwayRate": 0.83,
+      "stage1Commands": 1,
+      "stage2Commands": 0
+    }
+  ],
+  "summary": {
+    "normalVehicles": 1024,
+    "wrongwayEvents": 3,
+    "wrongwayRate": 0.29,
+    "commandSuccessRate": 100
+  }
+}
+```
+
+### 14.6 검증 기준
+
+- 같은 기간/구역 조건에서 backend aggregate와 frontend 표시값이 일치한다.
+- 정주행 수는 DB unique track 기준으로 계산한다.
+- 역주행 수는 dedupe된 `traffic_events` 기준으로 계산한다.
+- `situation-ended`가 active event를 resolve해도 historical wrong-way count는 사라지지 않는다.
+- DRY_RUN 명령은 명령 성공률에서 LIVE_TCP ACK와 별도로 분류한다.
+- 빈 DB, 이벤트 없음, 장비 미연동 상태가 실제 운영 상태처럼 오해되지 않는다.

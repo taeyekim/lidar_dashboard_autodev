@@ -857,3 +857,63 @@ push 결과:
 - UTP 기반 Ethernet 현장 조건은 배선, IP/port, transport 방식, timeout/retry/heartbeat까지 Hardware/Field Control 에이전트 자문을 받는다.
 - Nginx를 도입하면 `/api`, WebSocket, Swagger, health, static asset 경로가 모두 프록시 뒤에서 깨지지 않는지 확인해야 한다.
 - 납품 보안 검사는 자동 도구 결과와 수동 점검을 모두 남겨야 하며, 실제 장비 영향 가능성이 있는 active scan은 별도 승인 전까지 금지한다.
+
+## 관제 대시보드 고도화 작업지시: 운영 통계 레이어
+
+이 작업은 프로젝트를 별도의 `교통 운영 분석 플랫폼`으로 전환하는 것이 아니다. 기존 역주행 방지 관제 대시보드를 유지하면서, 관제자가 차량 흐름과 위험도를 더 빠르게 해석하도록 운영 통계 레이어를 추가하는 고도화 작업이다.
+
+### 목표
+
+- 대시보드 상단 KPI를 정주행 수, 역주행 수, 역주행률, 명령 성공률까지 확장한다.
+- 일간/주간/월간/연간 기간 전환으로 정주행/역주행 추이를 보여준다.
+- 구역별 위험도, 시간대별 위험 패턴, 이벤트 lifecycle, 운영자 조치 이력을 관제 흐름 안에서 확인하게 한다.
+- 통계가 실제 DB 기준인지 라이다 raw 제공값인지 UI에서 명확히 구분한다.
+
+### 에이전트별 작업 지시
+
+| 에이전트 | 작업 지시 | 다른 에이전트에게 확인할 계약 |
+| --- | --- | --- |
+| PM/Tech Lead | 통계 고도화를 `KPI`, `기간별 추이`, `구역별 비교`, `명령 성공률`, `데이터 신뢰도` 작업 묶음으로 분해한다. | MVP 범위, 화면 우선순위, dev 직접 push 단위 |
+| UI/UX Designer | 관제 첫 화면을 유지하면서 통계 패널이 과하게 분석툴처럼 보이지 않게 정보 밀도와 시각 계층을 설계한다. | Backend bucket 단위, Frontend chart 가능성, 빈 데이터 문구 |
+| Frontend Engineer | KPI 카드, 기간 segmented control, compact chart, zone ranking, data trust strip을 구현한다. | Statistics API DTO, WebSocket/polling 갱신 기준, loading/error/empty state |
+| Backend/DB Engineer | Prisma aggregate/groupBy 기반 statistics API를 설계하고 Swagger에 문서화한다. | 정주행 count 기준, wrong-way dedupe 기준, bucket timezone |
+| LiDAR Domain Agent | `normal_moving_vehicle_count`와 DB unique track count의 의미 차이를 검토하고, 역주행률 계산 기준을 검수한다. | track 안정성, zone/time bucket, raw count 보조 지표 |
+| Hardware/Field Control Agent | 명령 성공률, ACK/timeout, DRY_RUN/LIVE_TCP 지표가 실제 제어보드 lifecycle과 맞는지 검토한다. | command status, response latency, retry/timeout 의미 |
+| Security Assurance Agent | 통계 API가 raw payload나 민감 운영 정보를 과도하게 노출하지 않는지 검토한다. | 인증/권한, 노출 필드, 감사 로그 |
+| QA/DevOps Agent | 빈 DB, 단일 이벤트, 반복 track, wrong-way dedupe, situation-ended resolve, 기간별 bucket 테스트를 설계한다. | seed/test data, runtime smoke 추가 범위, Docker/CI 가능성 |
+| Delivery/Acceptance Engineer | 납품 체크리스트에 통계 지표 검수 항목과 증적 캡처 항목을 추가한다. | 현장 검수 시나리오, 스크린샷, 미검증 처리 |
+
+### 에이전트 간 검수 루프
+
+통계 고도화 기능은 단일 에이전트가 바로 구현하지 않고 아래 순서로 상호 검수한다.
+
+1. PM/Tech Lead가 MVP 범위와 제외 범위를 선언한다.
+2. Backend/DB가 API response contract 초안을 만든다.
+3. LiDAR Domain이 count와 wrong-way rate 계산 기준을 검수한다.
+4. UI/UX가 화면 구조와 빈 데이터/장비 미연동 표현을 검수한다.
+5. Frontend가 구현 가능성과 상태 관리 방식을 검토한다.
+6. Hardware/Field Control이 command success/latency 지표 의미를 검수한다.
+7. Security Assurance가 통계 API 노출 범위와 인증 경계를 검수한다.
+8. QA/DevOps가 테스트 데이터와 검증 명령을 정의한다.
+9. Delivery/Acceptance가 납품 checklist와 runbook 반영 여부를 확인한다.
+10. 메인 에이전트가 구현, 검증, dev 직접 push를 수행한다.
+
+### 개발 우선순위
+
+1. Backend statistics API: 기간별 `normalVehicles`, `wrongwayEvents`, `wrongwayRate`.
+2. Swagger schema와 contract verifier.
+3. Frontend KPI 고도화: 정주행, 역주행, 역주행률, 명령 성공률.
+4. 기간별 compact chart: daily/weekly/monthly/yearly segmented control.
+5. 구역별 ranking과 시간대별 위험 패턴.
+6. command success/ACK/DRY_RUN/LIVE_TCP 분리 표시.
+7. runtime smoke 또는 contract script로 통계 응답 shape 검증.
+8. acceptance checklist/runbook 증적 항목 추가.
+
+### 완료 기준
+
+- 프론트는 정주행 수와 역주행 수를 같은 기준처럼 섞어 보이지 않는다.
+- 역주행률 계산식이 문서, API, UI에서 일치한다.
+- 기간 전환 시 동일 API contract를 사용하며, 빈 데이터 상태가 깨지지 않는다.
+- 통계 수치가 DB aggregate 결과와 일치한다.
+- DRY_RUN 명령과 LIVE_TCP ACK는 통계와 UI에서 구분된다.
+- 멀티에이전트 검수 결과가 구현 전/후 문서 또는 최종 보고에 남는다.
