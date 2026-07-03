@@ -88,6 +88,96 @@ function parseEvidenceMatrix(content) {
   return rows;
 }
 
+function extractBacktickTokens(value) {
+  const tokens = [];
+  for (const match of String(value || "").matchAll(/`([^`]+)`/g)) {
+    tokens.push(match[1]);
+  }
+  return tokens;
+}
+
+function unique(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function buildAutomatedEvidenceCoverage(rows, commands) {
+  const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+  const scripts = packageJson.scripts || {};
+  const executedCommands = commands.map((item) => item.command);
+  const normalizedExecutedCommands = executedCommands.map((command) => command.replace(/^npm\.cmd\b/, "npm"));
+  const smokeScript = scripts.smoke || "";
+  const deliveryVerifyScript = scripts["delivery:verify"] || "";
+  const ciScript = scripts.ci || "";
+
+  return rows.flatMap((row) =>
+    unique(extractBacktickTokens(row.automatedEvidence)).map((token) => {
+      const normalizedToken = token.replace(/^npm\.cmd /, "npm run ");
+      const directCommandIndex = normalizedExecutedCommands.findIndex((command) => command.includes(normalizedToken));
+      const directCommand = directCommandIndex >= 0 ? executedCommands[directCommandIndex] : null;
+      if (directCommand) {
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: "DIRECT",
+          coveredBy: directCommand,
+        };
+      }
+
+      if (normalizedToken.startsWith("npm run verify:") && smokeScript.includes(normalizedToken)) {
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: "SMOKE",
+          coveredBy: "npm run smoke",
+        };
+      }
+
+      if (normalizedToken === "npm run build:web" && ciScript.includes("npm run build:web")) {
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: "CI",
+          coveredBy: "npm run ci",
+        };
+      }
+
+      if (normalizedToken === "npm run delivery:verify" || deliveryVerifyScript.includes(normalizedToken)) {
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: "DELIVERY_VERIFY",
+          coveredBy: "npm run delivery:verify",
+        };
+      }
+
+      if (normalizedToken.startsWith("GET ") || normalizedToken.startsWith("/api/") || normalizedToken.endsWith(".ps1")) {
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: "RUNTIME_OR_FIELD",
+          coveredBy: "scripts/runtime-smoke.ps1 or field acceptance evidence",
+        };
+      }
+
+      if (["npm run ci:db", "npm run db:status"].includes(normalizedToken)) {
+        return {
+          area: row.area,
+          evidence: token,
+          coverage: "DB_REQUIRED",
+          coveredBy: "run when delivery PostgreSQL is available",
+        };
+      }
+
+      return {
+        area: row.area,
+        evidence: token,
+        coverage: "DOCUMENTED",
+        coveredBy: "documented in delivery evidence matrix",
+      };
+    }),
+  );
+}
+
 function buildMarkdown(manifest) {
   const lines = [
     "# Delivery Evidence Manifest",
@@ -127,6 +217,17 @@ function buildMarkdown(manifest) {
   );
   manifest.evidenceMatrix.rows.forEach((row) => {
     lines.push(`| ${row.area} | ${row.fieldEvidenceStillRequired} |`);
+  });
+
+  lines.push(
+    "",
+    "## Automated Evidence Coverage",
+    "",
+    "| Requirement Area | Evidence | Coverage | Covered By |",
+    "| --- | --- | --- | --- |",
+  );
+  manifest.automatedEvidenceCoverage.forEach((item) => {
+    lines.push(`| ${item.area} | \`${item.evidence}\` | ${item.coverage} | ${item.coveredBy} |`);
   });
 
   lines.push(
@@ -188,6 +289,7 @@ function main() {
       requirementAreas,
       rows: matrixRows,
     },
+    automatedEvidenceCoverage: buildAutomatedEvidenceCoverage(matrixRows, commands),
     fieldVerificationStillRequired: matrixRows.map((row) => ({
       area: row.area,
       evidence: row.fieldEvidenceStillRequired,
