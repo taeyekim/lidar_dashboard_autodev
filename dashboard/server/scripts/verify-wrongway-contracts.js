@@ -20,6 +20,8 @@ const eventsService = readProjectFile("dashboard/server/src/domains/events/event
 const securityMiddleware = readProjectFile("dashboard/server/src/middleware/security.js");
 const wrongwayRoutes = readProjectFile("dashboard/server/src/domains/wrongway/wrongway.routes.js");
 const externalIngestRoutes = readProjectFile("dashboard/server/src/domains/external-ingest/externalIngest.routes.js");
+const externalIngestService = readProjectFile("dashboard/server/src/domains/external-ingest/externalIngest.service.js");
+const externalEventModel = readProjectFile("dashboard/server/src/domains/external-ingest/externalEvent.model.js");
 const schema = readProjectFile("dashboard/server/prisma/schema.prisma");
 const payloadSpec = readProjectFile("docs/specs/lidar-dashboard-payload.md");
 const runbook = readProjectFile("docs/ops/delivery-runbook.md");
@@ -110,6 +112,16 @@ assertIncludes(
 assertIncludes(wrongwayRoutes, "requireDeviceIngestKey", "wrongway routes");
 assertIncludes(externalIngestRoutes, "requireDeviceIngestKey", "external ingest routes");
 assertIncludes(externalIngestRoutes, "/ingest/control-board/tcp/test", "external ingest routes");
+[
+  "bounded diagnostic buffer",
+  "최근 이벤트를 기준으로",
+].forEach((token) => assertIncludes(externalIngestService, token, "external ingest service comments"));
+[
+  "diagnostic event id",
+  "rawPayload를 보존하되",
+].forEach((token) => assertIncludes(externalEventModel, token, "external event model comments"));
+assert(!externalIngestService.includes("임시"), "external ingest service comments must not read like unfinished temporary code");
+assert(!externalEventModel.includes("임시"), "external event model comments must not read like unfinished temporary code");
 assertIncludes(schema, "model VehicleTrack", "prisma schema");
 assertIncludes(schema, "trackId                      String         @unique", "prisma schema");
 assertIncludes(schema, "rawPayload               Json", "prisma schema");

@@ -16,7 +16,7 @@ const EXTERNAL_EVENT_TYPE = {
   UNKNOWN: "UNKNOWN",
 };
 
-// 외부에서 id를 주지 않는 테스트 payload도 추적할 수 있도록 임시 이벤트 id를 만든다.
+// 외부에서 id를 주지 않는 테스트 payload도 추적할 수 있도록 diagnostic event id를 만든다.
 function createEventId() {
   return `evt-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 }
@@ -56,7 +56,7 @@ function analyzeOccurredAt(value, receivedAt) {
 function createRawSummary(raw) {
   const text = JSON.stringify(raw ?? {});
 
-  // 지금은 실제 데이터 규격 확인이 우선이라 rawPayload를 임시 보관한다.
+  // 현장 데이터 규격 검증을 위해 rawPayload를 보존하되, 운영 로그에는 요약 정보만 남긴다.
   // 다만 서버 운영 로그에는 원본 전체를 찍지 않고, 필드 목록과 크기만 남긴다.
   return {
     payloadKeys: raw && typeof raw === "object" && !Array.isArray(raw) ? Object.keys(raw) : [],

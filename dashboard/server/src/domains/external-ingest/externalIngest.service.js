@@ -9,7 +9,7 @@ const { adaptControlBoardPacket } = require("./adapters/controlBoardPacket.adapt
 // 최근 수신 이벤트는 DB 저장 전까지 메모리에 최대 50건만 유지한다.
 const MAX_RECENT_EVENTS = 50;
 
-// recentEvents는 현장 테스트 중 수신 여부를 확인하기 위한 임시 메모리 저장소다.
+// recentEvents는 현장 테스트 중 수신 여부를 확인하기 위한 bounded diagnostic buffer다.
 let recentEvents = [];
 
 // 새 이벤트를 맨 앞에 넣고, 오래된 이벤트는 최대 개수를 넘으면 잘라낸다.
