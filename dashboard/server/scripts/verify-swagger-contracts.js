@@ -57,6 +57,23 @@ function assertOptionalDeviceKey(operation, label) {
   );
 }
 
+const swaggerText = JSON.stringify(swaggerSpec);
+[
+  "占",
+  "沃",
+  "筌",
+  "獄",
+  "癰",
+  "揶",
+  "援먰넻",
+  "吏묎퀎",
+  "??＜",
+  "?쇱",
+  "?",
+].forEach((token) => {
+  assert(!swaggerText.includes(token), `Swagger must not expose mojibake token: ${token}`);
+});
+
 [
   ["/api/health", "get", "HealthResponse"],
   ["/api/database/health", "get", "DatabaseHealthResponse"],
@@ -161,6 +178,20 @@ assert(
   swaggerSpec.components?.schemas?.ControlBoardTcpFrameTestResponse?.properties?.tcp?.properties?.transport?.example ===
     "tcp",
   "ControlBoardTcpFrameTestResponse must document TCP transport",
+);
+
+assert(
+  assertPath("get", "/api/control-board/status").summary === "통합 제어보드 TCP 상태 조회",
+  "GET /api/control-board/status summary must be operator-readable Korean copy",
+);
+assert(
+  assertPath("get", "/api/control-board/commands").summary === "통합 제어보드 명령 이력 조회",
+  "GET /api/control-board/commands summary must be operator-readable Korean copy",
+);
+assert(
+  assertPath("post", "/api/control-board/commands/test").description.includes("DRY_RUN") &&
+    assertPath("post", "/api/control-board/commands/test").description.includes("LIVE_TCP"),
+  "POST /api/control-board/commands/test description must explain DRY_RUN/LIVE_TCP field safety",
 );
 
 const trafficEvent = swaggerSpec.components?.schemas?.TrafficEvent;

@@ -362,12 +362,12 @@ const swaggerSpec = {
     "/api/control-board/status": {
       get: {
         tags: ["Control"],
-        summary: "Integrated control board TCP status",
+        summary: "통합 제어보드 TCP 상태 조회",
         description:
-          "Returns the configured control board transport mode, dry-run/live state, command counts, and latest command.",
+          "통합 제어보드 전송 방식, DRY_RUN/LIVE_TCP 상태, 명령 집계, 최근 명령과 ACK 지연 정보를 조회합니다.",
         responses: {
           200: {
-            description: "Control board command channel status",
+            description: "통합 제어보드 명령 채널 상태",
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/ControlBoardStatusResponse" },
@@ -380,7 +380,7 @@ const swaggerSpec = {
     "/api/control-board/commands": {
       get: {
         tags: ["Control"],
-        summary: "List integrated control board command history",
+        summary: "통합 제어보드 명령 이력 조회",
         parameters: [
           { name: "limit", in: "query", schema: { type: "integer", example: 20 } },
           { name: "status", in: "query", schema: { type: "string", example: "DRY_RUN" } },
@@ -389,7 +389,7 @@ const swaggerSpec = {
         ],
         responses: {
           200: {
-            description: "Control board command list",
+            description: "통합 제어보드 명령 목록",
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/ControlBoardCommandListResponse" },
@@ -402,9 +402,9 @@ const swaggerSpec = {
     "/api/control-board/commands/test": {
       post: {
         tags: ["Control"],
-        summary: "Send or dry-run an integrated control board command",
+        summary: "통합 제어보드 명령 전송 또는 dry-run",
         description:
-          "Uses CONTROL_BOARD_DRY_RUN=true by default. Disable dry-run only after CONTROL_BOARD_HOST and CONTROL_BOARD_PORT are set for field testing.",
+          "기본값은 CONTROL_BOARD_DRY_RUN=true입니다. 현장 제어보드 IP/port 확인 후에만 dry-run을 해제하고 LIVE_TCP 명령을 전송합니다.",
         security: [{ cookieAuth: [], csrfHeaderAuth: [] }, { bearerAuth: [] }],
         requestBody: {
           required: false,
@@ -416,7 +416,7 @@ const swaggerSpec = {
         },
         responses: {
           200: {
-            description: "Control board test command result",
+            description: "통합 제어보드 테스트 명령 결과",
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/ControlBoardCommandTestResponse" },
@@ -1451,17 +1451,17 @@ const swaggerSpec = {
           eventCreated: {
             type: "boolean",
             example: true,
-            description: "False when an existing active event was updated.",
+            description: "기존 active 이벤트가 갱신된 경우 false입니다.",
           },
           eventReused: {
             type: "boolean",
             example: false,
-            description: "True when track_id + event type matched an unresolved existing event.",
+            description: "track_id와 이벤트 유형이 미종료 이벤트와 일치해 기존 이벤트를 재사용한 경우 true입니다.",
           },
           resolvedEventIds: {
             type: "array",
             items: { type: "string" },
-            description: "Wrong-way event ids resolved by a situation-ended payload.",
+            description: "situation-ended payload로 종료 처리된 역주행 이벤트 ID 목록입니다.",
           },
           controlCommand: {
             nullable: true,
@@ -1473,7 +1473,7 @@ const swaggerSpec = {
               {
                 type: "object",
                 additionalProperties: true,
-                description: "normal-driving can return vehicle track information without a traffic event.",
+                description: "normal-driving은 traffic event 없이 vehicle track 정보만 반환할 수 있습니다.",
               },
             ],
           },
