@@ -34,6 +34,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [completionAudit, "fieldReadinessStatus", "completion audit generator"],
   [completionAudit, "controlBoardSafetyStatus", "completion audit generator"],
   [completionAudit, "requiredFieldValues", "completion audit generator"],
+  [completionAudit, "manualEvidenceSignals", "completion audit generator"],
   [handoverPackage, "Residual Field Gates", "handover package generator"],
   [handoverPackage, "residualFieldGates", "handover package generator"],
   [handoverPackage, "canMarkGoalComplete=false", "handover package generator"],
@@ -45,12 +46,15 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [matrix, "canMarkGoalComplete", "delivery evidence matrix"],
   [matrix, "field readiness", "delivery evidence matrix"],
   [matrix, "LIVE_TCP_READY", "delivery evidence matrix"],
+  [matrix, "strictAcceptanceBlocked", "delivery evidence matrix"],
+  [matrix, "manual evidence", "delivery evidence matrix"],
   [matrix, "Final Status", "delivery evidence matrix"],
 ].forEach(([content, token, label]) => assertIncludes(content, token, label));
 
 const latestCompletion = readLatestJsonManifest("artifacts/completion-audit");
 const latestPackage = readLatestJsonManifest("artifacts/handover-package");
 const latestReadiness = readLatestJsonManifest("artifacts/field-readiness");
+const latestSecurity = readLatestJsonManifest("artifacts/security");
 
 function hasOpenRequiredFieldValue(item) {
   const state = String(item.state || "").toLowerCase();
@@ -85,6 +89,11 @@ if (latestCompletion) {
       Array.isArray(data.requiredFieldValues) && data.requiredFieldValues.every((item) => !hasOpenRequiredFieldValue(item)),
       "complete audit requires no open required field values",
     );
+    assert(
+      Array.isArray(data.manualEvidenceSignals) &&
+        data.manualEvidenceSignals.every((item) => item.status === "PRESENT"),
+      "complete audit requires all manual evidence signals to be PRESENT",
+    );
   }
 }
 
@@ -102,6 +111,23 @@ if (latestReadiness) {
       requiredFieldValues.every((item) => !hasOpenRequiredFieldValue(item)),
       "PASS field readiness requires no open required field values",
     );
+  }
+}
+
+if (latestSecurity) {
+  const data = latestSecurity.data || {};
+  const finalClaimsReady =
+    latestCompletion?.data?.canMarkGoalComplete === true ||
+    latestPackage?.data?.status === "READY" ||
+    latestPackage?.data?.canMarkGoalComplete === true;
+  if (data.options?.requireScanners === true && finalClaimsReady) {
+    assert(
+      data.strictAcceptanceBlocked === false,
+      "required scanner security evidence must not be strictAcceptanceBlocked",
+    );
+  }
+  if (data.strictAcceptanceBlocked === true && latestCompletion?.data?.canMarkGoalComplete === true) {
+    throw new Error("complete audit cannot coexist with blocking strict security evidence");
   }
 }
 
