@@ -35,6 +35,8 @@ const packageJson = readProjectFile("package.json");
   "/api/devices",
   "vehicleTracks",
   "controlCommands",
+  "eventLogs",
+  "controlCommandLogs",
   "deviceStatusLogs",
   "manifest.json",
   "manifest.md",

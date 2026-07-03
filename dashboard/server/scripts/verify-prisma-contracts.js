@@ -143,41 +143,30 @@ const eventService = readProjectFile("dashboard/server/src/domains/events/events
 
 [
   'where: { id: "site-wolchulsan-rest-area" }',
-  'name: "월출산휴게소"',
-  'location: "전라남도 영암군"',
-  'description: "라이다 역주행 방지 시스템 1차 개발 대상 현장"',
+  'name: "\\uC6D4\\uCD9C\\uC0B0\\uD734\\uAC8C\\uC18C"',
+  'location: "\\uC804\\uB77C\\uB0A8\\uB3C4 \\uC601\\uC554\\uAD70"',
+  "description:",
+  '"\\uB77C\\uC774\\uB2E4 \\uC5ED\\uC8FC\\uD589 \\uBC29\\uC9C0 \\uC2DC\\uC2A4\\uD15C 1\\uCC28 \\uAC1C\\uBC1C \\uB300\\uC0C1 \\uD604\\uC7A5"',
   'zoneCode: "ROUNDABOUT-01"',
   'zoneCode: "ROUNDABOUT-02"',
-  'name: "회전교차로 1"',
-  'name: "회전교차로 2"',
+  'name: "\\uD68C\\uC804\\uAD50\\uCC28\\uB85C 1"',
+  'name: "\\uD68C\\uC804\\uAD50\\uCC28\\uB85C 2"',
   'deviceCode: "LIDAR-PC-01"',
   'deviceCode: "CONTROL-BOARD-01"',
   'deviceCode: "LIDAR-PC-02"',
   'deviceCode: "CONTROL-BOARD-02"',
-  'name: "회전교차로 1 라이다 PC"',
-  'name: "회전교차로 1 통합제어보드"',
-  'name: "회전교차로 2 라이다 PC"',
-  'name: "회전교차로 2 통합제어보드"',
+  'name: "\\uD68C\\uC804\\uAD50\\uCC28\\uB85C 1 \\uB77C\\uC774\\uB2E4 PC"',
+  '"\\uD68C\\uC804\\uAD50\\uCC28\\uB85C 1 \\uD1B5\\uD569\\uC81C\\uC5B4\\uBCF4\\uB4DC"',
+  'name: "\\uD68C\\uC804\\uAD50\\uCC28\\uB85C 2 \\uB77C\\uC774\\uB2E4 PC"',
+  '"\\uD68C\\uC804\\uAD50\\uCC28\\uB85C 2 \\uD1B5\\uD569\\uC81C\\uC5B4\\uBCF4\\uB4DC"',
   'deviceType: "LIDAR_PC"',
   'deviceType: "CONTROL_BOARD"',
   'status: "UNKNOWN"',
   'healthStatus: "UNKNOWN"',
 ].forEach((token) => assertIncludes(seed, token, "Prisma seed contract"));
 
-[
-  "占",
-  "沃",
-  "筌",
-  "獄",
-  "癰",
-  "揶",
-  "?붿",
-  "?뚯",
-  "?쇱",
-  "?듯",
-].forEach((token) => {
-  assert(!seed.includes(token), `Prisma seed contains mojibake token: ${token}`);
-});
+assert(!seed.includes("\uFFFD"), "Prisma seed contains replacement-character mojibake");
+assert(!/\?{2,}/.test(seed), "Prisma seed contains repeated question-mark mojibake");
 
 assertIncludes(
   syntaxChecker,

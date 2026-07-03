@@ -29,15 +29,17 @@ async function main() {
   const site = await prisma.site.upsert({
     where: { id: "site-wolchulsan-rest-area" },
     update: {
-      name: "월출산휴게소",
-      location: "전라남도 영암군",
-      description: "라이다 역주행 방지 시스템 1차 개발 대상 현장",
+      name: "\uC6D4\uCD9C\uC0B0\uD734\uAC8C\uC18C",
+      location: "\uC804\uB77C\uB0A8\uB3C4 \uC601\uC554\uAD70",
+      description:
+        "\uB77C\uC774\uB2E4 \uC5ED\uC8FC\uD589 \uBC29\uC9C0 \uC2DC\uC2A4\uD15C 1\uCC28 \uAC1C\uBC1C \uB300\uC0C1 \uD604\uC7A5",
     },
     create: {
       id: "site-wolchulsan-rest-area",
-      name: "월출산휴게소",
-      location: "전라남도 영암군",
-      description: "라이다 역주행 방지 시스템 1차 개발 대상 현장",
+      name: "\uC6D4\uCD9C\uC0B0\uD734\uAC8C\uC18C",
+      location: "\uC804\uB77C\uB0A8\uB3C4 \uC601\uC554\uAD70",
+      description:
+        "\uB77C\uC774\uB2E4 \uC5ED\uC8FC\uD589 \uBC29\uC9C0 \uC2DC\uC2A4\uD15C 1\uCC28 \uAC1C\uBC1C \uB300\uC0C1 \uD604\uC7A5",
     },
   });
 
@@ -45,16 +47,18 @@ async function main() {
     where: { zoneCode: "ROUNDABOUT-01" },
     update: {
       siteId: site.id,
-      name: "회전교차로 1",
+      name: "\uD68C\uC804\uAD50\uCC28\uB85C 1",
       type: "ROUNDABOUT",
-      description: "월출산휴게소 회전교차로 1",
+      description:
+        "\uC6D4\uCD9C\uC0B0\uD734\uAC8C\uC18C \uD68C\uC804\uAD50\uCC28\uB85C 1",
     },
     create: {
       siteId: site.id,
       zoneCode: "ROUNDABOUT-01",
-      name: "회전교차로 1",
+      name: "\uD68C\uC804\uAD50\uCC28\uB85C 1",
       type: "ROUNDABOUT",
-      description: "월출산휴게소 회전교차로 1",
+      description:
+        "\uC6D4\uCD9C\uC0B0\uD734\uAC8C\uC18C \uD68C\uC804\uAD50\uCC28\uB85C 1",
     },
   });
 
@@ -62,16 +66,18 @@ async function main() {
     where: { zoneCode: "ROUNDABOUT-02" },
     update: {
       siteId: site.id,
-      name: "회전교차로 2",
+      name: "\uD68C\uC804\uAD50\uCC28\uB85C 2",
       type: "ROUNDABOUT",
-      description: "월출산휴게소 회전교차로 2",
+      description:
+        "\uC6D4\uCD9C\uC0B0\uD734\uAC8C\uC18C \uD68C\uC804\uAD50\uCC28\uB85C 2",
     },
     create: {
       siteId: site.id,
       zoneCode: "ROUNDABOUT-02",
-      name: "회전교차로 2",
+      name: "\uD68C\uC804\uAD50\uCC28\uB85C 2",
       type: "ROUNDABOUT",
-      description: "월출산휴게소 회전교차로 2",
+      description:
+        "\uC6D4\uCD9C\uC0B0\uD734\uAC8C\uC18C \uD68C\uC804\uAD50\uCC28\uB85C 2",
     },
   });
 
@@ -79,30 +85,32 @@ async function main() {
     {
       zoneId: roundabout1.id,
       deviceCode: "LIDAR-PC-01",
-      name: "회전교차로 1 라이다 PC",
+      name: "\uD68C\uC804\uAD50\uCC28\uB85C 1 \uB77C\uC774\uB2E4 PC",
       deviceType: "LIDAR_PC",
-      installedLocation: "회전교차로 1",
+      installedLocation: "\uD68C\uC804\uAD50\uCC28\uB85C 1",
     },
     {
       zoneId: roundabout1.id,
       deviceCode: "CONTROL-BOARD-01",
-      name: "회전교차로 1 통합제어보드",
+      name:
+        "\uD68C\uC804\uAD50\uCC28\uB85C 1 \uD1B5\uD569\uC81C\uC5B4\uBCF4\uB4DC",
       deviceType: "CONTROL_BOARD",
-      installedLocation: "회전교차로 1",
+      installedLocation: "\uD68C\uC804\uAD50\uCC28\uB85C 1",
     },
     {
       zoneId: roundabout2.id,
       deviceCode: "LIDAR-PC-02",
-      name: "회전교차로 2 라이다 PC",
+      name: "\uD68C\uC804\uAD50\uCC28\uB85C 2 \uB77C\uC774\uB2E4 PC",
       deviceType: "LIDAR_PC",
-      installedLocation: "회전교차로 2",
+      installedLocation: "\uD68C\uC804\uAD50\uCC28\uB85C 2",
     },
     {
       zoneId: roundabout2.id,
       deviceCode: "CONTROL-BOARD-02",
-      name: "회전교차로 2 통합제어보드",
+      name:
+        "\uD68C\uC804\uAD50\uCC28\uB85C 2 \uD1B5\uD569\uC81C\uC5B4\uBCF4\uB4DC",
       deviceType: "CONTROL_BOARD",
-      installedLocation: "회전교차로 2",
+      installedLocation: "\uD68C\uC804\uAD50\uCC28\uB85C 2",
     },
   ];
 

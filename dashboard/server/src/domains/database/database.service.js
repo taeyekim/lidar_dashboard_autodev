@@ -3,7 +3,7 @@ const { prisma } = require("../../prisma/client");
 async function getDatabaseHealth() {
   const checkedAt = new Date().toISOString();
 
-  // DB 연결 자체와 기본 테이블 조회 가능 여부를 함께 확인한다.
+  // Confirm both database connectivity and basic table query availability.
   await prisma.$queryRaw`SELECT 1`;
 
   const [

@@ -81,7 +81,7 @@ $databaseHealth = Invoke-CurlJson -Url "$BaseUrl/api/database/health"
 if (!$databaseHealth.ok -or $databaseHealth.database -ne "postgresql" -or !$databaseHealth.tables) {
   throw "Database health endpoint did not report PostgreSQL table health."
 }
-@("users", "sites", "zones", "devices", "vehicleTracks", "trafficEvents", "controlCommands", "deviceStatusLogs") |
+@("users", "sites", "zones", "devices", "vehicleTracks", "trafficEvents", "eventLogs", "controlCommands", "controlCommandLogs", "deviceStatusLogs") |
   ForEach-Object { Assert-NumberProperty -Object $databaseHealth.tables -Name $_ -Label "Database health tables" }
 
 $systemStatus = Invoke-CurlJson -Url "$BaseUrl/api/status"
