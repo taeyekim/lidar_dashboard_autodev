@@ -53,6 +53,7 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "npm run verify:audit-policy",
   "npm run security:evidence",
   "npm run delivery:evidence",
+  "npm run verify:delivery-evidence-summary",
   "artifacts/delivery/<timestamp>/runtime/",
   "artifacts/delivery/<timestamp>/security/",
   "scripts/runtime-smoke.ps1",
@@ -65,6 +66,9 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "responseSampleCount",
   "responseDurationMs",
   "executable KPI vectors",
+  "summary vectors",
+  "failed command count",
+  "field verification required areas",
   "DRY_RUN/LIVE command separation",
 ].forEach((token) => {
   assert(matrix.includes(token), `delivery evidence matrix is missing token: ${token}`);
@@ -73,6 +77,8 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
 [
   [packageJson, "verify:delivery-evidence-matrix", "root package scripts"],
   [packageJson, "verify:delivery-evidence-matrix", "root smoke chain"],
+  [packageJson, "verify:delivery-evidence-summary", "root package scripts"],
+  [packageJson, "verify:delivery-evidence-summary", "root smoke chain"],
   [packageJson, "verify:statistics-metrics", "root statistics metric script"],
   [packageJson, "verify-statistics-metrics.js", "root smoke chain"],
   [packageJson, "verify:control-board-latency", "root package scripts"],
@@ -80,6 +86,7 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   [serverPackageJson, "verify-control-board-latency.js", "server verify chain"],
   [serverPackageJson, "verify-statistics-metrics.js", "server verify chain"],
   [serverPackageJson, "verify-delivery-evidence-matrix.js", "server verify chain"],
+  [serverPackageJson, "verify-delivery-evidence-summary.js", "server verify chain"],
   [deliveryEvidence, "Delivery Evidence Matrix", "delivery evidence generator"],
   [deliveryEvidence, "delivery-evidence-matrix.md", "delivery evidence generator"],
   [deliveryEvidence, "parseEvidenceMatrix", "delivery evidence generator"],
