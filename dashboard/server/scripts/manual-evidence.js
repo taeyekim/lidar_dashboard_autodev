@@ -102,6 +102,11 @@ function validateManualEvidence(type, content) {
       "Decision timestamp",
     ]);
     if (emptyDecisionField) return `Evidence has an empty '${emptyDecisionField}' decision value.`;
+    const evidenceRows = markdownRowsAfterHeader(content, "Path Or Reference");
+    const filledEvidenceRows = evidenceRows.filter((row) => row[1] && row[1].trim() !== "");
+    if (filledEvidenceRows.length === 0) {
+      return "Evidence must include at least one screenshot, browser note, field acceptance manifest, or handover package reference.";
+    }
   }
 
   if (type === "Field Risk Acceptance") {

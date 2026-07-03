@@ -63,6 +63,7 @@ const validOperatorEvidence = operatorTemplate
   .replace("| Entry URL |  |", "| Entry URL | https://dashboard.example.local |")
   .replace("| Base API URL |  |", "| Base API URL | https://dashboard.example.local/api |")
   .replace("| Captured at |  |", "| Captured at | 2026-07-03T00:00:00Z |")
+  .replace("| Screenshot |  |  |", "| Screenshot | artifacts/manual/screenshots/operator-ui-dashboard.png | Dashboard, event detail, devices, statistics, and Swagger captures. |")
   .replace("| Walkthrough result | PASS / REVIEW |", "| Walkthrough result | PASS |")
   .replace("| Reviewer signature/name |  |", "| Reviewer signature/name | reviewer |")
   .replace("| Decision timestamp |  |", "| Decision timestamp | 2026-07-03T00:00:00Z |");
@@ -85,9 +86,19 @@ assert(
   "operator evidence must reject empty delivery display resolution",
 );
 
+const missingEvidenceReferenceOperatorEvidence = validOperatorEvidence.replace(
+  "| Screenshot | artifacts/manual/screenshots/operator-ui-dashboard.png | Dashboard, event detail, devices, statistics, and Swagger captures. |",
+  "| Screenshot |  | Dashboard, event detail, devices, statistics, and Swagger captures. |",
+);
+assert(
+  validateManualEvidence("Operator UI Walkthrough", missingEvidenceReferenceOperatorEvidence).includes("at least one screenshot"),
+  "operator evidence must reject PASS walkthroughs without screenshot or artifact references",
+);
+
 [
   "liveApproved",
   "LIVE_TCP_APPROVAL_REQUIRED",
+  "At least one `Evidence Files` path or reference",
 ].forEach((token) => assertIncludes(operatorTemplate, token, "operator UI walkthrough template"));
 
 const riskTemplateReason = validateManualEvidence("Field Risk Acceptance", riskTemplate);

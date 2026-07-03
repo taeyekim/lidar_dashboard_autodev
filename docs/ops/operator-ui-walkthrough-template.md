@@ -6,6 +6,8 @@ before running field acceptance with
 Do not record passwords, JWTs, cookies, private IP ranges outside the approved
 handover audience, or other secret values.
 Empty session or reviewer decision values are not valid field evidence.
+At least one `Evidence Files` path or reference must be filled before final
+acceptance.
 
 ## Session
 
