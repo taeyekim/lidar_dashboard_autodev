@@ -31,6 +31,7 @@ const deliveryEvidence = readProjectFile("dashboard/server/scripts/generate-deli
   "ConvertTo-StepList",
   "Get-StepsByStatus",
   "Get-LatestManifest",
+  "Get-LatestManifestPath",
   "Add-PreflightManifestGate",
   "SkipRuntime",
   "SkipDb",
@@ -65,6 +66,10 @@ const deliveryEvidence = readProjectFile("dashboard/server/scripts/generate-deli
   "nextActions",
   "Field Acceptance Decision",
   "Field Acceptance Orchestrator",
+  "Evidence References",
+  "evidenceRefs",
+  "fieldPreflight",
+  "controlBoard",
   "field preflight manifest gate",
   "Latest field preflight manifest status",
 ].forEach((token) => assertIncludes(script, token, "field acceptance script"));
@@ -95,6 +100,7 @@ assert(
   "-SiteName",
   "artifacts/field-acceptance",
   "Handover readiness is true",
+  "child evidence references",
   "preflight manifest status is `PASS`",
 ].forEach((token) => assertIncludes(runbook, token, "delivery runbook"));
 
@@ -110,6 +116,7 @@ assert(
   "field acceptance orchestrator",
   "field reviewer",
   "readyForHandover=true",
+  "child evidence references",
   "latest preflight status is `PASS`",
   "artifacts/field-acceptance",
 ].forEach((token) => assertIncludes(acceptance, token, "acceptance checklist"));

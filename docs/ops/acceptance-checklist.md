@@ -31,6 +31,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `npm run field:acceptance` or `scripts/field-acceptance.ps1` runs the field acceptance orchestrator and creates `artifacts/field-acceptance/<timestamp>/manifest.json` plus `manifest.md`.
 - [ ] Field acceptance reads the latest preflight manifest and adds a review/skipped gate when preflight status is not `PASS`.
 - [ ] Field acceptance manifest records the field reviewer, site name, handover readiness, skipped/review step counts, and next actions.
+- [ ] Field acceptance manifest records child evidence references for preflight, runtime, DB, LiDAR, control-board, security, and delivery manifests.
 - [ ] Field acceptance `readyForHandover=true` is allowed only when the status is `PASS`, latest preflight status is `PASS`, and both reviewer and site name are recorded.
 - [ ] `docker compose up --build` starts DB, backend, frontend, and reverse proxy.
 - [ ] `curl http://localhost:8080/healthz` returns `ok`.

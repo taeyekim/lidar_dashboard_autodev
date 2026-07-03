@@ -75,9 +75,9 @@ and `npm.cmd run delivery:evidence` in order, then records
 `artifacts/field-acceptance/<timestamp>/manifest.json` plus `manifest.md`.
 The manifest includes a `Field Acceptance Decision` summary with `-Reviewer`,
 `-SiteName`, optional `-DecisionNote`, PASS/REVIEW/SKIPPED counts, handover
-readiness, and next actions for the handover package. The orchestrator also
-reads the latest preflight manifest and adds a review/skipped gate when the
-preflight status is not `PASS`.
+readiness, child evidence references, and next actions for the handover package.
+The orchestrator also reads the latest preflight manifest and adds a
+review/skipped gate when the preflight status is not `PASS`.
 Handover readiness is true only when the overall status is `PASS`, the latest
 preflight manifest status is `PASS`, and both `-Reviewer` and `-SiteName` are
 recorded.

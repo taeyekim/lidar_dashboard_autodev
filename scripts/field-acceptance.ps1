@@ -109,6 +109,18 @@ function Get-LatestManifest {
   return Get-Content -LiteralPath $manifest -Raw | ConvertFrom-Json
 }
 
+function Get-LatestManifestPath {
+  param([string]$Root)
+
+  if (!(Test-Path -LiteralPath $Root)) { return $null }
+  $manifest = Get-ChildItem -LiteralPath $Root -Directory |
+    Sort-Object Name -Descending |
+    Select-Object -First 1 |
+    ForEach-Object { Join-Path $_.FullName "manifest.json" }
+  if (!$manifest -or !(Test-Path -LiteralPath $manifest)) { return $null }
+  return $manifest
+}
+
 function Add-PreflightManifestGate {
   param([object[]]$Steps)
 
@@ -234,6 +246,15 @@ function New-AcceptanceManifest {
       startCompose = [bool]$StartCompose
       stopCompose = [bool]$StopCompose
     }
+    evidenceRefs = @{
+      fieldPreflight = Get-LatestManifestPath -Root "artifacts/field-preflight"
+      runtime = Get-LatestManifestPath -Root "artifacts/runtime"
+      database = Get-LatestManifestPath -Root "artifacts/field-db-rehearsal"
+      lidar = Get-LatestManifestPath -Root "artifacts/field-lidar-rehearsal"
+      controlBoard = Get-LatestManifestPath -Root "artifacts/field-control-board-rehearsal"
+      security = Get-LatestManifestPath -Root "artifacts/security"
+      delivery = Get-LatestManifestPath -Root "artifacts/delivery"
+    }
     steps = $stepList
   }
 }
@@ -297,6 +318,18 @@ function Write-AcceptanceManifest {
     "| StrictPreflight | $([bool]$StrictPreflight) |",
     "| StartCompose | $([bool]$StartCompose) |",
     "| StopCompose | $([bool]$StopCompose) |",
+    "",
+    "## Evidence References",
+    "",
+    "| Evidence | Manifest |",
+    "| --- | --- |",
+    "| Field preflight | $($manifest.evidenceRefs.fieldPreflight) |",
+    "| Runtime | $($manifest.evidenceRefs.runtime) |",
+    "| DB and Prisma | $($manifest.evidenceRefs.database) |",
+    "| LiDAR ingest | $($manifest.evidenceRefs.lidar) |",
+    "| Control-board TCP | $($manifest.evidenceRefs.controlBoard) |",
+    "| Security | $($manifest.evidenceRefs.security) |",
+    "| Delivery | $($manifest.evidenceRefs.delivery) |",
     "",
     "## Steps",
     "",
