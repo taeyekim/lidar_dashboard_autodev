@@ -5,6 +5,7 @@ const {
   fieldStringState,
   fieldValuePriority,
   isPlaceholderFieldValue,
+  metadataReviewItems,
   numericState,
   valueState,
 } = require("./generate-field-readiness-report");
@@ -32,6 +33,11 @@ const riskAcceptanceTemplate = readProjectFile("docs/ops/field-risk-acceptance-t
 [
   "artifacts/field-readiness",
   "Field Readiness Report",
+  "isPlaceholderFieldText",
+  "metadataReviewItems",
+  "field readiness metadata",
+  "Metadata review",
+  "Rerun npm.cmd run field:readiness with concrete --generated-by=<field-reviewer> and --site-name=<delivery-site> values.",
   "Docker daemon",
   "Nginx/API health",
   "DEVICE_INGEST_API_KEY",
@@ -119,6 +125,8 @@ assert(numericState("TBD") === "invalid", "placeholder TCP port/timing values mu
 assert(numericState("5020") === "configured", "numeric TCP port/timing values should be configured");
 assert(corsOriginState("https://operator.example.local") === "trusted-only", "explicit CORS origin should be trusted-only");
 assert(fieldValuePriority({ state: "placeholder" }) === "BLOCKING", "placeholder field values should be blocking");
+assert(metadataReviewItems("field-reviewer", "field-site").length === 2, "placeholder readiness reviewer/site should require metadata review");
+assert(metadataReviewItems("reviewer-a", "delivery-site").length === 0, "concrete readiness reviewer/site should not require metadata review");
 
 [
   "field:readiness",
