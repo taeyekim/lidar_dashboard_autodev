@@ -330,6 +330,45 @@ function buildControlBoardFieldRehearsalSummary(controlBoardFieldRehearsal) {
   };
 }
 
+function buildLidarFieldRehearsalSummary(lidarFieldRehearsal) {
+  const data = lidarFieldRehearsal?.data || {};
+  const results = Array.isArray(data.results) ? data.results : [];
+  const failedResults = results.filter((item) => item.status !== "PASS");
+  const resultNames = results.map((item) => String(item.name || ""));
+  const requiredResultNames = [
+    "operator cookie auth login",
+    "normal-driving first unique track",
+    "normal-driving duplicate track update",
+    "wrong-way-level-1 event and command",
+    "wrong-way-level-1 duplicate event reuse",
+    "wrong-way-level-2 event and command",
+    "situation-ended resolves active events",
+  ];
+  const missingRequiredResults = requiredResultNames.filter((name) => !resultNames.includes(name));
+  const summary = data.summary || {};
+  const summaryFields = ["vehiclesPassed", "wrongwayVehicles", "wrongWayEvents", "wrongwayRate"];
+  const missingSummaryFields = summaryFields.filter((field) => typeof summary[field] !== "number");
+
+  return {
+    path: evidencePath(lidarFieldRehearsal),
+    exists: Boolean(lidarFieldRehearsal),
+    evidenceType: data.evidenceType || "MISSING",
+    deviceKeyUsed: data.deviceKeyUsed === true,
+    normalTrackId: data.normalTrackId || "",
+    wrongTrackId: data.wrongTrackId || "",
+    resultCount: results.length,
+    failedResultCount: failedResults.length,
+    missingRequiredResults,
+    missingSummaryFields,
+    summary: {
+      vehiclesPassed: typeof summary.vehiclesPassed === "number" ? summary.vehiclesPassed : null,
+      wrongwayVehicles: typeof summary.wrongwayVehicles === "number" ? summary.wrongwayVehicles : null,
+      wrongWayEvents: typeof summary.wrongWayEvents === "number" ? summary.wrongWayEvents : null,
+      wrongwayRate: typeof summary.wrongwayRate === "number" ? summary.wrongwayRate : null,
+    },
+  };
+}
+
 function buildFinalStatusReport(input = {}) {
   const evidenceRefs = input.evidenceRefs || latestEvidenceRefs();
   const manualEvidence = input.manualEvidence || manualEvidenceRefs();
@@ -340,6 +379,7 @@ function buildFinalStatusReport(input = {}) {
   const security = evidenceRefs.securityEvidence;
   const handoverPackage = evidenceRefs.handoverPackage;
   const controlBoardFieldRehearsal = evidenceRefs.controlBoardFieldRehearsal;
+  const lidarFieldRehearsal = evidenceRefs.lidarFieldRehearsal;
   const fieldRiskRegister = evidenceRefs.fieldRiskRegister;
   const fieldActionBoard = evidenceRefs.fieldActionBoard;
   const fieldGateClosureMap = evidenceRefs.fieldGateClosureMap;
@@ -356,6 +396,7 @@ function buildFinalStatusReport(input = {}) {
   const securitySummary = buildSecuritySummary(security);
   const fieldAcceptanceSummary = buildFieldAcceptanceSummary(fieldAcceptance);
   const controlBoardFieldRehearsalSummary = buildControlBoardFieldRehearsalSummary(controlBoardFieldRehearsal);
+  const lidarFieldRehearsalSummary = buildLidarFieldRehearsalSummary(lidarFieldRehearsal);
   const manualEvidenceSummary = buildManualEvidenceSummary(manualEvidence);
   const referenceFreshness = refsAreFresh(handoverPackage, evidenceRefs);
   const git = buildGitState(input.git);
@@ -469,6 +510,36 @@ function buildFinalStatusReport(input = {}) {
         `Control-board field rehearsal is not approved LIVE_TCP ACK evidence: allowLiveTcp=${controlBoardFieldRehearsalSummary.allowLiveTcp}, liveApproved=${controlBoardFieldRehearsalSummary.liveApproved}, initialMode=${controlBoardFieldRehearsalSummary.initialMode}, finalMode=${controlBoardFieldRehearsalSummary.finalMode}, acknowledgedCommands=${controlBoardFieldRehearsalSummary.acknowledgedCommandCount}/${controlBoardFieldRehearsalSummary.commandResultCount}.`,
         "Run the control-board field rehearsal with -AllowLiveTcp against the approved integrated control board and confirm all command rehearsals are ACKNOWLEDGED.",
         evidencePath(controlBoardFieldRehearsal),
+      );
+    }
+  }
+
+  if (!lidarFieldRehearsal) {
+    addGate(
+      gates,
+      "LiDAR Field Rehearsal",
+      "MISSING",
+      "Latest LiDAR ingest field rehearsal manifest is missing.",
+      "Run scripts/lidar-ingest-rehearsal.ps1 against the delivery Nginx entrypoint with representative LiDAR payloads.",
+      null,
+    );
+  } else {
+    const lidarRehearsalReady =
+      lidarFieldRehearsalSummary.evidenceType === "FIELD_REHEARSAL_PASS" &&
+      lidarFieldRehearsalSummary.failedResultCount === 0 &&
+      lidarFieldRehearsalSummary.missingRequiredResults.length === 0 &&
+      lidarFieldRehearsalSummary.missingSummaryFields.length === 0 &&
+      Boolean(lidarFieldRehearsalSummary.normalTrackId) &&
+      Boolean(lidarFieldRehearsalSummary.wrongTrackId);
+
+    if (!lidarRehearsalReady) {
+      addGate(
+        gates,
+        "LiDAR Field Rehearsal",
+        "REVIEW",
+        `LiDAR field rehearsal is not complete representative payload evidence: missingResults=${lidarFieldRehearsalSummary.missingRequiredResults.join(", ") || "none"}, missingSummaryFields=${lidarFieldRehearsalSummary.missingSummaryFields.join(", ") || "none"}, failedResults=${lidarFieldRehearsalSummary.failedResultCount}.`,
+        "Rerun the LiDAR ingest field rehearsal and confirm normal-driving unique track, duplicate update, wrong-way stage 1/2 commands, situation-ended resolution, raw detail linkage, and KPI summary evidence.",
+        evidencePath(lidarFieldRehearsal),
       );
     }
   }
@@ -734,6 +805,7 @@ function buildFinalStatusReport(input = {}) {
       controlBoardSafetyStatus: readinessData.env?.controlBoardSafetyStatus || "UNKNOWN",
     },
     fieldAcceptance: fieldAcceptanceSummary,
+    lidarFieldRehearsal: lidarFieldRehearsalSummary,
     controlBoardFieldRehearsal: controlBoardFieldRehearsalSummary,
     securityEvidence: securitySummary,
     manualEvidenceReadiness: {
@@ -789,6 +861,7 @@ function buildMarkdown(manifest) {
     `- Field readiness: ${manifest.fieldReadiness.status} (${manifest.fieldReadiness.path || "missing"})`,
     `- Field acceptance: ${manifest.fieldAcceptance.status} (${manifest.fieldAcceptance.path || "missing"})`,
     `- Field acceptance ready for handover: ${manifest.fieldAcceptance.readyForHandover}`,
+    `- LiDAR field rehearsal: ${manifest.lidarFieldRehearsal.evidenceType} (${manifest.lidarFieldRehearsal.path || "missing"})`,
     `- Control-board safety: ${manifest.fieldReadiness.controlBoardSafetyStatus}`,
     `- Control-board field rehearsal: ${manifest.controlBoardFieldRehearsal.safetyStatus} (${manifest.controlBoardFieldRehearsal.path || "missing"})`,
     `- Security evidence: ${manifest.securityEvidence.exists ? "present" : "missing"} (${manifest.securityEvidence.path || "missing"})`,
@@ -845,6 +918,23 @@ function buildMarkdown(manifest) {
     `| Skipped steps | ${manifest.fieldAcceptance.skippedStepCount} |`,
     `| Operator UI walkthrough | ${markdownCell(manifest.fieldAcceptance.operatorUiWalkthroughStatus)} |`,
     `| Operator UI evidence | ${manifest.fieldAcceptance.operatorUiWalkthroughEvidence ? `\`${markdownCell(manifest.fieldAcceptance.operatorUiWalkthroughEvidence)}\`` : "missing"} |`,
+    "",
+    "## LiDAR Field Rehearsal",
+    "",
+    "| Item | Value |",
+    "| --- | --- |",
+    `| Manifest | ${manifest.lidarFieldRehearsal.path ? `\`${markdownCell(manifest.lidarFieldRehearsal.path)}\`` : "missing"} |`,
+    `| Evidence type | ${markdownCell(manifest.lidarFieldRehearsal.evidenceType)} |`,
+    `| Device key used | ${manifest.lidarFieldRehearsal.deviceKeyUsed ? "yes" : "no"} |`,
+    `| Normal track ID | ${markdownCell(manifest.lidarFieldRehearsal.normalTrackId || "missing")} |`,
+    `| Wrong-way track ID | ${markdownCell(manifest.lidarFieldRehearsal.wrongTrackId || "missing")} |`,
+    `| Failed result count | ${manifest.lidarFieldRehearsal.failedResultCount} |`,
+    `| Missing required results | ${markdownCell(manifest.lidarFieldRehearsal.missingRequiredResults.join(", ") || "none")} |`,
+    `| Missing summary fields | ${markdownCell(manifest.lidarFieldRehearsal.missingSummaryFields.join(", ") || "none")} |`,
+    `| Vehicles passed | ${manifest.lidarFieldRehearsal.summary.vehiclesPassed ?? "missing"} |`,
+    `| Wrong-way vehicles | ${manifest.lidarFieldRehearsal.summary.wrongwayVehicles ?? "missing"} |`,
+    `| Wrong-way events | ${manifest.lidarFieldRehearsal.summary.wrongWayEvents ?? "missing"} |`,
+    `| Wrong-way rate | ${manifest.lidarFieldRehearsal.summary.wrongwayRate ?? "missing"} |`,
     "",
     "## Control Board Field Rehearsal",
     "",

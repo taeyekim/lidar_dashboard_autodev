@@ -38,6 +38,10 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "FIELD_ACTION_REQUIRED", "final status report generator"],
   [generator, "AUTOMATED_REFRESH_AVAILABLE", "final status report generator"],
   [generator, "Control Board TCP", "final status report generator"],
+  [generator, "LiDAR Field Rehearsal", "final status report generator"],
+  [generator, "missingRequiredResults", "final status report generator"],
+  [generator, "normal-driving first unique track", "final status report generator"],
+  [generator, "wrong-way-level-2 event and command", "final status report generator"],
   [generator, "Control Board Field Rehearsal", "final status report generator"],
   [generator, "acknowledgedCommandCount", "final status report generator"],
   [generator, "ACKNOWLEDGED", "final status report generator"],
@@ -172,6 +176,30 @@ const readyEvidence = {
       },
       safety: { operatorUiWalkthroughEvidence: "artifacts/manual/operator-ui-walkthrough.md" },
       steps: [{ name: "operator UI browser walkthrough", status: "PASS" }],
+    },
+  },
+  lidarFieldRehearsal: {
+    path: "artifacts/field-lidar-rehearsal/20260101-000000/manifest.json",
+    data: {
+      evidenceType: "FIELD_REHEARSAL_PASS",
+      deviceKeyUsed: true,
+      normalTrackId: "field-normal-fixture",
+      wrongTrackId: "field-wrong-fixture",
+      results: [
+        { name: "operator cookie auth login", status: "PASS", response: { ok: true } },
+        { name: "normal-driving first unique track", status: "PASS", response: { vehicleTrackCreated: true } },
+        { name: "normal-driving duplicate track update", status: "PASS", response: { vehicleTrackCreated: false } },
+        { name: "wrong-way-level-1 event and command", status: "PASS", response: { controlCommand: { commandType: "STAGE_1_ON" } } },
+        { name: "wrong-way-level-1 duplicate event reuse", status: "PASS", response: { eventReused: true } },
+        { name: "wrong-way-level-2 event and command", status: "PASS", response: { controlCommand: { commandType: "STAGE_2_ON" } } },
+        { name: "situation-ended resolves active events", status: "PASS", response: { controlCommand: { commandType: "STAGE_2_RETURN" } } },
+      ],
+      summary: {
+        vehiclesPassed: 1,
+        wrongwayVehicles: 1,
+        wrongWayEvents: 2,
+        wrongwayRate: 100,
+      },
     },
   },
   controlBoardFieldRehearsal: {
@@ -324,6 +352,8 @@ assert(
 assert(ready.fieldAcceptance.readyForHandover === true, "complete fixture should expose field acceptance handover readiness");
 assert(ready.fieldAcceptance.reviewerReady === true, "complete fixture should expose concrete field acceptance reviewer");
 assert(ready.fieldAcceptance.siteNameReady === true, "complete fixture should expose concrete field acceptance site name");
+assert(ready.lidarFieldRehearsal.missingRequiredResults.length === 0, "complete fixture should expose complete LiDAR rehearsal");
+assert(ready.lidarFieldRehearsal.summary.wrongWayEvents === 2, "complete fixture should expose LiDAR KPI summary");
 assert(ready.controlBoardFieldRehearsal.allowLiveTcp === true, "complete fixture should expose approved live TCP rehearsal");
 assert(
   ready.controlBoardFieldRehearsal.acknowledgedCommandCount === 3,
@@ -362,6 +392,7 @@ assert(
 );
 assert(buildMarkdown(ready).includes("Delivery Entrypoint Consistency"), "markdown should include delivery entrypoint consistency");
 assert(buildMarkdown(ready).includes("Field Acceptance"), "markdown should include field acceptance summary");
+assert(buildMarkdown(ready).includes("LiDAR Field Rehearsal"), "markdown should include LiDAR rehearsal summary");
 assert(buildMarkdown(ready).includes("Control Board Field Rehearsal"), "markdown should include control-board rehearsal summary");
 assert(buildMarkdown(ready).includes("Git pushed to origin/dev: yes"), "markdown should include git push state");
 
@@ -390,6 +421,10 @@ assert(
 assert(
   missing.remainingGates.some((item) => item.category === "Control Board Field Rehearsal" && item.status === "MISSING"),
   "missing fixture should expose missing control-board field rehearsal",
+);
+assert(
+  missing.remainingGates.some((item) => item.category === "LiDAR Field Rehearsal" && item.status === "MISSING"),
+  "missing fixture should expose missing LiDAR field rehearsal",
 );
 assert(
   missing.gateActionRunbook.some((item) => item.actionType === "AUTOMATED_REFRESH_AVAILABLE"),
@@ -1046,6 +1081,41 @@ assert(
     (item) => item.category === "Control Board Field Rehearsal" && item.message.includes("approved LIVE_TCP ACK evidence"),
   ),
   "DRY_RUN control-board rehearsal should expose approved LIVE_TCP ACK evidence gate",
+);
+
+const incompleteLidarRehearsal = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    lidarFieldRehearsal: {
+      ...readyEvidence.lidarFieldRehearsal,
+      data: {
+        ...readyEvidence.lidarFieldRehearsal.data,
+        results: readyEvidence.lidarFieldRehearsal.data.results.filter(
+          (item) => item.name !== "wrong-way-level-2 event and command",
+        ),
+        summary: {
+          vehiclesPassed: 1,
+          wrongwayVehicles: 1,
+          wrongWayEvents: 1,
+        },
+      },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
+  git: readyGit,
+});
+
+assert(
+  incompleteLidarRehearsal.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED",
+  "incomplete LiDAR rehearsal must not allow final close",
+);
+assert(
+  incompleteLidarRehearsal.remainingGates.some(
+    (item) => item.category === "LiDAR Field Rehearsal" && item.message.includes("wrong-way-level-2 event and command"),
+  ),
+  "incomplete LiDAR rehearsal should expose missing representative payload gate",
 );
 
 console.log("final status report contracts ok");
