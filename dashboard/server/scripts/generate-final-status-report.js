@@ -191,6 +191,7 @@ function refsAreFresh(handoverPackage, evidenceRefs) {
     delivery: evidencePath(evidenceRefs.delivery),
     completionAudit: evidencePath(evidenceRefs.completionAudit),
     fieldReadiness: evidencePath(evidenceRefs.fieldReadiness),
+    fieldAcceptance: evidencePath(evidenceRefs.fieldAcceptance),
     securityEvidence: evidencePath(evidenceRefs.securityEvidence),
     manualEvidenceReadiness: evidencePath(evidenceRefs.manualEvidenceReadiness),
     fieldRiskRegister: evidencePath(evidenceRefs.fieldRiskRegister),
@@ -230,6 +231,7 @@ function endpointConsistency(reportBaseUrl, evidenceRefs) {
   const expected = normalizeEndpoint(reportBaseUrl);
   return [
     ["fieldReadiness", evidenceRefs.fieldReadiness?.data?.baseUrl],
+    ["fieldAcceptance", evidenceRefs.fieldAcceptance?.data?.baseUrl],
     ["securityEvidence", evidenceRefs.securityEvidence?.data?.targetUrl],
     ["handoverPackage", evidenceRefs.handoverPackage?.data?.baseUrl],
     ["runtimeEvidence", evidenceRefs.runtimeEvidence?.data?.options?.baseUrl],
@@ -243,12 +245,34 @@ function endpointConsistency(reportBaseUrl, evidenceRefs) {
     }));
 }
 
+function buildFieldAcceptanceSummary(fieldAcceptance) {
+  const data = fieldAcceptance?.data || {};
+  const steps = Array.isArray(data.steps) ? data.steps : [];
+  const operatorUiStep = steps.find((step) => String(step.name || "").toLowerCase().includes("operator ui browser walkthrough")) || null;
+  return {
+    path: evidencePath(fieldAcceptance),
+    status: data.status || "MISSING",
+    baseUrl: data.baseUrl || null,
+    readyForHandover: data.handover?.readyForHandover === true,
+    requiresFieldReview: data.handover?.requiresFieldReview === true,
+    reviewer: data.handover?.reviewer || "",
+    siteName: data.handover?.siteName || "",
+    latestPreflightStatus: data.handover?.latestPreflightStatus || "UNKNOWN",
+    latestPreflightPassed: data.handover?.latestPreflightPassed === true,
+    reviewStepCount: Number(data.handover?.reviewStepCount || 0),
+    skippedStepCount: Number(data.handover?.skippedStepCount || 0),
+    operatorUiWalkthroughStatus: operatorUiStep?.status || "MISSING",
+    operatorUiWalkthroughEvidence: data.safety?.operatorUiWalkthroughEvidence || "",
+  };
+}
+
 function buildFinalStatusReport(input = {}) {
   const evidenceRefs = input.evidenceRefs || latestEvidenceRefs();
   const manualEvidence = input.manualEvidence || manualEvidenceRefs();
   const gates = [];
   const completion = evidenceRefs.completionAudit;
   const readiness = evidenceRefs.fieldReadiness;
+  const fieldAcceptance = evidenceRefs.fieldAcceptance;
   const security = evidenceRefs.securityEvidence;
   const handoverPackage = evidenceRefs.handoverPackage;
   const completionData = completion?.data || {};
@@ -257,6 +281,7 @@ function buildFinalStatusReport(input = {}) {
   const manualReadiness = evidenceRefs.manualEvidenceReadiness;
   const manualReadinessData = manualReadiness?.data || {};
   const securitySummary = buildSecuritySummary(security);
+  const fieldAcceptanceSummary = buildFieldAcceptanceSummary(fieldAcceptance);
   const manualEvidenceSummary = buildManualEvidenceSummary(manualEvidence);
   const referenceFreshness = refsAreFresh(handoverPackage, evidenceRefs);
   const git = buildGitState(input.git);
@@ -324,6 +349,48 @@ function buildFinalStatusReport(input = {}) {
     }
     if (readinessData.env?.controlBoardSafetyStatus !== "LIVE_TCP_READY") {
       addGate(gates, "Control Board TCP", readinessData.env?.controlBoardSafetyStatus || "UNKNOWN", "Control-board safety is not LIVE_TCP_READY.", "Configure field host/port, record CONTROL_BOARD_LIVE_APPROVED=true, and capture live TCP rehearsal evidence.", evidencePath(readiness));
+    }
+  }
+
+  if (!fieldAcceptance) {
+    addGate(
+      gates,
+      "Field Acceptance",
+      "MISSING",
+      "Latest field acceptance manifest is missing.",
+      "Run npm.cmd run field:acceptance -- -BaseUrl <delivery-url> -Reviewer <field-reviewer> -SiteName <delivery-site> -OperatorUiWalkthroughEvidence artifacts/manual/operator-ui-walkthrough.md.",
+      null,
+    );
+  } else {
+    if (fieldAcceptanceSummary.status !== "PASS") {
+      addGate(
+        gates,
+        "Field Acceptance",
+        fieldAcceptanceSummary.status || "REVIEW",
+        `Field acceptance status is ${fieldAcceptanceSummary.status}; review=${fieldAcceptanceSummary.reviewStepCount}, skipped=${fieldAcceptanceSummary.skippedStepCount}.`,
+        "Close REVIEW/SKIPPED field acceptance steps and rerun the field acceptance orchestrator.",
+        evidencePath(fieldAcceptance),
+      );
+    }
+    if (fieldAcceptanceSummary.readyForHandover !== true || fieldAcceptanceSummary.requiresFieldReview === true) {
+      addGate(
+        gates,
+        "Field Acceptance",
+        "NOT_READY",
+        `Field acceptance handover readiness is not closed: readyForHandover=${fieldAcceptanceSummary.readyForHandover}, requiresFieldReview=${fieldAcceptanceSummary.requiresFieldReview}.`,
+        "Record reviewer/site, require PASS preflight, close review/skipped steps, and rerun field acceptance.",
+        evidencePath(fieldAcceptance),
+      );
+    }
+    if (fieldAcceptanceSummary.operatorUiWalkthroughStatus !== "PASS") {
+      addGate(
+        gates,
+        "Field Acceptance",
+        "OPERATOR_UI_REVIEW",
+        `Operator UI walkthrough step is ${fieldAcceptanceSummary.operatorUiWalkthroughStatus}.`,
+        "Attach accepted operator UI walkthrough evidence and rerun field acceptance.",
+        evidencePath(fieldAcceptance),
+      );
     }
   }
 
@@ -437,6 +504,7 @@ function buildFinalStatusReport(input = {}) {
       status: readinessData.status || "MISSING",
       controlBoardSafetyStatus: readinessData.env?.controlBoardSafetyStatus || "UNKNOWN",
     },
+    fieldAcceptance: fieldAcceptanceSummary,
     securityEvidence: securitySummary,
     manualEvidenceReadiness: {
       path: evidencePath(manualReadiness),
@@ -489,6 +557,8 @@ function buildMarkdown(manifest) {
     "",
     `- Completion audit: ${manifest.completionAudit.status} (${manifest.completionAudit.path || "missing"})`,
     `- Field readiness: ${manifest.fieldReadiness.status} (${manifest.fieldReadiness.path || "missing"})`,
+    `- Field acceptance: ${manifest.fieldAcceptance.status} (${manifest.fieldAcceptance.path || "missing"})`,
+    `- Field acceptance ready for handover: ${manifest.fieldAcceptance.readyForHandover}`,
     `- Control-board safety: ${manifest.fieldReadiness.controlBoardSafetyStatus}`,
     `- Security evidence: ${manifest.securityEvidence.exists ? "present" : "missing"} (${manifest.securityEvidence.path || "missing"})`,
     `- Manual evidence readiness: ${manifest.manualEvidenceReadiness.status} (${manifest.manualEvidenceReadiness.path || "missing"})`,
@@ -515,6 +585,23 @@ function buildMarkdown(manifest) {
             `| ${markdownCell(item.category)} | ${markdownCell(item.status)} | ${markdownCell(item.actionType)} | ${markdownCell(item.message)} | ${markdownCell(item.closeWhen)} | ${item.evidence ? `\`${markdownCell(item.evidence)}\`` : "missing"} |`,
         )
       : ["| none | PASS | REVIEW_REQUIRED | No remaining final gates. | - | - |"]),
+    "",
+    "## Field Acceptance",
+    "",
+    "| Item | Value |",
+    "| --- | --- |",
+    `| Manifest | ${manifest.fieldAcceptance.path ? `\`${markdownCell(manifest.fieldAcceptance.path)}\`` : "missing"} |`,
+    `| Status | ${markdownCell(manifest.fieldAcceptance.status)} |`,
+    `| Base URL | ${markdownCell(manifest.fieldAcceptance.baseUrl || "missing")} |`,
+    `| Ready for handover | ${manifest.fieldAcceptance.readyForHandover ? "yes" : "no"} |`,
+    `| Requires field review | ${manifest.fieldAcceptance.requiresFieldReview ? "yes" : "no"} |`,
+    `| Reviewer | ${markdownCell(manifest.fieldAcceptance.reviewer || "missing")} |`,
+    `| Site name | ${markdownCell(manifest.fieldAcceptance.siteName || "missing")} |`,
+    `| Latest preflight status | ${markdownCell(manifest.fieldAcceptance.latestPreflightStatus)} |`,
+    `| Review steps | ${manifest.fieldAcceptance.reviewStepCount} |`,
+    `| Skipped steps | ${manifest.fieldAcceptance.skippedStepCount} |`,
+    `| Operator UI walkthrough | ${markdownCell(manifest.fieldAcceptance.operatorUiWalkthroughStatus)} |`,
+    `| Operator UI evidence | ${manifest.fieldAcceptance.operatorUiWalkthroughEvidence ? `\`${markdownCell(manifest.fieldAcceptance.operatorUiWalkthroughEvidence)}\`` : "missing"} |`,
     "",
     "## Evidence References",
     "",

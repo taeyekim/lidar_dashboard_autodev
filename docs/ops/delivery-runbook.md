@@ -268,8 +268,9 @@ security evidence, runtime evidence, and the handover package; the report's
 evidence URLs do not match the final status base URL.
 Share this report as the final close/no-close decision. It reports
 `READY_TO_CLOSE` only when completion audit, field readiness, strict scanner
-security evidence, manual evidence, handover package readiness, residual field
-gates, latest artifact references, and clean source revision evidence all agree;
+security evidence, latest field acceptance `PASS`/`readyForHandover=true`
+evidence, manual evidence, handover package readiness, residual field gates,
+latest artifact references, and clean source revision evidence all agree;
 otherwise it lists the
 remaining gates under `FIELD_OR_SECURITY_REVIEW_REQUIRED`. Start with the
 `Gate Action Summary` table: `AUTOMATED_REFRESH_AVAILABLE` items can usually be

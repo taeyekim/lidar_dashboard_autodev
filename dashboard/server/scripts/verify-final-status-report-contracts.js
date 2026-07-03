@@ -38,6 +38,11 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "FIELD_ACTION_REQUIRED", "final status report generator"],
   [generator, "AUTOMATED_REFRESH_AVAILABLE", "final status report generator"],
   [generator, "Control Board TCP", "final status report generator"],
+  [generator, "Field Acceptance", "final status report generator"],
+  [generator, "buildFieldAcceptanceSummary", "final status report generator"],
+  [generator, "readyForHandover", "final status report generator"],
+  [generator, "requiresFieldReview", "final status report generator"],
+  [generator, "operatorUiWalkthroughStatus", "final status report generator"],
   [generator, "LIVE_TCP_READY", "final status report generator"],
   [generator, "requireScanners", "final status report generator"],
   [generator, "strictAcceptanceBlocked", "final status report generator"],
@@ -75,12 +80,16 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [acceptanceChecklist, "npm run final:status", "acceptance checklist"],
   [acceptanceChecklist, "artifacts/final-status", "acceptance checklist"],
   [acceptanceChecklist, "Git Delivery State", "acceptance checklist"],
+  [acceptanceChecklist, "Field Acceptance", "acceptance checklist"],
+  [acceptanceChecklist, "readyForHandover=true", "acceptance checklist"],
   [acceptanceChecklist, "Delivery Entrypoint Consistency", "acceptance checklist"],
   [acceptanceChecklist, "WRONG_BRANCH", "acceptance checklist"],
   [acceptanceChecklist, "WRONG_UPSTREAM", "acceptance checklist"],
   [acceptanceChecklist, "UNPUSHED", "acceptance checklist"],
   [matrix, "artifacts/final-status", "delivery evidence matrix"],
   [matrix, "Git Delivery State", "delivery evidence matrix"],
+  [matrix, "Field Acceptance", "delivery evidence matrix"],
+  [matrix, "OPERATOR_UI_REVIEW", "delivery evidence matrix"],
   [matrix, "Delivery Entrypoint Consistency", "delivery evidence matrix"],
   [matrix, "MISMATCH", "delivery evidence matrix"],
   [matrix, "pushed to `origin/dev`", "delivery evidence matrix"],
@@ -116,6 +125,25 @@ const readyEvidence = {
   fieldReadiness: {
     path: "artifacts/field-readiness/20260101-000000/manifest.json",
     data: { status: "PASS", baseUrl: "http://field.local:8080", env: { controlBoardSafetyStatus: "LIVE_TCP_READY" } },
+  },
+  fieldAcceptance: {
+    path: "artifacts/field-acceptance/20260101-000000/manifest.json",
+    data: {
+      status: "PASS",
+      baseUrl: "http://field.local:8080",
+      handover: {
+        readyForHandover: true,
+        requiresFieldReview: false,
+        reviewer: "field-reviewer",
+        siteName: "delivery-site",
+        latestPreflightStatus: "PASS",
+        latestPreflightPassed: true,
+        reviewStepCount: 0,
+        skippedStepCount: 0,
+      },
+      safety: { operatorUiWalkthroughEvidence: "artifacts/manual/operator-ui-walkthrough.md" },
+      steps: [{ name: "operator UI browser walkthrough", status: "PASS" }],
+    },
   },
   securityEvidence: {
     path: "artifacts/security/20260101-000000/manifest.json",
@@ -169,6 +197,7 @@ readyEvidence.handoverPackage = {
       delivery: readyEvidence.delivery.path,
       completionAudit: readyEvidence.completionAudit.path,
       fieldReadiness: readyEvidence.fieldReadiness.path,
+      fieldAcceptance: readyEvidence.fieldAcceptance.path,
       securityEvidence: readyEvidence.securityEvidence.path,
       manualEvidenceReadiness: readyEvidence.manualEvidenceReadiness.path,
       fieldRiskRegister: readyEvidence.fieldRiskRegister.path,
@@ -198,6 +227,11 @@ assert(
   "complete fixture should verify fresh field risk register reference",
 );
 assert(
+  ready.referenceFreshness.some((item) => item.key === "fieldAcceptance" && item.fresh === true),
+  "complete fixture should verify fresh field acceptance reference",
+);
+assert(ready.fieldAcceptance.readyForHandover === true, "complete fixture should expose field acceptance handover readiness");
+assert(
   ready.referenceFreshness.some((item) => item.key === "fieldActionBoard" && item.fresh === true),
   "complete fixture should verify fresh field action board reference",
 );
@@ -216,6 +250,7 @@ assert(
 assert(buildMarkdown(ready).includes("READY_TO_CLOSE"), "markdown should include READY_TO_CLOSE");
 assert(buildMarkdown(ready).includes("Source Revision Freshness"), "markdown should include source revision freshness");
 assert(buildMarkdown(ready).includes("Delivery Entrypoint Consistency"), "markdown should include delivery entrypoint consistency");
+assert(buildMarkdown(ready).includes("Field Acceptance"), "markdown should include field acceptance summary");
 assert(buildMarkdown(ready).includes("Git pushed to origin/dev: yes"), "markdown should include git push state");
 
 const missing = buildFinalStatusReport({
@@ -312,6 +347,44 @@ assert(
 assert(
   blockedSecurity.gateActionRunbook.some((item) => item.actionType === "SECURITY_REVIEW_REQUIRED"),
   "blocked security fixture should expose security action type",
+);
+
+const reviewFieldAcceptance = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    fieldAcceptance: {
+      ...readyEvidence.fieldAcceptance,
+      data: {
+        ...readyEvidence.fieldAcceptance.data,
+        status: "REVIEW",
+        handover: {
+          ...readyEvidence.fieldAcceptance.data.handover,
+          readyForHandover: false,
+          requiresFieldReview: true,
+          reviewStepCount: 1,
+        },
+        steps: [{ name: "operator UI browser walkthrough", status: "REVIEW" }],
+      },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
+  git: readyGit,
+});
+
+assert(reviewFieldAcceptance.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "review field acceptance fixture should require review");
+assert(
+  reviewFieldAcceptance.remainingGates.some((item) => item.category === "Field Acceptance" && item.status === "REVIEW"),
+  "review field acceptance fixture should expose Field Acceptance REVIEW",
+);
+assert(
+  reviewFieldAcceptance.remainingGates.some((item) => item.category === "Field Acceptance" && item.status === "OPERATOR_UI_REVIEW"),
+  "review field acceptance fixture should expose operator UI review gate",
+);
+assert(
+  reviewFieldAcceptance.gateActionRunbook.some((item) => item.actionType === "FIELD_ACTION_REQUIRED"),
+  "review field acceptance fixture should route to field action",
 );
 
 const stalePackage = buildFinalStatusReport({
