@@ -868,6 +868,9 @@ const swaggerSpec = {
     "/api/ingest/events/recent": {
       get: {
         tags: ["External Ingest"],
+        security: OPERATOR_READ_SECURITY,
+        description:
+          "Operator diagnostic endpoint for field verification. Returns the bounded in-memory ingest buffer and requires operator authentication.",
         summary: "최근 외부 수신 이벤트 조회",
         parameters: [
           {
@@ -895,6 +898,7 @@ const swaggerSpec = {
     "/api/ingest/status": {
       get: {
         tags: ["External Ingest"],
+        security: OPERATOR_READ_SECURITY,
         summary: "외부 수신 상태 조회",
         description:
           "라이다 PC와 통합 제어보드에서 최근 수신된 이벤트를 기준으로 마지막 수신 시각, 최근 오류 패킷 수, 최근 오류 이벤트를 요약합니다. 현장 테스트에서 수신 여부를 빠르게 확인하기 위한 API입니다.",

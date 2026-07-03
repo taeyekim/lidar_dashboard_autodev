@@ -146,6 +146,8 @@ assert(
   ["/api/events/{id}", "get"],
   ["/api/events/{id}/logs", "get"],
   ["/api/statistics/traffic", "get"],
+  ["/api/ingest/status", "get"],
+  ["/api/ingest/events/recent", "get"],
 ].forEach(([path, method]) => {
   assertOperatorReadAuth(assertPath(method, path), `${method.toUpperCase()} ${path}`);
 });
@@ -225,6 +227,16 @@ assert(
     controlBoardSerialAlias.description.includes("하위 호환 alias") &&
     controlBoardSerialAlias.description.includes("/api/ingest/control-board/tcp/test"),
   "Control board serial test must be documented as a legacy alias with TCP test guidance",
+);
+
+const ingestStatus = assertPath("get", "/api/ingest/status");
+const ingestRecent = assertPath("get", "/api/ingest/events/recent");
+assertOperatorReadAuth(ingestStatus, "GET /api/ingest/status");
+assertOperatorReadAuth(ingestRecent, "GET /api/ingest/events/recent");
+assert(
+  ingestRecent.description.includes("Operator diagnostic endpoint") &&
+    ingestRecent.description.includes("requires operator authentication"),
+  "Recent ingest events endpoint must be documented as an authenticated operator diagnostic endpoint",
 );
 
 const controlBoardSerialPacket =

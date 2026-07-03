@@ -138,6 +138,19 @@ async function main() {
       String(logoutWithCsrf.headers["set-cookie"] || "").includes("Max-Age=0"),
       "logout success must clear auth and CSRF cookies",
     );
+
+    const unauthenticatedIngestStatus = await request(server, { path: "/api/ingest/status" });
+    assert(unauthenticatedIngestStatus.status === 401, "ingest status diagnostic endpoint must require operator auth");
+
+    const unauthenticatedRecentIngest = await request(server, { path: "/api/ingest/events/recent" });
+    assert(unauthenticatedRecentIngest.status === 401, "recent ingest diagnostic endpoint must require operator auth");
+
+    const authenticatedIngestStatus = await request(server, {
+      path: "/api/ingest/status",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    assert(authenticatedIngestStatus.status === 200, "authenticated operator must be able to read ingest status diagnostics");
+    assert(authenticatedIngestStatus.json?.ok === true, "ingest status diagnostics must use the API success envelope");
   } finally {
     await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
