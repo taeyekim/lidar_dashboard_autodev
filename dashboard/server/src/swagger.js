@@ -1573,6 +1573,12 @@ const swaggerSpec = {
           acknowledgedCommands: { type: "integer", example: 3 },
           failedCommands: { type: "integer", example: 1 },
           commandSuccessRate: { type: "number", nullable: true, example: 75 },
+          averageResponseMs: {
+            type: "integer",
+            nullable: true,
+            example: 184,
+            description: "Average LIVE TCP acknowledgement latency calculated from sentAt to acknowledgedAt.",
+          },
         },
       },
       TrafficStatisticsBucket: {

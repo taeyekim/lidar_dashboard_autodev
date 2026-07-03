@@ -385,7 +385,8 @@ GET /api/statistics/traffic?range=daily|weekly|monthly|yearly
     "liveCommands": 0,
     "acknowledgedCommands": 0,
     "failedCommands": 0,
-    "commandSuccessRate": null
+    "commandSuccessRate": null,
+    "averageResponseMs": null
   },
   "buckets": [
     {

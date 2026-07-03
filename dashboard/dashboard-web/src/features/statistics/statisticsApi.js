@@ -14,6 +14,7 @@ export const METRIC_DEFAULTS = {
   acknowledgedCommands: 0,
   failedCommands: 0,
   commandSuccessRate: null,
+  averageResponseMs: null,
 };
 
 function buildQuery(params = {}) {

@@ -30,6 +30,11 @@ function formatRate(value, suffix = "%") {
   return `${Number(value).toFixed(2)}${suffix}`;
 }
 
+function formatDurationMs(value) {
+  if (value === null || value === undefined) return "-";
+  return `${Number(value).toLocaleString()}ms`;
+}
+
 function formatPeriod(data) {
   if (!data?.period?.start || !data?.period?.end) return "집계 대기";
   return `${new Date(data.period.start).toLocaleString()} - ${new Date(data.period.end).toLocaleString()}`;
@@ -180,7 +185,7 @@ export function TrafficStatisticsPanel() {
           icon={ShieldCheck}
           label="TCP ACK"
           value={formatRate(totals.commandSuccessRate)}
-          subLabel={`LIVE ${formatNumber(totals.liveCommands)} / DRY ${formatNumber(totals.dryRunCommands)}`}
+          subLabel={`평균 ${formatDurationMs(totals.averageResponseMs)} · LIVE ${formatNumber(totals.liveCommands)} / DRY ${formatNumber(totals.dryRunCommands)}`}
           tone="emerald"
         />
       </div>

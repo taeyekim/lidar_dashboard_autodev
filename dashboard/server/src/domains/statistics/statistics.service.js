@@ -115,6 +115,8 @@ function createBucket(start, end, unit, index) {
     liveCommands: 0,
     acknowledgedCommands: 0,
     failedCommands: 0,
+    responseDurationTotalMs: 0,
+    responseDurationSamples: 0,
   };
 }
 
@@ -162,6 +164,8 @@ function createZoneStat(key, name) {
     liveCommands: 0,
     acknowledgedCommands: 0,
     failedCommands: 0,
+    responseDurationTotalMs: 0,
+    responseDurationSamples: 0,
   };
 }
 
@@ -193,6 +197,14 @@ function applyControlCommand(target, command) {
   }
   if (LIVE_SUCCESS_STATUSES.has(command.status)) target.acknowledgedCommands += 1;
   if (LIVE_FAILURE_STATUSES.has(command.status)) target.failedCommands += 1;
+
+  if (command.sentAt && command.acknowledgedAt) {
+    const durationMs = new Date(command.acknowledgedAt).getTime() - new Date(command.sentAt).getTime();
+    if (durationMs >= 0) {
+      target.responseDurationTotalMs += durationMs;
+      target.responseDurationSamples += 1;
+    }
+  }
 }
 
 function finalizeStat(stat) {
@@ -215,6 +227,9 @@ function finalizeStat(stat) {
     acknowledgedCommands: stat.acknowledgedCommands,
     failedCommands: stat.failedCommands,
     commandSuccessRate: liveCompleted ? percent(stat.acknowledgedCommands, liveCompleted) : null,
+    averageResponseMs: stat.responseDurationSamples
+      ? Math.round(stat.responseDurationTotalMs / stat.responseDurationSamples)
+      : null,
   };
 }
 
@@ -290,6 +305,8 @@ async function getTrafficStatistics(query = {}) {
         status: true,
         commandType: true,
         requestedAt: true,
+        sentAt: true,
+        acknowledgedAt: true,
         trafficEvent: {
           select: {
             externalZoneId: true,
@@ -331,6 +348,8 @@ async function getTrafficStatistics(query = {}) {
     accumulator.liveCommands += bucket.liveCommands;
     accumulator.acknowledgedCommands += bucket.acknowledgedCommands;
     accumulator.failedCommands += bucket.failedCommands;
+    accumulator.responseDurationTotalMs += bucket.responseDurationTotalMs;
+    accumulator.responseDurationSamples += bucket.responseDurationSamples;
     return accumulator;
   }, createBucket(start, end, bucketUnit, "total"));
 

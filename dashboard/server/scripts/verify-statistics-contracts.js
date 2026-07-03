@@ -34,6 +34,11 @@ const expectedRanges = ["daily", "weekly", "monthly", "yearly"];
   "dryRunCommands",
   "liveCommands",
   "ACKNOWLEDGED",
+  "sentAt: true",
+  "acknowledgedAt: true",
+  "responseDurationTotalMs",
+  "responseDurationSamples",
+  "averageResponseMs",
 ].forEach((token) => assertIncludes(service, token, "statistics service"));
 
 expectedRanges.forEach((range) => {
@@ -47,6 +52,7 @@ assertIncludes(routeIndex, "statisticsRoutes", "route index");
 assertIncludes(api, "/api/statistics/traffic", "statistics api");
 assertIncludes(api, "URLSearchParams", "statistics api query builder");
 assertIncludes(api, "METRIC_DEFAULTS", "statistics api metric defaults");
+assertIncludes(api, "averageResponseMs", "statistics api response latency default");
 assertIncludes(api, "normalizeTrafficStatistics", "statistics api response normalizer");
 assertIncludes(api, "normalizeMetric(source.totals)", "statistics api totals normalizer");
 assertIncludes(api, "const source = response || {}", "statistics api empty response fallback");
@@ -81,6 +87,8 @@ assertIncludes(fieldRequirements, "zones", "field requirements statistics respon
   "wrongwayVehicles",
   "wrongwayRate",
   "commandSuccessRate",
+  "averageResponseMs",
+  "formatDurationMs",
   "ResponsiveContainer",
   "ComposedChart",
   "TCP ACK",
@@ -112,10 +120,12 @@ const metrics = swaggerSpec.components?.schemas?.TrafficStatisticsMetrics?.prope
   "wrongwayRate",
   "controlCommands",
   "commandSuccessRate",
+  "averageResponseMs",
 ].forEach((field) => assert(metrics[field], `TrafficStatisticsMetrics must expose ${field}`));
 
 assertIncludes(evidenceMatrix, "DB unique track counts", "delivery evidence matrix statistics source");
 assertIncludes(evidenceMatrix, "wrong-way rate", "delivery evidence matrix statistics metric");
 assertIncludes(evidenceMatrix, "command metrics", "delivery evidence matrix statistics metric");
+assertIncludes(fieldRequirements, '"averageResponseMs"', "field requirements statistics response latency");
 
 console.log("statistics contracts ok");
