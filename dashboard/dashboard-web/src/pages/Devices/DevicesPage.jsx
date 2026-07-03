@@ -23,7 +23,7 @@ function formatDateTime(value) {
   if (!value) return "미수신";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleString();
+  return date.toLocaleString("ko-KR", { hour12: false });
 }
 
 function statusTone(status = "", healthStatus = "") {
@@ -69,7 +69,7 @@ function SummaryCard({ icon, title, value, subText, tone = "gray" }) {
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-xs font-bold uppercase tracking-wide opacity-70">{title}</div>
-          <div className="mt-1 text-2xl font-bold font-mono">{value}</div>
+          <div className="mt-1 font-mono text-2xl font-bold">{value}</div>
         </div>
         <IconComponent className="h-5 w-5 opacity-80" />
       </div>
@@ -84,6 +84,7 @@ export default function DevicesPage() {
   const [systemStatus, setSystemStatus] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
   const loadDevices = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -129,7 +130,8 @@ export default function DevicesPage() {
   }, [deviceStatus, devices.length]);
 
   const systemTone = systemStatus.database?.ok === false ? "red" : summary.errorCount > 0 ? "amber" : "green";
-  const systemLabel = systemStatus.database?.ok === false ? "DB 오류" : summary.total > 0 ? "구성 완료" : "장비 미구성";
+  const systemLabel =
+    systemStatus.database?.ok === false ? "DB 오류" : summary.total > 0 ? "구성 완료" : "장비 미구성";
 
   return (
     <div className="min-h-screen space-y-6 bg-white p-6 font-sans">
@@ -138,22 +140,24 @@ export default function DevicesPage() {
           <h1 className="text-2xl font-bold text-gray-800">장비 상태</h1>
           <div className="text-sm text-gray-500">라이다 PC, 통합제어보드, 현장 구역 연동 상태</div>
         </div>
-        <button
-          type="button"
-          onClick={loadDevices}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded border border-gray-200 px-3 text-sm font-bold text-gray-700 hover:bg-gray-50"
-          disabled={loading}
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          새로고침
-        </button>
-        <div className="inline-flex h-10 items-center gap-2 rounded border border-gray-200 px-3 text-xs font-bold text-gray-600">
-          {realtimeStatus === "CONNECTED" ? (
-            <Wifi className="h-4 w-4 text-green-600" />
-          ) : (
-            <WifiOff className="h-4 w-4 text-amber-600" />
-          )}
-          {realtimeStatus}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={loadDevices}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded border border-gray-200 px-3 text-sm font-bold text-gray-700 hover:bg-gray-50"
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            새로고침
+          </button>
+          <div className="inline-flex h-10 items-center gap-2 rounded border border-gray-200 px-3 text-xs font-bold text-gray-600">
+            {realtimeStatus === "CONNECTED" ? (
+              <Wifi className="h-4 w-4 text-green-600" />
+            ) : (
+              <WifiOff className="h-4 w-4 text-amber-600" />
+            )}
+            {realtimeStatus}
+          </div>
         </div>
       </div>
 
@@ -225,7 +229,10 @@ export default function DevicesPage() {
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-600">
                         <span>{device.type}</span>
                         <span>{device.code}</span>
-                        <span>{device.ipAddress}{device.port ? `:${device.port}` : ""}</span>
+                        <span>
+                          {device.ipAddress}
+                          {device.port ? `:${device.port}` : ""}
+                        </span>
                       </div>
                       <div className="mt-2 text-xs text-gray-500">
                         {device.siteName} / {device.zoneName} / {device.location}

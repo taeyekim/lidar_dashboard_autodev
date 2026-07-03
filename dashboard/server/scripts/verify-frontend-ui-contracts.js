@@ -10,6 +10,7 @@ function readProjectFile(relativePath) {
 }
 
 const card = readProjectFile("dashboard/dashboard-web/src/shared/components/Card.jsx");
+const devicesPage = readProjectFile("dashboard/dashboard-web/src/pages/Devices/DevicesPage.jsx");
 const todaysEventsPath = path.join(
   __dirname,
   "..",
@@ -31,5 +32,20 @@ const todaysEventsPath = path.join(
 });
 
 assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component must not remain in frontend source");
+
+[
+  "장비 상태",
+  "라이다 PC, 통합제어보드",
+  "등록 장비",
+  "제어보드",
+  "TCP 대상 설정됨",
+  "등록된 장비가 없습니다.",
+].forEach((token) => {
+  assert(devicesPage.includes(token), `Devices page must include production operations copy: ${token}`);
+});
+
+["�", "占", "誘", "理", "諛", "蹂", "媛"].forEach((token) => {
+  assert(!devicesPage.includes(token), `Devices page must not include mojibake token: ${token}`);
+});
 
 console.log("frontend UI contracts ok");
