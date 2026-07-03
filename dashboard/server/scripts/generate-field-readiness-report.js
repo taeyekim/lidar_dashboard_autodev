@@ -153,9 +153,8 @@ function metadataReviewItems(generatedBy, siteName) {
 }
 
 function isPlaceholderFieldValue(value) {
-  return /^(?:-|n\/a|na|none|null|tbd|todo|pending|unknown|example|change-me|changeme)$/i.test(
-    String(value || "").trim(),
-  );
+  const normalized = String(value || "").trim();
+  return /^(?:-|n\/a|na|none|null|tbd|todo|pending|unknown|example|change-me|changeme)$/i.test(normalized) || /^change-this-/i.test(normalized);
 }
 
 function valueState(value, placeholder = "") {
@@ -270,7 +269,7 @@ function buildEnvChecks() {
   checks.push(buildCheck("JWT secret", jwtSecret && jwtSecret !== "change-this-to-a-long-random-secret" ? "PASS" : "REVIEW", "critical", jwtSecret ? "JWT_SECRET is present without exposing the value." : "JWT_SECRET is missing.", "Set a long random JWT_SECRET."));
 
   const adminPassword = envValue(values, "SEED_ADMIN_PASSWORD");
-  checks.push(buildCheck("seed admin password", adminPassword && adminPassword !== "admin1234!" ? "PASS" : "REVIEW", "critical", adminPassword ? "SEED_ADMIN_PASSWORD is present without exposing the value." : "SEED_ADMIN_PASSWORD is missing.", "Set a non-example seed admin password before field acceptance."));
+  checks.push(buildCheck("seed admin password", valueState(adminPassword) === "configured" && adminPassword !== "admin1234!" ? "PASS" : "REVIEW", "critical", adminPassword ? "SEED_ADMIN_PASSWORD is present without exposing the value." : "SEED_ADMIN_PASSWORD is missing.", "Set a non-example seed admin password before field acceptance."));
 
   const deviceKey = envValue(values, "DEVICE_INGEST_API_KEY");
   const deviceKeyState = fieldStringState(deviceKey);

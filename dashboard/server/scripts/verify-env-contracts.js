@@ -117,6 +117,11 @@ assert(
   "JWT_SECRET must be an obvious placeholder in .env.example",
 );
 assert(
+  env.get("SEED_ADMIN_PASSWORD") === "change-this-admin-password",
+  "SEED_ADMIN_PASSWORD must be an obvious placeholder in .env.example",
+);
+assert(!envExample.includes("SEED_ADMIN_PASSWORD=admin1234!"), ".env.example must not expose the old example seed password");
+assert(
   !envExample.includes("replace_with_control_board_ip") && !envExample.includes("replace_with_control_board_port"),
   ".env.example must not contain field-only placeholder values that look configured",
 );

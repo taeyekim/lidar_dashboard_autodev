@@ -136,6 +136,7 @@ function hasOpenRequiredFieldValue(item) {
     "not-approved",
     "invalid",
     "change-this-to-a-long-random-secret",
+    "change-this-admin-password",
     "admin1234!",
   ].includes(state);
 }

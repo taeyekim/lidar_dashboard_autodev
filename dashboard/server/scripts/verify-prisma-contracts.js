@@ -168,6 +168,8 @@ const eventService = readProjectFile("dashboard/server/src/domains/events/events
 
 assert(!seed.includes("\uFFFD"), "Prisma seed contains replacement-character mojibake");
 assert(!/\?{2,}/.test(seed), "Prisma seed contains repeated question-mark mojibake");
+assertIncludes(seed, '"change-this-admin-password"', "Prisma seed admin password placeholder");
+assert(!seed.includes('|| "admin1234!"'), "Prisma seed must not fall back to the old example seed password");
 
 [
   "Prisma seed",

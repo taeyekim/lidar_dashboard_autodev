@@ -7,7 +7,7 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   const adminUserId = process.env.SEED_ADMIN_USER_ID || "admin";
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "admin1234!";
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "change-this-admin-password";
   const adminName = process.env.SEED_ADMIN_NAME || "System Administrator";
 
   await prisma.user.upsert({

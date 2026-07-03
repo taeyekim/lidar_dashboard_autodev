@@ -33,6 +33,7 @@ const riskAcceptanceTemplate = readProjectFile("docs/ops/field-risk-acceptance-t
   "Strict",
   "JWT_SECRET",
   "SEED_ADMIN_PASSWORD",
+  "change-this-",
   "DEVICE_INGEST_API_KEY",
   "CONTROL_BOARD_DRY_RUN",
   "CONTROL_BOARD_LIVE_APPROVED",

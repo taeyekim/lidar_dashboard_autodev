@@ -123,6 +123,7 @@ assert(isPlaceholderFieldValue("N/A") === true, "N/A should be treated as a plac
 assert(fieldStringState("pending") === "placeholder", "pending field values must remain placeholder");
 assert(fieldStringState("10.10.0.12") === "configured", "real-looking host values should remain configured");
 assert(valueState("change-this-to-a-long-random-secret", "change-this-to-a-long-random-secret") === "placeholder", "known example secret should remain placeholder");
+assert(valueState("change-this-admin-password") === "placeholder", "seed password placeholder should remain placeholder");
 assert(valueState("unknown") === "placeholder", "generic placeholder secret should remain placeholder");
 assert(numericState("TBD") === "invalid", "placeholder TCP port/timing values must not be numeric configured");
 assert(numericState("5020") === "configured", "numeric TCP port/timing values should be configured");
