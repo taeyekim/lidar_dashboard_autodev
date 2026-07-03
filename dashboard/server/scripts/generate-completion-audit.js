@@ -109,7 +109,28 @@ function buildCompanionEvidenceMetadata(deliveryManifest) {
   }));
 }
 
-function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest) {
+function buildManualEvidenceSignals() {
+  const refs = [
+    {
+      type: "Operator UI Walkthrough",
+      path: "artifacts/manual/operator-ui-walkthrough.md",
+      template: "docs/ops/operator-ui-walkthrough-template.md",
+      requiredWhen: "Field acceptance requires browser walkthrough evidence.",
+    },
+    {
+      type: "Field Risk Acceptance",
+      path: "artifacts/manual/field-risk-acceptance.md",
+      template: "docs/ops/field-risk-acceptance-template.md",
+      requiredWhen: "Field readiness, scanner, trusted-LAN, Swagger, HTTPS cookie, dry-run, or unavailable-hardware risk is accepted instead of resolved.",
+    },
+  ];
+  return refs.map((item) => ({
+    ...item,
+    status: fs.existsSync(path.join(root, item.path)) ? "PRESENT" : "MISSING",
+  }));
+}
+
+function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest, manualEvidenceSignals = []) {
   if (!deliveryManifest) {
     return [{
       category: "automated",
@@ -130,6 +151,8 @@ function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest) {
   const fieldPreflightSkippedCount = normalizeNumber(summary.fieldPreflightSkippedCount);
   const fieldVerificationRequiredCount = normalizeNumber(summary.fieldVerificationRequiredCount);
   const readinessSignals = buildReadinessSignals(fieldReadinessManifest);
+  const operatorUiEvidence = manualEvidenceSignals.find((item) => item.type === "Operator UI Walkthrough");
+  const riskAcceptanceEvidence = manualEvidenceSignals.find((item) => item.type === "Field Risk Acceptance");
 
   if (summary.status !== "AUTOMATED_CHECKS_PASS") {
     addBlocker(blockers, "field", `Delivery handover summary status is ${summary.status || "UNKNOWN"}.`, blockerNextAction("deliveryStatus"));
@@ -177,6 +200,29 @@ function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest) {
       message.includes("Control-board safety status") ? blockerNextAction("controlBoard") : blockerNextAction("readiness"),
     );
   });
+  if ((fieldAcceptanceReviewCount > 0 || fieldAcceptanceSkippedCount > 0) && operatorUiEvidence?.status !== "PRESENT") {
+    addBlocker(
+      blockers,
+      "field",
+      "Operator UI walkthrough evidence is missing while field acceptance still has review/skipped items.",
+      "Fill docs/ops/operator-ui-walkthrough-template.md and attach artifacts/manual/operator-ui-walkthrough.md before final field acceptance.",
+    );
+  }
+  if (
+    (readinessSignals.reviewCount > 0 ||
+      readinessSignals.skippedCount > 0 ||
+      companionReviewCount > 0 ||
+      companionSkippedCount > 0 ||
+      fieldPreflightSkippedCount > 0) &&
+    riskAcceptanceEvidence?.status !== "PRESENT"
+  ) {
+    addBlocker(
+      blockers,
+      "field",
+      "Field risk acceptance evidence is missing while readiness, scanner, preflight, or companion evidence has review/skipped items.",
+      "Fill docs/ops/field-risk-acceptance-template.md when risks are accepted, or resolve the underlying review/skipped evidence.",
+    );
+  }
 
   return blockers;
 }
@@ -186,7 +232,8 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest) {
   const readinessSignals = buildReadinessSignals(fieldReadinessManifest);
   const requiredFieldValues = buildRequiredFieldValueSignals(fieldReadinessManifest);
   const companionEvidenceMetadata = buildCompanionEvidenceMetadata(deliveryManifest);
-  const completionBlockers = buildCompletionBlockers(deliveryManifest, fieldReadinessManifest);
+  const manualEvidenceSignals = buildManualEvidenceSignals();
+  const completionBlockers = buildCompletionBlockers(deliveryManifest, fieldReadinessManifest, manualEvidenceSignals);
   const automatedBlockers = completionBlockers.filter((item) => item.category === "automated");
   const fieldBlockers = completionBlockers.filter((item) => item.category === "field");
   const failedCommandCount = normalizeNumber(summary.failedCommandCount);
@@ -232,6 +279,7 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest) {
       fieldVerificationRequiredCount: normalizeNumber(summary.fieldVerificationRequiredCount),
       fieldReadinessReviewCount: readinessSignals.reviewCount,
       fieldReadinessSkippedCount: readinessSignals.skippedCount,
+      manualEvidenceMissingCount: manualEvidenceSignals.filter((item) => item.status === "MISSING").length,
       automatedBlockerCount: automatedBlockers.length,
       fieldBlockerCount: fieldBlockers.length,
     },
@@ -242,9 +290,10 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest) {
       : [],
     requiredFieldValues,
     companionEvidenceMetadata,
+    manualEvidenceSignals,
     handoverSummaryStatus: summary.status || null,
     decisionRule:
-      "canMarkGoalComplete is true only when automated delivery checks pass and no field readiness, companion, acceptance, preflight, skipped, or required verification item remains.",
+      "canMarkGoalComplete is true only when automated delivery checks pass and no field readiness, companion, acceptance, preflight, skipped, manual evidence, or required verification item remains.",
   };
 }
 
@@ -281,6 +330,7 @@ function buildMarkdown(manifest) {
     `- Field preflight skipped items: ${manifest.counts.fieldPreflightSkippedCount}`,
     `- Field readiness review items: ${manifest.counts.fieldReadinessReviewCount}`,
     `- Field readiness skipped items: ${manifest.counts.fieldReadinessSkippedCount}`,
+    `- Manual evidence missing: ${manifest.counts.manualEvidenceMissingCount}`,
     `- Field verification required areas: ${manifest.counts.fieldVerificationRequiredCount}`,
     "",
     "## Field Verification Required",
@@ -304,6 +354,12 @@ function buildMarkdown(manifest) {
     ...(manifest.companionEvidenceMetadata.length > 0
       ? manifest.companionEvidenceMetadata.map((item) => `| ${item.type} | ${item.manifestPath || "missing"} | ${item.reviewCount} | ${item.skippedCount} | ${formatMetadata(item.metadata)} |`)
       : ["| none | missing | 0 | 0 | none |"]),
+    "",
+    "## Manual Evidence",
+    "",
+    "| Type | Status | Path | Template | Required When |",
+    "| --- | --- | --- | --- | --- |",
+    ...manifest.manualEvidenceSignals.map((item) => `| ${item.type} | ${item.status} | ${item.path} | ${item.template} | ${item.requiredWhen} |`),
     "",
     "## Completion Blockers",
     "",
@@ -350,6 +406,7 @@ if (require.main === module) {
 module.exports = {
   buildCompletionAudit,
   buildCompletionBlockers,
+  buildManualEvidenceSignals,
   buildReadinessSignals,
   buildRequiredFieldValueSignals,
 };
