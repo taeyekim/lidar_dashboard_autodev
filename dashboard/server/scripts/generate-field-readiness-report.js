@@ -125,10 +125,20 @@ function buildCheck(name, status, severity, message, nextAction = "") {
   };
 }
 
+function isPlaceholderFieldValue(value) {
+  return /^(?:-|n\/a|na|none|null|tbd|todo|pending|unknown|example|change-me|changeme)$/i.test(
+    String(value || "").trim(),
+  );
+}
+
 function valueState(value, placeholder = "") {
   if (!value) return "missing";
-  if (placeholder && value === placeholder) return "placeholder";
+  if ((placeholder && value === placeholder) || isPlaceholderFieldValue(value)) return "placeholder";
   return "configured";
+}
+
+function fieldStringState(value) {
+  return valueState(value);
 }
 
 function listValue(value) {
@@ -236,7 +246,8 @@ function buildEnvChecks() {
   checks.push(buildCheck("seed admin password", adminPassword && adminPassword !== "admin1234!" ? "PASS" : "REVIEW", "critical", adminPassword ? "SEED_ADMIN_PASSWORD is present without exposing the value." : "SEED_ADMIN_PASSWORD is missing.", "Set a non-example seed admin password before field acceptance."));
 
   const deviceKey = envValue(values, "DEVICE_INGEST_API_KEY");
-  checks.push(buildCheck("device ingest key", deviceKey ? "PASS" : "REVIEW", "warning", deviceKey ? "DEVICE_INGEST_API_KEY is configured and redacted." : "DEVICE_INGEST_API_KEY is not configured.", "Configure the device key or document the trusted-LAN exception."));
+  const deviceKeyState = fieldStringState(deviceKey);
+  checks.push(buildCheck("device ingest key", deviceKeyState === "configured" ? "PASS" : "REVIEW", "warning", deviceKeyState === "configured" ? "DEVICE_INGEST_API_KEY is configured and redacted." : "DEVICE_INGEST_API_KEY is not configured or is placeholder.", "Configure the device key or document the trusted-LAN exception."));
 
   const dryRun = envValue(values, "CONTROL_BOARD_DRY_RUN").toLowerCase();
   const liveApproved = envValue(values, "CONTROL_BOARD_LIVE_APPROVED").toLowerCase() === "true";
@@ -250,8 +261,10 @@ function buildEnvChecks() {
   const responseTimeoutState = numericState(responseTimeout);
   const retryCountState = numericState(retryCount, { minimum: 0 });
   const heartbeatIntervalState = numericState(heartbeatInterval);
+  const hostState = fieldStringState(host);
+  const portState = numericState(port);
   const tcpTimingReady = [connectTimeoutState, responseTimeoutState, retryCountState, heartbeatIntervalState].every((state) => state === "configured");
-  const liveReady = dryRun === "false" && liveApproved && host && port && tcpTimingReady;
+  const liveReady = dryRun === "false" && liveApproved && hostState === "configured" && portState === "configured" && tcpTimingReady;
   const safetyStatus = dryRun === "false" ? (liveReady ? "LIVE_TCP_READY" : "LIVE_TCP_REVIEW") : "DRY_RUN_SAFE";
   checks.push(buildCheck("control-board TCP mode", liveReady ? "PASS" : "REVIEW", "critical", `${safetyStatus}: ${liveReady ? "LIVE_TCP host, port, approval, and timing values are configured." : "Control-board is dry-run or live TCP host, port, approval, or timing values are incomplete."}`, "Set CONTROL_BOARD_DRY_RUN=false only after field IP/port, timing values, and hardware approval are confirmed."));
   checks.push(buildCheck("control-board live approval", liveApproved ? "PASS" : "REVIEW", "critical", liveApproved ? "CONTROL_BOARD_LIVE_APPROVED=true." : "CONTROL_BOARD_LIVE_APPROVED is not true.", "Set CONTROL_BOARD_LIVE_APPROVED=true only after hardware owner approval is recorded."));
@@ -264,13 +277,21 @@ function buildEnvChecks() {
   const wrongwayRateLimit = envValue(values, "NGINX_WRONGWAY_RATE_LIMIT");
   const wrongwayBurst = envValue(values, "NGINX_WRONGWAY_BURST");
   const contentSecurityPolicy = envValue(values, "NGINX_CONTENT_SECURITY_POLICY");
+  const wrongwayRateLimitState = fieldStringState(wrongwayRateLimit);
+  const wrongwayBurstState = fieldStringState(wrongwayBurst);
+  const contentSecurityPolicyState = fieldStringState(contentSecurityPolicy);
+  const swaggerAllowState = isPlaceholderFieldValue(swaggerAllow)
+    ? "placeholder"
+    : swaggerAllow && swaggerAllow !== "all"
+      ? "restricted"
+      : "open-or-missing";
   checks.push(buildCheck("HTTPS cookie setting", secureCookie === "true" ? "PASS" : "REVIEW", "warning", secureCookie === "true" ? "AUTH_COOKIE_SECURE=true." : "AUTH_COOKIE_SECURE is not true.", "Set AUTH_COOKIE_SECURE=true when HTTPS/TLS is used."));
   checks.push(buildCheck("SameSite cookie setting", ["lax", "strict", "none"].includes(sameSiteCookie) ? "PASS" : "REVIEW", "warning", sameSiteCookie ? "AUTH_COOKIE_SAMESITE is configured." : "AUTH_COOKIE_SAMESITE is missing.", "Set AUTH_COOKIE_SAMESITE to lax, strict, or none according to the delivery topology."));
   const corsState = corsOriginState(corsOrigins);
   checks.push(buildCheck("CORS trusted origins", corsState === "trusted-only" ? "PASS" : "REVIEW", "warning", corsState === "trusted-only" ? "CORS_ORIGINS contains explicit origins only." : "CORS_ORIGINS is missing, wildcard, or open.", "Set CORS_ORIGINS to the approved operator UI origin list before delivery."));
-  checks.push(buildCheck("Swagger allowlist", swaggerAllow && swaggerAllow !== "all" ? "PASS" : "REVIEW", "warning", swaggerAllow && swaggerAllow !== "all" ? "NGINX_SWAGGER_ALLOW is restricted." : "NGINX_SWAGGER_ALLOW is open or missing.", "Restrict Swagger to the operator/internal network before delivery."));
-  checks.push(buildCheck("Nginx wrong-way rate limit", wrongwayRateLimit && wrongwayBurst ? "PASS" : "REVIEW", "warning", wrongwayRateLimit && wrongwayBurst ? "Nginx wrong-way rate limit and burst are configured." : "Nginx wrong-way rate limit or burst is missing.", "Set NGINX_WRONGWAY_RATE_LIMIT and NGINX_WRONGWAY_BURST for the expected lidar event rate."));
-  checks.push(buildCheck("Nginx content security policy", contentSecurityPolicy ? "PASS" : "REVIEW", "warning", contentSecurityPolicy ? "NGINX_CONTENT_SECURITY_POLICY is configured." : "NGINX_CONTENT_SECURITY_POLICY is missing.", "Review and set NGINX_CONTENT_SECURITY_POLICY for final camera/lidar/media hosts."));
+  checks.push(buildCheck("Swagger allowlist", swaggerAllowState === "restricted" ? "PASS" : "REVIEW", "warning", swaggerAllowState === "restricted" ? "NGINX_SWAGGER_ALLOW is restricted." : "NGINX_SWAGGER_ALLOW is open, missing, or placeholder.", "Restrict Swagger to the operator/internal network before delivery."));
+  checks.push(buildCheck("Nginx wrong-way rate limit", wrongwayRateLimitState === "configured" && wrongwayBurstState === "configured" ? "PASS" : "REVIEW", "warning", wrongwayRateLimitState === "configured" && wrongwayBurstState === "configured" ? "Nginx wrong-way rate limit and burst are configured." : "Nginx wrong-way rate limit or burst is missing or placeholder.", "Set NGINX_WRONGWAY_RATE_LIMIT and NGINX_WRONGWAY_BURST for the expected lidar event rate."));
+  checks.push(buildCheck("Nginx content security policy", contentSecurityPolicyState === "configured" ? "PASS" : "REVIEW", "warning", contentSecurityPolicyState === "configured" ? "NGINX_CONTENT_SECURITY_POLICY is configured." : "NGINX_CONTENT_SECURITY_POLICY is missing or placeholder.", "Review and set NGINX_CONTENT_SECURITY_POLICY for final camera/lidar/media hosts."));
 
   const exampleKeys = Object.keys(example.values);
   const missingExampleKeys = local.exists ? exampleKeys.filter((key) => !(key in values)) : exampleKeys;
@@ -291,14 +312,14 @@ function buildEnvChecks() {
     ),
     buildRequiredFieldValue(
       "DEVICE_INGEST_API_KEY",
-      deviceKey ? "configured" : "missing-or-trusted-lan-exception-required",
+      deviceKeyState === "missing" ? "missing-or-trusted-lan-exception-required" : deviceKeyState,
       "Configure the device key, or document the trusted-LAN exception for the lidar PC/bridge.",
       "Blocks ingest hardening evidence unless an explicit exception is accepted.",
       "Set DEVICE_INGEST_API_KEY and configure the lidar sender to use X-Device-Key, or attach the exception note.",
     ),
     buildRequiredFieldValue(
       "CONTROL_BOARD_HOST",
-      host ? "configured" : "missing",
+      hostState,
       "Set the integrated control-board TCP host before approved live TCP rehearsal.",
       "Blocks live control-board TCP evidence.",
       "Fill CONTROL_BOARD_HOST after the hardware owner confirms the field IP.",
@@ -314,7 +335,7 @@ function buildEnvChecks() {
     ),
     buildRequiredFieldValue(
       "CONTROL_BOARD_PORT",
-      port ? "configured" : "missing",
+      portState,
       "Set the integrated control-board TCP port before approved live TCP rehearsal.",
       "Blocks live control-board TCP evidence.",
       "Fill CONTROL_BOARD_PORT after the hardware owner confirms the field port.",
@@ -386,7 +407,7 @@ function buildEnvChecks() {
     ),
     buildRequiredFieldValue(
       "NGINX_WRONGWAY_RATE_LIMIT",
-      wrongwayRateLimit ? "configured" : "missing",
+      wrongwayRateLimitState,
       "Set the wrong-way ingest rate limit for the expected lidar sender rate.",
       "Blocks Nginx delivery posture review when missing.",
       "Set NGINX_WRONGWAY_RATE_LIMIT after confirming the lidar PC event rate.",
@@ -394,7 +415,7 @@ function buildEnvChecks() {
     ),
     buildRequiredFieldValue(
       "NGINX_WRONGWAY_BURST",
-      wrongwayBurst ? "configured" : "missing",
+      wrongwayBurstState,
       "Set the wrong-way ingest burst for the expected lidar sender burst profile.",
       "Blocks Nginx delivery posture review when missing.",
       "Set NGINX_WRONGWAY_BURST after confirming the lidar PC burst profile.",
@@ -402,7 +423,7 @@ function buildEnvChecks() {
     ),
     buildRequiredFieldValue(
       "NGINX_CONTENT_SECURITY_POLICY",
-      contentSecurityPolicy ? "configured" : "missing",
+      contentSecurityPolicyState,
       "Review CSP for the final camera/lidar/media host topology.",
       "Blocks Nginx security posture review when missing.",
       "Set NGINX_CONTENT_SECURITY_POLICY after reviewing final media hosts.",
@@ -410,9 +431,9 @@ function buildEnvChecks() {
     ),
     buildRequiredFieldValue(
       "NGINX_SWAGGER_ALLOW",
-      swaggerAllow && swaggerAllow !== "all" ? "restricted" : "open-or-missing",
+      swaggerAllowState,
       "Restrict Swagger to the operator/internal network CIDR before delivery.",
-      "Blocks Swagger exposure acceptance when open or missing.",
+      "Blocks Swagger exposure acceptance when open, missing, or placeholder.",
       "Set NGINX_SWAGGER_ALLOW to the approved operator/internal CIDR.",
       false,
     ),
@@ -543,3 +564,14 @@ function main() {
 if (require.main === module) {
   main();
 }
+
+module.exports = {
+  buildManifest,
+  buildMarkdown,
+  corsOriginState,
+  fieldStringState,
+  fieldValuePriority,
+  isPlaceholderFieldValue,
+  numericState,
+  valueState,
+};

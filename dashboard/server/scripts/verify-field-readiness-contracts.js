@@ -1,5 +1,13 @@
 const fs = require("fs");
 const path = require("path");
+const {
+  corsOriginState,
+  fieldStringState,
+  fieldValuePriority,
+  isPlaceholderFieldValue,
+  numericState,
+  valueState,
+} = require("./generate-field-readiness-report");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -89,11 +97,28 @@ const riskAcceptanceTemplate = readProjectFile("docs/ops/field-risk-acceptance-t
   "gitleaks detect --source . --redact",
   "The Nginx entrypoint returns a successful /api/health response.",
   "numericState",
+  "isPlaceholderFieldValue",
+  "fieldStringState",
+  "NGINX_SWAGGER_ALLOW is open, missing, or placeholder.",
+  "Nginx wrong-way rate limit or burst is missing or placeholder.",
+  "NGINX_CONTENT_SECURITY_POLICY is missing or placeholder.",
+  "DEVICE_INGEST_API_KEY is not configured or is placeholder.",
   "Control-board TCP timing values are missing or invalid.",
-  "liveApproved && host && port && tcpTimingReady",
+  "hostState === \"configured\" && portState === \"configured\" && tcpTimingReady",
   "LIVE_TCP host, port, approval, and timing values are configured.",
   "live TCP host, port, approval, or timing values are incomplete.",
 ].forEach((token) => assertIncludes(generator, token, "field readiness generator"));
+
+assert(isPlaceholderFieldValue("TBD") === true, "TBD should be treated as a placeholder field value");
+assert(isPlaceholderFieldValue("N/A") === true, "N/A should be treated as a placeholder field value");
+assert(fieldStringState("pending") === "placeholder", "pending field values must remain placeholder");
+assert(fieldStringState("10.10.0.12") === "configured", "real-looking host values should remain configured");
+assert(valueState("change-this-to-a-long-random-secret", "change-this-to-a-long-random-secret") === "placeholder", "known example secret should remain placeholder");
+assert(valueState("unknown") === "placeholder", "generic placeholder secret should remain placeholder");
+assert(numericState("TBD") === "invalid", "placeholder TCP port/timing values must not be numeric configured");
+assert(numericState("5020") === "configured", "numeric TCP port/timing values should be configured");
+assert(corsOriginState("https://operator.example.local") === "trusted-only", "explicit CORS origin should be trusted-only");
+assert(fieldValuePriority({ state: "placeholder" }) === "BLOCKING", "placeholder field values should be blocking");
 
 [
   "field:readiness",
