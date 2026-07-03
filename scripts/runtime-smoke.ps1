@@ -233,6 +233,8 @@ try {
   Invoke-CurlJson -Url "$BaseUrl/api/status" | Out-Null
   Invoke-CurlJson -Url "$BaseUrl/api/devices/status" | Out-Null
   Invoke-CurlJson -Url "$BaseUrl/api-docs.json" | Out-Null
+  $swaggerUi = Invoke-CurlStatus -Url "$BaseUrl/api-docs"
+  Assert-HttpStatus -Response $swaggerUi -Expected 200 -Label "Swagger UI path smoke"
 
   $healthHeaders = Invoke-CurlStatus -Url "$BaseUrl/healthz"
   Assert-HttpStatus -Response $healthHeaders -Expected 200 -Label "healthz header smoke"

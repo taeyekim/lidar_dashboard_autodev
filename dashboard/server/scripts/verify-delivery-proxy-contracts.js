@@ -34,6 +34,12 @@ assert(
   "Nginx template must expose a Swagger allowlist control",
 );
 assert(
+  nginxTemplate.includes("location = /api-docs") &&
+    nginxTemplate.includes("location /api-docs/") &&
+    nginxTemplate.includes("location = /api-docs.json"),
+  "Nginx template must route exact Swagger UI and JSON paths through the backend allowlist",
+);
+assert(
   nginxTemplate.includes('add_header Content-Security-Policy "${NGINX_CONTENT_SECURITY_POLICY}" always') &&
     nginxTemplate.includes('add_header X-Permitted-Cross-Domain-Policies "none" always'),
   "Nginx template must emit delivery security headers for CSP and cross-domain policy",
@@ -56,9 +62,10 @@ assert(
 assert(
   runtimeSmoke.includes("SPA cache header smoke") &&
     runtimeSmoke.includes("frontend asset cache header smoke") &&
+    runtimeSmoke.includes("Swagger UI path smoke") &&
     runtimeSmoke.includes("max-age=2592000") &&
     runtimeSmoke.includes("immutable"),
-  "Runtime smoke must verify SPA no-store and immutable frontend asset cache headers",
+  "Runtime smoke must verify Swagger UI routing, SPA no-store, and immutable frontend asset cache headers",
 );
 assert(
   frontendConfig.includes("`ws://${API_HOST}:${API_PORT}/ws`"),
