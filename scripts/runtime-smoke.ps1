@@ -448,7 +448,33 @@ try {
   if ($null -eq $summary.vehiclesPassed) {
     throw "Event summary did not include vehiclesPassed unique track count."
   }
-  Invoke-CurlJson -Url "$BaseUrl/api/control-board/status" | Out-Null
+  $statistics = Invoke-CurlJson -Url "$BaseUrl/api/statistics/traffic?range=daily"
+  if (!$statistics.ok -or !$statistics.totals -or !$statistics.buckets -or !$statistics.zones) {
+    throw "Traffic statistics smoke did not include ok, totals, buckets, and zones."
+  }
+  if ($null -eq $statistics.totals.normalVehicles -or $null -eq $statistics.totals.wrongwayVehicles) {
+    throw "Traffic statistics smoke did not include normal/wrong-way vehicle counters."
+  }
+  if ($null -eq $statistics.totals.commandSuccessRate) {
+    Write-Warning "Traffic statistics commandSuccessRate is null; this is expected until LIVE_TCP ACK/FAILED samples exist."
+  }
+  if (!($statistics.totals.PSObject.Properties.Name -contains "averageResponseMs")) {
+    throw "Traffic statistics smoke did not expose averageResponseMs."
+  }
+
+  $controlBoardStatus = Invoke-CurlJson -Url "$BaseUrl/api/control-board/status"
+  if (!$controlBoardStatus.ok -or !$controlBoardStatus.byStatus) {
+    throw "Control-board status smoke did not include ok and byStatus."
+  }
+  if (!($controlBoardStatus.PSObject.Properties.Name -contains "averageResponseMs")) {
+    throw "Control-board status smoke did not expose averageResponseMs."
+  }
+  if (!($controlBoardStatus.PSObject.Properties.Name -contains "responseSampleCount")) {
+    throw "Control-board status smoke did not expose responseSampleCount."
+  }
+  if ($controlBoardStatus.latestCommand -and !($controlBoardStatus.latestCommand.PSObject.Properties.Name -contains "responseDurationMs")) {
+    throw "Control-board status latestCommand did not expose responseDurationMs."
+  }
 
   Write-Host "runtime smoke ok"
 } finally {
