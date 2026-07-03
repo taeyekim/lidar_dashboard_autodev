@@ -14,6 +14,7 @@ function assertIncludes(content, token, label) {
 }
 
 const generator = readProjectFile("dashboard/server/scripts/generate-field-closure-plan.js");
+const manualEvidence = readProjectFile("dashboard/server/scripts/manual-evidence.js");
 const packageJson = readProjectFile("package.json");
 const serverPackageJson = readProjectFile("dashboard/server/package.json");
 const runbook = readProjectFile("docs/ops/delivery-runbook.md");
@@ -34,6 +35,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "manualEvidenceActions",
   "manualEvidenceMissingCount",
   "buildManualEvidenceActions",
+  "manualEvidenceRefs",
+  "validationReason",
+  "status !== \"PRESENT\"",
   "completionGate",
   "evidenceCommand",
   "doneWhen",
@@ -46,12 +50,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "Field Readiness Open Checks",
   "| Status | Severity | Check | Message | Next Action | Evidence Command | Done When |",
   "Manual Evidence Actions",
-  "| Status | Type | Path | Template | Next Action | Done When |",
-  "Operator UI Walkthrough",
-  "Field Risk Acceptance",
-  "docs/ops/operator-ui-walkthrough-template.md",
-  "docs/ops/field-risk-acceptance-template.md",
-  "artifacts/manual/field-risk-acceptance.md",
+  "| Status | Type | Path | Template | Validation | Next Action | Done When |",
   "DB And Prisma Field Rehearsal",
   "Lidar Ingest Field Rehearsal",
   "Control Board Field Rehearsal",
@@ -65,6 +64,17 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "handover:package",
   "--strict",
 ].forEach((token) => assertIncludes(generator, token, "field closure plan generator"));
+
+[
+  "Operator UI Walkthrough",
+  "Field Risk Acceptance",
+  "docs/ops/operator-ui-walkthrough-template.md",
+  "docs/ops/field-risk-acceptance-template.md",
+  "artifacts/manual/field-risk-acceptance.md",
+  "artifacts/manual/operator-ui-walkthrough.md",
+  "INVALID",
+  "validationReason",
+].forEach((token) => assertIncludes(manualEvidence, token, "manual evidence helper"));
 
 [
   "field:closure-plan",

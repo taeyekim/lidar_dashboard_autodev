@@ -1,6 +1,10 @@
 const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
+const {
+  manualEvidenceRefs,
+  validateManualEvidence,
+} = require("./manual-evidence");
 
 const root = path.join(__dirname, "..", "..", "..");
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
@@ -293,88 +297,6 @@ function summarizeFieldPreflight(type, outputRoot) {
     reviewItems,
     skippedItems,
   };
-}
-
-function manualEvidenceRefs() {
-  const refs = [
-    {
-      type: "Operator UI Walkthrough",
-      path: "artifacts/manual/operator-ui-walkthrough.md",
-      template: "docs/ops/operator-ui-walkthrough-template.md",
-      requiredWhen: "Field acceptance requires browser walkthrough evidence.",
-    },
-    {
-      type: "Field Risk Acceptance",
-      path: "artifacts/manual/field-risk-acceptance.md",
-      template: "docs/ops/field-risk-acceptance-template.md",
-      requiredWhen: "Field readiness, scanner, trusted-LAN, Swagger, HTTPS cookie, dry-run, or unavailable-hardware risk is accepted instead of resolved.",
-    },
-  ];
-  return refs.map((item) => {
-    const absolutePath = path.join(root, item.path);
-    if (!fs.existsSync(absolutePath)) {
-      return { ...item, status: "MISSING", validationReason: "Evidence file does not exist." };
-    }
-    const content = fs.readFileSync(absolutePath, "utf8");
-    const validationReason = validateManualEvidence(item.type, content);
-    return {
-      ...item,
-      status: validationReason ? "INVALID" : "PRESENT",
-      validationReason,
-    };
-  });
-}
-
-function validateManualEvidence(type, content) {
-  if (type === "Operator UI Walkthrough") {
-    const requiredTokens = [
-      "## Required Screens",
-      "Login",
-      "Dashboard",
-      "Control-board mode",
-      "Event detail",
-      "Devices",
-      "Event Log",
-      "Statistics",
-      "Swagger",
-      "## Reviewer Decision",
-      "Walkthrough result",
-    ];
-    const missingTokens = requiredTokens.filter((token) => !content.includes(token));
-    if (missingTokens.length > 0) return `Missing required token(s): ${missingTokens.join(", ")}.`;
-    if (/\|\s*TODO\s*\|/.test(content)) return "Evidence still contains TODO screen rows.";
-    if (!/\|\s*Walkthrough result\s*\|\s*PASS\s*\|/.test(content)) {
-      return "Evidence must record '| Walkthrough result | PASS |'.";
-    }
-  }
-
-  if (type === "Field Risk Acceptance") {
-    const requiredTokens = [
-      "## Accepted Items",
-      "Risk Accepted",
-      "Compensating Control",
-      "Evidence Reference",
-      "Expiry Or Recheck",
-      "## Reviewer Decision",
-      "Decision",
-      "Follow-up owner",
-      "Target recheck date",
-      "Reviewer signature/name",
-    ];
-    const missingTokens = requiredTokens.filter((token) => !content.includes(token));
-    if (missingTokens.length > 0) return `Missing required token(s): ${missingTokens.join(", ")}.`;
-    if (/\|\s*TODO\s*\|/.test(content)) return "Evidence still contains TODO accepted-item rows.";
-    if (!/\|\s*Decision\s*\|\s*(ACCEPTED|RECHECK_REQUIRED)\s*\|/.test(content)) {
-      return "Evidence must record a reviewer decision of ACCEPTED or RECHECK_REQUIRED.";
-    }
-    const emptyField = ["Follow-up owner", "Target recheck date", "Reviewer signature/name"].find((field) => {
-      const pattern = new RegExp(`\\|\\s*${field}\\s*\\|\\s*\\|`);
-      return pattern.test(content);
-    });
-    if (emptyField) return `Evidence has an empty '${emptyField}' value.`;
-  }
-
-  return "";
 }
 
 function buildAutomatedEvidenceCoverage(rows, commands) {

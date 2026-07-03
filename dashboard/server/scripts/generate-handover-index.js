@@ -6,6 +6,7 @@ const {
   readLatestJsonManifest,
   timestampForPath,
 } = require("./generate-delivery-evidence");
+const { manualEvidenceRefs } = require("./manual-evidence");
 
 const root = path.join(__dirname, "..", "..", "..");
 
@@ -53,25 +54,14 @@ function indexEntry(entry) {
 }
 
 function manualEvidenceEntries() {
-  const entries = [
-    {
-      area: "Operator UI Walkthrough",
-      path: "artifacts/manual/operator-ui-walkthrough.md",
-      template: "docs/ops/operator-ui-walkthrough-template.md",
-      required: true,
-      notes: "Browser walkthrough evidence for login, dashboard, DRY_RUN/LIVE_TCP, event detail, devices, realtime state, statistics, and Swagger.",
-    },
-    {
-      area: "Field Risk Acceptance",
-      path: "artifacts/manual/field-risk-acceptance.md",
-      template: "docs/ops/field-risk-acceptance-template.md",
-      required: true,
-      notes: "Reviewer decision for accepted trusted-LAN, scanner, Swagger, HTTPS cookie, dry-run, or unavailable-hardware risks.",
-    },
-  ];
-  return entries.map((entry) => ({
-    ...entry,
-    status: fs.existsSync(path.join(root, entry.path)) ? "PRESENT" : "MISSING",
+  return manualEvidenceRefs().map((entry) => ({
+    area: entry.area,
+    path: entry.path,
+    template: entry.template,
+    required: entry.required,
+    notes: entry.notes,
+    status: entry.status,
+    validationReason: entry.validationReason,
   }));
 }
 
@@ -193,7 +183,7 @@ function buildIndexManifest(options = {}) {
   const completion = entries.find((entry) => entry.area === "Completion Audit");
   const completionManifest = completion?.manifestPath ? readLatestJsonManifest("artifacts/completion-audit") : null;
   const manualEvidence = manualEvidenceEntries();
-  const missingManualEvidence = manualEvidence.filter((entry) => entry.required && entry.status === "MISSING");
+  const missingManualEvidence = manualEvidence.filter((entry) => entry.required && entry.status !== "PRESENT");
   const controlBoardSafetyStatus =
     fieldReadinessEntry?.controlBoardSafetyStatus ||
     completionManifest?.data?.controlBoardSafetyStatus ||
@@ -258,10 +248,10 @@ function buildMarkdown(manifest) {
     "",
     "## Manual Evidence Entries",
     "",
-    "| Area | Status | Required | Path | Template |",
-    "| --- | --- | --- | --- | --- |",
+    "| Area | Status | Required | Path | Template | Validation |",
+    "| --- | --- | --- | --- | --- | --- |",
     ...manifest.manualEvidence.map((entry) =>
-      `| ${entry.area} | ${entry.status} | ${entry.required ? "yes" : "no"} | \`${entry.path}\` | \`${entry.template}\` |`,
+      `| ${entry.area} | ${entry.status} | ${entry.required ? "yes" : "no"} | \`${entry.path}\` | \`${entry.template}\` | ${entry.validationReason || "ok"} |`,
     ),
     "",
     "## Missing Required Areas",

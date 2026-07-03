@@ -13,6 +13,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
 const packageJson = readProjectFile("package.json");
 const serverPackageJson = readProjectFile("dashboard/server/package.json");
 const deliveryEvidence = readProjectFile("dashboard/server/scripts/generate-delivery-evidence.js");
+const manualEvidence = readProjectFile("dashboard/server/scripts/manual-evidence.js");
 const envContracts = readProjectFile("dashboard/server/scripts/verify-env-contracts.js");
 const deliveryRunbook = readProjectFile("docs/ops/delivery-runbook.md");
 const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
@@ -173,20 +174,23 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   [deliveryEvidence, "Field Preflight Evidence", "delivery evidence generator"],
   [deliveryEvidence, "Manual Evidence References", "delivery evidence generator"],
   [deliveryEvidence, "manualEvidenceRefs", "delivery evidence generator"],
-  [deliveryEvidence, "validateManualEvidence", "delivery evidence generator"],
-  [deliveryEvidence, "INVALID", "delivery evidence generator"],
   [deliveryEvidence, "validationReason", "delivery evidence generator"],
-  [deliveryEvidence, "TODO accepted-item rows", "delivery evidence generator"],
-  [deliveryEvidence, "ACCEPTED|RECHECK_REQUIRED", "delivery evidence generator"],
   [deliveryEvidence, "manualEvidenceMissingCount", "delivery evidence generator"],
   [deliveryEvidence, "manualEvidenceMissingItems", "delivery evidence generator"],
   [deliveryEvidence, "Manual evidence missing items", "delivery evidence generator"],
-  [deliveryEvidence, "Operator UI Walkthrough", "delivery evidence generator"],
-  [deliveryEvidence, "Field Risk Acceptance", "delivery evidence generator"],
-  [deliveryEvidence, "artifacts/manual/operator-ui-walkthrough.md", "delivery evidence generator"],
-  [deliveryEvidence, "artifacts/manual/field-risk-acceptance.md", "delivery evidence generator"],
-  [deliveryEvidence, "docs/ops/operator-ui-walkthrough-template.md", "delivery evidence generator"],
-  [deliveryEvidence, "docs/ops/field-risk-acceptance-template.md", "delivery evidence generator"],
+  [manualEvidence, "manualEvidenceDefinitions", "manual evidence helper"],
+  [manualEvidence, "manualEvidenceRefs", "manual evidence helper"],
+  [manualEvidence, "validateManualEvidence", "manual evidence helper"],
+  [manualEvidence, "INVALID", "manual evidence helper"],
+  [manualEvidence, "validationReason", "manual evidence helper"],
+  [manualEvidence, "TODO accepted-item rows", "manual evidence helper"],
+  [manualEvidence, "ACCEPTED|RECHECK_REQUIRED", "manual evidence helper"],
+  [manualEvidence, "Operator UI Walkthrough", "manual evidence helper"],
+  [manualEvidence, "Field Risk Acceptance", "manual evidence helper"],
+  [manualEvidence, "artifacts/manual/operator-ui-walkthrough.md", "manual evidence helper"],
+  [manualEvidence, "artifacts/manual/field-risk-acceptance.md", "manual evidence helper"],
+  [manualEvidence, "docs/ops/operator-ui-walkthrough-template.md", "manual evidence helper"],
+  [manualEvidence, "docs/ops/field-risk-acceptance-template.md", "manual evidence helper"],
   [deliveryEvidence, "COMPANION_EVIDENCE", "delivery evidence generator"],
   [deliveryEvidence, "OPTIONAL_SECURITY_FIELD", "delivery evidence generator"],
   [deliveryEvidence, "SELF", "delivery evidence generator"],

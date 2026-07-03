@@ -14,6 +14,7 @@ function assertIncludes(content, token, label) {
 }
 
 const generator = readProjectFile("dashboard/server/scripts/generate-handover-package.js");
+const manualEvidence = readProjectFile("dashboard/server/scripts/manual-evidence.js");
 const packageJson = readProjectFile("package.json");
 const serverPackageJson = readProjectFile("dashboard/server/package.json");
 const runbook = readProjectFile("docs/ops/delivery-runbook.md");
@@ -39,6 +40,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "replace(/\\|/g",
   "evidenceRefs",
   "manualEvidenceRefs",
+  "validationReason",
   "knownFieldLimitations",
   "fieldEvidenceSummary",
   "fieldEvidenceOpenItems",
@@ -50,16 +52,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "controlBoardFieldRehearsal",
   "runtimeEvidence",
   "securityEvidence",
-  "Operator UI Walkthrough",
-  "Field Risk Acceptance",
-  "artifacts/manual/operator-ui-walkthrough.md",
-  "artifacts/manual/field-risk-acceptance.md",
-  "docs/ops/operator-ui-walkthrough-template.md",
-  "docs/ops/field-risk-acceptance-template.md",
   "Manual Evidence References",
-  "| Type | Status | Path | Template | Required When |",
-  "PRESENT",
-  "MISSING",
+  "| Type | Status | Path | Template | Required When | Validation |",
   "Known Field Limitations",
   "| Area | Limitation | Source | Close When |",
   "Level-2 Escalation",
@@ -107,6 +101,19 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "--strict",
   "handover package strict gate failed",
 ].forEach((token) => assertIncludes(generator, token, "handover package generator"));
+
+[
+  "Operator UI Walkthrough",
+  "Field Risk Acceptance",
+  "artifacts/manual/operator-ui-walkthrough.md",
+  "artifacts/manual/field-risk-acceptance.md",
+  "docs/ops/operator-ui-walkthrough-template.md",
+  "docs/ops/field-risk-acceptance-template.md",
+  "INVALID",
+  "PRESENT",
+  "MISSING",
+  "validationReason",
+].forEach((token) => assertIncludes(manualEvidence, token, "manual evidence helper"));
 
 assert(
   generator.indexOf('["field closure plan", ["run", "field:closure-plan"') <

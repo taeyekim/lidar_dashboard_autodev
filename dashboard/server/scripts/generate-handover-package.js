@@ -10,6 +10,7 @@ const {
   summarizeFieldRehearsal,
   timestampForPath,
 } = require("./generate-delivery-evidence");
+const { manualEvidenceRefs } = require("./manual-evidence");
 
 const root = path.join(__dirname, "..", "..", "..");
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
@@ -84,27 +85,6 @@ function latestEvidenceRefs() {
     runtimeEvidence: readLatestJsonManifest("artifacts/runtime")?.path || null,
     securityEvidence: readLatestJsonManifest("artifacts/security")?.path || null,
   };
-}
-
-function manualEvidenceRefs() {
-  const refs = [
-    {
-      type: "Operator UI Walkthrough",
-      path: "artifacts/manual/operator-ui-walkthrough.md",
-      template: "docs/ops/operator-ui-walkthrough-template.md",
-      requiredWhen: "Field acceptance uses -OperatorUiWalkthroughEvidence or reviewer requires browser walkthrough proof.",
-    },
-    {
-      type: "Field Risk Acceptance",
-      path: "artifacts/manual/field-risk-acceptance.md",
-      template: "docs/ops/field-risk-acceptance-template.md",
-      requiredWhen: "A trusted-LAN, scanner, Swagger, HTTPS cookie, dry-run, or unavailable-hardware risk is accepted instead of resolved.",
-    },
-  ];
-  return refs.map((item) => ({
-    ...item,
-    status: fs.existsSync(path.join(root, item.path)) ? "PRESENT" : "MISSING",
-  }));
 }
 
 function knownFieldLimitations() {
@@ -268,11 +248,11 @@ function buildMarkdown(manifest) {
     "",
     "## Manual Evidence References",
     "",
-    "| Type | Status | Path | Template | Required When |",
-    "| --- | --- | --- | --- | --- |",
+    "| Type | Status | Path | Template | Required When | Validation |",
+    "| --- | --- | --- | --- | --- | --- |",
     ...manifest.manualEvidenceRefs.map(
       (item) =>
-        `| ${markdownCell(item.type)} | ${markdownCell(item.status)} | \`${markdownCell(item.path)}\` | \`${markdownCell(item.template)}\` | ${markdownCell(item.requiredWhen)} |`,
+        `| ${markdownCell(item.type)} | ${markdownCell(item.status)} | \`${markdownCell(item.path)}\` | \`${markdownCell(item.template)}\` | ${markdownCell(item.requiredWhen)} | ${markdownCell(item.validationReason || "ok")} |`,
     ),
     "",
     "## Known Field Limitations",

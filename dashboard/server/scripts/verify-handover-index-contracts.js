@@ -14,6 +14,7 @@ function assertIncludes(content, token, label) {
 }
 
 const generator = readProjectFile("dashboard/server/scripts/generate-handover-index.js");
+const manualEvidence = readProjectFile("dashboard/server/scripts/manual-evidence.js");
 const packageJson = readProjectFile("package.json");
 const serverPackageJson = readProjectFile("dashboard/server/package.json");
 const runbook = readProjectFile("docs/ops/delivery-runbook.md");
@@ -34,18 +35,16 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "Runtime Evidence",
   "Security Evidence",
   "manualEvidenceEntries",
+  "manualEvidenceRefs",
   "manualEvidence",
   "manualEvidenceCount",
   "missingManualEvidenceCount",
   "missingManualEvidenceAreas",
   "Manual Evidence Entries",
   "Missing Manual Evidence",
-  "Operator UI Walkthrough",
-  "Field Risk Acceptance",
-  "artifacts/manual/operator-ui-walkthrough.md",
-  "artifacts/manual/field-risk-acceptance.md",
-  "docs/ops/operator-ui-walkthrough-template.md",
-  "docs/ops/field-risk-acceptance-template.md",
+  "validationReason",
+  "Validation",
+  "status !== \"PRESENT\"",
   "missingRequiredAreas",
   "staleAreas",
   "reviewAreas",
@@ -61,6 +60,16 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "controlBoardSafetyStatus",
   "Control-board safety status",
 ].forEach((token) => assertIncludes(generator, token, "handover index generator"));
+
+[
+  "Operator UI Walkthrough",
+  "Field Risk Acceptance",
+  "artifacts/manual/operator-ui-walkthrough.md",
+  "artifacts/manual/field-risk-acceptance.md",
+  "docs/ops/operator-ui-walkthrough-template.md",
+  "docs/ops/field-risk-acceptance-template.md",
+  "INVALID",
+].forEach((token) => assertIncludes(manualEvidence, token, "manual evidence helper"));
 
 [
   "handover:index",

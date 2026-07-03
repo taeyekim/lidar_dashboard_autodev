@@ -12,6 +12,7 @@ function readProjectFile(relativePath) {
 const packageJson = readProjectFile("package.json");
 const serverPackageJson = readProjectFile("dashboard/server/package.json");
 const completionAudit = readProjectFile("dashboard/server/scripts/generate-completion-audit.js");
+const manualEvidence = readProjectFile("dashboard/server/scripts/manual-evidence.js");
 const deliveryMatrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
 const deliveryRunbook = readProjectFile("docs/ops/delivery-runbook.md");
 const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
@@ -60,20 +61,10 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "buildRequiredFieldValueSignals",
   "buildCompanionEvidenceMetadata",
   "buildManualEvidenceSignals",
-  "validateManualEvidence",
+  "manualEvidenceRefs",
   "manualEvidenceSignals",
   "manualEvidenceMissingCount",
-  "INVALID",
-  "validationReason",
-  "TODO accepted-item rows",
-  "ACCEPTED|RECHECK_REQUIRED",
   "Manual Evidence",
-  "Operator UI Walkthrough",
-  "Field Risk Acceptance",
-  "artifacts/manual/operator-ui-walkthrough.md",
-  "artifacts/manual/field-risk-acceptance.md",
-  "docs/ops/operator-ui-walkthrough-template.md",
-  "docs/ops/field-risk-acceptance-template.md",
   "manual evidence",
   "requiredFieldValues",
   "Required Field Values",
@@ -89,6 +80,24 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "goal remains active",
 ].forEach((token) => {
   assert(completionAudit.includes(token), `completion audit generator is missing ${token}`);
+});
+
+[
+  "manualEvidenceDefinitions",
+  "manualEvidenceRefs",
+  "validateManualEvidence",
+  "INVALID",
+  "validationReason",
+  "TODO accepted-item rows",
+  "ACCEPTED|RECHECK_REQUIRED",
+  "Operator UI Walkthrough",
+  "Field Risk Acceptance",
+  "artifacts/manual/operator-ui-walkthrough.md",
+  "artifacts/manual/field-risk-acceptance.md",
+  "docs/ops/operator-ui-walkthrough-template.md",
+  "docs/ops/field-risk-acceptance-template.md",
+].forEach((token) => {
+  assert(manualEvidence.includes(token), `manual evidence helper is missing ${token}`);
 });
 
 [
