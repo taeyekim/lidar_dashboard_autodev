@@ -123,6 +123,7 @@ function securityDisposition(item, requireScanners) {
     return {
       code: "RISK_ACCEPTED",
       labelKo: "위험 수용",
+      labelEn: "Risk accepted",
       reason: item.reason || "Finding is accepted by the documented audit policy.",
       blocksStrictAcceptance: false,
     };
@@ -131,6 +132,7 @@ function securityDisposition(item, requireScanners) {
     return {
       code: "BLOCKING",
       labelKo: "차단",
+      labelEn: "Blocking",
       reason: `${item.label} is required for strict security acceptance but was skipped.`,
       blocksStrictAcceptance: true,
     };
@@ -139,6 +141,7 @@ function securityDisposition(item, requireScanners) {
     return {
       code: "UNVERIFIED",
       labelKo: "미검증",
+      labelEn: "Unverified",
       reason: item.reason || "Security check was not executed.",
       blocksStrictAcceptance: false,
     };
@@ -147,6 +150,7 @@ function securityDisposition(item, requireScanners) {
     return {
       code: "PASS",
       labelKo: "통과",
+      labelEn: "Pass",
       reason: "Command completed successfully.",
       blocksStrictAcceptance: false,
     };
@@ -154,6 +158,7 @@ function securityDisposition(item, requireScanners) {
   return {
     code: item.label === "npm audit policy gate" ? "BLOCKING" : "DELIVERY_FIX",
     labelKo: item.label === "npm audit policy gate" ? "차단" : "납품 전 수정",
+    labelEn: item.label === "npm audit policy gate" ? "Blocking" : "Delivery fix required",
     reason: item.error || `${item.label} exited with code ${item.exitCode}.`,
     blocksStrictAcceptance: item.label === "npm audit policy gate",
   };
@@ -233,13 +238,13 @@ function buildMarkdown(manifest) {
     "",
     "## Acceptance Classification",
     "",
-    "| Classification | Korean Label | Check | Blocks Strict Acceptance | Reason |",
-    "| --- | --- | --- | --- | --- |",
+    "| Classification | Korean Label | English Label | Check | Blocks Strict Acceptance | Reason |",
+    "| --- | --- | --- | --- | --- | --- |",
   );
 
   manifest.checks.forEach((item) => {
     lines.push(
-      `| ${item.disposition.code} | ${item.disposition.labelKo} | ${tableValue(item.label)} | ${item.disposition.blocksStrictAcceptance ? "yes" : "no"} | ${tableValue(item.disposition.reason)} |`,
+      `| ${item.disposition.code} | ${item.disposition.labelKo} | ${item.disposition.labelEn} | ${tableValue(item.label)} | ${item.disposition.blocksStrictAcceptance ? "yes" : "no"} | ${tableValue(item.disposition.reason)} |`,
     );
   });
 
