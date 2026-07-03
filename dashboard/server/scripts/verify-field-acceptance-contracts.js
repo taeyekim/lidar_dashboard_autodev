@@ -21,6 +21,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
 const acceptance = readProjectFile("docs/ops/acceptance-checklist.md");
 const envContracts = readProjectFile("dashboard/server/scripts/verify-env-contracts.js");
 const deliveryEvidence = readProjectFile("dashboard/server/scripts/generate-delivery-evidence.js");
+const operatorUiTemplate = readProjectFile("docs/ops/operator-ui-walkthrough-template.md");
 
 [
   "BaseUrl",
@@ -117,6 +118,8 @@ assert(
   "Handover readiness is true",
   "child evidence references",
   "operator UI browser walkthrough",
+  "docs/ops/operator-ui-walkthrough-template.md",
+  "artifacts/manual/operator-ui-walkthrough.md",
   "preflight manifest status is `PASS`",
 ].forEach((token) => assertIncludes(runbook, token, "delivery runbook"));
 
@@ -132,12 +135,30 @@ assert(
   "field acceptance orchestrator",
   "field reviewer",
   "operator UI browser walkthrough",
+  "docs/ops/operator-ui-walkthrough-template.md",
+  "artifacts/manual/operator-ui-walkthrough.md",
   "delivery display resolution",
   "readyForHandover=true",
   "child evidence references",
   "latest preflight status is `PASS`",
   "artifacts/field-acceptance",
 ].forEach((token) => assertIncludes(acceptance, token, "acceptance checklist"));
+
+[
+  "Operator UI Walkthrough Evidence Template",
+  "artifacts/manual/operator-ui-walkthrough.md",
+  "Delivery display resolution",
+  "Control-board mode",
+  "DRY_RUN or LIVE_TCP state",
+  "Event detail",
+  "Raw LiDAR payload",
+  "Event Log",
+  "Realtime connected/degraded/disabled state",
+  "Statistics",
+  "Daily, weekly, monthly, yearly normal/wrong-way counts",
+  "Swagger",
+  "Reviewer Decision",
+].forEach((token) => assertIncludes(operatorUiTemplate, token, "operator UI walkthrough template"));
 
 assertIncludes(envContracts, "field:acceptance", "environment contract verifier");
 assertIncludes(envContracts, "scripts/field-acceptance.ps1", "environment contract verifier");

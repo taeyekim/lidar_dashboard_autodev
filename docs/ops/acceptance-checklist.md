@@ -33,6 +33,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Field acceptance manifest records the field reviewer, site name, handover readiness, skipped/review step counts, and next actions.
 - [ ] Field acceptance manifest records child evidence references for preflight, runtime, DB, LiDAR, control-board, security, and delivery manifests.
 - [ ] Field acceptance records the operator UI browser walkthrough gate; pass `-OperatorUiWalkthroughEvidence <path>` after capturing the delivery display resolution walkthrough, or keep the step in REVIEW/SKIPPED with reviewer acceptance.
+- [ ] Operator UI walkthrough uses `docs/ops/operator-ui-walkthrough-template.md` and the filled evidence is attached as `artifacts/manual/operator-ui-walkthrough.md`.
 - [ ] Field acceptance `readyForHandover=true` is allowed only when the status is `PASS`, latest preflight status is `PASS`, and both reviewer and site name are recorded.
 - [ ] `docker compose up --build` starts DB, backend, frontend, and reverse proxy.
 - [ ] `curl http://localhost:8080/healthz` returns `ok`.
@@ -103,7 +104,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Event Log and Devices page show WebSocket connected/degraded state while polling fallback remains active.
 - [ ] Event Log receives realtime updates through `/ws` when Nginx is the browser entrypoint.
 - [ ] WebSocket disabled or missing URL state is shown as disabled/degraded, never as connected.
-- [ ] Operator UI browser walkthrough evidence captures login, dashboard status, DRY_RUN/LIVE_TCP state, event detail raw payload and command timeline, Devices, Event Log realtime/degraded state, Swagger entrypoint, and the delivery display resolution.
+- [ ] Operator UI browser walkthrough evidence captures login, dashboard status, DRY_RUN/LIVE_TCP state, event detail raw payload and command timeline, Devices, Event Log realtime/degraded state, statistics, Swagger entrypoint, and the delivery display resolution.
 
 ## Swagger/API
 

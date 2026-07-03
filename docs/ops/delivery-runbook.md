@@ -82,6 +82,9 @@ It also records an `operator UI browser walkthrough` gate. Pass
 `-OperatorUiWalkthroughEvidence <path>` after capturing the delivery display
 resolution walkthrough for login, dashboard status, DRY_RUN/LIVE_TCP state,
 event detail, Devices, Event Log realtime/degraded state, and Swagger entrypoint.
+Use `docs/ops/operator-ui-walkthrough-template.md` as the tracked template and
+copy the filled field evidence to `artifacts/manual/operator-ui-walkthrough.md`
+before attaching it to the acceptance run.
 Without that evidence, the step remains REVIEW unless `-SkipOperatorUiWalkthrough`
 is accepted by the field reviewer.
 Handover readiness is true only when the overall status is `PASS`, the latest
