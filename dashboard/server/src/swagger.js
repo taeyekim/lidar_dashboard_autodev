@@ -94,6 +94,7 @@ const swaggerSpec = {
         tags: ["Auth"],
         summary: "Operator logout",
         description: "Clears the HttpOnly access cookie and readable CSRF cookie.",
+        security: [{ cookieAuth: [], csrfHeaderAuth: [] }, { bearerAuth: [] }],
         responses: {
           200: {
             description: "Logout success",

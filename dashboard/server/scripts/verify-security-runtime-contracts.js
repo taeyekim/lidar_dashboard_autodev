@@ -3,6 +3,8 @@ const http = require("http");
 process.env.LOG_LEVEL = "error";
 
 const authService = require("../src/domains/auth/auth.service");
+const { buildAuthCookie, buildCsrfCookie, createCsrfToken } = require("../src/domains/auth/auth.cookie");
+const { signUserToken } = require("../src/domains/auth/token");
 const { app } = require("../src/app");
 
 function assert(condition, message) {
@@ -14,6 +16,14 @@ authService.login = async () => {
   error.status = 401;
   throw error;
 };
+
+authService.getUserById = async (id) => ({
+  id,
+  userId: "operator",
+  name: "Operator",
+  role: "operator",
+  isActive: true,
+});
 
 function request(server, options = {}) {
   const address = server.address();
@@ -99,6 +109,35 @@ async function main() {
     assert(rateLimited.status === 429, "login endpoint must return 429 after the configured rate-limit threshold");
     assert(rateLimited.headers["retry-after"], "rate-limited responses must include Retry-After");
     assert(rateLimited.json?.ok === false, "rate-limited responses must use the API error envelope");
+
+    const token = signUserToken({ id: "runtime-user-1", userId: "operator", role: "operator", name: "Operator" });
+    const csrfToken = createCsrfToken();
+    const cookie = `${buildAuthCookie(token).split(";")[0]}; ${buildCsrfCookie(csrfToken).split(";")[0]}`;
+
+    const logoutWithoutCsrf = await request(server, {
+      method: "POST",
+      path: "/api/auth/logout",
+      body: {},
+      headers: { Cookie: cookie },
+    });
+    assert(logoutWithoutCsrf.status === 403, "cookie-authenticated logout without CSRF must return 403");
+    assert(logoutWithoutCsrf.json?.ok === false, "logout CSRF rejection must use the API error envelope");
+
+    const logoutWithCsrf = await request(server, {
+      method: "POST",
+      path: "/api/auth/logout",
+      body: {},
+      headers: {
+        Cookie: cookie,
+        "X-CSRF-Token": csrfToken,
+      },
+    });
+    assert(logoutWithCsrf.status === 200, "cookie-authenticated logout with CSRF must return 200");
+    assert(logoutWithCsrf.json?.ok === true, "logout success must use the API success envelope");
+    assert(
+      String(logoutWithCsrf.headers["set-cookie"] || "").includes("Max-Age=0"),
+      "logout success must clear auth and CSRF cookies",
+    );
   } finally {
     await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }

@@ -42,7 +42,7 @@ const envExample = readProjectFile(".env.example");
   "hasValidCsrfToken(req)",
   "getCsrfCookieToken(req)",
   "authMode: \"httpOnlyCookie\"",
-  'router.post("/auth/logout", controller.logout)',
+  'router.post("/auth/logout", requireAuth, controller.logout)',
   "buildClearAuthCookie()",
   "buildClearCsrfCookie()",
   'credentials: "include"',
@@ -102,6 +102,12 @@ assert(
   "Swagger must define CSRF header security",
 );
 assert(swaggerSpec.paths?.["/api/auth/logout"]?.post, "Swagger must document POST /api/auth/logout");
+assert(
+  swaggerSpec.paths?.["/api/auth/logout"]?.post?.security?.some(
+    (item) => Array.isArray(item.cookieAuth) && Array.isArray(item.csrfHeaderAuth),
+  ),
+  "Swagger logout operation must require cookieAuth plus csrfHeaderAuth",
+);
 assert(
   swaggerSpec.paths?.["/api/auth/logout"]?.post?.responses?.[200]?.headers?.["Set-Cookie"],
   "Swagger logout response must document cookie clearing Set-Cookie headers",
