@@ -12,6 +12,9 @@ Placeholder values such as `TBD`, `N/A`, `none`, `pending`, `unknown`,
 accepted-risk evidence.
 `Acceptance date`, accepted-item `Expiry Or Recheck`, and `Target recheck date`
 must use `YYYY-MM-DD`.
+Remove non-applicable accepted-item rows before final review. Every remaining
+accepted-item row must use `ACCEPTED`; unresolved `REVIEW`, `RECHECK_REQUIRED`,
+or similar statuses are not final completion evidence.
 
 ## Session
 

@@ -183,7 +183,12 @@ function validateManualEvidence(type, content) {
       return "Evidence 'Acceptance date' must use YYYY-MM-DD.";
     }
     if (/\|\s*TODO\s*\|/.test(content)) return "Evidence still contains TODO accepted-item rows.";
-    const acceptedRows = markdownRowsAfterHeader(content, "Risk Accepted").filter((row) => row[0] === "ACCEPTED");
+    const acceptedItemRows = markdownRowsAfterHeader(content, "Risk Accepted");
+    const unresolvedAcceptedItemRow = acceptedItemRows.find((row) => row[0] !== "ACCEPTED");
+    if (unresolvedAcceptedItemRow) {
+      return "Every remaining accepted risk item row must have ACCEPTED status.";
+    }
+    const acceptedRows = acceptedItemRows.filter((row) => row[0] === "ACCEPTED");
     if (acceptedRows.length === 0) return "Evidence must include at least one ACCEPTED risk item row.";
     const emptyAcceptedCell = acceptedRows.find((row) => row.slice(1, 6).some((cell) => cell === ""));
     if (emptyAcceptedCell) {

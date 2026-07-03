@@ -189,6 +189,18 @@ assert(
   "risk acceptance evidence should remain invalid until accepted-item rows are completed",
 );
 
+const reviewRiskEvidence = validRiskEvidence.replace(
+  "| ACCEPTED | Security scanners | ZAP skipped on field PC. | Internal-only network and audit policy evidence. | artifacts/security/example/manifest.json | 2026-08-01 |",
+  [
+    "| ACCEPTED | Security scanners | ZAP skipped on field PC. | Internal-only network and audit policy evidence. | artifacts/security/example/manifest.json | 2026-08-01 |",
+    "| REVIEW | Swagger exposure | Swagger exposure still needs network owner review. | Restrict with allowlist before close. | artifacts/security/example/manifest.json | 2026-08-01 |",
+  ].join("\n"),
+);
+assert(
+  validateManualEvidence("Field Risk Acceptance", reviewRiskEvidence).includes("Every remaining accepted risk item row must have ACCEPTED"),
+  "risk acceptance evidence must reject REVIEW accepted-item rows even when reviewer decision says ACCEPTED",
+);
+
 const missingEvidenceRisk = validRiskEvidence.replace(
   "| ACCEPTED | Security scanners | ZAP skipped on field PC. | Internal-only network and audit policy evidence. | artifacts/security/example/manifest.json | 2026-08-01 |",
   "| ACCEPTED | Security scanners | ZAP skipped on field PC. | Internal-only network and audit policy evidence. |  | 2026-08-01 |",
@@ -259,6 +271,7 @@ assert(
 assert(isIsoDateCell("2026-08-01") === true, "YYYY-MM-DD should be accepted as a manual evidence date");
 assert(isIsoDateCell("2026/08/01") === false, "slash dates should not be accepted as manual evidence dates");
 assertIncludes(riskTemplate, "Placeholder values", "field risk acceptance template");
+assertIncludes(riskTemplate, "Remove non-applicable accepted-item rows", "field risk acceptance template");
 
 const manualEvidence = manualEvidenceRefs();
 assert(manualEvidence.length === manualEvidenceDefinitions.length, "manual evidence refs should mirror definitions");
