@@ -71,6 +71,7 @@ function checkEvidenceCommand(name) {
     "control-board live approval": "Confirm CONTROL_BOARD_LIVE_APPROVED=true only after the hardware owner approves live TCP testing.",
     "HTTPS cookie setting": "Confirm AUTH_COOKIE_SECURE=true in the HTTPS/TLS delivery topology.",
     "SameSite cookie setting": "Confirm AUTH_COOKIE_SAMESITE matches the delivery topology; SameSite=None requires Secure cookies.",
+    "CORS trusted origins": "Confirm CORS_ORIGINS contains only approved operator UI origins.",
     "Swagger allowlist": "Confirm NGINX_SWAGGER_ALLOW is restricted to the operator/internal CIDR.",
     "Nginx wrong-way rate limit": "Confirm NGINX_WRONGWAY_RATE_LIMIT and NGINX_WRONGWAY_BURST match the expected lidar event rate.",
     "Nginx content security policy": "Confirm NGINX_CONTENT_SECURITY_POLICY allows final media hosts while keeping script/object restrictions.",
@@ -95,6 +96,7 @@ function checkDoneWhen(name) {
     "control-board live approval": "CONTROL_BOARD_LIVE_APPROVED=true is recorded after hardware owner approval.",
     "HTTPS cookie setting": "AUTH_COOKIE_SECURE=true for the HTTPS/TLS delivery route.",
     "SameSite cookie setting": "AUTH_COOKIE_SAMESITE matches the same-site or cross-site HTTPS delivery route.",
+    "CORS trusted origins": "CORS_ORIGINS contains only approved operator UI origins and no wildcard/open entry.",
     "Swagger allowlist": "NGINX_SWAGGER_ALLOW is restricted to the approved operator/internal CIDR.",
     "Nginx wrong-way rate limit": "Wrong-way ingest rate limit and burst values match the expected lidar sender rate.",
     "Nginx content security policy": "Content Security Policy is reviewed for the final camera/lidar/media hosts.",
@@ -127,6 +129,20 @@ function valueState(value, placeholder = "") {
   return "configured";
 }
 
+function listValue(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function corsOriginState(value) {
+  const origins = listValue(value);
+  if (origins.length === 0) return "missing";
+  if (origins.some((origin) => ["*", "all"].includes(origin.toLowerCase()))) return "open-or-wildcard";
+  return "trusted-only";
+}
+
 function buildRequiredFieldValue(name, state, requiredForPass, completionGate, nextAction, redacted = true) {
   return {
     name,
@@ -140,6 +156,7 @@ function buildRequiredFieldValue(name, state, requiredForPass, completionGate, n
 
 function fieldValueOwner(name) {
   if (["JWT_SECRET", "SEED_ADMIN_PASSWORD", "AUTH_COOKIE_SECURE", "AUTH_COOKIE_SAMESITE"].includes(name)) return "Auth/Security";
+  if (["CORS_ORIGINS"].includes(name)) return "Auth/Security";
   if (["DEVICE_INGEST_API_KEY"].includes(name)) return "LiDAR Ingest";
   if (name.startsWith("CONTROL_BOARD_")) return "Control-board TCP";
   if (name.startsWith("NGINX_")) return "Nginx Delivery";
@@ -149,8 +166,8 @@ function fieldValueOwner(name) {
 function fieldValuePriority(item) {
   const state = String(item.state || "");
   if (["missing", "placeholder", "not-approved"].includes(state)) return "BLOCKING";
-  if (state.includes("exception") || state === "open-or-missing") return "REVIEW";
-  if (state === "true" || state === "configured" || state === "approved" || state === "restricted") return "READY";
+  if (state.includes("exception") || state === "open-or-missing" || state === "open-or-wildcard") return "REVIEW";
+  if (state === "true" || state === "configured" || state === "approved" || state === "restricted" || state === "trusted-only") return "READY";
   return "REVIEW";
 }
 
@@ -221,12 +238,15 @@ function buildEnvChecks() {
 
   const secureCookie = envValue(values, "AUTH_COOKIE_SECURE").toLowerCase();
   const sameSiteCookie = envValue(values, "AUTH_COOKIE_SAMESITE").toLowerCase();
+  const corsOrigins = envValue(values, "CORS_ORIGINS");
   const swaggerAllow = envValue(values, "NGINX_SWAGGER_ALLOW");
   const wrongwayRateLimit = envValue(values, "NGINX_WRONGWAY_RATE_LIMIT");
   const wrongwayBurst = envValue(values, "NGINX_WRONGWAY_BURST");
   const contentSecurityPolicy = envValue(values, "NGINX_CONTENT_SECURITY_POLICY");
   checks.push(buildCheck("HTTPS cookie setting", secureCookie === "true" ? "PASS" : "REVIEW", "warning", secureCookie === "true" ? "AUTH_COOKIE_SECURE=true." : "AUTH_COOKIE_SECURE is not true.", "Set AUTH_COOKIE_SECURE=true when HTTPS/TLS is used."));
   checks.push(buildCheck("SameSite cookie setting", ["lax", "strict", "none"].includes(sameSiteCookie) ? "PASS" : "REVIEW", "warning", sameSiteCookie ? "AUTH_COOKIE_SAMESITE is configured." : "AUTH_COOKIE_SAMESITE is missing.", "Set AUTH_COOKIE_SAMESITE to lax, strict, or none according to the delivery topology."));
+  const corsState = corsOriginState(corsOrigins);
+  checks.push(buildCheck("CORS trusted origins", corsState === "trusted-only" ? "PASS" : "REVIEW", "warning", corsState === "trusted-only" ? "CORS_ORIGINS contains explicit origins only." : "CORS_ORIGINS is missing, wildcard, or open.", "Set CORS_ORIGINS to the approved operator UI origin list before delivery."));
   checks.push(buildCheck("Swagger allowlist", swaggerAllow && swaggerAllow !== "all" ? "PASS" : "REVIEW", "warning", swaggerAllow && swaggerAllow !== "all" ? "NGINX_SWAGGER_ALLOW is restricted." : "NGINX_SWAGGER_ALLOW is open or missing.", "Restrict Swagger to the operator/internal network before delivery."));
   checks.push(buildCheck("Nginx wrong-way rate limit", wrongwayRateLimit && wrongwayBurst ? "PASS" : "REVIEW", "warning", wrongwayRateLimit && wrongwayBurst ? "Nginx wrong-way rate limit and burst are configured." : "Nginx wrong-way rate limit or burst is missing.", "Set NGINX_WRONGWAY_RATE_LIMIT and NGINX_WRONGWAY_BURST for the expected lidar event rate."));
   checks.push(buildCheck("Nginx content security policy", contentSecurityPolicy ? "PASS" : "REVIEW", "warning", contentSecurityPolicy ? "NGINX_CONTENT_SECURITY_POLICY is configured." : "NGINX_CONTENT_SECURITY_POLICY is missing.", "Review and set NGINX_CONTENT_SECURITY_POLICY for final camera/lidar/media hosts."));
@@ -301,6 +321,14 @@ function buildEnvChecks() {
       "Set lax/strict for same-site delivery, or none only for cross-site HTTPS delivery.",
       "Blocks cookie topology acceptance when missing or invalid.",
       "Set AUTH_COOKIE_SAMESITE to lax, strict, or none according to the delivery topology.",
+      false,
+    ),
+    buildRequiredFieldValue(
+      "CORS_ORIGINS",
+      corsState,
+      "Set the approved operator UI origins for the delivery topology.",
+      "Blocks browser/API exposure review when missing, wildcard, or open.",
+      "Set CORS_ORIGINS to explicit delivery UI origins only.",
       false,
     ),
     buildRequiredFieldValue(
