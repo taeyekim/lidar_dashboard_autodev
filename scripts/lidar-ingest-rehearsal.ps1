@@ -120,6 +120,16 @@ function Assert-EventDetailCommandType {
   }
 }
 
+function Test-PlaceholderFieldText {
+  param([string]$Value)
+
+  return [regex]::IsMatch(
+    [string]$Value,
+    "^(?:-|n/a|na|none|null|tbd|todo|pending|unknown|unspecified|field-reviewer|field-reviewer-name|field-site|delivery-site-name)$",
+    [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+  )
+}
+
 $envValues = Read-DotEnv ".env"
 if (!$DeviceKey) {
   $DeviceKey = $env:DEVICE_INGEST_API_KEY
@@ -267,6 +277,17 @@ Assert-NumberProperty -Object $summary -Name "wrongwayVehicles" -Label "Event su
 Assert-NumberProperty -Object $summary -Name "wrongWayEvents" -Label "Event summary"
 Assert-NumberProperty -Object $summary -Name "wrongwayRate" -Label "Event summary"
 
+if (Test-PlaceholderFieldText -Value $Reviewer) {
+  $results = Add-Result -Results $results -Name "field reviewer metadata" -Status "REVIEW" -Response @{
+    reason = "Reviewer is missing or placeholder; rerun with a concrete -Reviewer value."
+  }
+}
+if (Test-PlaceholderFieldText -Value $SiteName) {
+  $results = Add-Result -Results $results -Name "field site metadata" -Status "REVIEW" -Response @{
+    reason = "SiteName is missing or placeholder; rerun with a concrete -SiteName value."
+  }
+}
+
 $manifest = [pscustomobject]@{
   generatedAt = (Get-Date).ToUniversalTime().ToString("o")
   evidenceType = "FIELD_REHEARSAL_PASS"
@@ -310,6 +331,10 @@ $markdownLines = @(
   ""
 )
 $markdownLines | Out-File -LiteralPath (Join-Path $outputDir "manifest.md") -Encoding utf8
+
+if (($results | Where-Object { $_.status -ne "PASS" }).Count -gt 0) {
+  throw "LiDAR ingest field rehearsal completed with REVIEW items."
+}
 
   Write-Host "lidar ingest field rehearsal ok"
   Write-Host "evidence written to $outputDir"

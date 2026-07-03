@@ -143,6 +143,16 @@ function Assert-CommandEvidence {
   }
 }
 
+function Test-PlaceholderFieldText {
+  param([string]$Value)
+
+  return [regex]::IsMatch(
+    [string]$Value,
+    "^(?:-|n/a|na|none|null|tbd|todo|pending|unknown|unspecified|field-reviewer|field-reviewer-name|field-site|delivery-site-name)$",
+    [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+  )
+}
+
 $envValues = Read-DotEnv ".env"
 $liveApproved = ""
 if ($env:CONTROL_BOARD_LIVE_APPROVED) { $liveApproved = $env:CONTROL_BOARD_LIVE_APPROVED }
@@ -219,6 +229,16 @@ try {
     throw "Control-board status did not expose averageResponseMs."
   }
   $results = Add-Result -Results $results -Name "final control-board status metrics" -Status "PASS" -Response $finalStatus
+  if (Test-PlaceholderFieldText -Value $Reviewer) {
+    $results = Add-Result -Results $results -Name "field reviewer metadata" -Status "REVIEW" -Response @{
+      reason = "Reviewer is missing or placeholder; rerun with a concrete -Reviewer value."
+    }
+  }
+  if (Test-PlaceholderFieldText -Value $SiteName) {
+    $results = Add-Result -Results $results -Name "field site metadata" -Status "REVIEW" -Response @{
+      reason = "SiteName is missing or placeholder; rerun with a concrete -SiteName value."
+    }
+  }
 
   $manifest = [pscustomobject]@{
     generatedAt = (Get-Date).ToUniversalTime().ToString("o")
@@ -265,6 +285,10 @@ try {
     ""
   )
   $markdownLines | Out-File -LiteralPath (Join-Path $outputDir "manifest.md") -Encoding utf8
+
+  if (($results | Where-Object { $_.status -ne "PASS" }).Count -gt 0) {
+    throw "Control-board field rehearsal completed with REVIEW items."
+  }
 
   Write-Host "control-board field rehearsal ok"
   Write-Host "evidence written to $outputDir"

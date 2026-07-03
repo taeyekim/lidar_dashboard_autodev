@@ -101,6 +101,16 @@ function Assert-NumberProperty {
   }
 }
 
+function Test-PlaceholderFieldText {
+  param([string]$Value)
+
+  return [regex]::IsMatch(
+    [string]$Value,
+    "^(?:-|n/a|na|none|null|tbd|todo|pending|unknown|unspecified|field-reviewer|field-reviewer-name|field-site|delivery-site-name)$",
+    [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+  )
+}
+
 $runId = (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmss")
 $outputDir = Join-Path $OutputRoot $runId
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
@@ -184,6 +194,20 @@ try {
       sites = $sites.total
       zones = $zones.total
       devices = $devices.total
+    }
+  }
+  if (Test-PlaceholderFieldText -Value $Reviewer) {
+    $results += [pscustomobject]@{
+      name = "field reviewer metadata"
+      status = "REVIEW"
+      response = @{ reason = "Reviewer is missing or placeholder; rerun with a concrete -Reviewer value." }
+    }
+  }
+  if (Test-PlaceholderFieldText -Value $SiteName) {
+    $results += [pscustomobject]@{
+      name = "field site metadata"
+      status = "REVIEW"
+      response = @{ reason = "SiteName is missing or placeholder; rerun with a concrete -SiteName value." }
     }
   }
 

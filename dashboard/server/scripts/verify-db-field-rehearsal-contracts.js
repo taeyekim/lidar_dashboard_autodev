@@ -51,6 +51,12 @@ const packageJson = readProjectFile("package.json");
   "manifest.md",
   "FIELD_REHEARSAL_PASS",
   "hostName",
+  "Test-PlaceholderFieldText",
+  "field reviewer metadata",
+  "field site metadata",
+  "Reviewer is missing or placeholder",
+  "SiteName is missing or placeholder",
+  "DB Prisma field rehearsal completed with REVIEW items",
   "db prisma field rehearsal ok",
 ].forEach((token) => assertIncludes(script, token, "DB field rehearsal script"));
 

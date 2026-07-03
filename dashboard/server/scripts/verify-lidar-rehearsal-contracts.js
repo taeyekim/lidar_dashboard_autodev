@@ -55,6 +55,12 @@ const packageJson = readProjectFile("package.json");
   "FIELD_REHEARSAL_PASS",
   "hostName",
   "deviceKeyUsed",
+  "Test-PlaceholderFieldText",
+  "field reviewer metadata",
+  "field site metadata",
+  "Reviewer is missing or placeholder",
+  "SiteName is missing or placeholder",
+  "LiDAR ingest field rehearsal completed with REVIEW items",
   "lidar ingest field rehearsal ok",
 ].forEach((token) => assertIncludes(script, token, "lidar ingest rehearsal script"));
 
