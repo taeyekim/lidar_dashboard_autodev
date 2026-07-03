@@ -68,4 +68,28 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
 
 assert(!dashboardPage.includes("추후 구현"), "Dashboard page must not expose unfinished action comments");
 
+[
+  "역주행 방지 실시간 관제 대시보드",
+  "현재 상황",
+  "수신 체인",
+  "최근 라이다 수신",
+  "통합제어보드",
+  "수동 제어",
+  "DB unique",
+  "역주행률",
+].forEach((token) => {
+  assert(dashboardPage.includes(token), `Dashboard page must include operations copy: ${token}`);
+});
+
+[
+  "<span>12%</span>",
+  "<span>2%</span>",
+  "No packet yet",
+  "Manual command",
+  "Latest command",
+  "Active situation",
+].forEach((token) => {
+  assert(!dashboardPage.includes(token), `Dashboard page must not expose sample or unfinished copy: ${token}`);
+});
+
 console.log("frontend UI contracts ok");

@@ -507,6 +507,8 @@ export default function DashboardPage({
   const activeIncident = activeDashboardEvent || latestWrongwayEvent;
   const activeIncidentStage = Number(activeIncident?.stage || 0);
   const hasActiveIncident = Boolean(activeIncident);
+  const wrongWayRate =
+    kpi.vehiclesPassed > 0 ? ((kpi.wrongWayEvents / kpi.vehiclesPassed) * 100).toFixed(2) : "0.00";
   const incidentTone = activeIncidentStage >= 2 ? "red" : hasActiveIncident ? "amber" : "green";
   const incidentStatusText = activeIncidentStage >= 2
     ? "2차 차단 필요"
@@ -549,13 +551,13 @@ export default function DashboardPage({
 
             <div className="mb-4 space-y-1 text-sm font-bold text-gray-900">
               <p>
-                Location:{" "}
+                위치:{" "}
                 <span className="font-semibold text-gray-700">
                   {activeDashboardEvent.zone_id || "Zone A - Tunnel Entrance"}
                 </span>
               </p>
               <p>
-                Time:{" "}
+                시각:{" "}
                 <span className="font-semibold text-gray-700">
                   {activeDashboardEvent.timestamp || "실시간"}
                 </span>
@@ -641,10 +643,10 @@ export default function DashboardPage({
             className={`w-2.5 h-2.5 rounded-full ${
               serverAlive ? "bg-green-500" : "bg-red-500"
             }`}
-            title={serverAlive ? "SERVER OK" : "SERVER DOWN"}
+            title={serverAlive ? "API 정상" : "API 오류"}
           />
           <span className="font-mono text-xs text-gray-600">
-            {serverAlive ? "SERVER" : "OFFLINE"}
+            {serverAlive ? "API 정상" : "API 오류"}
           </span>
         </div>
         <div className="flex items-center gap-2 bg-gray-100 border border-gray-300 rounded px-3 h-10">
@@ -652,23 +654,23 @@ export default function DashboardPage({
             className={`w-2.5 h-2.5 rounded-full ${
               detectorAlive ? "bg-green-500" : "bg-red-500"
             }`}
-            title={detectorAlive ? "DETECTOR OK" : "DETECTOR DOWN"}
+            title={detectorAlive ? "감지 서버 정상" : "감지 서버 오류"}
           />
           <span className="font-mono text-xs text-gray-600">
-            {detectorAlive ? "DETECTOR" : "DETECTOR OFF"}
+            {detectorAlive ? "감지 서버" : "감지 서버 오류"}
           </span>
         </div>
           <button
             onClick={startDemo}
             className="h-10 px-4 rounded bg-gray-900 text-white text-xs font-bold hover:bg-gray-700"
           >
-            DEMO START
+            데모 시작
           </button>
           <button
             onClick={resetDemo}
             className="h-10 px-4 rounded bg-gray-200 text-gray-800 text-xs font-bold hover:bg-gray-300"
           >
-            RESET
+            초기화
           </button>
         </div>
 
@@ -698,7 +700,7 @@ export default function DashboardPage({
               {hasActiveIncident ? <Siren className="h-5 w-5" /> : <Activity className="h-5 w-5" />}
             </div>
             <div className="min-w-0">
-              <div className="text-xs font-black uppercase tracking-wider text-gray-500">Active situation</div>
+              <div className="text-xs font-black uppercase tracking-wider text-gray-500">현재 상황</div>
               <div className="mt-1 text-lg font-black text-gray-900">{incidentStatusText}</div>
               <div className="mt-1 truncate text-sm text-gray-600">
                 {hasActiveIncident
@@ -709,7 +711,7 @@ export default function DashboardPage({
           </div>
 
           <div className="rounded border border-white/70 bg-white/70 p-3">
-            <div className="text-xs font-black uppercase tracking-wider text-gray-500">Signal chain</div>
+            <div className="text-xs font-black uppercase tracking-wider text-gray-500">수신 체인</div>
             <div className="mt-2 grid grid-cols-3 gap-2 text-center text-[11px] font-black">
               <span className={serverAlive ? "rounded bg-emerald-100 px-2 py-1 text-emerald-700" : "rounded bg-red-100 px-2 py-1 text-red-700"}>
                 API
@@ -721,13 +723,13 @@ export default function DashboardPage({
                 LIDAR
               </span>
             </div>
-            <div className="mt-2 truncate text-xs text-gray-500">Last lidar: {lastLidarText}</div>
+            <div className="mt-2 truncate text-xs text-gray-500">최근 라이다 수신: {lastLidarText}</div>
           </div>
 
           <div className="rounded border border-white/70 bg-white/70 p-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className="text-xs font-black uppercase tracking-wider text-gray-500">Control command</div>
+                <div className="text-xs font-black uppercase tracking-wider text-gray-500">최근 제어 명령</div>
                 <div className="mt-1 truncate text-sm font-black text-gray-900">
                   {latestCommandSummary(latestControlCommand)}
                 </div>
@@ -741,7 +743,7 @@ export default function DashboardPage({
               </span>
             </div>
             <div className="mt-2 truncate font-mono text-xs text-gray-500">
-              {latestControlCommand?.packetHex || "No packet yet"}
+              {latestControlCommand?.packetHex || "전송 패킷 없음"}
             </div>
           </div>
         </div>
@@ -783,7 +785,7 @@ export default function DashboardPage({
         <Card className="flex min-h-32 flex-col justify-between border-solid bg-white">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-xs font-bold uppercase tracking-wider text-gray-400">Control board</div>
+              <div className="text-xs font-bold uppercase tracking-wider text-gray-400">통합제어보드</div>
               <div className="mt-1 text-xl font-black text-gray-900">{controlBoardMode}</div>
             </div>
             <span
@@ -796,11 +798,11 @@ export default function DashboardPage({
           <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-500">
             <div>
               <span className="font-bold text-gray-700">Host</span>{" "}
-              {controlBoardStatus?.hostConfigured ? "configured" : "not set"}
+              {controlBoardStatus?.hostConfigured ? "설정됨" : "미설정"}
             </div>
             <div>
               <span className="font-bold text-gray-700">Port</span>{" "}
-              {controlBoardStatus?.portConfigured ? "configured" : "not set"}
+              {controlBoardStatus?.portConfigured ? "설정됨" : "미설정"}
             </div>
           </div>
           {controlBoardError && (
@@ -809,12 +811,12 @@ export default function DashboardPage({
         </Card>
 
         <Card className="min-h-32 border-solid bg-white">
-          <div className="text-xs font-bold uppercase tracking-wider text-gray-400">Latest command</div>
+          <div className="text-xs font-bold uppercase tracking-wider text-gray-400">최근 명령</div>
           <div className="mt-2 text-sm font-black text-gray-900">
             {latestCommandSummary(latestControlCommand)}
           </div>
           <div className="mt-2 truncate font-mono text-xs text-gray-500">
-            {latestControlCommand?.packetHex || "No packet yet"}
+            {latestControlCommand?.packetHex || "전송 패킷 없음"}
           </div>
           <div className="mt-2 text-xs text-gray-400">
             CRC {latestControlCommand?.crcStatus || "-"} / retry {controlBoardStatus?.retryCount ?? "-"}
@@ -822,7 +824,7 @@ export default function DashboardPage({
         </Card>
 
         <Card className="min-h-32 border-solid bg-white">
-          <div className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-400">Manual command</div>
+          <div className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-400">수동 제어</div>
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
@@ -830,7 +832,7 @@ export default function DashboardPage({
               disabled={Boolean(controlBoardBusy)}
               className="rounded bg-amber-500 px-2 py-2 text-xs font-black text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              1st
+              1차 경고
             </button>
             <button
               type="button"
@@ -838,7 +840,7 @@ export default function DashboardPage({
               disabled={Boolean(controlBoardBusy)}
               className="rounded bg-red-600 px-2 py-2 text-xs font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              2nd
+              2차 차단
             </button>
             <button
               type="button"
@@ -846,11 +848,11 @@ export default function DashboardPage({
               disabled={Boolean(controlBoardBusy)}
               className="rounded bg-gray-800 px-2 py-2 text-xs font-black text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Return
+              복귀
             </button>
           </div>
           <div className="mt-3 text-xs text-gray-500">
-            {controlBoardBusy ? `Sending ${controlBoardBusy}` : "Uses dry-run until live TCP is enabled."}
+            {controlBoardBusy ? `명령 전송 중: ${controlBoardBusy}` : "LIVE_TCP 전환 전에는 dry-run 명령으로 기록됩니다."}
           </div>
         </Card>
       </div>
@@ -885,9 +887,9 @@ export default function DashboardPage({
             <div className="font-mono text-sm font-bold text-gray-700 mb-1">통과 차량 수</div>
             <div className="flex items-center space-x-2">
               <span className="text-2xl font-bold text-gray-900">{kpi.vehiclesPassed.toLocaleString()}</span>
-              <div className="flex items-center text-xs text-green-600 bg-green-100 px-1 rounded">
+              <div className="flex items-center text-xs text-blue-600 bg-blue-100 px-1 rounded">
                 <ArrowUpRight className="w-3 h-3 mr-1" />
-                <span>12%</span>
+                <span>DB unique</span>
               </div>
             </div>
           </div>
@@ -906,7 +908,7 @@ export default function DashboardPage({
               <span className="text-2xl font-bold text-gray-900">{kpi.wrongWayEvents}</span>
               <div className="flex items-center text-xs text-red-600 bg-red-100 px-1 rounded">
                 <span className="animate-pulse mr-1">●</span>
-                <span>조치 필요</span>
+                <span>역주행률 {wrongWayRate}%</span>
               </div>
             </div>
           </div>
@@ -925,7 +927,7 @@ export default function DashboardPage({
               <span className="text-2xl font-bold text-gray-900">{kpi.unidentified}</span>
               <div className="flex items-center text-xs text-red-600 bg-red-100 px-1 rounded">
                 <ArrowDownRight className="w-3 h-3 mr-1" />
-                <span>2%</span>
+                <span>검토 대상</span>
               </div>
             </div>
           </div>

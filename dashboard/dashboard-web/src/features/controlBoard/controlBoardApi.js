@@ -26,7 +26,7 @@ export function controlBoardModeLabel(status = {}) {
 }
 
 export function latestCommandSummary(command = null) {
-  if (!command) return "No command history";
+  if (!command) return "명령 이력 없음";
   const parts = [command.commandType, command.status].filter(Boolean);
-  return parts.length > 0 ? parts.join(" / ") : "Latest command";
+  return parts.length > 0 ? parts.join(" / ") : "최근 명령";
 }
