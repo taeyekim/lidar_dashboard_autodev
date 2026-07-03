@@ -35,6 +35,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "artifacts/final-execution-plan", "final execution plan generator"],
   [generator, "sourceFinalStatus", "final execution plan generator"],
   [generator, "sourceFieldGateClosureMap", "final execution plan generator"],
+  [generator, "buildGitState", "final execution plan generator"],
   [generator, "gatesByActionType", "final execution plan generator"],
   [generator, "orderedCommands", "final execution plan generator"],
   [generator, "commandGateCoverage", "final execution plan generator"],
@@ -44,7 +45,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "docs-text-quality", "final execution plan generator"],
   [generator, "npm.cmd run verify:docs-text-quality", "final execution plan generator"],
   [generator, "ci-status", "final execution plan generator"],
+  [generator, "ci-closeout", "final execution plan generator"],
   [generator, "npm.cmd run ci:status", "final execution plan generator"],
+  [generator, "Git pushed to origin/dev", "final execution plan generator"],
   [generator, "git push origin dev", "final execution plan generator"],
   [generator, "HEAD matches origin/dev", "final execution plan generator"],
   [generator, "manualEvidenceTargets", "final execution plan generator"],
@@ -102,7 +105,7 @@ const openPlan = buildFinalExecutionPlan({
   generatedBy: "reviewer-a",
   siteName: "delivery-site",
   baseUrl: "http://field.local:8080",
-  git: { branch: "dev", commit: "fixture", clean: true },
+  git: { branch: "dev", commit: "fixture", clean: true, upstream: "origin/dev", upstreamCommit: "fixture", pushed: true },
   finalStatus: {
     path: "artifacts/final-status/20260101-000000/manifest.json",
     data: {
@@ -141,6 +144,8 @@ assert(
   "field execution commands must not emit copy-paste placeholder reviewer/site values",
 );
 assert(openPlan.remainingGateCount === 4, "execution plan should preserve remaining gate count");
+assert(openPlan.git.upstream === "origin/dev", "execution plan should expose git upstream");
+assert(openPlan.git.pushed === true, "execution plan should expose pushed source state");
 assert(openPlan.commandGateCoverage.some((item) => item.id === "security-evidence" && item.gateCount === 1), "security command coverage should count matching security gates");
 assert(
   openPlan.commandGateCoverage.some(
@@ -178,10 +183,12 @@ assert(
     openPlan.orderedCommands.findIndex((item) => item.id === "source-revision-closeout") <
     openPlan.orderedCommands.findIndex((item) => item.id === "docs-text-quality") &&
     openPlan.orderedCommands.findIndex((item) => item.id === "docs-text-quality") <
+    openPlan.orderedCommands.findIndex((item) => item.id === "ci-closeout") &&
+    openPlan.orderedCommands.findIndex((item) => item.id === "ci-closeout") <
     openPlan.orderedCommands.findIndex((item) => item.id === "ci-status") &&
     openPlan.orderedCommands.findIndex((item) => item.id === "ci-status") <
     openPlan.orderedCommands.findIndex((item) => item.id === "completion-audit"),
-  "open plan should close source revision, verify docs text quality, and record CI status before Git-bearing evidence refresh commands",
+  "open plan should close source revision, verify docs text quality, run CI closeout, and record CI status before Git-bearing evidence refresh commands",
 );
 assert(openPlan.orderedCommands.some((item) => item.command.includes("http://field.local:8080")), "commands should use the requested base URL");
 assert(openPlan.sourceFieldGateClosureMap.includes("artifacts/field-gate-closure-map"), "execution plan should reference gate closure map");
@@ -191,12 +198,14 @@ assert(openMarkdown.includes("Final Execution Plan"), "markdown should include t
 assert(openMarkdown.includes("This execution plan does not prove field completion"), "markdown should include guardrail");
 assert(openMarkdown.includes("Ordered Commands"), "markdown should include ordered command table");
 assert(openMarkdown.includes("Command Gate Coverage"), "markdown should include command gate coverage table");
+assert(openMarkdown.includes("Git upstream: origin/dev"), "markdown should include git upstream");
+assert(openMarkdown.includes("Git pushed to origin/dev: yes"), "markdown should include git pushed state");
 
 const readyPlan = buildFinalExecutionPlan({
   generatedAt: "2026-01-01T00:00:00.000Z",
   generatedBy: "reviewer-a",
   siteName: "delivery-site",
-  git: { branch: "dev", commit: "fixture", clean: true },
+  git: { branch: "dev", commit: "fixture", clean: true, upstream: "origin/dev", upstreamCommit: "fixture", pushed: true },
   finalStatus: {
     path: "artifacts/final-status/20260101-000000/manifest.json",
     data: {
@@ -216,7 +225,7 @@ const placeholderMetadataPlan = buildFinalExecutionPlan({
   generatedAt: "2026-01-01T00:00:00.000Z",
   generatedBy: "field-reviewer",
   siteName: "field-site",
-  git: { branch: "dev", commit: "fixture", clean: true },
+  git: { branch: "dev", commit: "fixture", clean: true, upstream: "origin/dev", upstreamCommit: "fixture", pushed: true },
   finalStatus: {
     path: "artifacts/final-status/20260101-000000/manifest.json",
     data: {
@@ -238,7 +247,7 @@ const missingFinalStatusPlan = buildFinalExecutionPlan({
   generatedAt: "2026-01-01T00:00:00.000Z",
   generatedBy: "reviewer-a",
   siteName: "delivery-site",
-  git: { branch: "dev", commit: "fixture", clean: true },
+  git: { branch: "dev", commit: "fixture", clean: true, upstream: "origin/dev", upstreamCommit: "fixture", pushed: true },
   finalStatus: null,
   manualEvidence: [],
 });
@@ -269,6 +278,10 @@ assert(
 assert(
   automatedRefreshCommands.some((item) => item.id === "ci-status"),
   "automated refresh gates should include CI status evidence",
+);
+assert(
+  automatedRefreshCommands.some((item) => item.id === "ci-closeout"),
+  "automated refresh gates should include CI closeout",
 );
 assert(
   automatedRefreshCommands.some((item) => item.id === "handover-index"),
