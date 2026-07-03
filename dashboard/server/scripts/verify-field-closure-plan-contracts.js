@@ -38,6 +38,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "DB And Prisma Field Rehearsal",
   "Lidar Ingest Field Rehearsal",
   "Control Board Field Rehearsal",
+  "-OperatorUiWalkthroughEvidence",
+  "artifacts/manual/operator-ui-walkthrough.md",
   "npm.cmd run delivery:evidence",
   "npm.cmd run completion:audit",
   "npm.cmd run handover:index",

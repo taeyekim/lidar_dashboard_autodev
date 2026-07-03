@@ -78,6 +78,12 @@ The manifest includes a `Field Acceptance Decision` summary with `-Reviewer`,
 readiness, child evidence references, and next actions for the handover package.
 The orchestrator also reads the latest preflight manifest and adds a
 review/skipped gate when the preflight status is not `PASS`.
+It also records an `operator UI browser walkthrough` gate. Pass
+`-OperatorUiWalkthroughEvidence <path>` after capturing the delivery display
+resolution walkthrough for login, dashboard status, DRY_RUN/LIVE_TCP state,
+event detail, Devices, Event Log realtime/degraded state, and Swagger entrypoint.
+Without that evidence, the step remains REVIEW unless `-SkipOperatorUiWalkthrough`
+is accepted by the field reviewer.
 Handover readiness is true only when the overall status is `PASS`, the latest
 preflight manifest status is `PASS`, and both `-Reviewer` and `-SiteName` are
 recorded.
@@ -98,7 +104,7 @@ with a PASS manifest.
 Strict field acceptance example after the delivery stack is already running:
 
 ```powershell
-npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -StrictPreflight -IncludeContainerImages -IncludeZap -RequireScanners
+npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -Reviewer "field-reviewer" -SiteName "delivery-site" -OperatorUiWalkthroughEvidence artifacts/manual/operator-ui-walkthrough.md -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -StrictPreflight -IncludeContainerImages -IncludeZap -RequireScanners
 ```
 
 After `npm.cmd run delivery:evidence`, run `npm.cmd run completion:audit`.
@@ -449,6 +455,7 @@ Evidence package:
 - frontend lint result
 - `npm.cmd run verify:audit-policy` or `npm run verify:audit-policy` result
 - `artifacts/field-acceptance/<timestamp>/manifest.json` and `manifest.md` from `scripts/field-acceptance.ps1`
+- operator UI browser walkthrough evidence passed through `scripts/field-acceptance.ps1 -OperatorUiWalkthroughEvidence <path>`
 - `artifacts/field-preflight/<timestamp>/manifest.json` and `manifest.md` from `scripts/field-preflight.ps1`
 - `npm.cmd run security:evidence` manifest under `artifacts/security/<timestamp>/`
 - `scripts/runtime-smoke.ps1` result when Docker runtime smoke is available

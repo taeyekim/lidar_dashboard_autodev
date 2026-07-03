@@ -4,11 +4,13 @@ param(
   [string]$Reviewer = "",
   [string]$SiteName = "",
   [string]$DecisionNote = "",
+  [string]$OperatorUiWalkthroughEvidence = "",
   [switch]$SkipRuntime,
   [switch]$SkipDb,
   [switch]$SkipLidar,
   [switch]$SkipControlBoard,
   [switch]$SkipSecurity,
+  [switch]$SkipOperatorUiWalkthrough,
   [switch]$RunDbDeploy,
   [switch]$RunDbSeed,
   [switch]$AllowLiveTcp,
@@ -95,6 +97,23 @@ function Add-SkippedStep {
 
   $now = (Get-Date).ToUniversalTime().ToString("o")
   return New-StepResult -Name $Name -Status "SKIPPED" -Command "" -LogPath "" -ExitCode 0 -StartedAt $now -FinishedAt $now -Reason $Reason
+}
+
+function Add-OperatorUiWalkthroughGate {
+  $now = (Get-Date).ToUniversalTime().ToString("o")
+  if ($SkipOperatorUiWalkthrough) {
+    return New-StepResult -Name "operator UI browser walkthrough" -Status "SKIPPED" -Command "" -LogPath "" -ExitCode 0 -StartedAt $now -FinishedAt $now -Reason "SkipOperatorUiWalkthrough switch was provided; delivery display browser walkthrough evidence must be accepted by the field reviewer."
+  }
+
+  if ([string]::IsNullOrWhiteSpace($OperatorUiWalkthroughEvidence)) {
+    return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "attach browser walkthrough evidence with -OperatorUiWalkthroughEvidence <path>" -LogPath "" -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Browser walkthrough evidence for the delivery display resolution was not attached. Capture login, dashboard status, DRY_RUN/LIVE_TCP state, event detail, Devices, Event Log realtime/degraded state, and Swagger entrypoint."
+  }
+
+  if (!(Test-Path -LiteralPath $OperatorUiWalkthroughEvidence)) {
+    return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "read $OperatorUiWalkthroughEvidence" -LogPath "" -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence path was provided but does not exist."
+  }
+
+  return New-StepResult -Name "operator UI browser walkthrough" -Status "PASS" -Command "read $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 0 -StartedAt $now -FinishedAt $now
 }
 
 function Get-LatestManifest {
@@ -245,6 +264,8 @@ function New-AcceptanceManifest {
       strictPreflight = [bool]$StrictPreflight
       startCompose = [bool]$StartCompose
       stopCompose = [bool]$StopCompose
+      skipOperatorUiWalkthrough = [bool]$SkipOperatorUiWalkthrough
+      operatorUiWalkthroughEvidence = $OperatorUiWalkthroughEvidence
     }
     evidenceRefs = @{
       fieldPreflight = Get-LatestManifestPath -Root "artifacts/field-preflight"
@@ -318,6 +339,8 @@ function Write-AcceptanceManifest {
     "| StrictPreflight | $([bool]$StrictPreflight) |",
     "| StartCompose | $([bool]$StartCompose) |",
     "| StopCompose | $([bool]$StopCompose) |",
+    "| SkipOperatorUiWalkthrough | $([bool]$SkipOperatorUiWalkthrough) |",
+    "| OperatorUiWalkthroughEvidence | $OperatorUiWalkthroughEvidence |",
     "",
     "## Evidence References",
     "",
@@ -443,6 +466,8 @@ if ($SkipSecurity) {
     npm.cmd @securityArgs
   }
 }
+
+$steps += Add-OperatorUiWalkthroughGate
 
 Write-AcceptanceManifest -Status "IN_PROGRESS" -Steps $steps | Out-Null
 

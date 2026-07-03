@@ -23,6 +23,7 @@ const matrix = `
 | Requirement Area | Delivery Requirement | Automated Evidence | Field Evidence Still Required |
 | --- | --- | --- | --- |
 | Control Board TCP | Sends raw command frames. | \`npm run verify:control-board-protocol\`, \`GET /api/control-board/status\` | Live integrated control-board TCP test |
+| Frontend Control UI | Browser walkthrough remains attached to acceptance. | \`scripts/field-acceptance.ps1 -OperatorUiWalkthroughEvidence <path>\` | Browser walkthrough on delivery display |
 | Traffic Statistics | KPI vectors remain executable. | \`npm run verify:statistics-metrics\`, \`scripts/runtime-smoke.ps1\` | Field acceptance of period labels |
 | Delivery Evidence | Manifest packaging remains reproducible. | \`npm run delivery:evidence\`, \`npm run field:preflight\`, \`npm run field:acceptance\`, \`npm run completion:audit\`, \`npm run handover:index\`, \`npm run field:closure-plan\`, \`npm run field:readiness\`, \`npm run handover:package\`, \`artifacts/delivery/<timestamp>/runtime/\`, \`artifacts/field-acceptance/<timestamp>/manifest.json\`, \`artifacts/field-preflight/<timestamp>/manifest.json\`, \`artifacts/completion-audit/<timestamp>/manifest.json\`, \`artifacts/handover-index/<timestamp>/manifest.json\`, \`artifacts/field-closure-plan/<timestamp>/manifest.json\`, \`artifacts/field-readiness/<timestamp>/manifest.json\`, \`artifacts/handover-package/<timestamp>/manifest.json\` | none |
 `;
@@ -204,16 +205,16 @@ const securityMetadataSummary = summarizeCompanionEvidence(
   "artifacts/delivery-summary-security-metadata",
 );
 
-assert(rows.length === 3, "delivery evidence summary vector should parse three matrix rows");
+assert(rows.length === 4, "delivery evidence summary vector should parse four matrix rows");
 assert(summary.status === "AUTOMATED_CHECKS_REVIEW", "failed commands should force review status");
 assert(summary.failedCommandCount === 1, "summary should count one failed command");
 assertIncludes(summary.failedCommands, "docker compose config", "summary should expose failed command label");
-assert(summary.requirementAreaCount === 3, "summary should count requirement areas");
+assert(summary.requirementAreaCount === 4, "summary should count requirement areas");
 assert(
   summary.automatedEvidenceItemCount === coverage.length,
   "summary should mirror automated evidence coverage count",
 );
-assert(summary.fieldVerificationRequiredCount === 2, "summary should exclude none/n/a field evidence rows");
+assert(summary.fieldVerificationRequiredCount === 3, "summary should exclude none/n/a field evidence rows");
 assertIncludes(
   summary.fieldVerificationRequiredAreas,
   "Control Board TCP",
@@ -223,6 +224,11 @@ assertIncludes(
   summary.fieldVerificationRequiredAreas,
   "Traffic Statistics",
   "summary should include traffic statistics field verification",
+);
+assertIncludes(
+  summary.fieldVerificationRequiredAreas,
+  "Frontend Control UI",
+  "summary should include frontend UI field verification",
 );
 assert(
   !summary.fieldVerificationRequiredAreas.includes("Delivery Evidence"),
@@ -367,6 +373,14 @@ assert(
 assert(
   coverage.some((item) => item.evidence === "npm run field:acceptance" && item.coverage === "FIELD_ACCEPTANCE_EVIDENCE"),
   "coverage should classify field acceptance command",
+);
+assert(
+  coverage.some(
+    (item) =>
+      item.evidence === "scripts/field-acceptance.ps1 -OperatorUiWalkthroughEvidence <path>" &&
+      item.coverage === "FIELD_ACCEPTANCE_EVIDENCE",
+  ),
+  "coverage should classify operator UI walkthrough as field acceptance evidence",
 );
 assert(
   coverage.some((item) => item.evidence === "npm run completion:audit" && item.coverage === "COMPLETION_AUDIT_EVIDENCE"),

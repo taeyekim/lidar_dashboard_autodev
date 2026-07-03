@@ -392,7 +392,7 @@ function buildAutomatedEvidenceCoverage(rows, commands) {
         };
       }
 
-      if (normalizedToken === "npm run field:acceptance") {
+      if (normalizedToken === "npm run field:acceptance" || normalizedToken.startsWith("scripts/field-acceptance.ps1")) {
         return {
           area: row.area,
           evidence: token,
