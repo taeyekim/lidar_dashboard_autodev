@@ -56,6 +56,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [matrix, "field readiness", "delivery evidence matrix"],
   [matrix, "LIVE_TCP_READY", "delivery evidence matrix"],
   [matrix, "strictAcceptanceBlocked", "delivery evidence matrix"],
+  [handoverIndex, "requireScanners", "handover index generator"],
+  [handoverIndex, "strictAcceptanceBlocked", "handover index generator"],
   [matrix, "manual evidence", "delivery evidence matrix"],
   [matrix, "latest referenced artifacts", "delivery evidence matrix"],
   [matrix, "no residual field gates", "delivery evidence matrix"],
@@ -151,7 +153,11 @@ if (finalClaimsReady()) {
 
 if (latestSecurity) {
   const data = latestSecurity.data || {};
-  if (data.options?.requireScanners === true && finalClaimsReady()) {
+  if (finalClaimsReady()) {
+    assert(
+      data.options?.requireScanners === true,
+      "READY/COMPLETE final status requires security evidence generated with requireScanners=true",
+    );
     assert(
       data.strictAcceptanceBlocked === false,
       "required scanner security evidence must not be strictAcceptanceBlocked",

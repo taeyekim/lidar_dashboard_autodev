@@ -26,6 +26,10 @@ function manifestStatus(entry, manifest) {
   const data = manifest.data || {};
   if (data.status) return data.status;
   if (data.handoverSummary?.status) return data.handoverSummary.status;
+  if (entry.area === "Security Evidence") {
+    if (data.options?.requireScanners !== true) return "REVIEW";
+    if (data.strictAcceptanceBlocked === true) return "REVIEW";
+  }
   if (data.canMarkGoalComplete === false) return "REVIEW";
   if (data.results?.some((item) => item.status && item.status !== "PASS")) return "REVIEW";
   if (data.checks?.some((item) => item.status === "skipped" || item.exitCode !== 0)) return "REVIEW";

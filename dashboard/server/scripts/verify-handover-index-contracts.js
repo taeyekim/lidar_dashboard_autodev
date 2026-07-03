@@ -35,6 +35,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "Control Board Field Rehearsal",
   "Runtime Evidence",
   "Security Evidence",
+  "requireScanners",
+  "strictAcceptanceBlocked",
   "manualEvidenceEntries",
   "manualEvidenceRefs",
   "manualEvidence",
@@ -100,6 +102,14 @@ if (vectorManifest.counts.missingManualEvidenceCount > 0) {
   assert(
     vectorManifest.status !== "READY",
     "handover index must not be READY while manual evidence is MISSING or INVALID",
+  );
+}
+
+const securityEntry = vectorManifest.entries.find((entry) => entry.area === "Security Evidence");
+if (securityEntry?.manifestPath) {
+  assert(
+    securityEntry.status !== "READY",
+    "handover index must not mark non-strict security evidence as READY",
   );
 }
 
