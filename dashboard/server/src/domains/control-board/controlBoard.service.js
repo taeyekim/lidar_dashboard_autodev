@@ -84,6 +84,7 @@ async function createCommandRow(tx, commandType, packet, options = {}) {
         trigger: options.trigger || "MANUAL",
         label: packet.label,
         source: options.source || "CONTROL_BOARD_SERVICE",
+        ...(options.metadata || {}),
       },
     },
   });
@@ -272,7 +273,7 @@ async function sendCommand(commandType, options = {}) {
   }
 }
 
-async function createCommandForWrongwayEvent(payloadType, trafficEvent) {
+async function createCommandForWrongwayEvent(payloadType, trafficEvent, options = {}) {
   const commandType = WRONGWAY_COMMAND_MAP[payloadType];
   if (!commandType || !trafficEvent?.id) return null;
 
@@ -299,6 +300,7 @@ async function createCommandForWrongwayEvent(payloadType, trafficEvent) {
     trafficEventId: trafficEvent.id,
     trigger: "WRONGWAY_EVENT",
     source: "WRONGWAY_API",
+    metadata: options.metadata,
   });
 }
 

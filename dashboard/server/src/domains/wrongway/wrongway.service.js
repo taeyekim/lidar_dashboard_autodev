@@ -449,7 +449,12 @@ async function ingestWrongwayPayload(payload, options = {}) {
 
   let controlCommand = null;
   try {
-    controlCommand = await controlBoardService.createCommandForWrongwayEvent(data.type, result.event);
+    controlCommand = await controlBoardService.createCommandForWrongwayEvent(data.type, result.event, {
+      metadata: {
+        resolvedEventIds: result.resolvedEvents.map((event) => event.id),
+        resolvedEventCount: result.resolvedEvents.length,
+      },
+    });
   } catch (error) {
     logger.error("control board command trigger failed", {
       eventId: result.event?.id,

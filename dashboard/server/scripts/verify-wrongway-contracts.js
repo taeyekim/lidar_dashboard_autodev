@@ -45,6 +45,7 @@ const runbook = readProjectFile("docs/ops/delivery-runbook.md");
   "resolveActiveWrongwayEventsForTrack",
   "eventReused",
   "resolvedEventIds",
+  "resolvedEventCount",
   "status: { notIn: CLOSED_EVENT_STATUSES }",
   "rawPayload: data.rawPayload",
   "vehicleTrackCreated",
@@ -62,13 +63,19 @@ assert(
 );
 assertIncludes(
   service,
-  "controlBoardService.createCommandForWrongwayEvent(data.type, result.event)",
+  "controlBoardService.createCommandForWrongwayEvent(data.type, result.event,",
   "wrongway service",
 );
+[
+  "resolvedEventIds: result.resolvedEvents.map((event) => event.id)",
+  "resolvedEventCount: result.resolvedEvents.length",
+].forEach((token) => assertIncludes(service, token, "wrongway situation-ended command metadata"));
 [
   "prisma.controlCommand.findFirst",
   "trafficEventId: trafficEvent.id",
   "commandType",
+  "...(options.metadata || {})",
+  "metadata: options.metadata",
   "control board command reused for wrongway event",
 ].forEach((token) => assertIncludes(controlBoardService, token, "control board service"));
 [
