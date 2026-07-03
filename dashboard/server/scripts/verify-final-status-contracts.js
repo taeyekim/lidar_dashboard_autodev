@@ -35,8 +35,11 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [completionAudit, "controlBoardSafetyStatus", "completion audit generator"],
   [completionAudit, "requiredFieldValues", "completion audit generator"],
   [completionAudit, "manualEvidenceSignals", "completion audit generator"],
+  [completionAudit, "sourceDeliveryManifest", "completion audit generator"],
+  [completionAudit, "sourceFieldReadinessManifest", "completion audit generator"],
   [handoverPackage, "Residual Field Gates", "handover package generator"],
   [handoverPackage, "residualFieldGates", "handover package generator"],
+  [handoverPackage, "evidenceRefs", "handover package generator"],
   [handoverPackage, "canMarkGoalComplete=false", "handover package generator"],
   [handoverIndex, "canMarkGoalComplete", "handover index generator"],
   [fieldClosurePlan, "canMarkGoalComplete", "field closure plan generator"],
@@ -48,6 +51,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [matrix, "LIVE_TCP_READY", "delivery evidence matrix"],
   [matrix, "strictAcceptanceBlocked", "delivery evidence matrix"],
   [matrix, "manual evidence", "delivery evidence matrix"],
+  [matrix, "latest referenced artifacts", "delivery evidence matrix"],
   [matrix, "Final Status", "delivery evidence matrix"],
 ].forEach(([content, token, label]) => assertIncludes(content, token, label));
 
@@ -55,6 +59,9 @@ const latestCompletion = readLatestJsonManifest("artifacts/completion-audit");
 const latestPackage = readLatestJsonManifest("artifacts/handover-package");
 const latestReadiness = readLatestJsonManifest("artifacts/field-readiness");
 const latestSecurity = readLatestJsonManifest("artifacts/security");
+const latestDelivery = readLatestJsonManifest("artifacts/delivery");
+const latestIndex = readLatestJsonManifest("artifacts/handover-index");
+const latestClosurePlan = readLatestJsonManifest("artifacts/field-closure-plan");
 
 function hasOpenRequiredFieldValue(item) {
   const state = String(item.state || "").toLowerCase();
@@ -80,6 +87,14 @@ if (latestCompletion) {
     );
   }
   if (data.canMarkGoalComplete) {
+    assert(
+      data.sourceDeliveryManifest === latestDelivery?.path,
+      "complete audit must reference the latest delivery evidence manifest",
+    );
+    assert(
+      data.sourceFieldReadinessManifest === latestReadiness?.path,
+      "complete audit must reference the latest field readiness manifest",
+    );
     assert(data.fieldReadinessStatus === "PASS", "complete audit requires PASS field readiness");
     assert(
       data.controlBoardSafetyStatus === "LIVE_TCP_READY",
@@ -134,6 +149,14 @@ if (latestSecurity) {
 if (latestPackage) {
   const data = latestPackage.data || {};
   assert(Array.isArray(data.residualFieldGates), "handover package must expose residualFieldGates");
+  const packageClaimsReady = data.status === "READY" || data.canMarkGoalComplete === true;
+  if (packageClaimsReady) {
+    assert(data.evidenceRefs?.delivery === latestDelivery?.path, "READY package must reference latest delivery evidence");
+    assert(data.evidenceRefs?.completionAudit === latestCompletion?.path, "READY package must reference latest completion audit");
+    assert(data.evidenceRefs?.fieldReadiness === latestReadiness?.path, "READY package must reference latest field readiness");
+    assert(data.evidenceRefs?.handoverIndex === latestIndex?.path, "READY package must reference latest handover index");
+    assert(data.evidenceRefs?.fieldClosurePlan === latestClosurePlan?.path, "READY package must reference latest field closure plan");
+  }
   if (!data.canMarkGoalComplete || data.status !== "READY") {
     assert(
       data.residualFieldGates.length > 0,
