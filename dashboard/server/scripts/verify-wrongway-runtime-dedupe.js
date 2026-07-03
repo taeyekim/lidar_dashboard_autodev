@@ -1,0 +1,234 @@
+const path = require("path");
+
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+function assertEqual(actual, expected, message) {
+  assert(actual === expected, `${message}: expected ${expected}, received ${actual}`);
+}
+
+function installMock(modulePath, exports) {
+  const resolved = require.resolve(modulePath);
+  require.cache[resolved] = {
+    id: resolved,
+    filename: resolved,
+    loaded: true,
+    exports,
+  };
+}
+
+function makeRecord(data, defaults = {}) {
+  const now = new Date("2026-07-03T00:00:00.000Z");
+  return {
+    createdAt: now,
+    updatedAt: now,
+    ...defaults,
+    ...data,
+  };
+}
+
+function createMockPrisma() {
+  const state = {
+    vehicleTracks: new Map(),
+    trafficEvents: [],
+    eventLogs: [],
+    nextTrackId: 1,
+    nextEventId: 1,
+    nextLogId: 1,
+  };
+
+  const tx = {
+    zone: {
+      async findUnique() {
+        return null;
+      },
+    },
+    vehicleTrack: {
+      async findUnique({ where }) {
+        const track = state.vehicleTracks.get(where.trackId);
+        return track ? { id: track.id } : null;
+      },
+      async upsert({ where, create, update }) {
+        const existing = state.vehicleTracks.get(where.trackId);
+        if (existing) {
+          Object.assign(existing, update, { updatedAt: new Date("2026-07-03T00:00:01.000Z") });
+          return existing;
+        }
+
+        const track = makeRecord(create, {
+          id: `track-${state.nextTrackId}`,
+        });
+        state.nextTrackId += 1;
+        state.vehicleTracks.set(where.trackId, track);
+        return track;
+      },
+    },
+    trafficEvent: {
+      async findFirst({ where }) {
+        return state.trafficEvents.find((event) => {
+          if (where.trackId && event.trackId !== where.trackId) return false;
+          if (where.eventType && event.eventType !== where.eventType) return false;
+          if (where.status?.notIn?.includes(event.status)) return false;
+          return true;
+        }) || null;
+      },
+      async findUnique({ where }) {
+        return state.trafficEvents.find((event) => event.eventCode === where.eventCode) || null;
+      },
+      async create({ data }) {
+        const event = makeRecord(data, {
+          id: `event-${state.nextEventId}`,
+          status: "NEW",
+        });
+        state.nextEventId += 1;
+        state.trafficEvents.push(event);
+        return event;
+      },
+      async update({ where, data }) {
+        const event = state.trafficEvents.find((item) => item.id === where.id);
+        assert(event, `mock traffic event not found: ${where.id}`);
+        Object.assign(event, data, { updatedAt: new Date("2026-07-03T00:00:02.000Z") });
+        return event;
+      },
+      async upsert({ where, create, update }) {
+        const existing = state.trafficEvents.find((event) => event.eventCode === where.eventCode);
+        if (existing) {
+          Object.assign(existing, update, { updatedAt: new Date("2026-07-03T00:00:02.000Z") });
+          return existing;
+        }
+        return tx.trafficEvent.create({ data: create });
+      },
+      async findMany() {
+        return [];
+      },
+      async updateMany() {
+        return { count: 0 };
+      },
+    },
+    eventLog: {
+      async create({ data }) {
+        const log = makeRecord(data, { id: `log-${state.nextLogId}` });
+        state.nextLogId += 1;
+        state.eventLogs.push(log);
+        return log;
+      },
+      async createMany({ data }) {
+        data.forEach((item) => {
+          state.eventLogs.push(makeRecord(item, { id: `log-${state.nextLogId}` }));
+          state.nextLogId += 1;
+        });
+        return { count: data.length };
+      },
+    },
+  };
+
+  return {
+    __state: state,
+    async $transaction(callback) {
+      return callback(tx);
+    },
+  };
+}
+
+async function main() {
+  const serverRoot = path.resolve(__dirname, "..");
+  const prisma = createMockPrisma();
+  const dashboardEffects = { vehiclesPassed: 0, logs: [] };
+  const realtimeMessages = [];
+  const commandCalls = [];
+
+  installMock(path.join(serverRoot, "src/prisma/client.js"), { prisma });
+  installMock(path.join(serverRoot, "src/utils/logger.js"), {
+    logger: { info() {}, warn() {}, error() {} },
+  });
+  installMock(path.join(serverRoot, "src/realtime/bus.js"), {
+    broadcastRealtime(type, payload) {
+      realtimeMessages.push({ type, payload });
+    },
+  });
+  installMock(path.join(serverRoot, "src/domains/mock-lidar/mockLidar.service.js"), {
+    increaseVehiclePassed() {
+      dashboardEffects.vehiclesPassed += 1;
+    },
+    pushLog(message) {
+      dashboardEffects.logs.push(message);
+    },
+    applyDashboardEventEffects() {},
+    addWrongWayHistory() {},
+    broadcastDashboardEvent() {},
+  });
+  installMock(path.join(serverRoot, "src/domains/control-board/controlBoard.service.js"), {
+    async createCommandForWrongwayEvent(payloadType, trafficEvent) {
+      commandCalls.push({ payloadType, trafficEventId: trafficEvent?.id || null });
+      if (!trafficEvent?.id) return null;
+      return { id: `command-${commandCalls.length}`, payloadType, trafficEventId: trafficEvent.id };
+    },
+  });
+
+  const { ingestWrongwayPayload } = require(path.join(serverRoot, "src/domains/wrongway/wrongway.service.js"));
+
+  const firstNormal = await ingestWrongwayPayload({
+    type: "normal-driving",
+    zone_id: "Z-DEDUPE",
+    track_id: "stable-track-001",
+    timestamp: "2026-07-03T00:00:00.000Z",
+    normal_moving_vehicle_count: 3,
+    sequence: 1,
+  }, { receivedAt: "2026-07-03T00:00:00.000Z" });
+
+  const secondNormal = await ingestWrongwayPayload({
+    type: "normal-driving",
+    zone_id: "Z-DEDUPE",
+    track_id: "stable-track-001",
+    timestamp: "2026-07-03T00:00:01.000Z",
+    normal_moving_vehicle_count: 4,
+    sequence: 2,
+  }, { receivedAt: "2026-07-03T00:00:01.000Z" });
+
+  assert(firstNormal.ok, "first normal-driving ingest must succeed");
+  assert(secondNormal.ok, "second normal-driving ingest must succeed");
+  assert(firstNormal.vehicleTrackCreated, "first normal-driving payload must create the unique vehicle track");
+  assert(!secondNormal.vehicleTrackCreated, "repeated normal-driving payload must reuse the vehicle track");
+  assert(!firstNormal.eventCreated && !secondNormal.eventCreated, "normal-driving must not create traffic events");
+  assertEqual(prisma.__state.vehicleTracks.size, 1, "normal-driving duplicates must leave one vehicle track");
+  assertEqual(prisma.__state.trafficEvents.length, 0, "normal-driving duplicates must leave zero traffic events");
+  assertEqual(prisma.__state.eventLogs.length, 1, "repeated normal-driving track must not create duplicate event logs");
+  assertEqual(dashboardEffects.vehiclesPassed, 1, "dashboard vehicle counter must increment only for the first unique track");
+
+  const track = Array.from(prisma.__state.vehicleTracks.values())[0];
+  assertEqual(track.lastNormalMovingVehicleCount, 4, "vehicle track must keep the latest raw LiDAR normal count");
+  assertEqual(track.rawPayload.sequence, 2, "vehicle track must keep the latest raw normal-driving payload");
+
+  const firstWrongway = await ingestWrongwayPayload({
+    type: "wrong-way-level-1",
+    zone_id: "Z-DEDUPE",
+    track_id: "stable-track-001",
+    timestamp: "2026-07-03T00:00:02.000Z",
+    confidence: 0.95,
+  }, { receivedAt: "2026-07-03T00:00:02.000Z" });
+
+  const repeatedWrongway = await ingestWrongwayPayload({
+    type: "wrong-way-level-1",
+    zone_id: "Z-DEDUPE",
+    track_id: "stable-track-001",
+    timestamp: "2026-07-03T00:00:03.000Z",
+    confidence: 0.97,
+  }, { receivedAt: "2026-07-03T00:00:03.000Z" });
+
+  assert(firstWrongway.eventCreated, "first wrong-way level 1 payload must create a traffic event");
+  assert(repeatedWrongway.eventReused, "repeated active wrong-way level 1 payload must reuse the event");
+  assertEqual(prisma.__state.trafficEvents.length, 1, "repeated active wrong-way payload must not duplicate traffic events");
+  assertEqual(prisma.__state.trafficEvents[0].vehicleTrackId, track.id, "wrong-way event must link to the unique vehicle track");
+  assertEqual(commandCalls.filter((call) => call.trafficEventId).length, 2, "wrong-way command hook must receive the event on both create and reuse");
+
+  const vehicleTrackRealtime = realtimeMessages.filter((message) => message.type === "vehicle-track.updated");
+  assertEqual(vehicleTrackRealtime.length, 4, "every ingest must publish vehicle-track.updated for operators");
+
+  console.log("wrongway runtime dedupe ok");
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

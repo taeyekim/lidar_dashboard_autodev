@@ -2,7 +2,7 @@ const { PrismaClient } = require("@prisma/client");
 const { PrismaPg } = require("@prisma/adapter-pg");
 const { logger } = require("../utils/logger");
 
-// 개발 중 hot reload나 반복 import가 생겨도 Prisma 연결 객체를 재사용합니다.
+// Reuse the Prisma client during local hot reloads to avoid connection churn.
 const globalForPrisma = globalThis;
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 
