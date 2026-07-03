@@ -46,6 +46,7 @@ function indexEntry(entry) {
     attach: Boolean(manifest?.path),
     notes: entry.notes,
     sourceDeliveryManifest: data.sourceDeliveryManifest || null,
+    sourceFieldReadinessManifest: data.sourceFieldReadinessManifest || null,
     controlBoardSafetyStatus: data.env?.controlBoardSafetyStatus || data.controlBoardSafetyStatus || null,
   };
 }
@@ -126,6 +127,7 @@ function buildIndexManifest(options = {}) {
 
   const deliveryEntry = entries.find((entry) => entry.area === "Delivery Evidence");
   const completionEntry = entries.find((entry) => entry.area === "Completion Audit");
+  const fieldReadinessEntry = entries.find((entry) => entry.area === "Field Readiness");
   const consistencyIssues = [];
 
   if (deliveryEntry?.manifestPath && completionEntry?.manifestPath) {
@@ -135,6 +137,12 @@ function buildIndexManifest(options = {}) {
         `Completion Audit sourceDeliveryManifest (${completionEntry.sourceDeliveryManifest || "missing"}) does not match latest Delivery Evidence (${deliveryEntry.manifestPath}). Run npm run completion:audit again.`,
       );
     }
+    if (fieldReadinessEntry?.manifestPath && completionEntry.sourceFieldReadinessManifest !== fieldReadinessEntry.manifestPath) {
+      completionEntry.status = "STALE";
+      consistencyIssues.push(
+        `Completion Audit sourceFieldReadinessManifest (${completionEntry.sourceFieldReadinessManifest || "missing"}) does not match latest Field Readiness (${fieldReadinessEntry.manifestPath}). Run npm run completion:audit again.`,
+      );
+    }
   }
 
   const missingRequired = entries.filter((entry) => entry.required && !entry.manifestPath);
@@ -142,7 +150,6 @@ function buildIndexManifest(options = {}) {
   const reviewEntries = entries.filter((entry) => ["REVIEW", "AUTOMATED_CHECKS_REVIEW", "FIELD_VERIFICATION_REQUIRED", "PASS_WITH_SKIPS"].includes(entry.status));
   const completion = entries.find((entry) => entry.area === "Completion Audit");
   const completionManifest = completion?.manifestPath ? readLatestJsonManifest("artifacts/completion-audit") : null;
-  const fieldReadinessEntry = entries.find((entry) => entry.area === "Field Readiness");
   const controlBoardSafetyStatus =
     fieldReadinessEntry?.controlBoardSafetyStatus ||
     completionManifest?.data?.controlBoardSafetyStatus ||

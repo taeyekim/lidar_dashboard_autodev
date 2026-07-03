@@ -37,6 +37,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "reviewAreas",
   "consistencyIssues",
   "sourceDeliveryManifest",
+  "sourceFieldReadinessManifest",
   "staleEntryCount",
   "STALE",
   "canMarkGoalComplete",

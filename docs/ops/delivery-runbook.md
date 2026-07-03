@@ -139,6 +139,8 @@ all surface this status so `DRY_RUN_SAFE` or `LIVE_TCP_REVIEW` cannot be
 mistaken for field-ready TCP operation. Use
 `npm.cmd run handover:package -- --strict` when the command should fail unless
 the package status is `READY` and `canMarkGoalComplete=true`.
+The handover index marks completion audit evidence as `STALE` if it does not
+reference the latest delivery evidence or the latest field readiness report.
 
 Default URLs:
 
