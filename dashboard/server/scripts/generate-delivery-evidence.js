@@ -194,6 +194,7 @@ function summarizeFieldRehearsal(type, outputRoot) {
       type,
       outputRoot,
       manifestPath: null,
+      metadata: {},
       reviewCount: 1,
       passCount: 0,
       reviewItems: [`${type}: field rehearsal manifest not found`],
@@ -209,6 +210,13 @@ function summarizeFieldRehearsal(type, outputRoot) {
     type,
     outputRoot,
     manifestPath: manifest.path,
+    metadata: {
+      evidenceType: manifest.data.evidenceType || null,
+      baseUrl: manifest.data.baseUrl || null,
+      reviewer: manifest.data.reviewer || null,
+      siteName: manifest.data.siteName || null,
+      hostName: manifest.data.hostName || null,
+    },
     reviewCount: reviewItems.length,
     passCount: results.filter((item) => item.status === "PASS").length,
     reviewItems,
@@ -521,6 +529,16 @@ function buildMarkdown(manifest) {
     }
     return "n/a";
   };
+  const formatFieldRehearsalMetadata = (item) => {
+    const metadata = item.metadata || {};
+    return [
+      `evidenceType=${metadata.evidenceType || "unknown"}`,
+      `baseUrl=${metadata.baseUrl || "unknown"}`,
+      `reviewer=${metadata.reviewer || "unknown"}`,
+      `siteName=${metadata.siteName || "unknown"}`,
+      `hostName=${metadata.hostName || "unknown"}`,
+    ].join("<br>");
+  };
 
   const lines = [
     "# Delivery Evidence Manifest",
@@ -660,11 +678,11 @@ function buildMarkdown(manifest) {
     "",
     "## Field Rehearsal Evidence",
     "",
-    "| Type | Output Root | Manifest | PASS | Review |",
-    "| --- | --- | --- | --- | --- |",
+    "| Type | Output Root | Manifest | PASS | Review | Execution Metadata |",
+    "| --- | --- | --- | --- | --- | --- |",
     ...manifest.fieldRehearsalEvidence.summaries.map(
       (item) =>
-        `| ${item.type} | \`${item.outputRoot}\` | ${item.manifestPath ? `\`${item.manifestPath}\`` : "missing"} | ${item.passCount} | ${item.reviewCount} |`,
+        `| ${item.type} | \`${item.outputRoot}\` | ${item.manifestPath ? `\`${item.manifestPath}\`` : "missing"} | ${item.passCount} | ${item.reviewCount} | ${formatFieldRehearsalMetadata(item)} |`,
     ),
   );
 
@@ -699,6 +717,7 @@ function buildMarkdown(manifest) {
     "- Optional external tools such as gitleaks, Trivy, and OWASP ZAP are captured by `npm run security:evidence` or `scripts/security-scan.ps1` when installed.",
     "- Cross-platform security evidence can be generated with `npm run security:evidence`.",
     "- Runtime smoke with real Docker services and device ingest key should be attached here when performed on the delivery machine.",
+    "- Field rehearsal PASS manifests should carry `FIELD_REHEARSAL_PASS` plus reviewer, site, host, and base URL metadata.",
     "",
     "## Evidence Notes",
     "",
@@ -832,6 +851,7 @@ module.exports = {
   parseEvidenceMatrix,
   readLatestJsonManifest,
   summarizeCompanionEvidence,
+  summarizeFieldRehearsal,
   summarizeFieldAcceptance,
   summarizeFieldPreflight,
   statusLabel,

@@ -4,6 +4,7 @@ const {
   parseEvidenceMatrix,
   readLatestJsonManifest,
   summarizeCompanionEvidence,
+  summarizeFieldRehearsal,
   summarizeFieldAcceptance,
   summarizeFieldPreflight,
 } = require("./generate-delivery-evidence");
@@ -100,6 +101,36 @@ const fieldPreflightReviewSummary = buildHandoverSummary(rows, commands.slice(0,
 ]);
 const missingFieldAcceptance = summarizeFieldAcceptance("Field Acceptance", "artifacts/missing-field-acceptance-vector");
 const missingFieldPreflight = summarizeFieldPreflight("Field Preflight", "artifacts/missing-field-preflight-vector");
+const fieldRehearsalMetadataRoot = path.join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "artifacts",
+  "delivery-summary-field-rehearsal-metadata",
+);
+const fieldRehearsalMetadataDir = path.join(fieldRehearsalMetadataRoot, "20260703-000000");
+fs.mkdirSync(fieldRehearsalMetadataDir, { recursive: true });
+fs.writeFileSync(
+  path.join(fieldRehearsalMetadataDir, "manifest.json"),
+  JSON.stringify({
+    evidenceType: "FIELD_REHEARSAL_PASS",
+    baseUrl: "http://localhost:8080",
+    reviewer: "field-reviewer",
+    siteName: "delivery-site",
+    hostName: "field-host",
+    results: [
+      {
+        name: "field rehearsal pass vector",
+        status: "PASS",
+      },
+    ],
+  }),
+);
+const fieldRehearsalMetadataSummary = summarizeFieldRehearsal(
+  "Lidar Ingest",
+  "artifacts/delivery-summary-field-rehearsal-metadata",
+);
 const bomVectorRoot = path.join(__dirname, "..", "..", "..", "artifacts", "delivery-summary-vector-bom");
 const bomVectorDir = path.join(bomVectorRoot, "20260703-000000");
 fs.mkdirSync(bomVectorDir, { recursive: true });
@@ -292,6 +323,26 @@ assertIncludes(
 assert(
   fieldReviewSummary.notes.some((note) => note.includes("Field rehearsal evidence")),
   "summary should explain field rehearsal visibility",
+);
+assert(
+  fieldRehearsalMetadataSummary.metadata.evidenceType === "FIELD_REHEARSAL_PASS",
+  "field rehearsal summary should expose evidence type",
+);
+assert(
+  fieldRehearsalMetadataSummary.metadata.baseUrl === "http://localhost:8080",
+  "field rehearsal summary should expose base URL",
+);
+assert(
+  fieldRehearsalMetadataSummary.metadata.reviewer === "field-reviewer",
+  "field rehearsal summary should expose reviewer",
+);
+assert(
+  fieldRehearsalMetadataSummary.metadata.siteName === "delivery-site",
+  "field rehearsal summary should expose site name",
+);
+assert(
+  fieldRehearsalMetadataSummary.metadata.hostName === "field-host",
+  "field rehearsal summary should expose host name",
 );
 assert(
   coverage.some(
