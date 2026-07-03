@@ -97,6 +97,34 @@ function Add-SkippedStep {
   return New-StepResult -Name $Name -Status "SKIPPED" -Command "" -LogPath "" -ExitCode 0 -StartedAt $now -FinishedAt $now -Reason $Reason
 }
 
+function Get-LatestManifest {
+  param([string]$Root)
+
+  if (!(Test-Path -LiteralPath $Root)) { return $null }
+  $manifest = Get-ChildItem -LiteralPath $Root -Directory |
+    Sort-Object Name -Descending |
+    Select-Object -First 1 |
+    ForEach-Object { Join-Path $_.FullName "manifest.json" }
+  if (!$manifest -or !(Test-Path -LiteralPath $manifest)) { return $null }
+  return Get-Content -LiteralPath $manifest -Raw | ConvertFrom-Json
+}
+
+function Add-PreflightManifestGate {
+  param([object[]]$Steps)
+
+  $manifest = Get-LatestManifest -Root "artifacts/field-preflight"
+  $now = (Get-Date).ToUniversalTime().ToString("o")
+  if ($null -eq $manifest) {
+    return $Steps + (New-StepResult -Name "field preflight manifest gate" -Status "REVIEW" -Command "read artifacts/field-preflight/latest/manifest.json" -LogPath "" -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Latest field preflight manifest was not found.")
+  }
+
+  if ($manifest.status -eq "PASS") { return $Steps }
+
+  $status = if ($manifest.status -eq "PASS_WITH_SKIPS") { "SKIPPED" } else { "REVIEW" }
+  $exitCode = if ($status -eq "SKIPPED") { 0 } else { 1 }
+  return $Steps + (New-StepResult -Name "field preflight manifest gate" -Status $status -Command "read artifacts/field-preflight/latest/manifest.json" -LogPath "" -ExitCode $exitCode -StartedAt $now -FinishedAt $now -Reason "Latest field preflight manifest status is $($manifest.status); reviewCount=$($manifest.reviewCount), skippedCount=$($manifest.skippedCount).")
+}
+
 function Add-ArgumentIf {
   param(
     [string[]]$Arguments,
@@ -312,6 +340,7 @@ $preflightCommandParts = Add-ArgumentIf -Arguments $preflightCommandParts -Condi
 $steps += Invoke-AcceptanceStep -Name "field preflight" -Command ($preflightCommandParts -join " ") -LogFile (Join-Path $outputDir "00-field-preflight.log") -Script {
   powershell.exe @preflightArgs
 }
+$steps = Add-PreflightManifestGate -Steps $steps
 
 $steps += Invoke-AcceptanceStep -Name "delivery verify gate" -Command "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/delivery-verify.ps1" -LogFile (Join-Path $outputDir "01-delivery-verify.log") -Script {
   powershell.exe -NoProfile -ExecutionPolicy Bypass -File "scripts/delivery-verify.ps1"
