@@ -46,6 +46,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "LIVE_TCP_READY", "final status report generator"],
   [generator, "requireScanners", "final status report generator"],
   [generator, "strictAcceptanceBlocked", "final status report generator"],
+  [generator, "DELIVERY_FIX_REQUIRED", "final status report generator"],
+  [generator, "BLOCKING_FINDINGS", "final status report generator"],
+  [generator, "dispositionSummary", "final status report generator"],
   [generator, "referenceFreshness", "final status report generator"],
   [generator, "sourceRevisionFreshness", "final status report generator"],
   [generator, "Source Code State", "final status report generator"],
@@ -90,6 +93,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [matrix, "Git Delivery State", "delivery evidence matrix"],
   [matrix, "Field Acceptance", "delivery evidence matrix"],
   [matrix, "OPERATOR_UI_REVIEW", "delivery evidence matrix"],
+  [matrix, "DELIVERY_FIX_REQUIRED", "delivery evidence matrix"],
+  [matrix, "BLOCKING_FINDINGS", "delivery evidence matrix"],
+  [matrix, "zero blocking or delivery-fix security findings", "delivery evidence matrix"],
   [matrix, "Delivery Entrypoint Consistency", "delivery evidence matrix"],
   [matrix, "MISMATCH", "delivery evidence matrix"],
   [matrix, "pushed to `origin/dev`", "delivery evidence matrix"],
@@ -147,7 +153,12 @@ const readyEvidence = {
   },
   securityEvidence: {
     path: "artifacts/security/20260101-000000/manifest.json",
-    data: { targetUrl: "http://field.local:8080", options: { requireScanners: true }, strictAcceptanceBlocked: false },
+    data: {
+      targetUrl: "http://field.local:8080",
+      options: { requireScanners: true },
+      strictAcceptanceBlocked: false,
+      dispositionSummary: { pass: 6, blocking: 0, deliveryFix: 0, riskAccepted: 0, unverified: 0 },
+    },
   },
   handoverIndex: { path: "artifacts/handover-index/20260101-000000/manifest.json", data: { status: "READY" } },
   fieldClosurePlan: { path: "artifacts/field-closure-plan/20260101-000000/manifest.json", data: { status: "CLOSED" } },
@@ -330,7 +341,12 @@ const blockedSecurity = buildFinalStatusReport({
     ...readyEvidence,
     securityEvidence: {
       path: readyEvidence.securityEvidence.path,
-      data: { options: { requireScanners: true }, strictAcceptanceBlocked: true },
+      data: {
+        targetUrl: "http://field.local:8080",
+        options: { requireScanners: true },
+        strictAcceptanceBlocked: true,
+        dispositionSummary: { pass: 4, blocking: 1, deliveryFix: 0, riskAccepted: 0, unverified: 0 },
+      },
     },
   },
   manualEvidence: manualPresent,
@@ -347,6 +363,31 @@ assert(
 assert(
   blockedSecurity.gateActionRunbook.some((item) => item.actionType === "SECURITY_REVIEW_REQUIRED"),
   "blocked security fixture should expose security action type",
+);
+
+const deliveryFixSecurity = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    securityEvidence: {
+      path: readyEvidence.securityEvidence.path,
+      data: {
+        targetUrl: "http://field.local:8080",
+        options: { requireScanners: true },
+        strictAcceptanceBlocked: false,
+        dispositionSummary: { pass: 5, blocking: 0, deliveryFix: 1, riskAccepted: 0, unverified: 0 },
+      },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
+  git: readyGit,
+});
+
+assert(deliveryFixSecurity.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "delivery-fix security fixture should require review");
+assert(
+  deliveryFixSecurity.remainingGates.some((item) => item.category === "Security Evidence" && item.status === "DELIVERY_FIX_REQUIRED"),
+  "delivery-fix security fixture should expose DELIVERY_FIX_REQUIRED",
 );
 
 const reviewFieldAcceptance = buildFinalStatusReport({

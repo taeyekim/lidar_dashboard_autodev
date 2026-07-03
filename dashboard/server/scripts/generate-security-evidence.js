@@ -422,13 +422,14 @@ function main() {
 
   const requiredFailures = manifest.checks.filter(
     (item) =>
-      (item.status !== "skipped" && item.label === "npm audit policy gate" && item.exitCode !== 0) ||
+      item.disposition?.code === "BLOCKING" ||
+      item.disposition?.code === "DELIVERY_FIX" ||
       requiredScannerFailure(item, requireScanners),
   );
 
   console.log(`security evidence written to ${path.relative(root, outputDir)}`);
   if (requiredFailures.length > 0) {
-    console.error("security evidence captured required gate failures");
+    console.error("security evidence captured blocking or delivery-fix findings");
     process.exit(1);
   }
 }

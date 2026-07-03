@@ -403,6 +403,26 @@ function buildFinalStatusReport(input = {}) {
     if (securitySummary.strictAcceptanceBlocked) {
       addGate(gates, "Security Evidence", "BLOCKED", "Required scanner security evidence is strictAcceptanceBlocked.", "Resolve scanner failures/skips or attach accepted field-risk evidence.", evidencePath(security));
     }
+    if (Number(securitySummary.dispositionSummary?.blocking || 0) > 0) {
+      addGate(
+        gates,
+        "Security Evidence",
+        "BLOCKING_FINDINGS",
+        `${securitySummary.dispositionSummary.blocking} security check(s) are classified as BLOCKING.`,
+        "Resolve blocking security findings or attach accepted field-risk evidence before final close.",
+        evidencePath(security),
+      );
+    }
+    if (Number(securitySummary.dispositionSummary?.deliveryFix || 0) > 0) {
+      addGate(
+        gates,
+        "Security Evidence",
+        "DELIVERY_FIX_REQUIRED",
+        `${securitySummary.dispositionSummary.deliveryFix} security check(s) require delivery fixes.`,
+        "Fix the reported security findings and rerun npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners.",
+        evidencePath(security),
+      );
+    }
   }
 
   manualEvidenceSummary
