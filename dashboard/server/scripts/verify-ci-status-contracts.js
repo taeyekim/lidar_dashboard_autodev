@@ -33,6 +33,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "headSha", "CI status generator"],
   [generator, "conclusion", "CI status generator"],
   [generator, "canUseForFinalClose", "CI status generator"],
+  [generator, "gh workflow run", "CI status generator"],
+  [generator, "--ref", "CI status generator"],
   [generator, "artifacts/ci-status", "CI status generator"],
   [generator, "Git pushed to origin/dev", "CI status generator"],
   [runbook, "npm.cmd run ci:status", "delivery runbook"],
@@ -89,6 +91,7 @@ const failedToolManifest = buildCiStatusEvidence({
 });
 assert(failedToolManifest.status === "REVIEW", "missing gh/auth should require review");
 assert(failedToolManifest.reviewReasons.some((item) => item.includes("GitHub CLI run lookup failed")), "missing gh/auth should explain lookup failure");
+assert(failedToolManifest.nextAction.includes("gh workflow run CI --ref dev"), "missing CI evidence should point to manual workflow dispatch");
 
 const markdown = buildMarkdown(passManifest);
 ["CI Status Evidence", "GitHub Actions Run", "Can use for final close", "Git pushed to origin/dev"].forEach((token) =>

@@ -13,6 +13,7 @@ function assertIncludes(token) {
 }
 
 assertIncludes("push:");
+assertIncludes("workflow_dispatch:");
 assertIncludes("branches:");
 assertIncludes("- dev");
 assert(!workflow.includes("pull_request:"), "CI workflow must not use pull_request in dev direct-push mode");

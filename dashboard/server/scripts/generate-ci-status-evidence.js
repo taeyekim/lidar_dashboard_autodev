@@ -135,7 +135,7 @@ function buildCiStatusEvidence(input = {}) {
     nextAction:
       status === "PASS"
         ? "Attach this CI status evidence to the final handover package."
-        : `Confirm the ${workflow} GitHub Actions run for ${git.commit} on ${branch} is completed with conclusion=success, then rerun npm.cmd run ci:status.`,
+        : `Confirm the ${workflow} GitHub Actions run for ${git.commit} on ${branch} is completed with conclusion=success. If no run exists, trigger it with gh workflow run ${workflow} --ref ${branch}, wait for completion, then rerun npm.cmd run ci:status.`,
   };
 }
 

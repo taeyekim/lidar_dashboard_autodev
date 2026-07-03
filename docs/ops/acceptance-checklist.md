@@ -145,6 +145,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `npm run verify:statistics-metrics` passes and confirms unique track counts, wrong-way rate, command success rate, and average TCP ACK response vectors.
 - [ ] `npm --prefix dashboard/server test` passes for backend protocol and contract checks.
 - [ ] GitHub Actions on `dev` runs smoke, server tests, DB checks, frontend lint/build, audit policy, and `docker compose config --quiet`.
+- [ ] If no automatic CI run exists for the final `dev` commit, `gh workflow run CI --ref dev` is used intentionally and the resulting run is watched to completion before final close.
 - [ ] `npm run ci:status` records `artifacts/ci-status/<timestamp>/manifest.json` for the final pushed `dev` commit; final close requires status `PASS`.
 - [ ] `npm run ci` passes.
 - [ ] `npm --prefix dashboard/dashboard-web run lint` passes.
