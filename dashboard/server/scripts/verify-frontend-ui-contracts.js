@@ -51,6 +51,7 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
   'lazy(() => import("../pages/EventLog/EventLogPage"))',
   'lazy(() => import("../pages/Devices/DevicesPage"))',
   "<Suspense fallback={<RouteFallback />}>",
+  "Loading screen...",
 ].forEach((token) => assertIncludes(appRouter, token, "App router route-level lazy loading"));
 
 [
@@ -211,6 +212,7 @@ const MOJIBAKE_FORBIDDEN_TOKENS = [
 ];
 
 MOJIBAKE_FORBIDDEN_TOKENS.forEach((token) => {
+  assertExcludes(appRouter, token, "App router mojibake copy");
   assertExcludes(devicesPage, token, "Devices page mojibake copy");
   assertExcludes(eventLogPage, token, "Event log mojibake copy");
   assertExcludes(wrongwayLogPage, token, "Wrongway log mojibake copy");

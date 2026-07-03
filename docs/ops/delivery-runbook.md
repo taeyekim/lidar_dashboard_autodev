@@ -241,9 +241,9 @@ and configured site/zone/device API results under
 Field topology verification:
 
 ```bash
-curl http://localhost:8080/api/sites
-curl http://localhost:8080/api/zones
-curl http://localhost:8080/api/devices
+curl -b field-cookies.txt http://localhost:8080/api/sites
+curl -b field-cookies.txt http://localhost:8080/api/zones
+curl -b field-cookies.txt http://localhost:8080/api/devices
 ```
 
 Expected:

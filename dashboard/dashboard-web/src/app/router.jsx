@@ -13,7 +13,7 @@ const MainLayout = lazy(() => import("../layouts/MainLayout"));
 function RouteFallback() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-white text-sm font-bold text-gray-500">
-      화면을 불러오는 중입니다.
+      Loading screen...
     </div>
   );
 }
