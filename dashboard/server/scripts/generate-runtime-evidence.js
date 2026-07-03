@@ -54,14 +54,14 @@ function writeCommandLog(dir, item) {
   return fileName;
 }
 
-function parseEnvKeys() {
-  const envPath = path.join(root, ".env");
-  if (!fs.existsSync(envPath)) {
+function parseEnvFile(fileName) {
+  const filePath = path.join(root, fileName);
+  if (!fs.existsSync(filePath)) {
     return { exists: false, keys: [] };
   }
 
   const keys = fs
-    .readFileSync(envPath, "utf8")
+    .readFileSync(filePath, "utf8")
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line && !line.startsWith("#") && line.includes("="))
@@ -69,6 +69,23 @@ function parseEnvKeys() {
     .sort();
 
   return { exists: true, keys };
+}
+
+function buildEnvReadiness() {
+  const example = parseEnvFile(".env.example");
+  const local = parseEnvFile(".env");
+  const presentKeySet = new Set(local.keys);
+  const missingKeys = local.exists ? example.keys.filter((key) => !presentKeySet.has(key)) : [];
+
+  return {
+    exists: local.exists,
+    exampleExists: example.exists,
+    exampleKeys: example.keys,
+    presentKeys: local.keys,
+    missingKeys,
+    // Backward-compatible alias for older evidence readers.
+    keys: local.keys,
+  };
 }
 
 function statusLabel(item) {
@@ -83,7 +100,9 @@ function buildMarkdown(manifest) {
     `- Generated at: ${manifest.generatedAt}`,
     `- Run compose smoke: ${manifest.options.runSmoke ? "yes" : "no"}`,
     `- .env exists: ${manifest.env.exists ? "yes" : "no"}`,
-    `- .env keys recorded: ${manifest.env.keys.length}`,
+    `- .env keys recorded: ${manifest.env.presentKeys.length}`,
+    `- .env.example keys recorded: ${manifest.env.exampleKeys.length}`,
+    `- Missing .env keys: ${manifest.env.exists ? manifest.env.missingKeys.length : "not checked"}`,
     "",
     "## Commands",
     "",
@@ -102,12 +121,24 @@ function buildMarkdown(manifest) {
 
   lines.push(
     "",
+    "## Environment Readiness",
+    "",
+    "Values are intentionally omitted.",
+    "",
+    "| Check | Result |",
+    "| --- | --- |",
+    `| .env.example exists | ${manifest.env.exampleExists ? "yes" : "no"} |`,
+    `| .env exists | ${manifest.env.exists ? "yes" : "no"} |`,
+    `| .env.example key count | ${manifest.env.exampleKeys.length} |`,
+    `| .env key count | ${manifest.env.presentKeys.length} |`,
+    `| Missing keys | ${manifest.env.exists ? manifest.env.missingKeys.join(", ") || "none" : "skipped because .env is missing"} |`,
+    "",
     "## Environment Keys",
     "",
     "Values are intentionally omitted.",
     "",
     "```text",
-    ...manifest.env.keys,
+    ...manifest.env.presentKeys,
     "```",
     "",
   );
@@ -171,10 +202,17 @@ function main() {
     commands.push(skipped("runtime smoke", "Run with --run-smoke to start Docker compose and execute scripts/runtime-smoke.ps1"));
   }
 
+  const env = buildEnvReadiness();
+  if (!env.exists) {
+    notes.push(".env is not present; copy .env.example to .env and fill field values before runtime smoke.");
+  } else if (env.missingKeys.length > 0) {
+    notes.push(`.env is missing keys from .env.example: ${env.missingKeys.join(", ")}`);
+  }
+
   const manifest = {
     generatedAt: new Date().toISOString(),
     options: { runSmoke },
-    env: parseEnvKeys(),
+    env,
     notes,
     commands: commands.map((item) => {
       const logFile = item.status === "skipped" ? null : writeCommandLog(outputDir, item);

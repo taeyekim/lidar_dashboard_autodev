@@ -271,7 +271,7 @@ Evidence package:
 - `docs/ops/delivery-evidence-matrix.md` requirement-to-evidence coverage reference
 - `.env` values redacted summary
 - `artifacts/delivery/<timestamp>/manifest.md` and `manifest.json` from `npm run delivery:evidence`
-- `artifacts/runtime/<timestamp>/manifest.md` and `manifest.json` from `npm run runtime:evidence`
+- `artifacts/runtime/<timestamp>/manifest.md` and `manifest.json` from `npm run runtime:evidence`; this records `.env.example` key coverage, present `.env` keys, and missing `.env` keys without storing values.
 - `docker compose config --quiet` result
 - `npm.cmd run smoke` or `npm run smoke` result
 - `npm.cmd run ci` or `npm run ci` result
