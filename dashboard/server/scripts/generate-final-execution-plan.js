@@ -54,6 +54,14 @@ function commandCatalog(baseUrl) {
       doneWhen: "The register identifies every risk that must be resolved directly or copied into artifacts/manual/field-risk-acceptance.md.",
     },
     {
+      id: "field-action-board",
+      phase: "Field Runtime",
+      actionTypes: ["FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED", "REVIEW_REQUIRED"],
+      command: `npm.cmd run field:action-board -- --base-url=${baseUrl} --site-name="delivery-site-name" --generated-by="field-reviewer-name"`,
+      purpose: "Group remaining final-status gates by owner, priority, command, evidence, and close criteria.",
+      doneWhen: "The board shows owner-ready commands for every remaining final-status gate.",
+    },
+    {
       id: "field-preflight",
       phase: "Field Runtime",
       actionTypes: ["FIELD_ACTION_REQUIRED"],

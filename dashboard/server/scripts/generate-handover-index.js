@@ -145,6 +145,13 @@ function buildIndexManifest(options = {}) {
       notes: "Reviewer-preparation register that maps open field, security, and manual gates into risk acceptance draft rows.",
     },
     {
+      area: "Field Action Board",
+      required: true,
+      outputRoot: "artifacts/field-action-board",
+      command: "npm run field:action-board",
+      notes: "Owner-prioritized execution board that maps final-status gates to field commands, evidence paths, and close criteria.",
+    },
+    {
       area: "Field Closure Plan",
       required: true,
       outputRoot: "artifacts/field-closure-plan",
