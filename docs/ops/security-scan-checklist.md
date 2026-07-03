@@ -7,6 +7,7 @@ This checklist is for delivery rehearsals before connecting to the real control 
 - Confirm `.env` is not committed.
 - Set a long random `JWT_SECRET`.
 - Keep `CONTROL_BOARD_DRY_RUN=true` until field TCP host/port are confirmed.
+- Keep `CONTROL_BOARD_LIVE_APPROVED=false` until hardware-owner approval for live TCP command testing is recorded.
 - Confirm Nginx is the browser entrypoint: `http://<PUBLIC_HOST>:<NGINX_PORT>`.
 - Confirm `CORS_ORIGINS` contains only trusted operator UI origins.
 - Confirm `AUTH_COOKIE_SECURE=true` when HTTPS/TLS is used and `AUTH_COOKIE_SAMESITE` matches the delivery topology.

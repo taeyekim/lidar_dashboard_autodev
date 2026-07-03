@@ -9,6 +9,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `DEVICE_INGEST_API_KEY` is set when the lidar PC or bridge can send `X-Device-Key`, or the trusted-LAN exception is documented.
 - [ ] Accepted trusted-LAN, scanner, Swagger, HTTPS cookie, dry-run, or unavailable-hardware exceptions use `docs/ops/field-risk-acceptance-template.md` and are attached as `artifacts/manual/field-risk-acceptance.md`.
 - [ ] `CONTROL_BOARD_DRY_RUN=true` before real hardware approval.
+- [ ] `CONTROL_BOARD_LIVE_APPROVED=false` until the hardware owner explicitly approves live TCP command testing.
 - [ ] `CORS_ORIGINS` only includes trusted operator UI origins.
 - [ ] `AUTH_COOKIE_SECURE=true` is set when HTTPS/TLS is used through the delivery proxy.
 - [ ] `AUTH_COOKIE_SAMESITE` matches the deployment topology (`lax` for same-site Nginx entrypoint, `none` only when cross-site HTTPS is required).
@@ -21,7 +22,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 
 - [ ] `docs/ops/delivery-evidence-matrix.md` is reviewed as the requirement-to-evidence coverage map.
 - [ ] `docker compose config --quiet` passes.
-- [ ] `npm run field:preflight` or `scripts/field-preflight.ps1` records field preflight evidence for `.env`, `JWT_SECRET`, `DEVICE_INGEST_API_KEY`, control-board dry-run/live TCP readiness, cookie security, and `NGINX_SWAGGER_ALLOW`.
+- [ ] `npm run field:preflight` or `scripts/field-preflight.ps1` records field preflight evidence for `.env`, `JWT_SECRET`, `DEVICE_INGEST_API_KEY`, control-board dry-run/live TCP readiness and live approval, cookie security, and `NGINX_SWAGGER_ALLOW`.
 - [ ] `npm run runtime:evidence` records Docker CLI, daemon availability, compose config, and `.env` key inventory.
 - [ ] `npm run delivery:evidence` creates `artifacts/delivery/<timestamp>/manifest.md`, `manifest.json`, and companion `runtime/` and `security/` evidence folders.
 - [ ] `npm run completion:audit` creates `artifacts/completion-audit/<timestamp>/manifest.json` plus `artifacts/completion-audit/<timestamp>/manifest.md`, records redacted required field value states from field readiness, checks manual evidence for `artifacts/manual/operator-ui-walkthrough.md` and `artifacts/manual/field-risk-acceptance.md`, lists `Field Rehearsal Follow-ups` when unavailable rehearsal evidence is used, and keeps `canMarkGoalComplete=false` while field readiness, field verification, manual evidence, or skipped/review evidence remains.

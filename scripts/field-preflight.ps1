@@ -81,11 +81,12 @@ $deviceKey = Get-EnvValue -Values $envValues -Name "DEVICE_INGEST_API_KEY"
 $checks = Add-Check -Checks $checks -Name "device ingest key" -Status $(if ($deviceKey) { "PASS" } elseif ($RequireDeviceKey) { "REVIEW" } else { "SKIPPED" }) -Severity $(if ($RequireDeviceKey) { "critical" } else { "warning" }) -Message $(if ($deviceKey) { "DEVICE_INGEST_API_KEY is configured; value is intentionally redacted." } elseif ($RequireDeviceKey) { "DEVICE_INGEST_API_KEY is required for this acceptance run but is missing." } else { "DEVICE_INGEST_API_KEY is not set; trusted-LAN exception must be accepted by the field reviewer." })
 
 $dryRun = (Get-EnvValue -Values $envValues -Name "CONTROL_BOARD_DRY_RUN").ToLowerInvariant()
+$liveApproved = (Get-EnvValue -Values $envValues -Name "CONTROL_BOARD_LIVE_APPROVED").ToLowerInvariant()
 $hostValue = Get-EnvValue -Values $envValues -Name "CONTROL_BOARD_HOST"
 $portValue = Get-EnvValue -Values $envValues -Name "CONTROL_BOARD_PORT"
 if ($AllowLiveTcp) {
-  $liveReady = $dryRun -eq "false" -and $hostValue -and $portValue
-  $checks = Add-Check -Checks $checks -Name "live TCP readiness" -Status $(if ($liveReady) { "PASS" } else { "REVIEW" }) -Severity "critical" -Message $(if ($liveReady) { "LIVE_TCP requested and CONTROL_BOARD_HOST/PORT are configured." } else { "LIVE_TCP requested, but CONTROL_BOARD_DRY_RUN=false and CONTROL_BOARD_HOST/PORT are not all configured." })
+  $liveReady = $dryRun -eq "false" -and $liveApproved -eq "true" -and $hostValue -and $portValue
+  $checks = Add-Check -Checks $checks -Name "live TCP readiness" -Status $(if ($liveReady) { "PASS" } else { "REVIEW" }) -Severity "critical" -Message $(if ($liveReady) { "LIVE_TCP requested, CONTROL_BOARD_LIVE_APPROVED=true, and CONTROL_BOARD_HOST/PORT are configured." } else { "LIVE_TCP requested, but CONTROL_BOARD_DRY_RUN=false, CONTROL_BOARD_LIVE_APPROVED=true, and CONTROL_BOARD_HOST/PORT are not all satisfied." })
 } else {
   $dryRunSafe = $dryRun -ne "false"
   $checks = Add-Check -Checks $checks -Name "dry-run safety" -Status $(if ($dryRunSafe) { "PASS" } else { "REVIEW" }) -Severity "critical" -Message $(if ($dryRunSafe) { "CONTROL_BOARD_DRY_RUN is not false; live TCP will not be used by default." } else { "CONTROL_BOARD_DRY_RUN=false while -AllowLiveTcp was not provided." })

@@ -24,6 +24,8 @@ const packageJson = readProjectFile("package.json");
   "Reviewer",
   "SiteName",
   "AllowLiveTcp",
+  "CONTROL_BOARD_LIVE_APPROVED",
+  "liveApproved",
   "SEED_ADMIN_USER_ID",
   "SEED_ADMIN_PASSWORD",
   "AUTH_CSRF_COOKIE_NAME",

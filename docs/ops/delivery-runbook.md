@@ -14,6 +14,7 @@ This runbook describes the field rehearsal flow for the lidar wrong-way preventi
   `docs/ops/field-risk-acceptance-template.md` and attach the field copy as
   `artifacts/manual/field-risk-acceptance.md`.
 - Keep `CONTROL_BOARD_DRY_RUN=true` until the TCP host/port is confirmed with the hardware owner.
+- Keep `CONTROL_BOARD_LIVE_APPROVED=false` until the hardware owner explicitly approves live TCP command testing.
 - Confirm `CONTROL_BOARD_HOST`, `CONTROL_BOARD_PORT`, timeout, retry, and heartbeat values with the field network plan.
 - Confirm `NGINX_WRONGWAY_RATE_LIMIT`, `NGINX_WRONGWAY_BURST`, `NGINX_CONTENT_SECURITY_POLICY`, and `NGINX_SWAGGER_ALLOW` match the field network, media host topology, and Swagger exposure policy.
 
@@ -65,7 +66,7 @@ npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -Reviewer "field-
 ```
 
 The preflight records `.env` readiness, `JWT_SECRET`, seed admin password,
-`DEVICE_INGEST_API_KEY`, `CONTROL_BOARD_DRY_RUN`, live TCP host/port,
+`DEVICE_INGEST_API_KEY`, `CONTROL_BOARD_DRY_RUN`, `CONTROL_BOARD_LIVE_APPROVED`, live TCP host/port,
 `AUTH_COOKIE_SECURE`, `AUTH_COOKIE_SAMESITE`, and `NGINX_SWAGGER_ALLOW` under
 `artifacts/field-preflight/<timestamp>/manifest.json` plus `manifest.md`.
 Use `-RequireDeviceKey`, `-RequireHttpsCookies`, `-RequireSwaggerAllowlist`,
@@ -406,10 +407,11 @@ When moving to live TCP:
 
 1. Set `CONTROL_BOARD_HOST` and `CONTROL_BOARD_PORT`.
 2. Confirm the network path with the hardware owner.
-3. Set `CONTROL_BOARD_DRY_RUN=false`.
-4. Re-run `scripts/control-board-field-rehearsal.ps1` with `-AllowLiveTcp`, or send `STAGE_1_ON` from the operator UI manual command panel.
-5. Confirm packet/response in `control_commands` and `control_command_logs`.
-6. Restore `CONTROL_BOARD_DRY_RUN=true` after the test unless continuing field validation.
+3. Record hardware owner approval and set `CONTROL_BOARD_LIVE_APPROVED=true`.
+4. Set `CONTROL_BOARD_DRY_RUN=false`.
+5. Re-run `scripts/control-board-field-rehearsal.ps1` with `-AllowLiveTcp`, or send `STAGE_1_ON` from the operator UI manual command panel.
+6. Confirm packet/response in `control_commands` and `control_command_logs`.
+7. Restore `CONTROL_BOARD_DRY_RUN=true` after the test unless continuing field validation.
 
 ## 7. Security Checks
 

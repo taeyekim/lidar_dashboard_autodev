@@ -26,6 +26,7 @@ keys, or unrestricted internal network maps.
 | TODO | Swagger exposure | Swagger remains available to an approved internal operator network. | `NGINX_SWAGGER_ALLOW` restricted to approved CIDR or explicit internal-only exception. |  |  |
 | TODO | HTTPS cookie posture | HTTPS/TLS is deferred in an isolated same-site network rehearsal. | Record topology, use same-site Nginx entrypoint, and set `AUTH_COOKIE_SECURE=true` before HTTPS delivery. |  |  |
 | TODO | Control-board live TCP | Real control board is not connected; dry-run evidence is accepted until hardware approval. | Keep `CONTROL_BOARD_DRY_RUN=true`; live TCP requires approved host/port and command/ACK evidence. |  |  |
+| TODO | Control-board live approval | Host/port are configured but hardware-owner approval is not recorded yet. | Keep `CONTROL_BOARD_LIVE_APPROVED=false` and block final LIVE_TCP_READY until approval is recorded. |  |  |
 | TODO | Runtime/hardware rehearsal | DB, LiDAR, or control-board rehearsal is unavailable on the current workstation. | Attach `FIELD_REHEARSAL_UNAVAILABLE` manifest and schedule replacement PASS rehearsal. |  |  |
 
 ## Reviewer Decision

@@ -64,6 +64,7 @@ const requiredEnvKeys = [
   "DATABASE_URL",
   "CONTROL_BOARD_TRANSPORT",
   "CONTROL_BOARD_DRY_RUN",
+  "CONTROL_BOARD_LIVE_APPROVED",
   "CONTROL_BOARD_HOST",
   "CONTROL_BOARD_PORT",
   "CONTROL_BOARD_CONNECT_TIMEOUT_MS",
@@ -104,6 +105,7 @@ composeVariables.forEach((key) => {
 
 assert(env.get("CONTROL_BOARD_TRANSPORT") === "tcp", "CONTROL_BOARD_TRANSPORT must default to tcp");
 assert(env.get("CONTROL_BOARD_DRY_RUN") === "true", "CONTROL_BOARD_DRY_RUN must default to true");
+assert(env.get("CONTROL_BOARD_LIVE_APPROVED") === "false", "CONTROL_BOARD_LIVE_APPROVED must default to false");
 assert(env.get("CONTROL_BOARD_HOST") === "", "CONTROL_BOARD_HOST must stay blank in .env.example");
 assert(env.get("CONTROL_BOARD_PORT") === "", "CONTROL_BOARD_PORT must stay blank in .env.example");
 assert(
@@ -117,16 +119,19 @@ assert(
 
 [
   [deliveryRunbook, "CONTROL_BOARD_DRY_RUN=true", "delivery runbook"],
+  [deliveryRunbook, "CONTROL_BOARD_LIVE_APPROVED=false", "delivery runbook"],
   [deliveryRunbook, "JWT_SECRET", "delivery runbook"],
   [deliveryRunbook, "X-Device-Key", "delivery runbook"],
   [deliveryRunbook, "docs/ops/field-risk-acceptance-template.md", "delivery runbook"],
   [deliveryRunbook, "artifacts/manual/field-risk-acceptance.md", "delivery runbook"],
   [securityChecklist, "CONTROL_BOARD_DRY_RUN=true", "security checklist"],
+  [securityChecklist, "CONTROL_BOARD_LIVE_APPROVED=false", "security checklist"],
   [securityChecklist, "JWT_SECRET", "security checklist"],
   [securityChecklist, "DEVICE_INGEST_API_KEY", "security checklist"],
   [securityChecklist, "docs/ops/field-risk-acceptance-template.md", "security checklist"],
   [securityChecklist, "artifacts/manual/field-risk-acceptance.md", "security checklist"],
   [acceptanceChecklist, "CONTROL_BOARD_DRY_RUN=true", "acceptance checklist"],
+  [acceptanceChecklist, "CONTROL_BOARD_LIVE_APPROVED=false", "acceptance checklist"],
   [acceptanceChecklist, "JWT_SECRET", "acceptance checklist"],
   [acceptanceChecklist, "DEVICE_INGEST_API_KEY", "acceptance checklist"],
   [acceptanceChecklist, "docs/ops/field-risk-acceptance-template.md", "acceptance checklist"],
@@ -213,6 +218,7 @@ assert(
   [fieldPreflightScript, "JWT_SECRET", "field preflight script"],
   [fieldPreflightScript, "DEVICE_INGEST_API_KEY", "field preflight script"],
   [fieldPreflightScript, "CONTROL_BOARD_DRY_RUN", "field preflight script"],
+  [fieldPreflightScript, "CONTROL_BOARD_LIVE_APPROVED", "field preflight script"],
   [fieldPreflightScript, "NGINX_SWAGGER_ALLOW", "field preflight script"],
   [fieldPreflightScript, "AUTH_COOKIE_SECURE", "field preflight script"],
   [fieldAcceptanceScript, "scripts/field-acceptance.ps1", "field acceptance script"],

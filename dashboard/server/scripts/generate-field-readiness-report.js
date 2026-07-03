@@ -68,6 +68,7 @@ function checkEvidenceCommand(name) {
     "seed admin password": "Confirm SEED_ADMIN_PASSWORD is non-example before seeding the intended field DB.",
     "device ingest key": "Confirm DEVICE_INGEST_API_KEY is configured or attach the trusted-LAN exception note.",
     "control-board TCP mode": "Confirm CONTROL_BOARD_DRY_RUN, CONTROL_BOARD_HOST, and CONTROL_BOARD_PORT in .env before live TCP rehearsal.",
+    "control-board live approval": "Confirm CONTROL_BOARD_LIVE_APPROVED=true only after the hardware owner approves live TCP testing.",
     "HTTPS cookie setting": "Confirm AUTH_COOKIE_SECURE=true in the HTTPS/TLS delivery topology.",
     "Swagger allowlist": "Confirm NGINX_SWAGGER_ALLOW is restricted to the operator/internal CIDR.",
     "Docker CLI": "docker --version",
@@ -88,6 +89,7 @@ function checkDoneWhen(name) {
     "seed admin password": "SEED_ADMIN_PASSWORD is present and is not the example password.",
     "device ingest key": "DEVICE_INGEST_API_KEY is configured, or a signed trusted-LAN exception is attached.",
     "control-board TCP mode": "Dry-run is explicitly accepted or live TCP host/port are configured with hardware approval.",
+    "control-board live approval": "CONTROL_BOARD_LIVE_APPROVED=true is recorded after hardware owner approval.",
     "HTTPS cookie setting": "AUTH_COOKIE_SECURE=true for the HTTPS/TLS delivery route.",
     "Swagger allowlist": "NGINX_SWAGGER_ALLOW is restricted to the approved operator/internal CIDR.",
     "Docker CLI": "Docker CLI version command exits successfully on the delivery host.",
@@ -148,11 +150,13 @@ function buildEnvChecks() {
   checks.push(buildCheck("device ingest key", deviceKey ? "PASS" : "REVIEW", "warning", deviceKey ? "DEVICE_INGEST_API_KEY is configured and redacted." : "DEVICE_INGEST_API_KEY is not configured.", "Configure the device key or document the trusted-LAN exception."));
 
   const dryRun = envValue(values, "CONTROL_BOARD_DRY_RUN").toLowerCase();
+  const liveApproved = envValue(values, "CONTROL_BOARD_LIVE_APPROVED").toLowerCase() === "true";
   const host = envValue(values, "CONTROL_BOARD_HOST");
   const port = envValue(values, "CONTROL_BOARD_PORT");
-  const liveReady = dryRun === "false" && host && port;
+  const liveReady = dryRun === "false" && liveApproved && host && port;
   const safetyStatus = dryRun === "false" ? (liveReady ? "LIVE_TCP_READY" : "LIVE_TCP_REVIEW") : "DRY_RUN_SAFE";
   checks.push(buildCheck("control-board TCP mode", liveReady ? "PASS" : "REVIEW", "critical", `${safetyStatus}: ${liveReady ? "LIVE_TCP values are configured." : "Control-board is dry-run or live TCP values are incomplete."}`, "Set CONTROL_BOARD_DRY_RUN=false only after field IP/port and hardware approval are confirmed."));
+  checks.push(buildCheck("control-board live approval", liveApproved ? "PASS" : "REVIEW", "critical", liveApproved ? "CONTROL_BOARD_LIVE_APPROVED=true." : "CONTROL_BOARD_LIVE_APPROVED is not true.", "Set CONTROL_BOARD_LIVE_APPROVED=true only after hardware owner approval is recorded."));
 
   const secureCookie = envValue(values, "AUTH_COOKIE_SECURE").toLowerCase();
   const swaggerAllow = envValue(values, "NGINX_SWAGGER_ALLOW");
@@ -189,6 +193,14 @@ function buildEnvChecks() {
       "Set the integrated control-board TCP host before approved live TCP rehearsal.",
       "Blocks live control-board TCP evidence.",
       "Fill CONTROL_BOARD_HOST after the hardware owner confirms the field IP.",
+      false,
+    ),
+    buildRequiredFieldValue(
+      "CONTROL_BOARD_LIVE_APPROVED",
+      liveApproved ? "approved" : "not-approved",
+      "Record hardware owner approval before approved live TCP rehearsal.",
+      "Blocks final live TCP completion while not approved.",
+      "Set CONTROL_BOARD_LIVE_APPROVED=true only after hardware owner approval is recorded.",
       false,
     ),
     buildRequiredFieldValue(

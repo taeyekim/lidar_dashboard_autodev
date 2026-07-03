@@ -141,6 +141,9 @@ function Assert-CommandEvidence {
 }
 
 $envValues = Read-DotEnv ".env"
+$liveApproved = ""
+if ($env:CONTROL_BOARD_LIVE_APPROVED) { $liveApproved = $env:CONTROL_BOARD_LIVE_APPROVED }
+if (!$liveApproved -and $envValues.ContainsKey("CONTROL_BOARD_LIVE_APPROVED")) { $liveApproved = $envValues["CONTROL_BOARD_LIVE_APPROVED"] }
 if (!$UserId -and $env:SEED_ADMIN_USER_ID) { $UserId = $env:SEED_ADMIN_USER_ID }
 if (!$Password -and $env:SEED_ADMIN_PASSWORD) { $Password = $env:SEED_ADMIN_PASSWORD }
 if (!$UserId -and $envValues.ContainsKey("SEED_ADMIN_USER_ID")) { $UserId = $envValues["SEED_ADMIN_USER_ID"] }
@@ -170,6 +173,9 @@ try {
   $mode = [string]$initialStatus.mode
   if ($mode -eq "LIVE_TCP" -and !$AllowLiveTcp) {
     throw "Control board is LIVE_TCP. Re-run with -AllowLiveTcp only after field hardware approval."
+  }
+  if ($mode -eq "LIVE_TCP" -and $liveApproved.ToLowerInvariant() -ne "true") {
+    throw "Control board is LIVE_TCP but CONTROL_BOARD_LIVE_APPROVED is not true. Record hardware owner approval before live TCP rehearsal."
   }
   $results = Add-Result -Results $results -Name "initial control-board status" -Status "PASS" -Response $initialStatus
 
@@ -219,6 +225,7 @@ try {
     siteName = $SiteName
     hostName = [System.Net.Dns]::GetHostName()
     allowLiveTcp = [bool]$AllowLiveTcp
+    liveApproved = $liveApproved.ToLowerInvariant() -eq "true"
     initialMode = $mode
     finalMode = $finalStatus.mode
     safetyStatus = $finalStatus.safetyStatus
