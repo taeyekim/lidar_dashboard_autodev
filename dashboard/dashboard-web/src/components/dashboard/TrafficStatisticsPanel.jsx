@@ -139,6 +139,9 @@ export function TrafficStatisticsPanel() {
         <div className="min-w-0">
           <div className="text-lg font-black text-gray-900">정주행/역주행 운영 통계</div>
           <div className="mt-1 truncate text-xs font-semibold text-gray-500">{formatPeriod(data)}</div>
+          <div className="mt-1 text-xs font-semibold text-gray-500">
+            공식 차량 수는 DB unique track 기준이며, 라이다 raw count는 진단/비교용으로 분리합니다.
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -171,7 +174,7 @@ export function TrafficStatisticsPanel() {
           icon={Car}
           label="정주행 차량"
           value={formatNumber(totals.normalVehicles)}
-          subLabel={`전체 ${formatNumber(totals.vehiclesTotal)}대 기준`}
+          subLabel={`DB unique track 전체 ${formatNumber(totals.vehiclesTotal)}대 기준`}
           tone="blue"
         />
         <MetricTile
@@ -185,7 +188,7 @@ export function TrafficStatisticsPanel() {
           icon={TrendingUp}
           label="역주행률"
           value={formatRate(totals.wrongwayRate)}
-          subLabel={`1차 ${formatNumber(totals.stage1Events)} / 2차 ${formatNumber(totals.stage2Events)}`}
+          subLabel={`unique 역주행 / 전체 track, 1차 ${formatNumber(totals.stage1Events)} / 2차 ${formatNumber(totals.stage2Events)}`}
           tone="slate"
         />
         <MetricTile
