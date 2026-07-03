@@ -34,6 +34,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "conclusion", "CI status generator"],
   [generator, "canUseForFinalClose", "CI status generator"],
   [generator, "gh workflow run", "CI status generator"],
+  [generator, "workflow list", "CI status generator"],
+  [generator, "workflowDispatchConfigured", "CI status generator"],
+  [generator, "workflowState", "CI status generator"],
   [generator, "--ref", "CI status generator"],
   [generator, "artifacts/ci-status", "CI status generator"],
   [generator, "Git pushed to origin/dev", "CI status generator"],
@@ -57,6 +60,8 @@ const passManifest = buildCiStatusEvidence({
   generatedBy: "reviewer-a",
   hostName: "delivery-host",
   git,
+  workflowListResult: { command: "gh workflow list --all", exitCode: 0, stdout: "CI\tactive\t123\n", stderr: "", error: null },
+  workflowDispatchConfigured: true,
   ghResult: { command: "gh run list", exitCode: 0, stdout: "[]", stderr: "", error: null },
   runs: [
     {
@@ -72,29 +77,48 @@ const passManifest = buildCiStatusEvidence({
 });
 assert(passManifest.status === "PASS", "matching successful CI run should PASS");
 assert(passManifest.canUseForFinalClose === true, "PASS CI evidence should be usable for final close");
+assert(passManifest.workflowState.state === "active", "PASS CI evidence should expose active workflow state");
+assert(passManifest.workflowState.dispatchConfigured === true, "PASS CI evidence should expose workflow_dispatch support");
 assert(passManifest.reviewReasons.length === 0, "PASS CI evidence should have no review reasons");
 
 const staleManifest = buildCiStatusEvidence({
   generatedAt: "2026-01-01T00:00:00.000Z",
   git,
+  workflowListResult: { command: "gh workflow list --all", exitCode: 0, stdout: "CI\tactive\t123\n", stderr: "", error: null },
+  workflowDispatchConfigured: true,
   ghResult: { command: "gh run list", exitCode: 0, stdout: "[]", stderr: "", error: null },
   runs: [{ headSha: "older-sha", status: "completed", conclusion: "success" }],
 });
 assert(staleManifest.status === "REVIEW", "stale CI run should require review");
 assert(staleManifest.reviewReasons.some((item) => item.includes("does not match")), "stale CI run should explain headSha mismatch");
 
+const inactiveWorkflowManifest = buildCiStatusEvidence({
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  git,
+  workflowListResult: { command: "gh workflow list --all", exitCode: 0, stdout: "CI\tdisabled_manually\t123\n", stderr: "", error: null },
+  workflowDispatchConfigured: true,
+  ghResult: { command: "gh run list", exitCode: 0, stdout: "[]", stderr: "", error: null },
+  runs: [{ headSha: "fixture-sha", status: "completed", conclusion: "success" }],
+});
+assert(inactiveWorkflowManifest.status === "REVIEW", "inactive workflow should require review even when latest run succeeded");
+assert(inactiveWorkflowManifest.reviewReasons.some((item) => item.includes("instead of active")), "inactive workflow should explain inactive state");
+
 const failedToolManifest = buildCiStatusEvidence({
   generatedAt: "2026-01-01T00:00:00.000Z",
   git,
+  workflowListResult: { command: "gh workflow list --all", exitCode: 0, stdout: "", stderr: "", error: null },
+  workflowDispatchConfigured: false,
   ghResult: { command: "gh run list", exitCode: 1, stdout: "", stderr: "not authenticated", error: null },
   runs: [],
 });
 assert(failedToolManifest.status === "REVIEW", "missing gh/auth should require review");
 assert(failedToolManifest.reviewReasons.some((item) => item.includes("GitHub CLI run lookup failed")), "missing gh/auth should explain lookup failure");
+assert(failedToolManifest.reviewReasons.some((item) => item.includes("workflow is not listed")), "missing workflow listing should explain workflow list failure");
+assert(failedToolManifest.reviewReasons.some((item) => item.includes("workflow_dispatch trigger is not configured")), "missing dispatch config should explain manual trigger gap");
 assert(failedToolManifest.nextAction.includes("gh workflow run CI --ref dev"), "missing CI evidence should point to manual workflow dispatch");
 
 const markdown = buildMarkdown(passManifest);
-["CI Status Evidence", "GitHub Actions Run", "Can use for final close", "Git pushed to origin/dev"].forEach((token) =>
+["CI Status Evidence", "GitHub Actions Run", "Can use for final close", "Workflow dispatch configured", "Git pushed to origin/dev"].forEach((token) =>
   assert(markdown.includes(token), `CI status markdown should include ${token}`),
 );
 
