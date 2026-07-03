@@ -90,6 +90,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "Field Owner Briefs", "final status report generator"],
   [generator, "CI Status", "final status report generator"],
   [generator, "ci:closeout -- --dispatch", "final status report generator"],
+  [generator, "approved external CI closeout window", "final status report generator"],
   [generator, "openRiskCount", "final status report generator"],
   [generator, "openActionCount", "final status report generator"],
   [generator, "openGateCount", "final status report generator"],

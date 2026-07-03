@@ -63,6 +63,8 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "npm run handover:index",
   "npm run field:closure-plan",
   "npm run handover:package",
+  "ci:status` is read-only",
+  "approved external CI closeout window",
   "npm run field:readiness",
   "npm run verify:delivery-evidence-summary",
   "npm run verify:final-status",

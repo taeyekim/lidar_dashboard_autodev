@@ -207,7 +207,7 @@ function commandCatalog(baseUrl) {
       phase: "Package Refresh",
       actionTypes: ["AUTOMATED_REFRESH_AVAILABLE", "REVIEW_REQUIRED"],
       command: `npm.cmd run ci:closeout -- --dispatch --generated-by=${fieldReviewerArg}`,
-      purpose: "Intentionally dispatch GitHub Actions if needed, wait for the final dev commit run, and regenerate CI status evidence.",
+      purpose: "During the approved external CI closeout window, intentionally dispatch GitHub Actions if needed, wait for the final dev commit run, and regenerate CI status evidence.",
       doneWhen: "CI closeout completes and CI status evidence is PASS for the final pushed dev commit.",
     },
     {

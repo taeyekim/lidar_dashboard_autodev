@@ -29,6 +29,7 @@ const finalExecutionPlan = readProjectFile("dashboard/server/scripts/generate-fi
   [script, 'hasFlag("dispatch")', "CI closeout script"],
   [script, '"workflow", "run"', "CI closeout script"],
   [script, "Rerun with --dispatch", "CI closeout script"],
+  [script, "approved external CI closeout window", "CI closeout script"],
   [script, "workflow_dispatch trigger is not configured", "CI closeout script"],
   [script, "Working tree must be clean", "CI closeout script"],
   [script, "not proven pushed to origin/${branch}", "CI closeout script"],

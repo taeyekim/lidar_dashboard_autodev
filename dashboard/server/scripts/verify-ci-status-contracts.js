@@ -33,11 +33,12 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "headSha", "CI status generator"],
   [generator, "conclusion", "CI status generator"],
   [generator, "canUseForFinalClose", "CI status generator"],
-  [generator, "gh workflow run", "CI status generator"],
+  [generator, "npm.cmd run ci:status is read-only", "CI status generator"],
+  [generator, "ci:closeout -- --dispatch", "CI status generator"],
+  [generator, "approved CI closeout window", "CI status generator"],
   [generator, "workflow list", "CI status generator"],
   [generator, "workflowDispatchConfigured", "CI status generator"],
   [generator, "workflowState", "CI status generator"],
-  [generator, "--ref", "CI status generator"],
   [generator, "artifacts/ci-status", "CI status generator"],
   [generator, "Git pushed to origin/dev", "CI status generator"],
   [runbook, "npm.cmd run ci:status", "delivery runbook"],
@@ -115,7 +116,9 @@ assert(failedToolManifest.status === "REVIEW", "missing gh/auth should require r
 assert(failedToolManifest.reviewReasons.some((item) => item.includes("GitHub CLI run lookup failed")), "missing gh/auth should explain lookup failure");
 assert(failedToolManifest.reviewReasons.some((item) => item.includes("workflow is not listed")), "missing workflow listing should explain workflow list failure");
 assert(failedToolManifest.reviewReasons.some((item) => item.includes("workflow_dispatch trigger is not configured")), "missing dispatch config should explain manual trigger gap");
-assert(failedToolManifest.nextAction.includes("gh workflow run CI --ref dev"), "missing CI evidence should point to manual workflow dispatch");
+assert(failedToolManifest.nextAction.includes("npm.cmd run ci:status is read-only"), "missing CI evidence should make ci:status read-only behavior explicit");
+assert(failedToolManifest.nextAction.includes("ci:closeout -- --dispatch"), "missing CI evidence should point to intentional CI closeout dispatch");
+assert(failedToolManifest.nextAction.includes("approved CI closeout window"), "missing CI evidence should require an approved CI closeout window");
 
 const markdown = buildMarkdown(passManifest);
 ["CI Status Evidence", "GitHub Actions Run", "Can use for final close", "Workflow dispatch configured", "Git pushed to origin/dev"].forEach((token) =>

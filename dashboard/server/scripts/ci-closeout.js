@@ -163,7 +163,7 @@ async function main() {
       throw new Error(`GitHub workflow dispatch failed: ${dispatch.error || dispatch.stderr || "unknown error"}`);
     }
   } else if (!current.run) {
-    throw new Error(`No ${workflow} run exists for ${commit}. Rerun with --dispatch to intentionally start GitHub Actions.`);
+    throw new Error(`No ${workflow} run exists for ${commit}. Rerun with --dispatch during the approved external CI closeout window to intentionally start GitHub Actions.`);
   }
 
   current = await waitForRun({ workflow, branch, commit, timeoutMs, intervalMs });

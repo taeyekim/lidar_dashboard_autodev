@@ -294,6 +294,7 @@ assert(
 assert(buildOrderedCommands([{ actionType: "REVIEW_REQUIRED" }], "http://localhost:8080").some((item) => item.id === "final-status"), "review gates should still include final status refresh");
 assert(buildOrderedCommands([{ actionType: "REVIEW_REQUIRED" }], "http://localhost:8080").some((item) => item.id === "field-gate-closure-map"), "review gates should include gate closure map refresh");
 assert(commandCatalog("http://localhost:8080").some((item) => item.id === "field-acceptance" && item.command.includes("-RequireScanners")), "catalog should include strict field acceptance command");
+assert(commandCatalog("http://localhost:8080").some((item) => item.id === "ci-closeout" && item.purpose.includes("approved external CI closeout window")), "CI closeout command should require the approved external CI closeout window");
 const directCoverage = buildCommandGateCoverage(
   [{ order: 1, id: "security-evidence", phase: "Security", command: "npm.cmd run security:evidence", actionTypes: ["SECURITY_REVIEW_REQUIRED"], doneWhen: "done" }],
   [

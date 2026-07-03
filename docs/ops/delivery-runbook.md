@@ -57,7 +57,7 @@ npm.cmd run field:action-board -- --base-url=http://localhost:8080 --generated-b
 npm.cmd run field:gate-closure-map -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
 npm.cmd run field:owner-briefs -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
 npm.cmd run ci:status -- --generated-by="$env:FIELD_REVIEWER"
-# If no CI run exists for the final dev commit, trigger and wait intentionally:
+# If no CI run exists for the final dev commit, trigger and wait intentionally during the approved external CI closeout window:
 # npm.cmd run ci:closeout -- --dispatch --generated-by="$env:FIELD_REVIEWER"
 npm.cmd run handover:index -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
 npm.cmd run field:closure-plan -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
