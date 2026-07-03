@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { buildFinalStatusReport, buildMarkdown } = require("./generate-final-status-report");
+const { buildFinalStatusReport, buildMarkdown, isPlaceholderFieldText } = require("./generate-final-status-report");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -292,6 +292,11 @@ assert(
   "complete fixture should verify fresh field acceptance reference",
 );
 assert(ready.fieldAcceptance.readyForHandover === true, "complete fixture should expose field acceptance handover readiness");
+assert(ready.fieldAcceptance.reviewerReady === true, "complete fixture should expose concrete field acceptance reviewer");
+assert(ready.fieldAcceptance.siteNameReady === true, "complete fixture should expose concrete field acceptance site name");
+assert(isPlaceholderFieldText("field-reviewer-name") === true, "field reviewer placeholder should be recognized");
+assert(isPlaceholderFieldText("delivery-site-name") === true, "delivery site placeholder should be recognized");
+assert(isPlaceholderFieldText("field-reviewer") === false, "concrete reviewer should not be treated as placeholder");
 assert(
   ready.referenceFreshness.some((item) => item.key === "fieldActionBoard" && item.fresh === true),
   "complete fixture should verify fresh field action board reference",
@@ -575,6 +580,35 @@ assert(
 assert(
   reviewFieldAcceptance.gateActionRunbook.some((item) => item.actionType === "FIELD_ACTION_REQUIRED"),
   "review field acceptance fixture should route to field action",
+);
+
+const placeholderFieldAcceptanceMetadata = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    fieldAcceptance: {
+      ...readyEvidence.fieldAcceptance,
+      data: {
+        ...readyEvidence.fieldAcceptance.data,
+        handover: {
+          ...readyEvidence.fieldAcceptance.data.handover,
+          reviewer: "field-reviewer-name",
+          siteName: "delivery-site-name",
+        },
+      },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
+  git: readyGit,
+});
+
+assert(placeholderFieldAcceptanceMetadata.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "placeholder field acceptance metadata should require review");
+assert(
+  placeholderFieldAcceptanceMetadata.remainingGates.some(
+    (item) => item.category === "Field Acceptance" && item.status === "PLACEHOLDER_METADATA",
+  ),
+  "placeholder field acceptance metadata should expose PLACEHOLDER_METADATA gate",
 );
 
 const stalePackage = buildFinalStatusReport({

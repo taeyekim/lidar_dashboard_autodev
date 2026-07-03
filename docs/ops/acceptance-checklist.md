@@ -43,6 +43,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Git-bearing evidence has been regenerated from the same final delivery commit.
 - [ ] `npm run final:status -- --base-url=http://localhost:8080` creates `artifacts/final-status/<timestamp>/manifest.json` plus `manifest.md`; final close is allowed only when this report says `READY_TO_CLOSE` and `canMarkGoalComplete=true`, otherwise close the listed `remainingGates` using the `Gate Action Summary` action types.
 - [ ] Final status `Field Acceptance` summary shows latest field acceptance status `PASS`, `readyForHandover=true`, `requiresFieldReview=false`, zero review/skipped steps, and operator UI walkthrough step `PASS`.
+- [ ] Final status has no `Field Acceptance` `PLACEHOLDER_METADATA` gate; reviewer and site name are concrete delivery-session values, not `field-reviewer-name`, `delivery-site-name`, `unknown`, or `pending`.
 - [ ] Final status `Delivery Entrypoint Consistency` shows field readiness, security evidence, runtime evidence, and handover package were generated for the same delivery Nginx base URL passed to `final:status`.
 - [ ] Final status `Git Delivery State` has no `WRONG_BRANCH`, `WRONG_UPSTREAM`, or `UNPUSHED` gate.
 - [ ] Final status `Source Revision Freshness` shows no dirty source state, no non-`dev` evidence branch, and no stale Git commit for handover, manual readiness, action-board, gate-closure, owner-brief, or delivery evidence that records Git metadata.

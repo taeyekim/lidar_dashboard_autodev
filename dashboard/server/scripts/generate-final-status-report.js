@@ -131,6 +131,12 @@ function formatCompletionBlocker(blocker) {
   return parts.join(" ");
 }
 
+function isPlaceholderFieldText(value) {
+  return /^(?:-|n\/a|na|none|null|tbd|todo|pending|unknown|unspecified|field-reviewer-name|delivery-site-name)$/i.test(
+    String(value || "").trim(),
+  );
+}
+
 function gateSummary(gates) {
   return gates.reduce(
     (summary, gate) => {
@@ -273,6 +279,8 @@ function buildFieldAcceptanceSummary(fieldAcceptance) {
     requiresFieldReview: data.handover?.requiresFieldReview === true,
     reviewer: data.handover?.reviewer || "",
     siteName: data.handover?.siteName || "",
+    reviewerReady: Boolean(data.handover?.reviewer) && !isPlaceholderFieldText(data.handover?.reviewer),
+    siteNameReady: Boolean(data.handover?.siteName) && !isPlaceholderFieldText(data.handover?.siteName),
     latestPreflightStatus: data.handover?.latestPreflightStatus || "UNKNOWN",
     latestPreflightPassed: data.handover?.latestPreflightPassed === true,
     reviewStepCount: Number(data.handover?.reviewStepCount || 0),
@@ -403,6 +411,16 @@ function buildFinalStatusReport(input = {}) {
         "NOT_READY",
         `Field acceptance handover readiness is not closed: readyForHandover=${fieldAcceptanceSummary.readyForHandover}, requiresFieldReview=${fieldAcceptanceSummary.requiresFieldReview}.`,
         "Record reviewer/site, require PASS preflight, close review/skipped steps, and rerun field acceptance.",
+        evidencePath(fieldAcceptance),
+      );
+    }
+    if (!fieldAcceptanceSummary.reviewerReady || !fieldAcceptanceSummary.siteNameReady) {
+      addGate(
+        gates,
+        "Field Acceptance",
+        "PLACEHOLDER_METADATA",
+        `Field acceptance reviewer/site metadata is incomplete or placeholder: reviewer=${fieldAcceptanceSummary.reviewer || "missing"}, siteName=${fieldAcceptanceSummary.siteName || "missing"}.`,
+        "Rerun field acceptance with concrete -Reviewer and -SiteName values from the delivery session.",
         evidencePath(fieldAcceptance),
       );
     }
@@ -815,6 +833,7 @@ module.exports = {
   buildFinalStatusReport,
   buildMarkdown,
   buildGitState,
+  isPlaceholderFieldText,
   refsAreFresh,
   sourceGitFreshness,
 };
