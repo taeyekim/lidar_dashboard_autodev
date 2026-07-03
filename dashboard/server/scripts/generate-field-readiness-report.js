@@ -132,6 +132,61 @@ function buildRequiredFieldValue(name, state, requiredForPass, completionGate, n
   };
 }
 
+function fieldValueOwner(name) {
+  if (["JWT_SECRET", "SEED_ADMIN_PASSWORD", "AUTH_COOKIE_SECURE"].includes(name)) return "Auth/Security";
+  if (["DEVICE_INGEST_API_KEY"].includes(name)) return "LiDAR Ingest";
+  if (name.startsWith("CONTROL_BOARD_")) return "Control-board TCP";
+  if (name.startsWith("NGINX_")) return "Nginx Delivery";
+  return "Field Operations";
+}
+
+function fieldValuePriority(item) {
+  const state = String(item.state || "");
+  if (["missing", "placeholder", "not-approved"].includes(state)) return "BLOCKING";
+  if (state.includes("exception") || state === "open-or-missing") return "REVIEW";
+  if (state === "true" || state === "configured" || state === "approved" || state === "restricted") return "READY";
+  return "REVIEW";
+}
+
+function buildEnvActionGroups(requiredFieldValues) {
+  const groups = requiredFieldValues.reduce((acc, item) => {
+    const owner = fieldValueOwner(item.name);
+    if (!acc[owner]) {
+      acc[owner] = {
+        owner,
+        blockingCount: 0,
+        reviewCount: 0,
+        readyCount: 0,
+        items: [],
+      };
+    }
+    const priority = fieldValuePriority(item);
+    if (priority === "BLOCKING") acc[owner].blockingCount += 1;
+    else if (priority === "READY") acc[owner].readyCount += 1;
+    else acc[owner].reviewCount += 1;
+    acc[owner].items.push({
+      name: item.name,
+      state: item.state,
+      priority,
+      redacted: item.redacted,
+      completionGate: item.completionGate,
+      nextAction: item.nextAction,
+    });
+    return acc;
+  }, {});
+
+  return Object.values(groups).map((group) => ({
+    ...group,
+    status: group.blockingCount > 0 ? "BLOCKING" : group.reviewCount > 0 ? "REVIEW" : "READY",
+    nextAction:
+      group.blockingCount > 0
+        ? "Fill or approve the blocking field values before strict field acceptance."
+        : group.reviewCount > 0
+          ? "Resolve review values directly or attach accepted field-risk evidence."
+          : "No open field value action remains for this owner.",
+  }));
+}
+
 function buildEnvChecks() {
   const example = readEnvFile(".env.example");
   const local = readEnvFile(".env");
@@ -243,6 +298,7 @@ function buildEnvChecks() {
     exampleKeyCount: exampleKeys.length,
     missingExampleKeys,
     requiredFieldValues,
+    envActionGroups: buildEnvActionGroups(requiredFieldValues),
     controlBoardSafetyStatus: safetyStatus,
     checks,
   };
@@ -319,6 +375,20 @@ function buildMarkdown(manifest) {
     `- .env.example key count: ${manifest.env.exampleKeyCount}`,
     `- Missing .env.example keys: ${manifest.env.missingExampleKeys.join(", ") || "none"}`,
     `- Control-board safety status: ${manifest.env.controlBoardSafetyStatus}`,
+    "",
+    "## Field Value Action Groups",
+    "",
+    "| Owner | Status | Blocking | Review | Ready | Next Action |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ...manifest.env.envActionGroups.map((group) => `| ${tableValue(group.owner)} | ${group.status} | ${group.blockingCount} | ${group.reviewCount} | ${group.readyCount} | ${tableValue(group.nextAction)} |`),
+    "",
+    "## Field Value Action Items",
+    "",
+    "| Owner | Priority | Name | State | Completion Gate | Next Action | Redacted |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+    ...manifest.env.envActionGroups.flatMap((group) =>
+      group.items.map((item) => `| ${tableValue(group.owner)} | ${item.priority} | ${tableValue(item.name)} | ${tableValue(item.state)} | ${tableValue(item.completionGate)} | ${tableValue(item.nextAction)} | ${item.redacted} |`),
+    ),
     "",
     "## Required Field Values",
     "",

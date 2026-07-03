@@ -181,7 +181,10 @@ and `manifest.md`, checking Docker daemon reachability, Nginx/API health,
 required `.env` posture, control-board TCP mode, Swagger exposure, and optional
 security scanner availability without printing secret values. The control-board
 safety status is recorded as `DRY_RUN_SAFE`, `LIVE_TCP_READY`, or
-`LIVE_TCP_REVIEW`.
+`LIVE_TCP_REVIEW`. The report also includes `Field Value Action Groups` and
+`Field Value Action Items` so Auth/Security, LiDAR ingest, control-board TCP,
+and Nginx delivery owners can close blocking `.env` values without exposing
+secret values.
 
 For the final attachment refresh, run
 `npm.cmd run handover:package -- --base-url=http://localhost:8080`. Replace
