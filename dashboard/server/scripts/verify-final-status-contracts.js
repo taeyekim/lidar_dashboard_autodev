@@ -46,7 +46,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [deliveryRunbook, "canMarkGoalComplete", "delivery runbook"],
   [deliveryRunbook, "Residual Field Gates", "delivery runbook"],
   [deliveryRunbook, "verify:final-status", "delivery runbook"],
-  [deliveryRunbook, "fresh delivery/readiness/index/", "delivery runbook"],
+  [deliveryRunbook, "fresh delivery/readiness/security/index/", "delivery runbook"],
   [acceptanceChecklist, "canMarkGoalComplete=false", "acceptance checklist"],
   [acceptanceChecklist, "npm run verify:final-status", "acceptance checklist"],
   [acceptanceChecklist, "fresh referenced artifacts", "acceptance checklist"],
@@ -159,6 +159,9 @@ if (latestPackage) {
     assert(data.evidenceRefs?.delivery === latestDelivery?.path, "READY package must reference latest delivery evidence");
     assert(data.evidenceRefs?.completionAudit === latestCompletion?.path, "READY package must reference latest completion audit");
     assert(data.evidenceRefs?.fieldReadiness === latestReadiness?.path, "READY package must reference latest field readiness");
+    if (latestSecurity) {
+      assert(data.evidenceRefs?.securityEvidence === latestSecurity.path, "READY package must reference latest security evidence");
+    }
     assert(data.evidenceRefs?.handoverIndex === latestIndex?.path, "READY package must reference latest handover index");
     assert(data.evidenceRefs?.fieldClosurePlan === latestClosurePlan?.path, "READY package must reference latest field closure plan");
   }
