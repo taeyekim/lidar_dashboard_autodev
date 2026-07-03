@@ -173,7 +173,7 @@ const finalStatus = {
   path: "artifacts/final-status/20260101-000000/manifest.json",
   data: {
     baseUrl: "http://field.local:8080",
-    siteName: "field-site",
+    siteName: "delivery-site-a",
     remainingGates: [
       {
         actionType: "SECURITY_REVIEW_REQUIRED",
@@ -225,6 +225,7 @@ assert(groupRiskItems([{ area: "Security scanners", owner: "Auth/Security", requ
 const manifest = buildManifest({
   generatedAt: "2026-01-01T00:00:00.000Z",
   generatedBy: "tester",
+  siteName: "delivery-site-a",
   git: { branch: "dev", commit: "fixture", clean: true },
   finalStatus,
   fieldReadiness,
@@ -243,5 +244,24 @@ assert(markdown.includes("Field Risk Register"), "markdown should include title"
 assert(markdown.includes("Risk Acceptance Draft Rows"), "markdown should include risk acceptance draft rows");
 assert(markdown.includes("This risk register is preparation evidence"), "markdown should include guardrail");
 assert(markdown.includes("AUTH_COOKIE_SECURE"), "markdown should include field-value risk detail");
+
+const placeholderMetadata = buildManifest({
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "field-reviewer",
+  siteName: "field-site",
+  git: { branch: "dev", commit: "fixture", clean: true },
+  finalStatus: {
+    path: "artifacts/final-status/20260101-000000/manifest.json",
+    data: { baseUrl: "http://field.local:8080", siteName: "field-site", remainingGates: [] },
+  },
+  fieldReadiness: { path: "artifacts/field-readiness/20260101-000000/manifest.json", data: { env: { envActionGroups: [] } } },
+  security: { path: "artifacts/security/20260101-000000/manifest.json", data: { checks: [] } },
+  manualReadiness: { path: "artifacts/manual-evidence-readiness/20260101-000000/manifest.json", data: {} },
+});
+assert(placeholderMetadata.status === "OPEN", "placeholder metadata should keep risk register open");
+assert(
+  placeholderMetadata.riskItems.some((item) => item.status === "PLACEHOLDER_METADATA"),
+  "placeholder metadata should be represented as risk items",
+);
 
 console.log("field risk register contracts ok");

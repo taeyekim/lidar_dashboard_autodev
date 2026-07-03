@@ -4,6 +4,7 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 
 const { readLatestJsonManifest, timestampForPath } = require("./generate-delivery-evidence");
+const { isPlaceholderFieldText } = require("./generate-final-status-report");
 
 const root = path.join(__dirname, "..", "..", "..");
 const fieldReviewerArg = '"$env:FIELD_REVIEWER"';
@@ -107,6 +108,42 @@ function buildActionItems(finalStatus, baseUrl) {
   }));
 }
 
+function buildMetadataActionItems(generatedBy, siteName, baseUrl) {
+  const rerunCommand = `npm.cmd run field:action-board -- --base-url=${baseUrl} --site-name=${fieldSiteArg} --generated-by=${fieldReviewerArg}`;
+  const items = [];
+  if (isPlaceholderFieldText(generatedBy)) {
+    items.push({
+      id: "META-001",
+      owner: "PM/QA",
+      priority: "P1",
+      phase: "Field Review",
+      actionType: "FIELD_ACTION_REQUIRED",
+      category: "Field Metadata",
+      status: "PLACEHOLDER_METADATA",
+      message: "Generated-by reviewer metadata is missing or placeholder.",
+      closeWhen: "Set FIELD_REVIEWER to a concrete field reviewer and rerun field:action-board.",
+      evidence: null,
+      command: rerunCommand,
+    });
+  }
+  if (isPlaceholderFieldText(siteName)) {
+    items.push({
+      id: "META-002",
+      owner: "PM/QA",
+      priority: "P1",
+      phase: "Field Review",
+      actionType: "FIELD_ACTION_REQUIRED",
+      category: "Field Metadata",
+      status: "PLACEHOLDER_METADATA",
+      message: "Site name metadata is missing or placeholder.",
+      closeWhen: "Set FIELD_SITE_NAME to a concrete delivery site and rerun field:action-board.",
+      evidence: null,
+      command: rerunCommand,
+    });
+  }
+  return items;
+}
+
 function groupByPhase(items) {
   const phaseOrder = [
     "Manual Evidence",
@@ -166,11 +203,16 @@ function groupByOwner(items) {
 function buildManifest(input = {}) {
   const finalStatus = input.finalStatus || readLatestJsonManifest("artifacts/final-status");
   const baseUrl = input.baseUrl || finalStatus?.data?.baseUrl || "http://localhost:8080";
-  const items = buildActionItems(finalStatus, baseUrl);
+  const generatedBy = input.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
+  const siteName = input.siteName || finalStatus?.data?.siteName || "unspecified";
+  const items = [
+    ...buildActionItems(finalStatus, baseUrl),
+    ...buildMetadataActionItems(generatedBy, siteName, baseUrl),
+  ];
   return {
     generatedAt: input.generatedAt || new Date().toISOString(),
-    generatedBy: input.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
-    siteName: input.siteName || finalStatus?.data?.siteName || "unspecified",
+    generatedBy,
+    siteName,
     hostName: input.hostName || os.hostname(),
     baseUrl,
     status: finalStatus ? (items.length > 0 ? "OPEN" : "READY_TO_CLOSE") : "FINAL_STATUS_MISSING",
@@ -276,6 +318,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  buildMetadataActionItems,
   buildManifest,
   buildMarkdown,
   buildActionItems,

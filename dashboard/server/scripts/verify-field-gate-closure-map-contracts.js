@@ -57,7 +57,7 @@ assertIncludes(checklist, "npm run field:gate-closure-map", "acceptance checklis
 const actionBoard = {
   path: "artifacts/field-action-board/20260101-000000/manifest.json",
   data: {
-    siteName: "field-site",
+    siteName: "delivery-site-a",
     baseUrl: "http://field.local:8080",
     actionItems: [
       {
@@ -118,6 +118,7 @@ assert(
 const manifest = buildManifest({
   generatedAt: "2026-01-01T00:00:00.000Z",
   generatedBy: "tester",
+  siteName: "delivery-site-a",
   git: { branch: "dev", commit: "fixture", clean: true },
   actionBoard,
 });
@@ -136,6 +137,8 @@ assert(markdown.includes("GATE-001, GATE-002"), "markdown should include grouped
 
 const ready = buildManifest({
   generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "reviewer-a",
+  siteName: "delivery-site-a",
   git: { branch: "dev", commit: "fixture", clean: true },
   actionBoard: {
     path: "artifacts/field-action-board/20260101-000000/manifest.json",
@@ -145,8 +148,23 @@ const ready = buildManifest({
 assert(ready.status === "READY_TO_CLOSE", "empty action board should produce READY_TO_CLOSE map");
 assert(ready.openGateCount === 0, "empty action board should have no open gates");
 
+const placeholderMetadata = buildManifest({
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "field-reviewer",
+  siteName: "field-site",
+  git: { branch: "dev", commit: "fixture", clean: true },
+  actionBoard: {
+    path: "artifacts/field-action-board/20260101-000000/manifest.json",
+    data: { actionItems: [] },
+  },
+});
+assert(placeholderMetadata.status === "OPEN", "placeholder metadata should keep gate closure map open");
+assert(placeholderMetadata.openGateCount === 2, "placeholder reviewer/site should create metadata closure gates");
+
 const missing = buildManifest({
   generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "reviewer-a",
+  siteName: "delivery-site-a",
   git: { branch: "dev", commit: "fixture", clean: true },
   actionBoard: null,
 });

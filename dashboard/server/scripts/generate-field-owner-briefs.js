@@ -4,6 +4,7 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 
 const { readLatestJsonManifest, timestampForPath } = require("./generate-delivery-evidence");
+const { isPlaceholderFieldText } = require("./generate-final-status-report");
 
 const root = path.join(__dirname, "..", "..", "..");
 
@@ -78,11 +79,58 @@ function buildOwnerBrief(ownerGroup, actionBoardPath) {
   ].join("\n");
 }
 
+function buildMetadataOwnerGroup(generatedBy, siteName, baseUrl) {
+  const items = [];
+  if (isPlaceholderFieldText(generatedBy)) {
+    items.push({
+      id: "META-001",
+      priority: "P1",
+      phase: "Field Review",
+      actionType: "FIELD_ACTION_REQUIRED",
+      category: "Field Metadata",
+      status: "PLACEHOLDER_METADATA",
+      message: "Generated-by reviewer metadata is missing or placeholder.",
+      closeWhen: "Set FIELD_REVIEWER to a concrete field reviewer and rerun field:owner-briefs.",
+      evidence: null,
+    });
+  }
+  if (isPlaceholderFieldText(siteName)) {
+    items.push({
+      id: "META-002",
+      priority: "P1",
+      phase: "Field Review",
+      actionType: "FIELD_ACTION_REQUIRED",
+      category: "Field Metadata",
+      status: "PLACEHOLDER_METADATA",
+      message: "Site name metadata is missing or placeholder.",
+      closeWhen: "Set FIELD_SITE_NAME to a concrete delivery site and rerun field:owner-briefs.",
+      evidence: null,
+    });
+  }
+  if (items.length === 0) return null;
+  return {
+    owner: "PM/QA",
+    total: items.length,
+    byPriority: { P1: items.length },
+    byPhase: { "Field Review": items.length },
+    byActionType: { FIELD_ACTION_REQUIRED: items.length },
+    commands: [`npm.cmd run field:owner-briefs -- --base-url=${baseUrl} --site-name="$env:FIELD_SITE_NAME" --generated-by="$env:FIELD_REVIEWER"`],
+    items,
+  };
+}
+
 function buildManifest(input = {}) {
   const actionBoard = Object.prototype.hasOwnProperty.call(input, "actionBoard")
     ? input.actionBoard
     : readLatestJsonManifest("artifacts/field-action-board");
-  const ownerGroups = actionBoard?.data?.ownerGroups || [];
+  const generatedBy = input.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
+  const siteName = input.siteName || actionBoard?.data?.siteName || "unspecified";
+  const baseUrl = input.baseUrl || actionBoard?.data?.baseUrl || "http://localhost:8080";
+  const metadataOwnerGroup = buildMetadataOwnerGroup(generatedBy, siteName, baseUrl);
+  const ownerGroups = [
+    ...(actionBoard?.data?.ownerGroups || []),
+    ...(metadataOwnerGroup ? [metadataOwnerGroup] : []),
+  ];
   const briefs = ownerGroups.map((group) => ({
     owner: group.owner,
     fileName: `${slug(group.owner)}.md`,
@@ -95,10 +143,10 @@ function buildManifest(input = {}) {
 
   return {
     generatedAt: input.generatedAt || new Date().toISOString(),
-    generatedBy: input.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
-    siteName: input.siteName || actionBoard?.data?.siteName || "unspecified",
+    generatedBy,
+    siteName,
     hostName: input.hostName || os.hostname(),
-    baseUrl: input.baseUrl || actionBoard?.data?.baseUrl || "http://localhost:8080",
+    baseUrl,
     status: !actionBoard ? "ACTION_BOARD_MISSING" : briefs.length > 0 ? "OPEN" : "READY_TO_CLOSE",
     sourceFieldActionBoard: actionBoard?.path || null,
     ownerCount: briefs.length,
@@ -152,11 +200,11 @@ function buildMarkdown(manifest) {
   ].join("\n");
 }
 
-function writeOwnerBriefs(outputDir, actionBoard) {
-  const groups = actionBoard?.data?.ownerGroups || [];
+function writeOwnerBriefs(outputDir, ownerGroups, actionBoardPath) {
+  const groups = ownerGroups || [];
   return groups.map((group) => {
     const fileName = `${slug(group.owner)}.md`;
-    fs.writeFileSync(path.join(outputDir, fileName), buildOwnerBrief(group, actionBoard?.path || null));
+    fs.writeFileSync(path.join(outputDir, fileName), buildOwnerBrief(group, actionBoardPath || null));
     return fileName;
   });
 }
@@ -173,7 +221,16 @@ function main() {
   });
 
   ensureDir(outputDir);
-  writeOwnerBriefs(outputDir, actionBoard);
+  const metadataOwnerGroup = buildMetadataOwnerGroup(
+    manifest.generatedBy,
+    manifest.siteName,
+    manifest.baseUrl,
+  );
+  const ownerGroups = [
+    ...(actionBoard?.data?.ownerGroups || []),
+    ...(metadataOwnerGroup ? [metadataOwnerGroup] : []),
+  ];
+  writeOwnerBriefs(outputDir, ownerGroups, actionBoard?.path || null);
   fs.writeFileSync(path.join(outputDir, "manifest.json"), JSON.stringify(manifest, null, 2));
   fs.writeFileSync(path.join(outputDir, "manifest.md"), buildMarkdown(manifest));
   console.log(`field owner briefs written to ${path.relative(root, outputDir)}`);
@@ -186,6 +243,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  buildMetadataOwnerGroup,
   buildManifest,
   buildMarkdown,
   buildOwnerBrief,

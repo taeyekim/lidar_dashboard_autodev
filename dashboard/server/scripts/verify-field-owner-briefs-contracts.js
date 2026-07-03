@@ -67,7 +67,7 @@ assert(slug("Control-board TCP") === "control-board-tcp", "slug should normalize
 const actionBoard = {
   path: "artifacts/field-action-board/20260101-000000/manifest.json",
   data: {
-    siteName: "field-site",
+    siteName: "delivery-site-a",
     baseUrl: "http://field.local:8080",
     ownerGroups: [
       {
@@ -98,6 +98,7 @@ const actionBoard = {
 const manifest = buildManifest({
   generatedAt: "2026-01-01T00:00:00.000Z",
   generatedBy: "tester",
+  siteName: "delivery-site-a",
   git: { branch: "dev", commit: "fixture", clean: true },
   actionBoard,
 });
@@ -122,8 +123,24 @@ assert(ownerMarkdown.includes("DELIVERY_FIX_REQUIRED"), "owner markdown should i
 assert(ownerMarkdown.includes("Security delivery fix is required."), "owner markdown should include message");
 assert(ownerMarkdown.includes("This owner brief is an execution aid"), "owner markdown should include guardrail");
 
+const placeholderMetadata = buildManifest({
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "field-reviewer",
+  siteName: "field-site",
+  git: { branch: "dev", commit: "fixture", clean: true },
+  actionBoard: {
+    path: "artifacts/field-action-board/20260101-000000/manifest.json",
+    data: { ownerGroups: [] },
+  },
+});
+assert(placeholderMetadata.status === "OPEN", "placeholder metadata should keep owner briefs open");
+assert(placeholderMetadata.ownerCount === 1, "placeholder metadata should create PM/QA owner brief");
+assert(placeholderMetadata.openItemCount === 2, "placeholder reviewer/site should create metadata owner items");
+
 const missing = buildManifest({
   generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "reviewer-a",
+  siteName: "delivery-site-a",
   git: { branch: "dev", commit: "fixture", clean: true },
   actionBoard: null,
 });

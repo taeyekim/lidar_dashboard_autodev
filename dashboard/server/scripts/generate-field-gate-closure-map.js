@@ -4,6 +4,7 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 
 const { readLatestJsonManifest, timestampForPath } = require("./generate-delivery-evidence");
+const { isPlaceholderFieldText } = require("./generate-final-status-report");
 
 const root = path.join(__dirname, "..", "..", "..");
 
@@ -72,17 +73,56 @@ function buildCommandGroups(actionBoard) {
   ).sort((a, b) => b.gateCount - a.gateCount || a.command.localeCompare(b.command));
 }
 
+function buildMetadataCommandGroups(generatedBy, siteName, baseUrl) {
+  const gates = [];
+  if (isPlaceholderFieldText(generatedBy)) {
+    gates.push({
+      gateId: "META-001",
+      status: "PLACEHOLDER_METADATA",
+      closeCriteria: "Set FIELD_REVIEWER to a concrete field reviewer and rerun field:gate-closure-map.",
+    });
+  }
+  if (isPlaceholderFieldText(siteName)) {
+    gates.push({
+      gateId: "META-002",
+      status: "PLACEHOLDER_METADATA",
+      closeCriteria: "Set FIELD_SITE_NAME to a concrete delivery site and rerun field:gate-closure-map.",
+    });
+  }
+  if (gates.length === 0) return [];
+  return [{
+    commandId: "CMD-META",
+    command: `npm.cmd run field:gate-closure-map -- --base-url=${baseUrl} --site-name="$env:FIELD_SITE_NAME" --generated-by="$env:FIELD_REVIEWER"`,
+    gateCount: gates.length,
+    gateIds: gates.map((item) => item.gateId),
+    owners: ["PM/QA"],
+    phases: ["Field Review"],
+    priorityCounts: { P1: gates.length },
+    actionTypeCounts: { FIELD_ACTION_REQUIRED: gates.length },
+    categoryCounts: { "Field Metadata": gates.length },
+    statusCounts: gates.reduce((counts, item) => incrementCount(counts, item.status), {}),
+    evidencePaths: [],
+    closeCriteria: gates.map((item) => item.closeCriteria),
+  }];
+}
+
 function buildManifest(input = {}) {
   const actionBoard = Object.prototype.hasOwnProperty.call(input, "actionBoard")
     ? input.actionBoard
     : readLatestJsonManifest("artifacts/field-action-board");
-  const commandGroups = buildCommandGroups(actionBoard);
+  const generatedBy = input.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
+  const siteName = input.siteName || actionBoard?.data?.siteName || "unspecified";
+  const baseUrl = input.baseUrl || actionBoard?.data?.baseUrl || "http://localhost:8080";
+  const commandGroups = [
+    ...buildCommandGroups(actionBoard),
+    ...buildMetadataCommandGroups(generatedBy, siteName, baseUrl),
+  ];
   return {
     generatedAt: input.generatedAt || new Date().toISOString(),
-    generatedBy: input.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
-    siteName: input.siteName || actionBoard?.data?.siteName || "unspecified",
+    generatedBy,
+    siteName,
     hostName: input.hostName || os.hostname(),
-    baseUrl: input.baseUrl || actionBoard?.data?.baseUrl || "http://localhost:8080",
+    baseUrl,
     status: !actionBoard ? "ACTION_BOARD_MISSING" : commandGroups.length > 0 ? "OPEN" : "READY_TO_CLOSE",
     sourceFieldActionBoard: actionBoard?.path || null,
     commandCount: commandGroups.length,
@@ -174,6 +214,7 @@ if (require.main === module) {
 
 module.exports = {
   buildCommandGroups,
+  buildMetadataCommandGroups,
   buildManifest,
   buildMarkdown,
 };

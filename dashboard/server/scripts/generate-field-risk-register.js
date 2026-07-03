@@ -4,6 +4,7 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 
 const { readLatestJsonManifest, timestampForPath } = require("./generate-delivery-evidence");
+const { isPlaceholderFieldText } = require("./generate-final-status-report");
 const { manualEvidenceRefs } = require("./manual-evidence");
 
 const root = path.join(__dirname, "..", "..", "..");
@@ -200,23 +201,61 @@ function groupRiskItems(items) {
   );
 }
 
+function buildMetadataReviewItems(generatedBy, siteName) {
+  const items = [];
+  if (isPlaceholderFieldText(generatedBy)) {
+    items.push({
+      area: "Field metadata",
+      source: "field-risk-register.arguments",
+      status: "PLACEHOLDER_METADATA",
+      risk: "Generated-by reviewer metadata is missing or placeholder.",
+      preferredResolution: "Set FIELD_REVIEWER to a concrete field reviewer and rerun npm.cmd run field:risk-register.",
+      acceptableRiskPath: "Do not accept placeholder reviewer metadata for final field handover.",
+      evidenceReference: "artifacts/field-risk-register/<timestamp>/manifest.json",
+      owner: "PM/QA",
+      targetRecheckDate: "TODO",
+      requiresReviewerDecision: true,
+      copyToRiskAcceptance: false,
+    });
+  }
+  if (isPlaceholderFieldText(siteName)) {
+    items.push({
+      area: "Field metadata",
+      source: "field-risk-register.arguments",
+      status: "PLACEHOLDER_METADATA",
+      risk: "Site name metadata is missing or placeholder.",
+      preferredResolution: "Set FIELD_SITE_NAME to a concrete delivery site and rerun npm.cmd run field:risk-register.",
+      acceptableRiskPath: "Do not accept placeholder site metadata for final field handover.",
+      evidenceReference: "artifacts/field-risk-register/<timestamp>/manifest.json",
+      owner: "PM/QA",
+      targetRecheckDate: "TODO",
+      requiresReviewerDecision: true,
+      copyToRiskAcceptance: false,
+    });
+  }
+  return items;
+}
+
 function buildManifest(options = {}) {
   const finalStatus = options.finalStatus || readLatestJsonManifest("artifacts/final-status");
   const fieldReadiness = options.fieldReadiness || readLatestJsonManifest("artifacts/field-readiness");
   const security = options.security || readLatestJsonManifest("artifacts/security");
   const manualReadiness = options.manualReadiness || readLatestJsonManifest("artifacts/manual-evidence-readiness");
+  const generatedBy = options.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
+  const siteName = options.siteName || finalStatus?.data?.siteName || "unspecified";
   const riskItems = dedupeRisks([
     ...buildFieldValueRisks(fieldReadiness),
     ...buildSecurityRisks(security),
     ...buildFinalStatusRisks(finalStatus),
     ...buildManualEvidenceRisks(),
+    ...buildMetadataReviewItems(generatedBy, siteName),
   ]);
   const groups = groupRiskItems(riskItems);
 
   return {
     generatedAt: options.generatedAt || new Date().toISOString(),
-    generatedBy: options.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
-    siteName: options.siteName || finalStatus?.data?.siteName || "unspecified",
+    generatedBy,
+    siteName,
     hostName: options.hostName || os.hostname(),
     baseUrl: options.baseUrl || finalStatus?.data?.baseUrl || "http://localhost:8080",
     status: riskItems.length > 0 ? "OPEN" : "NO_OPEN_RISKS",

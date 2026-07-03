@@ -146,7 +146,7 @@ const manifest = buildManifest({
     path: "artifacts/final-status/20260101-000000/manifest.json",
     data: {
       baseUrl: "http://field.local:8080",
-      siteName: "field-site",
+      siteName: "delivery-site-a",
       remainingGates: gates,
     },
   },
@@ -168,6 +168,8 @@ assert(markdown.includes("field:preflight"), "markdown should include mapped pre
 
 const ready = buildManifest({
   generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "reviewer-a",
+  siteName: "delivery-site-a",
   git: { branch: "dev", commit: "fixture", clean: true },
   finalStatus: {
     path: "artifacts/final-status/20260101-000000/manifest.json",
@@ -178,5 +180,22 @@ const ready = buildManifest({
 });
 assert(ready.status === "READY_TO_CLOSE", "empty final gates should produce READY_TO_CLOSE board");
 assert(ready.openActionCount === 0, "empty final gates should have zero actions");
+
+const placeholderMetadata = buildManifest({
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "field-reviewer",
+  siteName: "field-site",
+  git: { branch: "dev", commit: "fixture", clean: true },
+  finalStatus: {
+    path: "artifacts/final-status/20260101-000000/manifest.json",
+    data: { remainingGates: [] },
+  },
+});
+assert(placeholderMetadata.status === "OPEN", "placeholder metadata should keep action board open");
+assert(placeholderMetadata.openActionCount === 2, "placeholder reviewer/site should create metadata action items");
+assert(
+  placeholderMetadata.actionItems.every((item) => item.category === "Field Metadata"),
+  "placeholder metadata action items should be categorized",
+);
 
 console.log("field action board contracts ok");
