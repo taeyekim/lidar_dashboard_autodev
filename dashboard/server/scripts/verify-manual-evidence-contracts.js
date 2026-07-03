@@ -5,6 +5,7 @@ const {
   manualEvidenceDefinitions,
   manualEvidenceRefs,
   isIsoDateCell,
+  isPlaceholderMarkdownCell,
   validateManualEvidence,
 } = require("./manual-evidence");
 
@@ -104,6 +105,13 @@ assert(
   validateManualEvidence("Operator UI Walkthrough", placeholderSessionOperatorEvidence).includes("placeholder 'Site name'"),
   "operator evidence must reject placeholder session values",
 );
+const shorthandPlaceholderOperatorEvidence = validOperatorEvidence
+  .replace("| Site name | delivery-site |", "| Site name | field-site |")
+  .replace("| Reviewer | reviewer |", "| Reviewer | field-reviewer |");
+assert(
+  validateManualEvidence("Operator UI Walkthrough", shorthandPlaceholderOperatorEvidence).includes("placeholder 'Site name'"),
+  "operator evidence must reject field shorthand placeholder session values",
+);
 
 const placeholderDecisionOperatorEvidence = validOperatorEvidence.replace(
   "| Reviewer signature/name | reviewer |",
@@ -201,6 +209,16 @@ assert(
   validateManualEvidence("Field Risk Acceptance", placeholderSessionRiskEvidence).includes("placeholder 'Reviewer'"),
   "risk acceptance evidence must reject placeholder session values",
 );
+const shorthandPlaceholderRiskEvidence = validRiskEvidence
+  .replace("| Site name | delivery-site |", "| Site name | delivery-site-name |")
+  .replace("| Reviewer | reviewer |", "| Reviewer | field-reviewer-name |");
+assert(
+  validateManualEvidence("Field Risk Acceptance", shorthandPlaceholderRiskEvidence).includes("placeholder 'Site name'"),
+  "risk acceptance evidence must reject field shorthand placeholder values",
+);
+assert(isPlaceholderMarkdownCell("field-reviewer") === true, "field-reviewer should be treated as manual evidence placeholder");
+assert(isPlaceholderMarkdownCell("field-site") === true, "field-site should be treated as manual evidence placeholder");
+assert(isPlaceholderMarkdownCell("reviewer-a") === false, "concrete reviewer should not be treated as manual evidence placeholder");
 
 const invalidAcceptanceDateRiskEvidence = validRiskEvidence.replace("| Acceptance date | 2026-08-01 |", "| Acceptance date | 2026/08/01 |");
 assert(

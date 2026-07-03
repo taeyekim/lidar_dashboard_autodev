@@ -7,8 +7,9 @@ it from the handover package. Do not include secrets, JWTs, passwords, private
 keys, or unrestricted internal network maps.
 Empty session values, accepted-item evidence/recheck cells, or reviewer follow-up
 values are not valid final risk acceptance evidence.
-Placeholder values such as `TBD`, `N/A`, `none`, `pending`, or `unknown` are not
-valid accepted-risk evidence.
+Placeholder values such as `TBD`, `N/A`, `none`, `pending`, `unknown`,
+`field-reviewer`, `field-site`, or `delivery-site-name` are not valid
+accepted-risk evidence.
 `Acceptance date`, accepted-item `Expiry Or Recheck`, and `Target recheck date`
 must use `YYYY-MM-DD`.
 

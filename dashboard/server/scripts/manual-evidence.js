@@ -64,7 +64,9 @@ function markdownRowsAfterHeader(content, headerToken) {
 }
 
 function isPlaceholderMarkdownCell(value) {
-  return /^(?:-|n\/a|na|none|null|tbd|todo|pending|unknown)$/i.test(String(value || "").trim());
+  return /^(?:-|n\/a|na|none|null|tbd|todo|pending|unknown|field-reviewer|field-reviewer-name|field-site|delivery-site-name)$/i.test(
+    String(value || "").trim(),
+  );
 }
 
 function isIsoDateCell(value) {
