@@ -213,6 +213,27 @@ function buildOrderedCommands(gates, baseUrl) {
     .map((item, index) => ({ order: index + 1, ...item }));
 }
 
+function buildCommandGateCoverage(orderedCommands, gates) {
+  return orderedCommands.map((command) => {
+    const matchedGates = gates.filter((gate) => command.actionTypes.includes(gate.actionType || "REVIEW_REQUIRED"));
+    const categories = [...new Set(matchedGates.map((gate) => gate.category).filter(Boolean))];
+    const statuses = [...new Set(matchedGates.map((gate) => gate.status).filter(Boolean))];
+    const evidence = [...new Set(matchedGates.map((gate) => gate.evidence).filter(Boolean))];
+    return {
+      order: command.order,
+      id: command.id,
+      phase: command.phase,
+      command: command.command,
+      actionTypes: command.actionTypes,
+      gateCount: matchedGates.length,
+      categories,
+      statuses,
+      evidence,
+      doneWhen: command.doneWhen,
+    };
+  });
+}
+
 function groupGatesByActionType(gates) {
   return gates.reduce((groups, gate) => {
     const type = gate.actionType || "REVIEW_REQUIRED";
@@ -253,8 +274,9 @@ function buildFinalExecutionPlan(input = {}) {
           closeWhen: "Run npm.cmd run final:status before building the final execution plan.",
           evidence: null,
         },
-      ];
+  ];
   const orderedCommands = planningGates.length > 0 ? buildOrderedCommands(planningGates, baseUrl) : [];
+  const commandGateCoverage = buildCommandGateCoverage(orderedCommands, planningGates);
   const gatesByActionType = groupGatesByActionType(planningGates);
   const status = !finalStatus
     ? "FINAL_STATUS_MISSING"
@@ -283,6 +305,7 @@ function buildFinalExecutionPlan(input = {}) {
     gatesByActionType,
     manualEvidenceTargets: buildManualEvidenceTargets(input.manualEvidence),
     orderedCommands,
+    commandGateCoverage,
     guardrails: [
       "This execution plan does not prove field completion.",
       "Run the commands against the delivery Nginx entrypoint and approved field network/hardware.",
@@ -339,6 +362,17 @@ function buildMarkdown(manifest) {
         )
       : ["| none | Final Decision | No commands required by the latest final status. | Final status is already READY_TO_CLOSE. | READY_TO_CLOSE remains current. |"]),
     "",
+    "## Command Gate Coverage",
+    "",
+    "| Order | Command ID | Gate Count | Action Types | Categories | Statuses | Evidence | Done When |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    ...(manifest.commandGateCoverage.length > 0
+      ? manifest.commandGateCoverage.map(
+          (item) =>
+            `| ${item.order} | ${markdownCell(item.id)} | ${item.gateCount} | ${markdownCell(item.actionTypes.join(", "))} | ${markdownCell(item.categories.join(", ") || "none")} | ${markdownCell(item.statuses.join(", ") || "none")} | ${markdownCell(item.evidence.join(", ") || "missing")} | ${markdownCell(item.doneWhen)} |`,
+        )
+      : ["| none | none | 0 | none | none | none | missing | No commands are required by the latest final status. |"]),
+    "",
     "## Manual Evidence Targets",
     "",
     "| Type | Status | Target | Template | Validation | Done When |",
@@ -389,5 +423,6 @@ module.exports = {
   buildFinalExecutionPlan,
   buildMarkdown,
   buildOrderedCommands,
+  buildCommandGateCoverage,
   commandCatalog,
 };

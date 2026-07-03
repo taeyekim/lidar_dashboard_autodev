@@ -3,6 +3,7 @@ const path = require("path");
 const {
   buildFinalExecutionPlan,
   buildMarkdown,
+  buildCommandGateCoverage,
   buildOrderedCommands,
   commandCatalog,
 } = require("./generate-final-execution-plan");
@@ -36,6 +37,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "sourceFieldGateClosureMap", "final execution plan generator"],
   [generator, "gatesByActionType", "final execution plan generator"],
   [generator, "orderedCommands", "final execution plan generator"],
+  [generator, "commandGateCoverage", "final execution plan generator"],
+  [generator, "Command Gate Coverage", "final execution plan generator"],
+  [generator, "gateCount", "final execution plan generator"],
   [generator, "manualEvidenceTargets", "final execution plan generator"],
   [generator, "This execution plan does not prove field completion", "final execution plan generator"],
   [generator, "npm.cmd run final:status", "final execution plan generator"],
@@ -58,8 +62,10 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [runbook, "artifacts/final-execution-plan/<timestamp>/manifest.json", "delivery runbook"],
   [checklist, "npm run final:execution-plan", "acceptance checklist"],
   [checklist, "Field Action Artifact Actions", "acceptance checklist"],
+  [checklist, "Command Gate Coverage", "acceptance checklist"],
   [checklist, "artifacts/final-execution-plan/<timestamp>/manifest.json", "acceptance checklist"],
   [matrix, "final:execution-plan", "delivery evidence matrix"],
+  [matrix, "Command Gate Coverage", "delivery evidence matrix"],
   [matrix, "strict `handover:package`", "delivery evidence matrix"],
   [matrix, "artifacts/final-execution-plan/<timestamp>/manifest.json", "delivery evidence matrix"],
 ].forEach(([content, token, label]) => assertIncludes(content, token, label));
@@ -97,6 +103,17 @@ const openPlan = buildFinalExecutionPlan({
 
 assert(openPlan.status === "OPEN", "open final status should produce OPEN execution plan");
 assert(openPlan.remainingGateCount === 3, "execution plan should preserve remaining gate count");
+assert(openPlan.commandGateCoverage.some((item) => item.id === "security-evidence" && item.gateCount === 1), "security command coverage should count matching security gates");
+assert(
+  openPlan.commandGateCoverage.some(
+    (item) => item.id === "field-acceptance" && item.categories.includes("Control Board TCP") && item.statuses.includes("DRY_RUN_SAFE"),
+  ),
+  "field acceptance command coverage should expose matched field gate categories and statuses",
+);
+assert(
+  openPlan.commandGateCoverage.some((item) => item.id === "manual-evidence-readiness" && item.categories.includes("Manual Evidence")),
+  "manual evidence readiness coverage should expose manual evidence gates",
+);
 assert(openPlan.orderedCommands.some((item) => item.id === "manual-evidence-readiness"), "manual gate should include manual evidence readiness command");
 assert(openPlan.orderedCommands.some((item) => item.id === "control-board-field-rehearsal"), "field gate should include control-board rehearsal command");
 assert(openPlan.orderedCommands.some((item) => item.id === "security-evidence"), "security gate should include strict security evidence command");
@@ -120,6 +137,7 @@ const openMarkdown = buildMarkdown(openPlan);
 assert(openMarkdown.includes("Final Execution Plan"), "markdown should include title");
 assert(openMarkdown.includes("This execution plan does not prove field completion"), "markdown should include guardrail");
 assert(openMarkdown.includes("Ordered Commands"), "markdown should include ordered command table");
+assert(openMarkdown.includes("Command Gate Coverage"), "markdown should include command gate coverage table");
 
 const readyPlan = buildFinalExecutionPlan({
   generatedAt: "2026-01-01T00:00:00.000Z",
@@ -137,6 +155,7 @@ const readyPlan = buildFinalExecutionPlan({
 assert(readyPlan.status === "READY_TO_CLOSE", "ready final status should produce READY_TO_CLOSE execution plan");
 assert(readyPlan.canMarkGoalComplete === true, "ready execution plan should allow close");
 assert(readyPlan.orderedCommands.length === 0, "ready execution plan should not invent commands");
+assert(readyPlan.commandGateCoverage.length === 0, "ready execution plan should not invent command coverage");
 const missingFinalStatusPlan = buildFinalExecutionPlan({
   generatedAt: "2026-01-01T00:00:00.000Z",
   git: { branch: "dev", commit: "fixture", clean: true },
@@ -170,5 +189,15 @@ assert(
 assert(buildOrderedCommands([{ actionType: "REVIEW_REQUIRED" }], "http://localhost:8080").some((item) => item.id === "final-status"), "review gates should still include final status refresh");
 assert(buildOrderedCommands([{ actionType: "REVIEW_REQUIRED" }], "http://localhost:8080").some((item) => item.id === "field-gate-closure-map"), "review gates should include gate closure map refresh");
 assert(commandCatalog("http://localhost:8080").some((item) => item.id === "field-acceptance" && item.command.includes("-RequireScanners")), "catalog should include strict field acceptance command");
+const directCoverage = buildCommandGateCoverage(
+  [{ order: 1, id: "security-evidence", phase: "Security", command: "npm.cmd run security:evidence", actionTypes: ["SECURITY_REVIEW_REQUIRED"], doneWhen: "done" }],
+  [
+    { actionType: "SECURITY_REVIEW_REQUIRED", category: "Security Scanner Closeout", status: "BLOCKING", evidence: "artifacts/security/latest/manifest.json" },
+    { actionType: "FIELD_ACTION_REQUIRED", category: "Control Board TCP", status: "LIVE_TCP_REVIEW", evidence: "artifacts/field-readiness/latest/manifest.json" },
+  ],
+);
+assert(directCoverage[0].gateCount === 1, "direct command coverage should only count matching action types");
+assert(directCoverage[0].categories.includes("Security Scanner Closeout"), "direct command coverage should retain matched categories");
+assert(directCoverage[0].evidence.includes("artifacts/security/latest/manifest.json"), "direct command coverage should retain evidence paths");
 
 console.log("final execution plan contracts ok");
