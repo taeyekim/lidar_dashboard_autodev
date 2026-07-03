@@ -104,6 +104,18 @@ const fieldPreflightReviewSummary = buildHandoverSummary(rows, commands.slice(0,
 const missingFieldAcceptance = summarizeFieldAcceptance("Field Acceptance", "artifacts/missing-field-acceptance-vector");
 const missingFieldPreflight = summarizeFieldPreflight("Field Preflight", "artifacts/missing-field-preflight-vector");
 const manualEvidence = manualEvidenceRefs();
+const manualEvidenceMissingSummary = buildHandoverSummary(rows, commands.slice(0, 3), coverage, [], [], [], [], [
+  {
+    type: "Operator UI Walkthrough",
+    path: "artifacts/manual/operator-ui-walkthrough.md",
+    status: "MISSING",
+  },
+  {
+    type: "Field Risk Acceptance",
+    path: "artifacts/manual/field-risk-acceptance.md",
+    status: "PRESENT",
+  },
+]);
 const fieldRehearsalMetadataRoot = path.join(
   __dirname,
   "..",
@@ -465,6 +477,23 @@ assert(
       item.template === "docs/ops/field-risk-acceptance-template.md",
   ),
   "manual evidence refs should expose field risk acceptance evidence",
+);
+assert(
+  manualEvidenceMissingSummary.status === "AUTOMATED_CHECKS_REVIEW",
+  "missing manual evidence should force handover summary review status",
+);
+assert(
+  manualEvidenceMissingSummary.manualEvidenceMissingCount === 1,
+  "summary should count missing manual evidence",
+);
+assertIncludes(
+  manualEvidenceMissingSummary.manualEvidenceMissingItems,
+  "Operator UI Walkthrough: artifacts/manual/operator-ui-walkthrough.md",
+  "summary should expose missing manual evidence item",
+);
+assert(
+  manualEvidenceMissingSummary.notes.some((note) => note.includes("Manual evidence references")),
+  "summary should explain manual evidence visibility",
 );
 assert(bomManifest.data.checks.length === 0, "latest manifest reader should tolerate UTF-8 BOM");
 

@@ -545,6 +545,7 @@ function buildHandoverSummary(
   fieldRehearsalSummaries = [],
   fieldAcceptanceSummaries = [],
   fieldPreflightSummaries = [],
+  manualEvidence = [],
 ) {
   const failedCommands = commands.filter((item) => item.exitCode !== 0);
   const companionReviewItems = companionSummaries.flatMap((item) => item.reviewItems || []);
@@ -554,6 +555,9 @@ function buildHandoverSummary(
   const fieldAcceptanceSkippedItems = fieldAcceptanceSummaries.flatMap((item) => item.skippedItems || []);
   const fieldPreflightReviewItems = fieldPreflightSummaries.flatMap((item) => item.reviewItems || []);
   const fieldPreflightSkippedItems = fieldPreflightSummaries.flatMap((item) => item.skippedItems || []);
+  const manualEvidenceMissingItems = manualEvidence
+    .filter((item) => item.status === "MISSING")
+    .map((item) => `${item.type}: ${item.path}`);
   const coverageCounts = automatedEvidenceCoverage.reduce((accumulator, item) => {
     accumulator[item.coverage] = (accumulator[item.coverage] || 0) + 1;
     return accumulator;
@@ -570,7 +574,10 @@ function buildHandoverSummary(
       companionSkippedItems.length === 0 &&
       fieldRehearsalReviewItems.length === 0 &&
       fieldAcceptanceReviewItems.length === 0 &&
-      fieldPreflightReviewItems.length === 0
+      fieldAcceptanceSkippedItems.length === 0 &&
+      fieldPreflightReviewItems.length === 0 &&
+      fieldPreflightSkippedItems.length === 0 &&
+      manualEvidenceMissingItems.length === 0
         ? "AUTOMATED_CHECKS_PASS"
         : "AUTOMATED_CHECKS_REVIEW",
     failedCommandCount: failedCommands.length,
@@ -589,6 +596,8 @@ function buildHandoverSummary(
     fieldPreflightReviewItems,
     fieldPreflightSkippedCount: fieldPreflightSkippedItems.length,
     fieldPreflightSkippedItems,
+    manualEvidenceMissingCount: manualEvidenceMissingItems.length,
+    manualEvidenceMissingItems,
     requirementAreaCount: matrixRows.length,
     automatedEvidenceItemCount: automatedEvidenceCoverage.length,
     coverageCounts,
@@ -601,6 +610,7 @@ function buildHandoverSummary(
       "Field rehearsal evidence is summarized here so missing or failing field manifests remain visible in the handover.",
       "Field acceptance orchestrator evidence is summarized here so the ordered on-site acceptance pass is visible in the delivery package.",
       "Field preflight evidence is summarized here so risky environment settings are visible before runtime/hardware checks.",
+      "Manual evidence references are summarized here so missing operator walkthrough or field risk acceptance files keep the delivery package in review.",
     ],
   };
 }
@@ -658,6 +668,7 @@ function buildMarkdown(manifest) {
     `- Field acceptance skipped items: ${manifest.handoverSummary.fieldAcceptanceSkippedCount}`,
     `- Field preflight review items: ${manifest.handoverSummary.fieldPreflightReviewCount}`,
     `- Field preflight skipped items: ${manifest.handoverSummary.fieldPreflightSkippedCount}`,
+    `- Manual evidence missing items: ${manifest.handoverSummary.manualEvidenceMissingCount}`,
     `- Requirement areas: ${manifest.handoverSummary.requirementAreaCount}`,
     `- Automated evidence items: ${manifest.handoverSummary.automatedEvidenceItemCount}`,
     `- Field verification required areas: ${manifest.handoverSummary.fieldVerificationRequiredCount}`,
@@ -716,6 +727,12 @@ function buildMarkdown(manifest) {
     "",
     ...(manifest.handoverSummary.fieldPreflightSkippedItems.length > 0
       ? manifest.handoverSummary.fieldPreflightSkippedItems.map((item) => `- ${item}`)
+      : ["- none"]),
+    "",
+    "Manual evidence missing items:",
+    "",
+    ...(manifest.handoverSummary.manualEvidenceMissingItems.length > 0
+      ? manifest.handoverSummary.manualEvidenceMissingItems.map((item) => `- ${item}`)
       : ["- none"]),
     "",
     "## Verification Commands",
@@ -897,6 +914,7 @@ function main() {
   const matrixRows = parseEvidenceMatrix(evidenceMatrix);
   const requirementAreas = matrixRows.map((row) => row.area);
   const automatedEvidenceCoverage = buildAutomatedEvidenceCoverage(matrixRows, commands);
+  const manualEvidence = manualEvidenceRefs();
   const handoverSummary = buildHandoverSummary(
     matrixRows,
     commands,
@@ -905,6 +923,7 @@ function main() {
     fieldRehearsalEvidence.summaries,
     fieldAcceptanceEvidence.summaries,
     fieldPreflightEvidence.summaries,
+    manualEvidence,
   );
 
   const manifest = {
@@ -932,7 +951,7 @@ function main() {
     fieldRehearsalEvidence,
     fieldAcceptanceEvidence,
     fieldPreflightEvidence,
-    manualEvidenceRefs: manualEvidenceRefs(),
+    manualEvidenceRefs: manualEvidence,
     automatedEvidenceCoverage,
     handoverSummary,
     fieldVerificationStillRequired: matrixRows.map((row) => ({
