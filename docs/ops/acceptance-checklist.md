@@ -12,7 +12,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `CONTROL_BOARD_LIVE_APPROVED=false` until the hardware owner explicitly approves live TCP command testing.
 - [ ] `CORS_ORIGINS` only includes trusted operator UI origins.
 - [ ] `AUTH_COOKIE_SECURE=true` is set when HTTPS/TLS is used through the delivery proxy.
-- [ ] `AUTH_COOKIE_SAMESITE` matches the deployment topology (`lax` for same-site Nginx entrypoint, `none` only when cross-site HTTPS is required).
+- [ ] `AUTH_COOKIE_SAMESITE` matches the deployment topology (`lax` for same-site Nginx entrypoint, `none` only when cross-site HTTPS is required); `SameSite=None` forces Secure cookies.
 - [ ] `NGINX_WRONGWAY_RATE_LIMIT` and `NGINX_WRONGWAY_BURST` match the expected lidar event rate.
 - [ ] `NGINX_CONTENT_SECURITY_POLICY` is reviewed for the final camera/lidar/media host topology.
 - [ ] `NGINX_SWAGGER_ALLOW` is restricted to the operator/internal network if Swagger should not be open to all internal clients.

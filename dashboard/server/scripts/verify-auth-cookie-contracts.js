@@ -8,6 +8,7 @@ const {
   createCsrfToken,
   parseCookies,
 } = require("../src/domains/auth/auth.cookie");
+const { getAuthConfig } = require("../src/domains/auth/auth.config");
 const swaggerSpec = require("../src/swagger");
 
 function assert(condition, message) {
@@ -92,6 +93,24 @@ assert(clearCsrfCookie.includes("Max-Age=0"), "clear CSRF cookie must expire imm
 const parsed = parseCookies(`lidar_dashboard_access=jwt-token; lidar_dashboard_csrf=${csrfToken}; other=value`);
 assert(parsed.lidar_dashboard_access === "jwt-token", "parseCookies must read auth cookie value");
 assert(parsed.lidar_dashboard_csrf === csrfToken, "parseCookies must read CSRF cookie value");
+
+const originalSameSite = process.env.AUTH_COOKIE_SAMESITE;
+const originalSecure = process.env.AUTH_COOKIE_SECURE;
+process.env.AUTH_COOKIE_SAMESITE = "none";
+process.env.AUTH_COOKIE_SECURE = "false";
+try {
+  const noneConfig = getAuthConfig();
+  assert(noneConfig.cookieSameSite === "none", "AUTH_COOKIE_SAMESITE=none must be preserved");
+  assert(noneConfig.cookieSecure === true, "SameSite=None must force Secure cookies");
+  const noneCookie = buildAuthCookie("jwt-token");
+  assert(noneCookie.includes("SameSite=None"), "SameSite=None auth cookie must serialize correctly");
+  assert(noneCookie.includes("Secure"), "SameSite=None auth cookie must include Secure");
+} finally {
+  if (originalSameSite === undefined) delete process.env.AUTH_COOKIE_SAMESITE;
+  else process.env.AUTH_COOKIE_SAMESITE = originalSameSite;
+  if (originalSecure === undefined) delete process.env.AUTH_COOKIE_SECURE;
+  else process.env.AUTH_COOKIE_SECURE = originalSecure;
+}
 
 const authLogin = swaggerSpec.components?.schemas?.AuthLoginResponse;
 assert(authLogin?.properties?.authMode, "Swagger AuthLoginResponse must expose authMode");
