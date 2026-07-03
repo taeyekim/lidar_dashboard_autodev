@@ -25,6 +25,7 @@ import {
 } from "recharts";
 import { Card } from "../../shared/components/Card";
 import { WS_BASE } from "../../shared/api/config";
+import { useRealtimeSocket } from "../../shared/realtime/useRealtimeSocket";
 import {
   fetchEvent,
   fetchEventLogs,
@@ -259,7 +260,6 @@ export default function EventLogPage() {
   const [summaryError, setSummaryError] = useState("");
   const [actionError, setActionError] = useState("");
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
-  const [realtimeStatus, setRealtimeStatus] = useState("CONNECTING");
 
   const loadSummary = useCallback(async () => {
     setSummaryLoading(true);
@@ -347,38 +347,26 @@ export default function EventLogPage() {
     }
   }, [selectedEvent]);
 
-  useEffect(() => {
-    const ws = new WebSocket(WS_BASE);
-
-    ws.onopen = () => setRealtimeStatus("CONNECTED");
-    ws.onclose = () => setRealtimeStatus("DISCONNECTED");
-    ws.onerror = () => setRealtimeStatus("ERROR");
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        if (msg.type === "state" && msg.payload) {
-          setSummary((prev) => ({ ...prev, ...normalizeSummary(msg.payload) }));
-        }
-        if (msg.type === "traffic-event.created" && msg.payload) {
-          const normalized = normalizeEvent(msg.payload);
-          setEvents((prev) => upsertEvent(prev, normalized));
-          setSelectedEvent((prev) => prev || normalized);
-          loadSummary();
-        }
-        if (msg.type === "traffic-event.updated" && msg.payload?.id) {
-          const normalized = normalizeEvent(msg.payload);
-          setEvents((prev) => upsertEvent(prev, normalized));
-          setSelectedEvent((prev) => (prev?.id === normalized.id ? { ...prev, ...normalized } : prev));
-          loadSummary();
-        }
-      } catch {
-        // Ignore malformed realtime messages.
+  const { status: realtimeStatus } = useRealtimeSocket({
+    url: WS_BASE,
+    onMessage: (msg) => {
+      if (msg.type === "state" && msg.payload) {
+        setSummary((prev) => ({ ...prev, ...normalizeSummary(msg.payload) }));
       }
-    };
-
-    return () => ws.close();
-  }, [loadSummary]);
+      if (msg.type === "traffic-event.created" && msg.payload) {
+        const normalized = normalizeEvent(msg.payload);
+        setEvents((prev) => upsertEvent(prev, normalized));
+        setSelectedEvent((prev) => prev || normalized);
+        loadSummary();
+      }
+      if (msg.type === "traffic-event.updated" && msg.payload?.id) {
+        const normalized = normalizeEvent(msg.payload);
+        setEvents((prev) => upsertEvent(prev, normalized));
+        setSelectedEvent((prev) => (prev?.id === normalized.id ? { ...prev, ...normalized } : prev));
+        loadSummary();
+      }
+    },
+  });
 
   const filteredEvents = useMemo(() => {
     const q = query.trim().toLowerCase();
