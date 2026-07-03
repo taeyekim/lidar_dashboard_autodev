@@ -114,6 +114,23 @@ function fieldEvidenceStrictFailures(fieldEvidenceSummary) {
     );
 }
 
+function buildFieldEvidenceOpenItems(fieldEvidenceSummary) {
+  return fieldEvidenceSummary.flatMap((item) => [
+    ...(item.reviewItems || []).map((message) => ({
+      type: item.type,
+      status: "REVIEW",
+      message,
+      manifestPath: item.manifestPath || null,
+    })),
+    ...(item.skippedItems || []).map((message) => ({
+      type: item.type,
+      status: "SKIPPED",
+      message,
+      manifestPath: item.manifestPath || null,
+    })),
+  ]);
+}
+
 function buildMarkdown(manifest) {
   return [
     "# Handover Package",
@@ -150,6 +167,17 @@ function buildMarkdown(manifest) {
       (item) =>
         `| ${item.type} | ${item.manifestPath ? `\`${item.manifestPath}\`` : "missing"} | ${item.passCount || 0} | ${item.reviewCount || 0} | ${item.skippedCount || 0} |`,
     ),
+    "",
+    "## Field Evidence Open Items",
+    "",
+    "| Type | Status | Message | Manifest |",
+    "| --- | --- | --- | --- |",
+    ...(manifest.fieldEvidenceOpenItems.length > 0
+      ? manifest.fieldEvidenceOpenItems.map(
+          (item) =>
+            `| ${item.type} | ${item.status} | ${item.message} | ${item.manifestPath ? `\`${item.manifestPath}\`` : "missing"} |`,
+        )
+      : ["| none | PASS | No field evidence review/skipped items. | - |"]),
     "",
     "## Commands",
     "",
@@ -201,6 +229,7 @@ function main() {
   const canMarkGoalComplete = Boolean(completion?.data?.canMarkGoalComplete);
   const controlBoardSafetyStatus = latestControlBoardSafetyStatus();
   const fieldEvidenceSummary = buildFieldEvidenceSummary();
+  const fieldEvidenceOpenItems = buildFieldEvidenceOpenItems(fieldEvidenceSummary);
   const strictFailureReasons = [];
   if (failedCommands.length > 0) {
     strictFailureReasons.push(`${failedCommands.length} package command(s) failed.`);
@@ -233,6 +262,7 @@ function main() {
     })),
     evidenceRefs,
     fieldEvidenceSummary,
+    fieldEvidenceOpenItems,
     failedCommandCount: failedCommands.length,
     strictFailureReasons,
   };
