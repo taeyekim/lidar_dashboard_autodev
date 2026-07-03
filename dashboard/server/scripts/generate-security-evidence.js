@@ -70,6 +70,73 @@ function buildToolInventory() {
   ];
 }
 
+const scannerCloseoutDefinitions = [
+  {
+    scanner: "gitleaks",
+    checks: ["gitleaks secret scan"],
+    requiredSwitch: "--require-scanners",
+    evidenceFiles: ["gitleaks.json", "gitleaks-secret-scan.log"],
+    installHint: "Install gitleaks and run `gitleaks detect --source . --redact`.",
+    closeoutWhenSkipped: "Install gitleaks or document reviewer risk acceptance in artifacts/manual/field-risk-acceptance.md.",
+  },
+  {
+    scanner: "Trivy filesystem",
+    checks: ["trivy filesystem scan"],
+    requiredSwitch: "--require-scanners",
+    evidenceFiles: ["trivy-fs.json", "trivy-filesystem-scan.log"],
+    installHint: "Install Trivy and run `trivy fs --scanners vuln,secret,misconfig .`.",
+    closeoutWhenSkipped: "Install Trivy or document reviewer risk acceptance in artifacts/manual/field-risk-acceptance.md.",
+  },
+  {
+    scanner: "Trivy images",
+    checks: ["trivy image scan", "trivy backend image scan", "trivy frontend image scan"],
+    requiredSwitch: "--include-container-images --require-scanners",
+    evidenceFiles: ["trivy-backend-image.json", "trivy-frontend-image.json"],
+    installHint: "Build delivery images, install Trivy, and rerun with `--include-container-images`.",
+    closeoutWhenSkipped:
+      "Build the delivery images and rerun image scans, or document why image scanning is unavailable for this handover.",
+  },
+  {
+    scanner: "OWASP ZAP baseline",
+    checks: ["OWASP ZAP baseline"],
+    requiredSwitch: "--include-zap --require-scanners --target-url=<nginx-url>",
+    evidenceFiles: ["zap-baseline.html", "owasp-zap-baseline.log"],
+    installHint: "Install OWASP ZAP baseline tooling and run against the Nginx entrypoint only.",
+    closeoutWhenSkipped:
+      "Run the baseline against the delivery Nginx URL, or document reviewer risk acceptance before field closeout.",
+  },
+];
+
+function buildScannerCloseout(checks) {
+  return scannerCloseoutDefinitions.map((definition) => {
+    const relatedChecks = checks.filter((item) => definition.checks.includes(item.label));
+    const blocking = relatedChecks.some((item) => item.disposition.blocksStrictAcceptance);
+    const skipped = relatedChecks.some((item) => item.status === "skipped");
+    const failed = relatedChecks.some((item) => ["BLOCKING", "DELIVERY_FIX"].includes(item.disposition.code));
+    const passed = relatedChecks.length > 0 && relatedChecks.every((item) => item.disposition.code === "PASS");
+    const riskAccepted = relatedChecks.length > 0 && relatedChecks.every((item) => item.disposition.code === "RISK_ACCEPTED");
+    const unverified = relatedChecks.some((item) => item.disposition.code === "UNVERIFIED");
+
+    let closeoutStatus = "PENDING";
+    if (passed) closeoutStatus = "EVIDENCE_READY";
+    else if (riskAccepted) closeoutStatus = "RISK_ACCEPTED";
+    else if (blocking || failed) closeoutStatus = "BLOCKING";
+    else if (unverified || skipped) closeoutStatus = "UNVERIFIED";
+
+    return {
+      scanner: definition.scanner,
+      requiredSwitch: definition.requiredSwitch,
+      relatedChecks: relatedChecks.map((item) => item.label),
+      dispositions: relatedChecks.map((item) => item.disposition.code),
+      closeoutStatus,
+      blocksStrictAcceptance: blocking,
+      evidenceFiles: definition.evidenceFiles,
+      installHint: definition.installHint,
+      closeoutWhenSkipped: definition.closeoutWhenSkipped,
+    };
+  });
+}
+
 function runCommand(label, command, args, options = {}) {
   const startedAt = new Date();
   const result = spawnSync(command, args, {
@@ -222,6 +289,20 @@ function buildMarkdown(manifest) {
 
   lines.push(
     "",
+    "## Scanner Closeout Matrix",
+    "",
+    "| Scanner | Status | Required Switch | Related Checks | Evidence Files | Install Hint | Closeout If Skipped |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+  );
+
+  manifest.scannerCloseout.forEach((item) => {
+    lines.push(
+      `| ${tableValue(item.scanner)} | ${tableValue(item.closeoutStatus)} | \`${tableValue(item.requiredSwitch)}\` | ${tableValue(item.relatedChecks.join(", ") || "none")} | ${tableValue(item.evidenceFiles.join(", "))} | ${tableValue(item.installHint)} | ${tableValue(item.closeoutWhenSkipped)} |`,
+    );
+  });
+
+  lines.push(
+    "",
     "## Checks",
     "",
     "| Status | Check | Command Or Reason | Log |",
@@ -256,6 +337,7 @@ function buildMarkdown(manifest) {
     "- `npm audit policy gate` is the required automated pass/fail gate for dependency audit findings.",
     "- Optional tools are recorded as `SKIPPED` when not installed or when image/ZAP switches are not provided.",
     "- Acceptance classification maps results to PASS, BLOCKING, DELIVERY_FIX, RISK_ACCEPTED, or UNVERIFIED for delivery review.",
+    "- Scanner closeout rows list the required switch, expected evidence files, install hint, and risk-acceptance path.",
     "- `--require-scanners` treats skipped gitleaks, Trivy, and OWASP ZAP checks as required BLOCKING failures for field acceptance.",
     "- Do not run active scans against the real integrated control board.",
     "",
@@ -398,6 +480,7 @@ function main() {
   });
 
   const dispositionSummary = summarizeDispositions(mappedChecks);
+  const scannerCloseout = buildScannerCloseout(mappedChecks);
   const strictAcceptanceBlocked = mappedChecks.some((item) => item.disposition.blocksStrictAcceptance);
 
   const manifest = {
@@ -412,6 +495,7 @@ function main() {
       requireScanners,
     },
     toolInventory,
+    scannerCloseout,
     dispositionSummary,
     strictAcceptanceBlocked,
     checks: mappedChecks,

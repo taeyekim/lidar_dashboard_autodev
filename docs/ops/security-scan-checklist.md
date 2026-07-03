@@ -69,6 +69,11 @@ classifications (`통과`, `차단`, `납품 전 수정`, `위험 수용`, `미�
 the handover package must show the field reviewer name. The PowerShell script
 remains available for Windows field rehearsals.
 
+Review the `Scanner Closeout Matrix` in `manifest.md` before field sign-off.
+Each gitleaks, Trivy filesystem, Trivy image, and OWASP ZAP row must either
+show `EVIDENCE_READY`, show documented `RISK_ACCEPTED`, or have an owner and
+recheck date in `artifacts/manual/field-risk-acceptance.md`.
+
 Use `--require-scanners` or `-RequireScanners` during strict field acceptance
 when skipped gitleaks, Trivy, or OWASP ZAP checks should become `차단` evidence
 instead of being recorded as review-only `미검증` skipped items.
