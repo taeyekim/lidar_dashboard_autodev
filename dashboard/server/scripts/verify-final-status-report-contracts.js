@@ -42,6 +42,10 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "requireScanners", "final status report generator"],
   [generator, "strictAcceptanceBlocked", "final status report generator"],
   [generator, "referenceFreshness", "final status report generator"],
+  [generator, "sourceRevisionFreshness", "final status report generator"],
+  [generator, "Source Code State", "final status report generator"],
+  [generator, "Evidence Source Revision", "final status report generator"],
+  [generator, "final source revision", "final status report generator"],
   [generator, "fieldRiskRegister", "final status report generator"],
   [generator, "fieldActionBoard", "final status report generator"],
   [generator, "fieldGateClosureMap", "final status report generator"],
@@ -71,7 +75,10 @@ const manualPresent = [
 ];
 
 const readyEvidence = {
-  delivery: { path: "artifacts/delivery/20260101-000000/manifest.json", data: {} },
+  delivery: {
+    path: "artifacts/delivery/20260101-000000/manifest.json",
+    data: { git: { branch: "dev", commit: "fixture", clean: true } },
+  },
   completionAudit: {
     path: "artifacts/completion-audit/20260101-000000/manifest.json",
     data: { status: "COMPLETE", canMarkGoalComplete: true, completionBlockers: [] },
@@ -88,7 +95,13 @@ const readyEvidence = {
   fieldClosurePlan: { path: "artifacts/field-closure-plan/20260101-000000/manifest.json", data: { status: "CLOSED" } },
   manualEvidenceReadiness: {
     path: "artifacts/manual-evidence-readiness/20260101-000000/manifest.json",
-    data: { status: "READY", readyForFinalClose: true, missingCount: 0, invalidCount: 0 },
+    data: {
+      status: "READY",
+      readyForFinalClose: true,
+      missingCount: 0,
+      invalidCount: 0,
+      git: { branch: "dev", commit: "fixture", clean: true },
+    },
   },
   fieldRiskRegister: {
     path: "artifacts/field-risk-register/20260101-000000/manifest.json",
@@ -96,15 +109,20 @@ const readyEvidence = {
   },
   fieldActionBoard: {
     path: "artifacts/field-action-board/20260101-000000/manifest.json",
-    data: { status: "READY_TO_CLOSE", openActionCount: 0 },
+    data: { status: "READY_TO_CLOSE", openActionCount: 0, git: { branch: "dev", commit: "fixture", clean: true } },
   },
   fieldGateClosureMap: {
     path: "artifacts/field-gate-closure-map/20260101-000000/manifest.json",
-    data: { status: "READY_TO_CLOSE", commandCount: 0, openGateCount: 0 },
+    data: {
+      status: "READY_TO_CLOSE",
+      commandCount: 0,
+      openGateCount: 0,
+      git: { branch: "dev", commit: "fixture", clean: true },
+    },
   },
   fieldOwnerBriefs: {
     path: "artifacts/field-owner-briefs/20260101-000000/manifest.json",
-    data: { status: "READY_TO_CLOSE", ownerCount: 0, openItemCount: 0 },
+    data: { status: "READY_TO_CLOSE", ownerCount: 0, openItemCount: 0, git: { branch: "dev", commit: "fixture", clean: true } },
   },
 };
 
@@ -113,6 +131,7 @@ readyEvidence.handoverPackage = {
   data: {
     status: "READY",
     canMarkGoalComplete: true,
+    git: { branch: "dev", commit: "fixture", clean: true },
     residualFieldGates: [],
     strictFailureReasons: [],
     evidenceRefs: {
@@ -158,7 +177,12 @@ assert(
   ready.referenceFreshness.some((item) => item.key === "fieldOwnerBriefs" && item.fresh === true),
   "complete fixture should verify fresh field owner briefs reference",
 );
+assert(
+  ready.sourceRevisionFreshness.some((item) => item.key === "handoverPackage" && item.fresh === true && item.clean === true),
+  "complete fixture should verify handover package source revision freshness",
+);
 assert(buildMarkdown(ready).includes("READY_TO_CLOSE"), "markdown should include READY_TO_CLOSE");
+assert(buildMarkdown(ready).includes("Source Revision Freshness"), "markdown should include source revision freshness");
 
 const missing = buildFinalStatusReport({
   evidenceRefs: {},
@@ -184,6 +208,43 @@ assert(
 assert(
   missing.gateActionRunbook.some((item) => item.actionType === "AUTOMATED_REFRESH_AVAILABLE"),
   "missing fixture should expose automated refresh action type",
+);
+
+const dirtySource = buildFinalStatusReport({
+  evidenceRefs: readyEvidence,
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  git: { branch: "dev", commit: "fixture", clean: false },
+});
+
+assert(dirtySource.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "dirty source fixture should require review");
+assert(
+  dirtySource.remainingGates.some((item) => item.category === "Source Code State" && item.status === "DIRTY"),
+  "dirty source fixture should expose dirty source code state",
+);
+
+const staleSourceRevision = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    handoverPackage: {
+      ...readyEvidence.handoverPackage,
+      data: {
+        ...readyEvidence.handoverPackage.data,
+        git: { branch: "dev", commit: "older-fixture", clean: true },
+      },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  git: { branch: "dev", commit: "fixture", clean: true },
+});
+
+assert(staleSourceRevision.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "stale source revision fixture should require review");
+assert(
+  staleSourceRevision.remainingGates.some(
+    (item) => item.category === "Evidence Source Revision" && item.message.includes("handoverPackage"),
+  ),
+  "stale source revision fixture should expose stale handover package commit",
 );
 
 const blockedSecurity = buildFinalStatusReport({

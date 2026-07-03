@@ -250,12 +250,17 @@ This verifier checks that READY/COMPLETE claims require `canMarkGoalComplete=tru
 `LIVE_TCP_READY`, PRESENT manual evidence, a security evidence manifest,
 non-blocking strict security evidence, empty `Residual Field Gates`, and fresh
 delivery/readiness/manual-readiness/security/index/closure references.
+Before the final report is shared, commit or intentionally clear local changes
+and regenerate the handover/final evidence from the delivery revision. The final
+status report includes `Source Revision Freshness`; any dirty working tree or
+Git-bearing evidence generated from an older commit remains a no-close gate.
 Then run `npm.cmd run final:status -- --base-url=http://localhost:8080` to
 write `artifacts/final-status/<timestamp>/manifest.json` plus `manifest.md`.
 Share this report as the final close/no-close decision. It reports
 `READY_TO_CLOSE` only when completion audit, field readiness, strict scanner
 security evidence, manual evidence, handover package readiness, residual field
-gates, and latest artifact references all agree; otherwise it lists the
+gates, latest artifact references, and clean source revision evidence all agree;
+otherwise it lists the
 remaining gates under `FIELD_OR_SECURITY_REVIEW_REQUIRED`. Start with the
 `Gate Action Summary` table: `AUTOMATED_REFRESH_AVAILABLE` items can usually be
 refreshed by Codex, while `FIELD_ACTION_REQUIRED`, `MANUAL_EVIDENCE_REQUIRED`,

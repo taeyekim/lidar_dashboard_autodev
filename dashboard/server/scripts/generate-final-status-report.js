@@ -179,6 +179,19 @@ function refsAreFresh(handoverPackage, evidenceRefs) {
   }));
 }
 
+function sourceGitFreshness(evidenceRefs, reportGit) {
+  return Object.entries(evidenceRefs)
+    .filter(([, value]) => value?.data?.git?.commit)
+    .map(([key, value]) => ({
+      key,
+      path: evidencePath(value),
+      expectedCommit: reportGit?.commit || null,
+      actualCommit: value.data.git.commit,
+      clean: value.data.git.clean === true,
+      fresh: Boolean(reportGit?.commit && value.data.git.commit === reportGit.commit),
+    }));
+}
+
 function buildFinalStatusReport(input = {}) {
   const evidenceRefs = input.evidenceRefs || latestEvidenceRefs();
   const manualEvidence = input.manualEvidence || manualEvidenceRefs();
@@ -195,6 +208,23 @@ function buildFinalStatusReport(input = {}) {
   const securitySummary = buildSecuritySummary(security);
   const manualEvidenceSummary = buildManualEvidenceSummary(manualEvidence);
   const referenceFreshness = refsAreFresh(handoverPackage, evidenceRefs);
+  const git = input.git || {
+    branch: gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
+    commit: gitValue(["rev-parse", "HEAD"]),
+    clean: gitValue(["status", "--short"]) === "",
+  };
+  const sourceRevisionFreshness = sourceGitFreshness(evidenceRefs, git);
+
+  if (git.clean !== true) {
+    addGate(
+      gates,
+      "Source Code State",
+      "DIRTY",
+      "Final status was generated while the working tree was not clean.",
+      "Commit or intentionally clear local changes, then rerun npm.cmd run final:status from the delivery revision.",
+      null,
+    );
+  }
 
   if (!completion) {
     addGate(gates, "Completion Audit", "MISSING", "Latest completion audit manifest is missing.", "Run npm.cmd run completion:audit.", null);
@@ -275,6 +305,23 @@ function buildFinalStatusReport(input = {}) {
       });
   }
 
+  sourceRevisionFreshness
+    .filter((item) => !item.fresh || !item.clean)
+    .forEach((item) => {
+      const reasons = [
+        !item.fresh ? `commit ${item.actualCommit} does not match final status commit ${item.expectedCommit}` : "",
+        !item.clean ? "source evidence was generated with a dirty working tree" : "",
+      ].filter(Boolean).join("; ");
+      addGate(
+        gates,
+        "Evidence Source Revision",
+        "STALE",
+        `${item.key} evidence is not tied to the clean final source revision: ${reasons}.`,
+        "Regenerate the referenced evidence after the final delivery commit and rerun npm.cmd run final:status.",
+        item.path,
+      );
+    });
+
   const status = gates.length === 0 ? "READY_TO_CLOSE" : "FIELD_OR_SECURITY_REVIEW_REQUIRED";
   const summary = gateSummary(gates);
 
@@ -284,11 +331,7 @@ function buildFinalStatusReport(input = {}) {
     siteName: input.siteName || "unspecified",
     hostName: input.hostName || os.hostname(),
     baseUrl: input.baseUrl || "http://localhost:8080",
-    git: input.git || {
-      branch: gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
-      commit: gitValue(["rev-parse", "HEAD"]),
-      clean: gitValue(["status", "--short"]) === "",
-    },
+    git,
     status,
     canMarkGoalComplete: status === "READY_TO_CLOSE",
     completionAudit: {
@@ -319,6 +362,7 @@ function buildFinalStatusReport(input = {}) {
     },
     evidenceRefs: Object.fromEntries(Object.entries(evidenceRefs).map(([key, value]) => [key, evidencePath(value)])),
     referenceFreshness,
+    sourceRevisionFreshness,
     manualEvidence: manualEvidenceSummary,
     gateSummary: summary,
     gateActionRunbook: gateActionRunbook(gates),
@@ -391,6 +435,17 @@ function buildMarkdown(manifest) {
         `| ${markdownCell(item.key)} | ${item.expected ? `\`${markdownCell(item.expected)}\`` : "missing"} | ${item.actual ? `\`${markdownCell(item.actual)}\`` : "missing"} | ${item.fresh ? "yes" : "no"} |`,
     ),
     "",
+    "## Source Revision Freshness",
+    "",
+    "| Evidence | Path | Evidence Commit | Final Status Commit | Clean | Fresh |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ...(manifest.sourceRevisionFreshness.length > 0
+      ? manifest.sourceRevisionFreshness.map(
+          (item) =>
+            `| ${markdownCell(item.key)} | ${item.path ? `\`${markdownCell(item.path)}\`` : "missing"} | ${markdownCell(item.actualCommit)} | ${markdownCell(item.expectedCommit)} | ${item.clean ? "yes" : "no"} | ${item.fresh ? "yes" : "no"} |`,
+        )
+      : ["| none | - | - | - | - | - |"]),
+    "",
     "## Manual Evidence",
     "",
     "| Type | Status | Path | Validation |",
@@ -435,4 +490,5 @@ module.exports = {
   buildFinalStatusReport,
   buildMarkdown,
   refsAreFresh,
+  sourceGitFreshness,
 };
