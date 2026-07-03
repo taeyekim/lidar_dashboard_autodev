@@ -70,6 +70,7 @@ function request(server, options = {}) {
 }
 
 async function main() {
+  const originalDeviceKey = process.env.DEVICE_INGEST_API_KEY;
   const server = await new Promise((resolve) => {
     const started = app.listen(0, "127.0.0.1", () => resolve(started));
   });
@@ -97,6 +98,27 @@ async function main() {
     });
     assert(nonJsonMutation.status === 415, "non-JSON API mutations must return 415");
     assert(nonJsonMutation.json?.ok === false, "non-JSON API mutation error must use the API error envelope");
+
+    process.env.DEVICE_INGEST_API_KEY = "runtime-device-key";
+    const protectedIngestPaths = ["/api/wrongway", "/api/ingest/lidar"];
+    for (const path of protectedIngestPaths) {
+      const missingDeviceKey = await request(server, {
+        method: "POST",
+        path,
+        body: { type: "normal-driving", track_id: "runtime-track-1" },
+      });
+      assert(missingDeviceKey.status === 401, `${path} must reject missing X-Device-Key before ingest processing`);
+      assert(missingDeviceKey.json?.ok === false, `${path} missing-key rejection must use the API error envelope`);
+
+      const wrongDeviceKey = await request(server, {
+        method: "POST",
+        path,
+        body: { type: "normal-driving", track_id: "runtime-track-1" },
+        headers: { "X-Device-Key": "wrong-runtime-key" },
+      });
+      assert(wrongDeviceKey.status === 401, `${path} must reject invalid X-Device-Key before ingest processing`);
+      assert(wrongDeviceKey.json?.ok === false, `${path} invalid-key rejection must use the API error envelope`);
+    }
 
     let rateLimited = null;
     for (let index = 0; index < 21; index += 1) {
@@ -152,6 +174,8 @@ async function main() {
     assert(authenticatedIngestStatus.status === 200, "authenticated operator must be able to read ingest status diagnostics");
     assert(authenticatedIngestStatus.json?.ok === true, "ingest status diagnostics must use the API success envelope");
   } finally {
+    if (originalDeviceKey === undefined) delete process.env.DEVICE_INGEST_API_KEY;
+    else process.env.DEVICE_INGEST_API_KEY = originalDeviceKey;
     await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
 }

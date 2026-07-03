@@ -1,7 +1,13 @@
 const { requireDeviceIngestKey } = require("../src/middleware/security");
+const fs = require("fs");
+const path = require("path");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+function readProjectFile(relativePath) {
+  return fs.readFileSync(path.join(__dirname, "..", "..", "..", relativePath), "utf8");
 }
 
 function runMiddleware(headers = {}) {
@@ -35,6 +41,25 @@ function runMiddleware(headers = {}) {
 const originalKey = process.env.DEVICE_INGEST_API_KEY;
 
 try {
+  const wrongwayRoutes = readProjectFile("dashboard/server/src/domains/wrongway/wrongway.routes.js");
+  const externalIngestRoutes = readProjectFile("dashboard/server/src/domains/external-ingest/externalIngest.routes.js");
+  const payloadSpec = readProjectFile("docs/specs/lidar-dashboard-payload.md");
+  const projectContext = readProjectFile("docs/ai/project-context.md");
+
+  [
+    'router.post("/wrongway", requireDeviceIngestKey, controller.receiveWrongWay)',
+    'router.post("/ingest/lidar", requireDeviceIngestKey, controller.receiveLidar)',
+    'router.post("/ingest/control-board", requireDeviceIngestKey, controller.receiveControlBoard)',
+    'router.post("/ingest/control-board/tcp/test", requireDeviceIngestKey, controller.testControlBoardTcp)',
+  ].forEach((token) => {
+    const haystack = `${wrongwayRoutes}\n${externalIngestRoutes}`;
+    assert(haystack.includes(token), `device ingest route contract is missing ${token}`);
+  });
+  assert(payloadSpec.includes("X-Device-Key"), "LiDAR payload spec must document X-Device-Key");
+  assert(payloadSpec.includes("DEVICE_INGEST_API_KEY"), "LiDAR payload spec must document DEVICE_INGEST_API_KEY");
+  assert(projectContext.includes("DEVICE_INGEST_API_KEY"), "project context must document the current device ingest key policy");
+  assert(!projectContext.includes("별도 장비 인증이나 IP 제한은 후속 과제로 둔다"), "project context must not describe device ingest auth as only a follow-up");
+
   process.env.DEVICE_INGEST_API_KEY = "";
   let result = runMiddleware();
   assert(result.nextCalled, "blank DEVICE_INGEST_API_KEY must allow ingest requests");

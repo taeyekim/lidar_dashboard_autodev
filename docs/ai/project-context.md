@@ -73,7 +73,8 @@
 - 백엔드는 `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout` 계약을 제공한다.
 - 프론트엔드는 로그인 화면, 세션 복구, 401 만료 처리, 로그아웃, protected route를 제공한다.
 - 사용자용 조회/수정 API는 JWT 보호 대상이다.
-- 라이다 PC가 호출하는 `/api/wrongway`와 장비 ingest API는 JWT 보호 대상에서 제외하고, 별도 장비 인증이나 IP 제한은 후속 과제로 둔다.
+- 라이다 PC가 호출하는 `/api/wrongway`와 장비 ingest API는 JWT 보호 대상에서 제외하되, `DEVICE_INGEST_API_KEY`가 설정된 운영 환경에서는 `X-Device-Key` 헤더로 장비 요청을 검증한다.
+- 현장 내부망에서는 Nginx allowlist, 방화벽, 포트 노출 정책으로 라이다 PC와 통합제어보드 접근 경로를 추가 제한한다.
 - 실제 `JWT_SECRET`, 관리자 비밀번호, 비밀번호 hash는 `.env`에만 두고 문서/커밋에 남기지 않는다.
 
 ## 대시보드 UI 목표
