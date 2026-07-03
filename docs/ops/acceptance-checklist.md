@@ -23,7 +23,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `npm run field:preflight` or `scripts/field-preflight.ps1` records field preflight evidence for `.env`, `JWT_SECRET`, `DEVICE_INGEST_API_KEY`, control-board dry-run/live TCP readiness, cookie security, and `NGINX_SWAGGER_ALLOW`.
 - [ ] `npm run runtime:evidence` records Docker CLI, daemon availability, compose config, and `.env` key inventory.
 - [ ] `npm run delivery:evidence` creates `artifacts/delivery/<timestamp>/manifest.md`, `manifest.json`, and companion `runtime/` and `security/` evidence folders.
-- [ ] `npm run completion:audit` creates `artifacts/completion-audit/<timestamp>/manifest.json` plus `artifacts/completion-audit/<timestamp>/manifest.md` and keeps `canMarkGoalComplete=false` while field verification or skipped/review evidence remains.
+- [ ] `npm run completion:audit` creates `artifacts/completion-audit/<timestamp>/manifest.json` plus `artifacts/completion-audit/<timestamp>/manifest.md` and keeps `canMarkGoalComplete=false` while field readiness, field verification, or skipped/review evidence remains.
 - [ ] `npm run handover:index` creates `artifacts/handover-index/<timestamp>/manifest.json` plus `manifest.md` listing the latest required handover manifests and missing/review/stale areas.
 - [ ] `npm run field:closure-plan` creates `artifacts/field-closure-plan/<timestamp>/manifest.json` plus `manifest.md` listing the field commands and done-when criteria needed to close open REVIEW/STALE/MISSING areas.
 - [ ] `npm run field:readiness` creates `artifacts/field-readiness/<timestamp>/manifest.json` plus `manifest.md` checking Docker, Nginx/API health, env readiness, control-board TCP mode, Swagger exposure, and optional scanner availability.

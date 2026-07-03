@@ -20,11 +20,49 @@ function latestDeliveryManifest(outputRoot = "artifacts/delivery") {
   return readLatestJsonManifest(outputRoot);
 }
 
+function latestFieldReadinessManifest(outputRoot = "artifacts/field-readiness") {
+  return readLatestJsonManifest(outputRoot);
+}
+
 function addBlocker(blockers, category, message) {
   blockers.push({ category, message });
 }
 
-function buildCompletionBlockers(deliveryManifest) {
+function buildReadinessSignals(fieldReadinessManifest) {
+  if (!fieldReadinessManifest) {
+    return {
+      status: "MISSING",
+      reviewCount: 1,
+      skippedCount: 0,
+      blockerMessages: ["Field readiness manifest is missing. Run npm run field:readiness before completion:audit."],
+    };
+  }
+
+  const data = fieldReadinessManifest.data || {};
+  const status = data.status || "UNKNOWN";
+  const reviewCount = normalizeNumber(data.reviewCount);
+  const skippedCount = normalizeNumber(data.skippedCount);
+  const blockerMessages = [];
+
+  if (status === "REVIEW" || status === "MISSING" || status === "UNKNOWN") {
+    blockerMessages.push(`Field readiness status is ${status}.`);
+  }
+  if (reviewCount > 0) {
+    blockerMessages.push(`${reviewCount} field readiness check(s) require review.`);
+  }
+  if (skippedCount > 0 || status === "PASS_WITH_SKIPS") {
+    blockerMessages.push(`${skippedCount} field readiness scanner/tool check(s) were skipped.`);
+  }
+
+  return {
+    status,
+    reviewCount,
+    skippedCount,
+    blockerMessages,
+  };
+}
+
+function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest) {
   if (!deliveryManifest) {
     return [{
       category: "automated",
@@ -43,6 +81,7 @@ function buildCompletionBlockers(deliveryManifest) {
   const fieldPreflightReviewCount = normalizeNumber(summary.fieldPreflightReviewCount);
   const fieldPreflightSkippedCount = normalizeNumber(summary.fieldPreflightSkippedCount);
   const fieldVerificationRequiredCount = normalizeNumber(summary.fieldVerificationRequiredCount);
+  const readinessSignals = buildReadinessSignals(fieldReadinessManifest);
 
   if (summary.status !== "AUTOMATED_CHECKS_PASS") {
     addBlocker(blockers, "field", `Delivery handover summary status is ${summary.status || "UNKNOWN"}.`);
@@ -81,13 +120,15 @@ function buildCompletionBlockers(deliveryManifest) {
       `${fieldVerificationRequiredCount} requirement area(s) still need field verification: ${areas}.`,
     );
   }
+  readinessSignals.blockerMessages.forEach((message) => addBlocker(blockers, "field", message));
 
   return blockers;
 }
 
-function buildCompletionAudit(deliveryManifest) {
+function buildCompletionAudit(deliveryManifest, fieldReadinessManifest) {
   const summary = deliveryManifest?.data?.handoverSummary || {};
-  const completionBlockers = buildCompletionBlockers(deliveryManifest);
+  const readinessSignals = buildReadinessSignals(fieldReadinessManifest);
+  const completionBlockers = buildCompletionBlockers(deliveryManifest, fieldReadinessManifest);
   const automatedBlockers = completionBlockers.filter((item) => item.category === "automated");
   const fieldBlockers = completionBlockers.filter((item) => item.category === "field");
   const failedCommandCount = normalizeNumber(summary.failedCommandCount);
@@ -99,6 +140,8 @@ function buildCompletionAudit(deliveryManifest) {
     normalizeNumber(summary.fieldPreflightReviewCount),
     normalizeNumber(summary.fieldPreflightSkippedCount),
     normalizeNumber(summary.fieldVerificationRequiredCount),
+    readinessSignals.reviewCount,
+    readinessSignals.skippedCount,
   ].reduce((total, value) => total + value, 0);
 
   let status = "COMPLETE";
@@ -111,6 +154,7 @@ function buildCompletionAudit(deliveryManifest) {
   return {
     generatedAt: new Date().toISOString(),
     sourceDeliveryManifest: deliveryManifest?.path || null,
+    sourceFieldReadinessManifest: fieldReadinessManifest?.path || null,
     status,
     canMarkGoalComplete: status === "COMPLETE",
     completionBlockers,
@@ -128,15 +172,18 @@ function buildCompletionAudit(deliveryManifest) {
       fieldPreflightReviewCount: normalizeNumber(summary.fieldPreflightReviewCount),
       fieldPreflightSkippedCount: normalizeNumber(summary.fieldPreflightSkippedCount),
       fieldVerificationRequiredCount: normalizeNumber(summary.fieldVerificationRequiredCount),
+      fieldReadinessReviewCount: readinessSignals.reviewCount,
+      fieldReadinessSkippedCount: readinessSignals.skippedCount,
       automatedBlockerCount: automatedBlockers.length,
       fieldBlockerCount: fieldBlockers.length,
     },
+    fieldReadinessStatus: readinessSignals.status,
     fieldVerificationRequiredAreas: Array.isArray(summary.fieldVerificationRequiredAreas)
       ? summary.fieldVerificationRequiredAreas
       : [],
     handoverSummaryStatus: summary.status || null,
     decisionRule:
-      "canMarkGoalComplete is true only when automated delivery checks pass and no field, companion, acceptance, preflight, skipped, or required verification item remains.",
+      "canMarkGoalComplete is true only when automated delivery checks pass and no field readiness, companion, acceptance, preflight, skipped, or required verification item remains.",
   };
 }
 
@@ -147,7 +194,9 @@ function buildMarkdown(manifest) {
     `- Status: ${manifest.status}`,
     `- Can mark goal complete: ${manifest.canMarkGoalComplete}`,
     `- Source delivery manifest: ${manifest.sourceDeliveryManifest || "missing"}`,
+    `- Source field readiness manifest: ${manifest.sourceFieldReadinessManifest || "missing"}`,
     `- Delivery handover status: ${manifest.handoverSummaryStatus || "missing"}`,
+    `- Field readiness status: ${manifest.fieldReadinessStatus || "missing"}`,
     "",
     "## Counts",
     "",
@@ -163,6 +212,8 @@ function buildMarkdown(manifest) {
     `- Field acceptance skipped items: ${manifest.counts.fieldAcceptanceSkippedCount}`,
     `- Field preflight review items: ${manifest.counts.fieldPreflightReviewCount}`,
     `- Field preflight skipped items: ${manifest.counts.fieldPreflightSkippedCount}`,
+    `- Field readiness review items: ${manifest.counts.fieldReadinessReviewCount}`,
+    `- Field readiness skipped items: ${manifest.counts.fieldReadinessSkippedCount}`,
     `- Field verification required areas: ${manifest.counts.fieldVerificationRequiredCount}`,
     "",
     "## Field Verification Required",
@@ -187,12 +238,14 @@ function buildMarkdown(manifest) {
 function main() {
   const outputRootArg = process.argv.find((arg) => arg.startsWith("--output-root="));
   const deliveryRootArg = process.argv.find((arg) => arg.startsWith("--delivery-root="));
+  const fieldReadinessRootArg = process.argv.find((arg) => arg.startsWith("--field-readiness-root="));
   const outputRoot = outputRootArg ? outputRootArg.slice("--output-root=".length) : "artifacts/completion-audit";
   const deliveryRoot = deliveryRootArg ? deliveryRootArg.slice("--delivery-root=".length) : "artifacts/delivery";
+  const fieldReadinessRoot = fieldReadinessRootArg ? fieldReadinessRootArg.slice("--field-readiness-root=".length) : "artifacts/field-readiness";
   const outputDir = path.join(root, outputRoot, timestampForPath());
   ensureDir(outputDir);
 
-  const manifest = buildCompletionAudit(latestDeliveryManifest(deliveryRoot));
+  const manifest = buildCompletionAudit(latestDeliveryManifest(deliveryRoot), latestFieldReadinessManifest(fieldReadinessRoot));
   fs.writeFileSync(path.join(outputDir, "manifest.json"), JSON.stringify(manifest, null, 2));
   fs.writeFileSync(path.join(outputDir, "manifest.md"), buildMarkdown(manifest));
 
@@ -210,4 +263,5 @@ if (require.main === module) {
 module.exports = {
   buildCompletionAudit,
   buildCompletionBlockers,
+  buildReadinessSignals,
 };

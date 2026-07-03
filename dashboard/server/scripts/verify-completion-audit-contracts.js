@@ -44,9 +44,16 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "artifacts/completion-audit",
   "fieldVerificationRequiredCount",
   "fieldPreflightReviewCount",
+  "fieldReadinessReviewCount",
+  "fieldReadinessSkippedCount",
   "fieldAcceptanceSkippedCount",
   "readLatestJsonManifest",
   "sourceDeliveryManifest",
+  "sourceFieldReadinessManifest",
+  "latestFieldReadinessManifest",
+  "buildReadinessSignals",
+  "artifacts/field-readiness",
+  "npm run field:readiness",
   "goal remains active",
 ].forEach((token) => {
   assert(completionAudit.includes(token), `completion audit generator is missing ${token}`);
@@ -57,6 +64,7 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "artifacts/completion-audit/<timestamp>/manifest.json",
   "artifacts/completion-audit/<timestamp>/manifest.md",
   "canMarkGoalComplete",
+  "field readiness",
 ].forEach((token) => {
   assert(deliveryMatrix.includes(token), `delivery evidence matrix is missing ${token}`);
   assert(deliveryRunbook.includes(token), `delivery runbook is missing ${token}`);
