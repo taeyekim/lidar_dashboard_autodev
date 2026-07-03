@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const swaggerSpec = require("../src/swagger");
+const { adaptLidarHttpPayload } = require("../src/domains/external-ingest/adapters/lidarHttp.adapter");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -22,6 +23,7 @@ const wrongwayRoutes = readProjectFile("dashboard/server/src/domains/wrongway/wr
 const externalIngestRoutes = readProjectFile("dashboard/server/src/domains/external-ingest/externalIngest.routes.js");
 const externalIngestService = readProjectFile("dashboard/server/src/domains/external-ingest/externalIngest.service.js");
 const externalEventModel = readProjectFile("dashboard/server/src/domains/external-ingest/externalEvent.model.js");
+const lidarHttpAdapter = readProjectFile("dashboard/server/src/domains/external-ingest/adapters/lidarHttp.adapter.js");
 const schema = readProjectFile("dashboard/server/prisma/schema.prisma");
 const payloadSpec = readProjectFile("docs/specs/lidar-dashboard-payload.md");
 const runbook = readProjectFile("docs/ops/delivery-runbook.md");
@@ -113,15 +115,33 @@ assertIncludes(wrongwayRoutes, "requireDeviceIngestKey", "wrongway routes");
 assertIncludes(externalIngestRoutes, "requireDeviceIngestKey", "external ingest routes");
 assertIncludes(externalIngestRoutes, "/ingest/control-board/tcp/test", "external ingest routes");
 [
-  "bounded diagnostic buffer",
-  "최근 이벤트를 기준으로",
-].forEach((token) => assertIncludes(externalIngestService, token, "external ingest service comments"));
-[
-  "diagnostic event id",
-  "rawPayload를 보존하되",
+  "External devices can send different payload shapes.",
+  "diagnostic payloads do not provide an ID",
+  "Field verification can inspect rawPayload in DB",
 ].forEach((token) => assertIncludes(externalEventModel, token, "external event model comments"));
-assert(!externalIngestService.includes("임시"), "external ingest service comments must not read like unfinished temporary code");
-assert(!externalEventModel.includes("임시"), "external event model comments must not read like unfinished temporary code");
+[
+  "Convert LiDAR HTTP/JSON payloads into the common external event model.",
+  "payload.objectId",
+  "payload.uuid",
+  "payload.stable_object_id",
+  "LiDAR wrong-way event received",
+].forEach((token) => assertIncludes(lidarHttpAdapter, token, "lidar HTTP adapter"));
+const stableIdEvent = adaptLidarHttpPayload({
+  type: "wrong-way-level-1",
+  zone_id: "Z-1",
+  stableObjectId: "stable-track-1",
+  timestamp: "2026-07-03T00:00:00.000Z",
+});
+assert(stableIdEvent.trackId === "stable-track-1", "lidar adapter must map stableObjectId to trackId");
+assert(stableIdEvent.message === "LiDAR wrong-way event received", "lidar adapter must provide a readable fallback message");
+const replacementChar = String.fromCharCode(0xfffd);
+const knownMojibakeChars = [0xf9e4, 0xb97c, 0xbcf4, 0xae38].map((code) => String.fromCharCode(code));
+[replacementChar, ...knownMojibakeChars].forEach((token) => {
+  assert(!externalEventModel.includes(token), `external event model must not contain mojibake token: ${token}`);
+  assert(!lidarHttpAdapter.includes(token), `lidar HTTP adapter must not contain mojibake token: ${token}`);
+});
+assert(!externalIngestService.includes("temporary"), "external ingest service comments must not read like unfinished temporary code");
+assert(!externalEventModel.includes("temporary"), "external event model comments must not read like unfinished temporary code");
 assertIncludes(schema, "model VehicleTrack", "prisma schema");
 assertIncludes(schema, "trackId                      String         @unique", "prisma schema");
 assertIncludes(schema, "rawPayload               Json", "prisma schema");
