@@ -126,6 +126,52 @@ fs.writeFileSync(
   }),
 );
 const policyAcceptedSummary = summarizeCompanionEvidence("Security", "artifacts/delivery-summary-policy-accepted");
+const runtimeMetadataRoot = path.join(__dirname, "..", "..", "..", "artifacts", "delivery-summary-runtime-metadata");
+const runtimeMetadataDir = path.join(runtimeMetadataRoot, "20260703-000000");
+fs.mkdirSync(runtimeMetadataDir, { recursive: true });
+fs.writeFileSync(
+  path.join(runtimeMetadataDir, "manifest.json"),
+  JSON.stringify({
+    options: {
+      runSmoke: true,
+      baseUrl: "http://localhost:8080",
+      useExistingStack: true,
+    },
+    env: {
+      exists: true,
+      missingKeys: ["CONTROL_BOARD_HOST"],
+    },
+    commands: [],
+  }),
+);
+const runtimeMetadataSummary = summarizeCompanionEvidence(
+  "Runtime",
+  "artifacts/delivery-summary-runtime-metadata",
+);
+const securityMetadataRoot = path.join(__dirname, "..", "..", "..", "artifacts", "delivery-summary-security-metadata");
+const securityMetadataDir = path.join(securityMetadataRoot, "20260703-000000");
+fs.mkdirSync(securityMetadataDir, { recursive: true });
+fs.writeFileSync(
+  path.join(securityMetadataDir, "manifest.json"),
+  JSON.stringify({
+    targetUrl: "http://localhost:8080",
+    options: {
+      includeContainerImages: true,
+      includeZap: true,
+      requireScanners: true,
+    },
+    dispositionSummary: {
+      pass: 4,
+      skipped: 0,
+    },
+    strictAcceptanceBlocked: true,
+    checks: [],
+  }),
+);
+const securityMetadataSummary = summarizeCompanionEvidence(
+  "Security",
+  "artifacts/delivery-summary-security-metadata",
+);
 
 assert(rows.length === 3, "delivery evidence summary vector should parse three matrix rows");
 assert(summary.status === "AUTOMATED_CHECKS_REVIEW", "failed commands should force review status");
@@ -189,6 +235,40 @@ assert(
   "policy accepted audit evidence should not create companion review items",
 );
 assert(policyAcceptedSummary.reviewCount === 0, "policy_accepted manifest checks should not be review items");
+assert(
+  runtimeMetadataSummary.metadata.baseUrl === "http://localhost:8080",
+  "runtime companion summary should expose smoke base URL",
+);
+assert(runtimeMetadataSummary.metadata.runSmoke === true, "runtime companion summary should expose runSmoke mode");
+assert(
+  runtimeMetadataSummary.metadata.useExistingStack === true,
+  "runtime companion summary should expose existing-stack mode",
+);
+assert(
+  runtimeMetadataSummary.metadata.envFilePresent === true,
+  "runtime companion summary should expose .env presence",
+);
+assert(
+  runtimeMetadataSummary.metadata.missingEnvKeyCount === 1,
+  "runtime companion summary should expose missing env key count",
+);
+assert(
+  securityMetadataSummary.metadata.targetUrl === "http://localhost:8080",
+  "security companion summary should expose target URL",
+);
+assert(
+  securityMetadataSummary.metadata.includeContainerImages === true,
+  "security companion summary should expose container image scan mode",
+);
+assert(securityMetadataSummary.metadata.includeZap === true, "security companion summary should expose ZAP mode");
+assert(
+  securityMetadataSummary.metadata.requireScanners === true,
+  "security companion summary should expose scanner requirement policy",
+);
+assert(
+  securityMetadataSummary.metadata.strictAcceptanceBlocked === true,
+  "security companion summary should expose strict acceptance block status",
+);
 assertIncludes(
   companionSummary.companionReviewItems,
   "Runtime: docker compose daemon check",

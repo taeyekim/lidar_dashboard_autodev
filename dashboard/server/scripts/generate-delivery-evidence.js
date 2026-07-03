@@ -124,6 +124,34 @@ function readLatestJsonManifest(outputRoot) {
   };
 }
 
+function summarizeCompanionMetadata(type, data) {
+  if (type === "Runtime") {
+    const options = data.options || {};
+    const env = data.env || {};
+    return {
+      baseUrl: options.baseUrl || null,
+      runSmoke: Boolean(options.runSmoke),
+      useExistingStack: Boolean(options.useExistingStack),
+      envFilePresent: env.exists === undefined ? null : Boolean(env.exists),
+      missingEnvKeyCount: Array.isArray(env.missingKeys) ? env.missingKeys.length : null,
+    };
+  }
+
+  if (type === "Security") {
+    const options = data.options || {};
+    return {
+      targetUrl: data.targetUrl || null,
+      includeContainerImages: Boolean(options.includeContainerImages),
+      includeZap: Boolean(options.includeZap),
+      requireScanners: Boolean(options.requireScanners),
+      strictAcceptanceBlocked: Boolean(data.strictAcceptanceBlocked),
+      dispositionSummary: data.dispositionSummary || null,
+    };
+  }
+
+  return {};
+}
+
 function summarizeCompanionEvidence(type, outputRoot) {
   const manifest = readLatestJsonManifest(outputRoot);
   if (!manifest) {
@@ -131,6 +159,7 @@ function summarizeCompanionEvidence(type, outputRoot) {
       type,
       outputRoot,
       manifestPath: null,
+      metadata: {},
       reviewCount: 1,
       skippedCount: 0,
       reviewItems: [`${type}: manifest not found`],
@@ -150,6 +179,7 @@ function summarizeCompanionEvidence(type, outputRoot) {
     type,
     outputRoot,
     manifestPath: manifest.path,
+    metadata: summarizeCompanionMetadata(type, manifest.data),
     reviewCount: reviewItems.length,
     skippedCount: skippedItems.length,
     reviewItems,
@@ -469,6 +499,29 @@ function buildHandoverSummary(
 }
 
 function buildMarkdown(manifest) {
+  const formatCompanionMetadata = (item) => {
+    const metadata = item.metadata || {};
+    if (item.type === "Runtime") {
+      return [
+        `baseUrl=${metadata.baseUrl || "unknown"}`,
+        `runSmoke=${metadata.runSmoke ? "yes" : "no"}`,
+        `useExistingStack=${metadata.useExistingStack ? "yes" : "no"}`,
+        `envFilePresent=${metadata.envFilePresent === null || metadata.envFilePresent === undefined ? "unknown" : metadata.envFilePresent ? "yes" : "no"}`,
+        `missingEnvKeys=${metadata.missingEnvKeyCount === null || metadata.missingEnvKeyCount === undefined ? "unknown" : metadata.missingEnvKeyCount}`,
+      ].join("<br>");
+    }
+    if (item.type === "Security") {
+      return [
+        `targetUrl=${metadata.targetUrl || "unknown"}`,
+        `includeContainerImages=${metadata.includeContainerImages ? "yes" : "no"}`,
+        `includeZap=${metadata.includeZap ? "yes" : "no"}`,
+        `requireScanners=${metadata.requireScanners ? "yes" : "no"}`,
+        `strictAcceptanceBlocked=${metadata.strictAcceptanceBlocked ? "yes" : "no"}`,
+      ].join("<br>");
+    }
+    return "n/a";
+  };
+
   const lines = [
     "# Delivery Evidence Manifest",
     "",
@@ -595,11 +648,11 @@ function buildMarkdown(manifest) {
     "",
     "## Companion Evidence",
     "",
-    "| Type | Output Root | Manifest | Review | Skipped |",
-    "| --- | --- | --- | --- | --- |",
+    "| Type | Output Root | Manifest | Review | Skipped | Execution Metadata |",
+    "| --- | --- | --- | --- | --- | --- |",
     ...manifest.companionEvidence.summaries.map(
       (item) =>
-        `| ${item.type} | \`${item.outputRoot}\` | ${item.manifestPath ? `\`${item.manifestPath}\`` : "missing"} | ${item.reviewCount} | ${item.skippedCount} |`,
+        `| ${item.type} | \`${item.outputRoot}\` | ${item.manifestPath ? `\`${item.manifestPath}\`` : "missing"} | ${item.reviewCount} | ${item.skippedCount} | ${formatCompanionMetadata(item)} |`,
     ),
   );
 

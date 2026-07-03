@@ -145,6 +145,8 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   [deliveryEvidence, "summarizeFieldPreflight", "delivery evidence generator"],
   [deliveryEvidence, "companionReviewItems", "delivery evidence generator"],
   [deliveryEvidence, "companionSkippedItems", "delivery evidence generator"],
+  [deliveryEvidence, "summarizeCompanionMetadata", "delivery evidence generator"],
+  [deliveryEvidence, "Execution Metadata", "delivery evidence generator"],
   [deliveryEvidence, "fieldRehearsalEvidence", "delivery evidence generator"],
   [deliveryEvidence, "fieldAcceptanceEvidence", "delivery evidence generator"],
   [deliveryEvidence, "fieldPreflightEvidence", "delivery evidence generator"],
