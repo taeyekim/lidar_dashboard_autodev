@@ -66,6 +66,35 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
   assert(eventLogPage.includes(token), `Event log must support eventId deep-link selection: ${token}`);
 });
 
+[
+  "이벤트 로그",
+  "라이다 수신 이벤트, 관제 상태, 제어 명령 이력",
+  "오늘 이벤트",
+  "역주행 이벤트",
+  "시간대별 이벤트 분포",
+  "이벤트 상세",
+  "운영 메모",
+  "통합제어보드 명령",
+  "원본 payload JSON",
+].forEach((token) => {
+  assert(eventLogPage.includes(token), `Event log page must include operations copy: ${token}`);
+});
+
+[
+  "Today events",
+  "Wrong-way events",
+  "Pending events",
+  "API summary",
+  "Needs review",
+  "From event API",
+  "Events from the backend event API",
+  "Search id, type, status, location",
+  "Add operator memo",
+  "No control board command is linked to this event.",
+].forEach((token) => {
+  assert(!eventLogPage.includes(token), `Event log page must not expose generic/sample copy: ${token}`);
+});
+
 assert(!dashboardPage.includes("추후 구현"), "Dashboard page must not expose unfinished action comments");
 
 [

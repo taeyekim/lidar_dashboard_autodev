@@ -56,9 +56,9 @@ const EMPTY_SUMMARY = {
 };
 
 function statusLabel(status) {
-  if (status === "pending" || status === "new") return "Pending";
-  if (status === "resolved" || status === "reviewed") return "Resolved";
-  if (status === "dismissed" || status === "ignored") return "Dismissed";
+  if (status === "pending" || status === "new") return "대기";
+  if (status === "resolved" || status === "reviewed") return "조치 완료";
+  if (status === "dismissed" || status === "ignored") return "무시";
   return status || "-";
 }
 
@@ -103,25 +103,25 @@ function AnalyticsView({ summary, loading, error }) {
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         <Card className="border-blue-100 bg-blue-50 p-4">
-          <div className="mb-1 text-sm font-bold text-blue-800">Today events</div>
+          <div className="mb-1 text-sm font-bold text-blue-800">오늘 이벤트</div>
           <div className="text-3xl font-bold text-gray-900">{summary.todaysEvents}</div>
-          <div className="mt-1 text-xs text-blue-600">{loading ? "Loading..." : "API summary"}</div>
+          <div className="mt-1 text-xs text-blue-600">{loading ? "집계 중" : "이벤트 API 기준"}</div>
         </Card>
 
         <Card className="border-red-100 bg-red-50 p-4">
-          <div className="mb-1 text-sm font-bold text-red-800">Wrong-way events</div>
+          <div className="mb-1 text-sm font-bold text-red-800">역주행 이벤트</div>
           <div className="text-3xl font-bold text-red-600">{summary.wrongWayEvents}</div>
-          <div className="mt-1 text-xs text-red-500">Needs review</div>
+          <div className="mt-1 text-xs text-red-500">관제 확인 대상</div>
         </Card>
 
         <Card className="border-green-100 bg-green-50 p-4">
-          <div className="mb-1 text-sm font-bold text-green-800">Pending events</div>
+          <div className="mb-1 text-sm font-bold text-green-800">대기 이벤트</div>
           <div className="text-3xl font-bold text-gray-900">{summary.newEvents}</div>
-          <div className="mt-1 text-xs text-green-600">From event API</div>
+          <div className="mt-1 text-xs text-green-600">상태 변경 필요</div>
         </Card>
       </div>
 
-      <Card title="Hourly event distribution" className="h-96">
+      <Card title="시간대별 이벤트 분포" className="h-96">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={hourlyData}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -143,8 +143,8 @@ function ContractEmptyView({ title }) {
         <Info className="mb-3 h-8 w-8 text-gray-300" />
         <h2 className="mb-2 text-lg font-bold text-gray-900">{title}</h2>
         <p className="text-sm leading-6">
-          The current event API contract does not provide CCTV, license plate, vehicle owner,
-          or vehicle registry data. This screen no longer renders sample data as if it were real.
+          현재 이벤트 API 계약에는 CCTV, 번호판, 차주, 차량 등록 정보가 포함되어 있지 않습니다.
+          실제 데이터처럼 보이는 샘플 대신 연동 범위 밖 상태로 표시합니다.
         </p>
       </div>
     </Card>
@@ -155,7 +155,7 @@ function RawPayloadBlock({ value }) {
   return (
     <details className="rounded border border-gray-200 bg-gray-50">
       <summary className="cursor-pointer px-3 py-2 text-xs font-bold uppercase text-gray-500">
-        rawPayload JSON
+        원본 payload JSON
       </summary>
       <pre className="max-h-72 overflow-auto border-t border-gray-200 p-3 text-xs text-gray-700">
         {JSON.stringify(value ?? {}, null, 2)}
@@ -175,7 +175,7 @@ function ControlCommandTimeline({ commands = [] }) {
   if (!commands.length) {
     return (
       <div className="rounded border border-gray-200 bg-gray-50 p-3 text-xs text-gray-500">
-        No control board command is linked to this event.
+        이 이벤트에 연결된 통합제어보드 명령이 없습니다.
       </div>
     );
   }
@@ -214,7 +214,7 @@ function ControlCommandTimeline({ commands = [] }) {
           {Array.isArray(command.logs) && command.logs.length > 0 && (
             <details className="mt-3 rounded border border-gray-100 bg-gray-50">
               <summary className="cursor-pointer px-2 py-1 font-bold uppercase text-gray-400">
-                command logs
+                명령 로그
               </summary>
               <div className="space-y-1 border-t border-gray-100 p-2">
                 {command.logs.map((log) => (
@@ -269,7 +269,7 @@ export default function EventLogPage() {
       const data = normalizeSummary(await fetchEventSummary());
       setSummary((prev) => ({ ...prev, ...data }));
     } catch (err) {
-      setSummaryError(err.message || "Failed to load event summary.");
+      setSummaryError(err.message || "이벤트 요약을 불러오지 못했습니다.");
     } finally {
       setSummaryLoading(false);
     }
@@ -288,7 +288,7 @@ export default function EventLogPage() {
         return data[0] || null;
       });
     } catch (err) {
-      setListError(err.message || "Failed to load events.");
+      setListError(err.message || "이벤트 목록을 불러오지 못했습니다.");
       setEvents([]);
       setSelectedEvent(null);
     } finally {
@@ -315,7 +315,7 @@ export default function EventLogPage() {
       }
       setEventLogs(logs.map((log) => normalizeEvent(log)));
     } catch (err) {
-      setDetailError(err.message || "Failed to load event detail.");
+      setDetailError(err.message || "이벤트 상세를 불러오지 못했습니다.");
     } finally {
       setDetailLoading(false);
     }
@@ -352,7 +352,7 @@ export default function EventLogPage() {
       })
       .catch((err) => {
         if (!ignore) {
-          setDetailError(err.message || "Failed to load event detail.");
+          setDetailError(err.message || "이벤트 상세를 불러오지 못했습니다.");
         }
       })
       .finally(() => {
@@ -436,7 +436,7 @@ export default function EventLogPage() {
       setSelectedEvent(updated);
       setEvents((prev) => prev.map((event) => (event.id === updated.id ? updated : event)));
     } catch (err) {
-      setActionError(err.message || "Failed to update status.");
+      setActionError(err.message || "이벤트 상태를 변경하지 못했습니다.");
     }
   };
 
@@ -451,7 +451,7 @@ export default function EventLogPage() {
       setSelectedEvent(updated);
       setEvents((prev) => prev.map((event) => (event.id === updated.id ? updated : event)));
     } catch (err) {
-      setActionError(err.message || "Failed to save memo.");
+      setActionError(err.message || "운영 메모를 저장하지 못했습니다.");
     }
   };
 
@@ -460,8 +460,8 @@ export default function EventLogPage() {
       <div className="mb-2 flex flex-col space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Event log</h1>
-            <div className="text-sm text-gray-500">Events from the backend event API</div>
+            <h1 className="text-2xl font-bold text-gray-800">이벤트 로그</h1>
+            <div className="text-sm text-gray-500">라이다 수신 이벤트, 관제 상태, 제어 명령 이력</div>
           </div>
           <div className="flex gap-2">
             <div className="flex items-center rounded bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600">
@@ -480,13 +480,13 @@ export default function EventLogPage() {
                 loadSummary();
               }}
             >
-              <RefreshCcw className="mr-2 h-4 w-4" /> Refresh
+              <RefreshCcw className="mr-2 h-4 w-4" /> 새로고침
             </button>
             <button
               className="flex items-center rounded bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600"
               type="button"
             >
-              <Download className="mr-2 h-4 w-4" /> CSV
+              <Download className="mr-2 h-4 w-4" /> CSV 내보내기
             </button>
           </div>
         </div>
@@ -501,7 +501,7 @@ export default function EventLogPage() {
             }`}
             type="button"
           >
-            All events
+            전체 이벤트
           </button>
 
           <button
@@ -514,7 +514,7 @@ export default function EventLogPage() {
             type="button"
           >
             <Activity className="mr-2 h-4 w-4" />
-            Analytics
+            분석
           </button>
 
           <button
@@ -527,7 +527,7 @@ export default function EventLogPage() {
             type="button"
           >
             <Calendar className="mr-2 h-4 w-4" />
-            Vehicle history
+            차량 이력
           </button>
 
           <button
@@ -540,7 +540,7 @@ export default function EventLogPage() {
             type="button"
           >
             <Eye className="mr-2 h-4 w-4" />
-            Unidentified
+            미식별
           </button>
         </div>
       </div>
@@ -550,8 +550,8 @@ export default function EventLogPage() {
           <AnalyticsView summary={summary} loading={summaryLoading} error={summaryError} />
         )}
 
-        {activeTab === "vehicles" && <ContractEmptyView title="Vehicle history is not in this API contract" />}
-        {activeTab === "unidentified" && <ContractEmptyView title="Unidentified vehicle data is not in this API contract" />}
+        {activeTab === "vehicles" && <ContractEmptyView title="차량 이력은 현재 API 계약 범위 밖입니다" />}
+        {activeTab === "unidentified" && <ContractEmptyView title="미식별 차량 데이터는 현재 API 계약 범위 밖입니다" />}
 
         {activeTab === "all" && (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
@@ -562,7 +562,7 @@ export default function EventLogPage() {
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   type="text"
-                  placeholder="Search id, type, status, location..."
+                  placeholder="ID, 유형, 상태, 구역 검색"
                   className="w-full border-none bg-transparent text-sm focus:outline-none"
                 />
               </div>
@@ -576,13 +576,13 @@ export default function EventLogPage() {
               <div className="space-y-2">
                 {listLoading && (
                   <div className="rounded border border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
-                    Loading events...
+                    이벤트를 불러오는 중입니다.
                   </div>
                 )}
 
                 {!listLoading && !listError && filteredEvents.length === 0 && (
                   <div className="rounded border border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
-                    No events found.
+                    조건에 맞는 이벤트가 없습니다.
                   </div>
                 )}
 
@@ -631,7 +631,7 @@ export default function EventLogPage() {
             </div>
 
             <div className="lg:col-span-4">
-              <Card title="Event detail" className="sticky top-6 h-full">
+              <Card title="이벤트 상세" className="sticky top-6 h-full">
                 {selectedEvent ? (
                   <div className="space-y-5">
                     <div className="border-b border-gray-100 pb-4">
@@ -639,41 +639,41 @@ export default function EventLogPage() {
                       <div className="mt-1 text-xs font-bold text-gray-500">{selectedEvent.category}</div>
                     </div>
 
-                    {detailLoading && <div className="text-xs text-gray-500">Loading detail...</div>}
+                    {detailLoading && <div className="text-xs text-gray-500">상세를 불러오는 중입니다.</div>}
                     {detailError && <div className="text-xs text-red-600">{detailError}</div>}
                     {actionError && <div className="text-xs text-red-600">{actionError}</div>}
 
                     <div>
-                      <div className="mb-1 text-xs font-bold text-gray-400">Message</div>
+                      <div className="mb-1 text-xs font-bold text-gray-400">메시지</div>
                       <p className="text-sm text-gray-800">{selectedEvent.message}</p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
-                        <div className="mb-1 text-xs font-bold text-gray-400">Status</div>
+                        <div className="mb-1 text-xs font-bold text-gray-400">상태</div>
                         <div className="text-gray-700">{statusLabel(selectedEvent.status)}</div>
                       </div>
                       <div>
-                        <div className="mb-1 text-xs font-bold text-gray-400">Confidence</div>
+                        <div className="mb-1 text-xs font-bold text-gray-400">신뢰도</div>
                         <div className="text-gray-700">{formatConfidencePercent(selectedEvent.confidence)}</div>
                       </div>
                       <div className="col-span-2">
-                        <div className="mb-1 text-xs font-bold text-gray-400">Time</div>
+                        <div className="mb-1 text-xs font-bold text-gray-400">시각</div>
                         <div className="text-gray-700">{formatEventTimestamp(selectedEvent.timestamp)}</div>
                       </div>
                       <div className="col-span-2">
-                        <div className="mb-1 text-xs font-bold text-gray-400">Location</div>
+                        <div className="mb-1 text-xs font-bold text-gray-400">구역</div>
                         <div className="text-gray-700">{selectedEvent.location}</div>
                       </div>
                     </div>
 
                     <div>
-                      <div className="mb-1 text-xs font-bold text-gray-400">Memo</div>
+                      <div className="mb-1 text-xs font-bold text-gray-400">운영 메모</div>
                       <textarea
                         value={memoDraft}
                         onChange={(event) => setMemoDraft(event.target.value)}
                         className="min-h-24 w-full rounded border border-gray-200 p-2 text-sm focus:border-blue-400 focus:outline-none"
-                        placeholder="Add operator memo"
+                        placeholder="운영 메모 입력"
                       />
                       <button
                         onClick={handleMemoSave}
@@ -681,7 +681,7 @@ export default function EventLogPage() {
                         type="button"
                       >
                         <Save className="mr-2 h-4 w-4" />
-                        Save memo
+                        메모 저장
                       </button>
                     </div>
 
@@ -691,27 +691,27 @@ export default function EventLogPage() {
                         onClick={() => handleStatus("resolved")}
                         type="button"
                       >
-                        Resolve
+                        조치 완료
                       </button>
                       <button
                         className="rounded border border-gray-300 bg-white py-2 text-sm font-bold text-gray-700 hover:bg-gray-50"
                         onClick={() => handleStatus("dismissed")}
                         type="button"
                       >
-                        Dismiss
+                        무시
                       </button>
                     </div>
 
                     <RawPayloadBlock value={selectedEvent.rawPayload} />
 
                     <div>
-                      <div className="mb-2 text-xs font-bold uppercase text-gray-400">Control commands</div>
+                      <div className="mb-2 text-xs font-bold uppercase text-gray-400">통합제어보드 명령</div>
                       <ControlCommandTimeline commands={selectedEvent.raw?.controlCommands || []} />
                     </div>
 
                     {eventLogs.length > 0 && (
                       <div>
-                        <div className="mb-2 text-xs font-bold uppercase text-gray-400">Event logs</div>
+                        <div className="mb-2 text-xs font-bold uppercase text-gray-400">감사 로그</div>
                         <div className="space-y-2">
                           {eventLogs.slice(0, 5).map((log) => (
                             <div key={log.id} className="rounded border border-gray-100 bg-gray-50 p-2 text-xs">
