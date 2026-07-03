@@ -81,6 +81,8 @@ const scannerCloseoutDefinitions = [
     requiredSwitch: "--require-scanners",
     evidenceFiles: ["gitleaks.json", "gitleaks-secret-scan.log"],
     installHint: "Install gitleaks or rerun `npm.cmd run security:evidence -- --use-docker-scanners`.",
+    nativeCommand: "gitleaks detect --source . --redact --report-format json --report-path artifacts/security/<timestamp>/gitleaks.json",
+    dockerFallbackCommand: "npm.cmd run security:evidence -- --require-scanners --use-docker-scanners",
     closeoutWhenSkipped: "Install gitleaks, rerun with --use-docker-scanners, or document reviewer risk acceptance in artifacts/manual/field-risk-acceptance.md.",
   },
   {
@@ -89,6 +91,8 @@ const scannerCloseoutDefinitions = [
     requiredSwitch: "--require-scanners",
     evidenceFiles: ["trivy-fs.json", "trivy-filesystem-scan.log"],
     installHint: "Install Trivy or rerun `npm.cmd run security:evidence -- --use-docker-scanners`.",
+    nativeCommand: "trivy fs --scanners vuln,secret,misconfig --format json --output artifacts/security/<timestamp>/trivy-fs.json .",
+    dockerFallbackCommand: "npm.cmd run security:evidence -- --require-scanners --use-docker-scanners",
     closeoutWhenSkipped: "Install Trivy, rerun with --use-docker-scanners, or document reviewer risk acceptance in artifacts/manual/field-risk-acceptance.md.",
   },
   {
@@ -97,6 +101,10 @@ const scannerCloseoutDefinitions = [
     requiredSwitch: "--include-container-images --require-scanners",
     evidenceFiles: ["trivy-backend-image.json", "trivy-frontend-image.json"],
     installHint: "Build delivery images, install Trivy, or rerun with `--include-container-images --use-docker-scanners`.",
+    nativeCommand:
+      "docker compose build && npm.cmd run security:evidence -- --include-container-images --require-scanners",
+    dockerFallbackCommand:
+      "docker compose build && npm.cmd run security:evidence -- --include-container-images --require-scanners --use-docker-scanners",
     closeoutWhenSkipped:
       "Build the delivery images and rerun image scans with native Trivy or --use-docker-scanners, or document why image scanning is unavailable for this handover.",
   },
@@ -106,12 +114,21 @@ const scannerCloseoutDefinitions = [
     requiredSwitch: "--include-zap --require-scanners --target-url=<nginx-url>",
     evidenceFiles: ["zap-baseline.html", "owasp-zap-baseline.log"],
     installHint: "Install OWASP ZAP baseline tooling or rerun with `--include-zap --use-docker-scanners` against the Nginx entrypoint only.",
+    nativeCommand:
+      "npm.cmd run security:evidence -- --include-zap --require-scanners --target-url=<target-url>",
+    dockerFallbackCommand:
+      "npm.cmd run security:evidence -- --include-zap --require-scanners --use-docker-scanners --target-url=<target-url>",
     closeoutWhenSkipped:
       "Run the baseline natively or with --use-docker-scanners against the delivery Nginx URL, or document reviewer risk acceptance before field closeout.",
   },
 ];
 
-function buildScannerCloseout(checks) {
+function scannerCloseoutCommand(value, targetUrl) {
+  return String(value || "").replace(/<target-url>/g, targetUrl || "http://localhost:8080");
+}
+
+function buildScannerCloseout(checks, options = {}) {
+  const targetUrl = options.targetUrl || "http://localhost:8080";
   return scannerCloseoutDefinitions.map((definition) => {
     const relatedChecks = checks.filter((item) => definition.checks.includes(item.label));
     const blocking = relatedChecks.some((item) => item.disposition.blocksStrictAcceptance);
@@ -136,6 +153,9 @@ function buildScannerCloseout(checks) {
       blocksStrictAcceptance: blocking,
       evidenceFiles: definition.evidenceFiles,
       installHint: definition.installHint,
+      nativeCommand: scannerCloseoutCommand(definition.nativeCommand, targetUrl),
+      dockerFallbackCommand: scannerCloseoutCommand(definition.dockerFallbackCommand, targetUrl),
+      riskAcceptanceEvidence: "artifacts/manual/field-risk-acceptance.md",
       closeoutWhenSkipped: definition.closeoutWhenSkipped,
     };
   });
@@ -374,6 +394,20 @@ function buildMarkdown(manifest) {
 
   lines.push(
     "",
+    "## Scanner Closeout Commands",
+    "",
+    "| Scanner | Native Command | Docker Fallback | Risk Acceptance Evidence |",
+    "| --- | --- | --- | --- |",
+  );
+
+  manifest.scannerCloseout.forEach((item) => {
+    lines.push(
+      `| ${tableValue(item.scanner)} | \`${tableValue(item.nativeCommand)}\` | \`${tableValue(item.dockerFallbackCommand)}\` | \`${tableValue(item.riskAcceptanceEvidence)}\` |`,
+    );
+  });
+
+  lines.push(
+    "",
     "## Checks",
     "",
     "| Status | Check | Command Or Reason | Log |",
@@ -409,7 +443,7 @@ function buildMarkdown(manifest) {
     "- Optional tools are recorded as `SKIPPED` when not installed or when image/ZAP switches are not provided.",
     "- `--use-docker-scanners` runs gitleaks, Trivy, and OWASP ZAP through Docker images when native commands are unavailable.",
     "- Acceptance classification maps results to PASS, BLOCKING, DELIVERY_FIX, RISK_ACCEPTED, or UNVERIFIED for delivery review.",
-    "- Scanner closeout rows list the required switch, expected evidence files, install hint, and risk-acceptance path.",
+    "- Scanner closeout rows list the required switch, expected evidence files, install hint, executable closeout commands, and risk-acceptance path.",
     "- `--require-scanners` treats skipped gitleaks, Trivy, and OWASP ZAP checks as required BLOCKING failures for field acceptance.",
     "- Do not run active scans against the real integrated control board.",
     "",
@@ -625,7 +659,7 @@ function main() {
   });
 
   const dispositionSummary = summarizeDispositions(mappedChecks);
-  const scannerCloseout = buildScannerCloseout(mappedChecks);
+  const scannerCloseout = buildScannerCloseout(mappedChecks, { targetUrl });
   const strictAcceptanceBlocked = mappedChecks.some((item) => item.disposition.blocksStrictAcceptance);
 
   const manifest = {

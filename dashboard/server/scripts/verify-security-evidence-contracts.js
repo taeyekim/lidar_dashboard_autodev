@@ -22,6 +22,7 @@ function withDisposition(item, requireScanners = false) {
 assert(scannerCloseoutDefinitions.length === 4, "scanner closeout should cover gitleaks, Trivy fs, Trivy images, and ZAP");
 assert(scannerCloseoutDefinitions.every((item) => item.requiredSwitch && item.closeoutWhenSkipped), "scanner closeout rows need switch and closeout guidance");
 assert(scannerCloseoutDefinitions.every((item) => item.installHint.includes("--use-docker-scanners")), "scanner closeout rows should mention Docker scanner fallback");
+assert(scannerCloseoutDefinitions.every((item) => item.nativeCommand && item.dockerFallbackCommand), "scanner closeout rows need executable command recipes");
 
 const skippedGitleaks = skipped("gitleaks secret scan", "gitleaks command is not installed on this PC");
 assert(requiredScannerFailure(skippedGitleaks, false) === false, "skipped scanner should not block unless scanners are required");
@@ -54,9 +55,12 @@ const acceptedGitleaks = withDisposition({
 });
 assert(acceptedGitleaks.disposition.code === "RISK_ACCEPTED", "policy accepted scanner should be RISK_ACCEPTED");
 
-const closeoutUnverified = buildScannerCloseout([unverifiedGitleaks]).find((item) => item.scanner === "gitleaks");
+const closeoutUnverified = buildScannerCloseout([unverifiedGitleaks], { targetUrl: "http://field.local:8080" }).find((item) => item.scanner === "gitleaks");
 assert(closeoutUnverified.closeoutStatus === "UNVERIFIED", "optional skipped gitleaks closeout should be UNVERIFIED");
 assert(closeoutUnverified.closeoutWhenSkipped.includes("field-risk-acceptance.md"), "unverified scanner closeout should point to risk acceptance evidence");
+assert(closeoutUnverified.nativeCommand.includes("gitleaks detect"), "gitleaks closeout should include native command");
+assert(closeoutUnverified.dockerFallbackCommand.includes("--use-docker-scanners"), "gitleaks closeout should include Docker fallback command");
+assert(closeoutUnverified.riskAcceptanceEvidence === "artifacts/manual/field-risk-acceptance.md", "scanner closeout should expose risk acceptance evidence path");
 
 const closeoutBlocking = buildScannerCloseout([blockingGitleaks]).find((item) => item.scanner === "gitleaks");
 assert(closeoutBlocking.closeoutStatus === "BLOCKING", "required skipped gitleaks closeout should be BLOCKING");
@@ -67,6 +71,12 @@ assert(closeoutReady.closeoutStatus === "EVIDENCE_READY", "passed scanner closeo
 
 const closeoutAccepted = buildScannerCloseout([acceptedGitleaks]).find((item) => item.scanner === "gitleaks");
 assert(closeoutAccepted.closeoutStatus === "RISK_ACCEPTED", "accepted scanner closeout should be RISK_ACCEPTED");
+
+const closeoutZap = buildScannerCloseout([], { targetUrl: "http://field.local:8080" }).find((item) => item.scanner === "OWASP ZAP baseline");
+assert(closeoutZap.nativeCommand.includes("--target-url=http://field.local:8080"), "ZAP closeout should render target URL in native command");
+assert(closeoutZap.dockerFallbackCommand.includes("--target-url=http://field.local:8080"), "ZAP closeout should render target URL in Docker command");
+const closeoutTrivyImages = buildScannerCloseout([], { targetUrl: "http://field.local:8080" }).find((item) => item.scanner === "Trivy images");
+assert(closeoutTrivyImages.nativeCommand.includes("docker compose build"), "Trivy image closeout should include image build command");
 
 const summary = summarizeDispositions([passedGitleaks, blockingGitleaks, acceptedGitleaks, unverifiedGitleaks]);
 assert(summary.pass === 1, "summary should count pass dispositions");
@@ -114,7 +124,7 @@ const markdown = buildMarkdown({
   strictAcceptanceBlocked: true,
   dispositionSummary: summary,
   toolInventory: [],
-  scannerCloseout: [closeoutBlocking, closeoutReady, closeoutAccepted],
+  scannerCloseout: [closeoutBlocking, closeoutReady, closeoutAccepted, closeoutZap, closeoutTrivyImages],
   checks: [passedGitleaks, blockingGitleaks, acceptedGitleaks, unverifiedGitleaks, dockerImageExport, dockerImageScan, dockerFrontendImageScan],
 });
 
@@ -124,6 +134,7 @@ const markdown = buildMarkdown({
   "trivy backend image scan",
   "trivy frontend image scan",
   "Scanner Closeout Matrix",
+  "Scanner Closeout Commands",
   "Acceptance Classification",
   "Git pushed to origin/dev",
   "Working tree clean",
@@ -132,6 +143,10 @@ const markdown = buildMarkdown({
   "BLOCKING",
   "RISK_ACCEPTED",
   "UNVERIFIED",
+  "gitleaks detect",
+  "docker compose build",
+  "field-risk-acceptance.md",
+  "--target-url=http://field.local:8080",
   "통과",
   "차단",
   "위험 수용",

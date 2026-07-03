@@ -161,7 +161,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] If `DEVICE_INGEST_API_KEY` is configured, `/api/wrongway`, `/api/ingest/lidar`, and `/api/ingest/control-board` without `X-Device-Key` return `401`.
 - [ ] `scripts/security-scan.ps1` evidence exists under `artifacts/security/`, or skipped tools are documented with reasons.
 - [ ] Strict security acceptance uses `--require-scanners` or `-RequireScanners` so skipped gitleaks, Trivy, and OWASP ZAP checks fail the evidence run.
-- [ ] `artifacts/security/<timestamp>/manifest.md` includes the `Scanner Closeout Matrix`, and every scanner row is either `EVIDENCE_READY`, documented `RISK_ACCEPTED`, or assigned for recheck in `artifacts/manual/field-risk-acceptance.md`.
+- [ ] `artifacts/security/<timestamp>/manifest.md` includes the `Scanner Closeout Matrix` and `Scanner Closeout Commands`, and every scanner row is either `EVIDENCE_READY`, documented `RISK_ACCEPTED`, or assigned for recheck in `artifacts/manual/field-risk-acceptance.md`.
 - [ ] Security evidence manifest records acceptance classifications for `통과`, `차단`, `납품 전 수정`, `위험 수용`, and `미검증` items.
 - [ ] Delivery evidence manifest exists under `artifacts/delivery/` and links raw command logs.
 - [ ] Secret scan result is documented or marked unverified with reason.

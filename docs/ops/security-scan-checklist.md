@@ -70,10 +70,14 @@ classifications (`통과`, `차단`, `납품 전 수정`, `위험 수용`, `미�
 the handover package must show the field reviewer name. The PowerShell script
 remains available for Windows field rehearsals.
 
-Review the `Scanner Closeout Matrix` in `manifest.md` before field sign-off.
+Review the `Scanner Closeout Matrix` and `Scanner Closeout Commands` in
+`manifest.md` before field sign-off.
 Each gitleaks, Trivy filesystem, Trivy image, and OWASP ZAP row must either
 show `EVIDENCE_READY`, show documented `RISK_ACCEPTED`, or have an owner and
 recheck date in `artifacts/manual/field-risk-acceptance.md`.
+The command section records the native command, Docker fallback command, and
+risk-acceptance evidence path for each scanner so the field reviewer can close
+or assign every scanner row without reconstructing the command line.
 
 Use `--use-docker-scanners` when Docker is available but native `gitleaks`,
 `trivy`, or `zap-baseline.py` commands are not installed. Use
