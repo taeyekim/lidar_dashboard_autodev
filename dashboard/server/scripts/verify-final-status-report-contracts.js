@@ -69,6 +69,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "WRONG_BRANCH", "final status report generator"],
   [generator, "WRONG_UPSTREAM", "final status report generator"],
   [generator, "UNPUSHED", "final status report generator"],
+  [generator, "MISSING_GIT_METADATA", "final status report generator"],
   [generator, "final source revision", "final status report generator"],
   [generator, "fieldRiskRegister", "final status report generator"],
   [generator, "fieldActionBoard", "final status report generator"],
@@ -147,7 +148,7 @@ const readyEvidence = {
   },
   fieldReadiness: {
     path: "artifacts/field-readiness/20260101-000000/manifest.json",
-    data: { status: "PASS", baseUrl: "http://field.local:8080", env: { controlBoardSafetyStatus: "LIVE_TCP_READY" } },
+    data: { status: "PASS", baseUrl: "http://field.local:8080", git: readyEvidenceGit, env: { controlBoardSafetyStatus: "LIVE_TCP_READY" } },
   },
   fieldAcceptance: {
     path: "artifacts/field-acceptance/20260101-000000/manifest.json",
@@ -172,6 +173,7 @@ const readyEvidence = {
     path: "artifacts/security/20260101-000000/manifest.json",
     data: {
       targetUrl: "http://field.local:8080",
+      git: readyEvidenceGit,
       options: { requireScanners: true },
       strictAcceptanceBlocked: false,
       dispositionSummary: { pass: 6, blocking: 0, deliveryFix: 0, riskAccepted: 0, unverified: 0 },
@@ -402,6 +404,34 @@ assert(
     (item) => item.category !== "Evidence Source Revision" || item.actionType === "AUTOMATED_REFRESH_AVAILABLE",
   ),
   "stale source revision gates should be automated refresh actions",
+);
+
+const missingEvidenceGitMetadata = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    fieldReadiness: {
+      ...readyEvidence.fieldReadiness,
+      data: {
+        ...readyEvidence.fieldReadiness.data,
+        git: undefined,
+      },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
+  git: readyGit,
+});
+
+assert(missingEvidenceGitMetadata.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "missing evidence git metadata fixture should require review");
+assert(
+  missingEvidenceGitMetadata.remainingGates.some(
+    (item) =>
+      item.category === "Evidence Source Revision" &&
+      item.status === "MISSING_GIT_METADATA" &&
+      item.message.includes("fieldReadiness"),
+  ),
+  "missing evidence git metadata fixture should expose missing field readiness git gate",
 );
 
 const unpushedEvidenceRevision = buildFinalStatusReport({

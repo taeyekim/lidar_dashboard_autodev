@@ -7,6 +7,12 @@ const { readLatestJsonManifest, timestampForPath } = require("./generate-deliver
 const { manualEvidenceRefs } = require("./manual-evidence");
 
 const root = path.join(__dirname, "..", "..", "..");
+const REQUIRED_SOURCE_REVISION_EVIDENCE_KEYS = [
+  "delivery",
+  "fieldReadiness",
+  "securityEvidence",
+  "handoverPackage",
+];
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -231,22 +237,27 @@ function refsAreFresh(handoverPackage, evidenceRefs) {
 }
 
 function sourceGitFreshness(evidenceRefs, reportGit) {
-  return Object.entries(evidenceRefs)
-    .filter(([, value]) => value?.data?.git?.commit)
-    .map(([key, value]) => ({
-      key,
-      path: evidencePath(value),
-      expectedCommit: reportGit?.commit || null,
-      actualCommit: value.data.git.commit,
-      branch: value.data.git.branch || null,
-      branchOk: value.data.git.branch === "dev",
-      upstream: value.data.git.upstream || null,
-      upstreamCommit: value.data.git.upstreamCommit || null,
-      upstreamOk: value.data.git.upstream === "origin/dev",
-      pushed: value.data.git.pushed === true,
-      clean: value.data.git.clean === true,
-      fresh: Boolean(reportGit?.commit && value.data.git.commit === reportGit.commit),
-    }));
+  return REQUIRED_SOURCE_REVISION_EVIDENCE_KEYS
+    .map((key) => [key, evidenceRefs[key]])
+    .filter(([, value]) => value)
+    .map(([key, value]) => {
+      const evidenceGit = value?.data?.git || {};
+      return {
+        key,
+        path: evidencePath(value),
+        expectedCommit: reportGit?.commit || null,
+        actualCommit: evidenceGit.commit || null,
+        branch: evidenceGit.branch || null,
+        branchOk: evidenceGit.branch === "dev",
+        upstream: evidenceGit.upstream || null,
+        upstreamCommit: evidenceGit.upstreamCommit || null,
+        upstreamOk: evidenceGit.upstream === "origin/dev",
+        pushed: evidenceGit.pushed === true,
+        clean: evidenceGit.clean === true,
+        hasGitMetadata: Boolean(evidenceGit.commit),
+        fresh: Boolean(reportGit?.commit && evidenceGit.commit === reportGit.commit),
+      };
+    });
 }
 
 function normalizeEndpoint(value) {
@@ -605,9 +616,10 @@ function buildFinalStatusReport(input = {}) {
   }
 
   sourceRevisionFreshness
-    .filter((item) => !item.fresh || !item.clean || !item.branchOk || !item.upstreamOk || !item.pushed)
+    .filter((item) => !item.hasGitMetadata || !item.fresh || !item.clean || !item.branchOk || !item.upstreamOk || !item.pushed)
     .forEach((item) => {
       const reasons = [
+        !item.hasGitMetadata ? "evidence manifest is missing git metadata" : "",
         !item.fresh ? `commit ${item.actualCommit} does not match final status commit ${item.expectedCommit}` : "",
         !item.branchOk ? `evidence branch ${item.branch || "missing"} is not dev` : "",
         !item.upstreamOk ? `evidence upstream ${item.upstream || "missing"} is not origin/dev` : "",
@@ -617,7 +629,7 @@ function buildFinalStatusReport(input = {}) {
       addGate(
         gates,
         "Evidence Source Revision",
-        "STALE",
+        item.hasGitMetadata ? "STALE" : "MISSING_GIT_METADATA",
         `${item.key} evidence is not tied to the clean final source revision: ${reasons}.`,
         "Regenerate the referenced evidence after the final delivery commit and rerun npm.cmd run final:status.",
         item.path,

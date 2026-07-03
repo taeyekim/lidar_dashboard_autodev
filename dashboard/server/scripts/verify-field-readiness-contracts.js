@@ -33,6 +33,9 @@ const riskAcceptanceTemplate = readProjectFile("docs/ops/field-risk-acceptance-t
 [
   "artifacts/field-readiness",
   "Field Readiness Report",
+  "buildGitState",
+  "Git pushed to origin/dev",
+  "Working tree clean",
   "isPlaceholderFieldText",
   "metadataReviewItems",
   "field readiness metadata",

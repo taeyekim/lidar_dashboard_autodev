@@ -77,6 +77,14 @@ const markdown = buildMarkdown({
   hostname: "delivery-host",
   platform: "win32 x64",
   targetUrl: "http://field.local:8080",
+  git: {
+    branch: "dev",
+    commit: "fixture",
+    clean: true,
+    upstream: "origin/dev",
+    upstreamCommit: "fixture",
+    pushed: true,
+  },
   options: { includeContainerImages: true, includeZap: true, requireScanners: true },
   strictAcceptanceBlocked: true,
   dispositionSummary: summary,
@@ -88,6 +96,8 @@ const markdown = buildMarkdown({
 [
   "Scanner Closeout Matrix",
   "Acceptance Classification",
+  "Git pushed to origin/dev",
+  "Working tree clean",
   "BLOCKING",
   "RISK_ACCEPTED",
   "UNVERIFIED",
