@@ -81,6 +81,37 @@ function Add-Result {
   }
 }
 
+function Assert-ControlCommandType {
+  param(
+    [object]$Command,
+    [string]$Expected,
+    [string]$Label
+  )
+
+  if (!$Command) {
+    throw "$Label did not include a control command."
+  }
+  if ($Command.commandType -ne $Expected) {
+    throw "$Label expected control command $Expected but got $($Command.commandType)."
+  }
+}
+
+function Assert-EventDetailCommandType {
+  param(
+    [object]$Detail,
+    [string]$Expected,
+    [string]$Label
+  )
+
+  $commands = @($Detail.event.controlCommands | Where-Object { $_.commandType -eq $Expected })
+  if ($commands.Count -lt 1) {
+    throw "$Label did not expose linked $Expected control command."
+  }
+  if (!$commands[0].packetHex) {
+    throw "$Label linked $Expected control command did not expose packetHex."
+  }
+}
+
 $envValues = Read-DotEnv ".env"
 if (!$DeviceKey) {
   $DeviceKey = $env:DEVICE_INGEST_API_KEY
@@ -138,6 +169,7 @@ $stage1 = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -DeviceKey
 if (!$stage1.ok -or !$stage1.eventId -or !$stage1.controlCommand) {
   throw "wrong-way-level-1 payload did not create an event and control command."
 }
+Assert-ControlCommandType -Command $stage1.controlCommand -Expected "STAGE_1_ON" -Label "wrong-way-level-1 payload"
 $results = Add-Result -Results $results -Name "wrong-way-level-1 event and command" -Status "PASS" -Response $stage1
 
 $stage1Duplicate = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -DeviceKey $DeviceKey -Body @{
@@ -166,6 +198,7 @@ $stage2 = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -DeviceKey
 if (!$stage2.ok -or !$stage2.eventId -or !$stage2.controlCommand) {
   throw "wrong-way-level-2 payload did not create or update an event and control command."
 }
+Assert-ControlCommandType -Command $stage2.controlCommand -Expected "STAGE_2_ON" -Label "wrong-way-level-2 payload"
 $results = Add-Result -Results $results -Name "wrong-way-level-2 event and command" -Status "PASS" -Response $stage2
 
 $ended = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -DeviceKey $DeviceKey -Body @{
@@ -179,9 +212,14 @@ $ended = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/wrongway" -DeviceKey 
 if (!$ended.ok -or !$ended.resolvedEventIds -or $ended.resolvedEventIds.Count -lt 1) {
   throw "situation-ended payload did not resolve an active wrong-way event."
 }
+Assert-ControlCommandType -Command $ended.controlCommand -Expected "STAGE_2_RETURN" -Label "situation-ended payload"
 $results = Add-Result -Results $results -Name "situation-ended resolves active events" -Status "PASS" -Response $ended
 
-foreach ($eventId in @($stage1.eventId, $stage2.eventId)) {
+foreach ($eventSpec in @(
+  @{ eventId = $stage1.eventId; commandType = "STAGE_1_ON"; label = "Stage 1 event detail" },
+  @{ eventId = $stage2.eventId; commandType = "STAGE_2_ON"; label = "Stage 2 event detail" }
+)) {
+  $eventId = $eventSpec.eventId
   $detail = Invoke-CurlJson -Url "$BaseUrl/api/events/$eventId"
   if (!$detail.ok -or !$detail.event -or !$detail.event.rawPayload) {
     throw "Event detail $eventId did not expose rawPayload."
@@ -189,6 +227,7 @@ foreach ($eventId in @($stage1.eventId, $stage2.eventId)) {
   if (!$detail.event.controlCommands -or $detail.event.controlCommands.Count -lt 1) {
     throw "Event detail $eventId did not expose linked controlCommands."
   }
+  Assert-EventDetailCommandType -Detail $detail -Expected $eventSpec.commandType -Label $eventSpec.label
 }
 
 $summary = Invoke-CurlJson -Url "$BaseUrl/api/events/summary"

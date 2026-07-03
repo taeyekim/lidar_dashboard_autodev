@@ -246,7 +246,8 @@ The rehearsal sends representative `normal-driving`, duplicate
 `normal-driving`, `wrong-way-level-1`, duplicate `wrong-way-level-1`,
 `wrong-way-level-2`, and `situation-ended` payloads. It verifies unique vehicle
 track creation, duplicate track update, wrong-way event reuse, linked control
-commands, raw payload retention, summary KPI fields, and writes
+commands, stage command mapping (`STAGE_1_ON`, `STAGE_2_ON`,
+`STAGE_2_RETURN`), raw payload retention, summary KPI fields, and writes
 `artifacts/field-lidar-rehearsal/<timestamp>/manifest.json` plus `manifest.md`.
 
 `scripts/runtime-smoke.ps1` also verifies wrong-way event detail, preserved
