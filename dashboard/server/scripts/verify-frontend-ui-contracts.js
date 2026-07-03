@@ -158,7 +158,7 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
 
 [
   "교통 운영 통계",
-  "정주행/역주행 운영 통계",
+  "정주행·역주행 운영 통계",
   "정주행 차량",
   "역주행 차량",
   "역주행률",

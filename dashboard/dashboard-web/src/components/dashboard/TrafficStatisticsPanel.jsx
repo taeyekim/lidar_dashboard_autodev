@@ -137,7 +137,7 @@ export function TrafficStatisticsPanel() {
     <Card className="border-solid bg-white" title="교통 운영 통계">
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
-          <div className="text-lg font-black text-gray-900">정주행/역주행 운영 통계</div>
+          <div className="text-lg font-black text-gray-900">정주행·역주행 운영 통계</div>
           <div className="mt-1 truncate text-xs font-semibold text-gray-500">{formatPeriod(data)}</div>
           <div className="mt-1 text-xs font-semibold text-gray-500">
             공식 차량 수는 DB unique track 기준이며, 라이다 raw count는 진단/비교용으로 분리합니다.

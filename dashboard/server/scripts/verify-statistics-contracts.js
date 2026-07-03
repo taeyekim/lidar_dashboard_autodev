@@ -82,6 +82,7 @@ assertIncludes(api, "const source = response || {}", "statistics api empty respo
 assertIncludes(api, "const sourceMetric = metric || {}", "statistics api empty metric fallback");
 assertIncludes(api, "Array.isArray(source.buckets)", "statistics api bucket fallback");
 assertIncludes(api, "Array.isArray(source.zones)", "statistics api zone fallback");
+
 assertIncludes(
   fieldRequirements,
   "GET /api/statistics/traffic?range=daily|weekly|monthly|yearly",
@@ -105,7 +106,7 @@ assertIncludes(fieldRequirements, "zones", "field requirements statistics respon
   "fetchTrafficStatistics({ range })",
   "setRange(option.value)",
   "교통 운영 통계",
-  "정주행/역주행 운영 통계",
+  "정주행·역주행 운영 통계",
   "정주행 차량",
   "역주행 차량",
   "역주행률",
@@ -134,9 +135,9 @@ assertIncludes(fieldRequirements, "zones", "field requirements statistics respon
 const STATISTICS_FORBIDDEN_COPY_TOKENS = [
   "Traffic operations",
   "Top zones",
-  // Common fragments produced when Korean UTF-8 text is decoded with the wrong code page.
   "援먰넻",
-  "吏묎퀎",
+  "李⑤웾",
+  "怨듭떇",
   "??＜",
   "?뺤＜",
 ];
