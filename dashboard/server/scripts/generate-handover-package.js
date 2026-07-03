@@ -214,6 +214,25 @@ function buildFieldEvidenceCommandRunbook(fieldEvidenceOpenItems) {
     }));
 }
 
+function buildFieldEvidenceFollowUps(fieldEvidenceSummary) {
+  return fieldEvidenceSummary
+    .map((item) => {
+      const acceptance = item.metadata?.unavailableAcceptance;
+      if (!acceptance) return null;
+      return {
+        type: item.type,
+        evidenceType: item.metadata?.evidenceType || "UNKNOWN",
+        manifestPath: item.manifestPath || null,
+        replacementOwner: acceptance.replacementOwner || "unknown",
+        targetRecheckDate: acceptance.targetRecheckDate || "unknown",
+        ownerStatus: acceptance.ownerStatus || "unknown",
+        recheckStatus: acceptance.recheckStatus || "unknown",
+        reason: acceptance.reason || "unknown",
+      };
+    })
+    .filter(Boolean);
+}
+
 function markdownCell(value) {
   return String(value ?? "").replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
 }
@@ -272,6 +291,17 @@ function buildMarkdown(manifest) {
       (item) =>
         `| ${markdownCell(item.type)} | ${item.manifestPath ? `\`${markdownCell(item.manifestPath)}\`` : "missing"} | ${item.passCount || 0} | ${item.reviewCount || 0} | ${item.skippedCount || 0} |`,
     ),
+    "",
+    "## Field Evidence Follow-ups",
+    "",
+    "| Type | Evidence | Owner | Recheck Date | Owner Status | Recheck Status | Reason | Manifest |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    ...(manifest.fieldEvidenceFollowUps.length > 0
+      ? manifest.fieldEvidenceFollowUps.map(
+          (item) =>
+            `| ${markdownCell(item.type)} | ${markdownCell(item.evidenceType)} | ${markdownCell(item.replacementOwner)} | ${markdownCell(item.targetRecheckDate)} | ${markdownCell(item.ownerStatus)} | ${markdownCell(item.recheckStatus)} | ${markdownCell(item.reason)} | ${item.manifestPath ? `\`${markdownCell(item.manifestPath)}\`` : "missing"} |`,
+        )
+      : ["| none | - | - | - | - | - | - | - |"]),
     "",
     "## Field Evidence Open Items",
     "",
@@ -346,6 +376,7 @@ function main() {
   const fieldEvidenceSummary = buildFieldEvidenceSummary();
   const fieldEvidenceOpenItems = buildFieldEvidenceOpenItems(fieldEvidenceSummary);
   const fieldEvidenceCommandRunbook = buildFieldEvidenceCommandRunbook(fieldEvidenceOpenItems);
+  const fieldEvidenceFollowUps = buildFieldEvidenceFollowUps(fieldEvidenceSummary);
   const manualEvidence = manualEvidenceRefs();
   const openManualEvidence = manualEvidence.filter((item) => item.required && item.status !== "PRESENT");
   const strictFailureReasons = [];
@@ -387,6 +418,7 @@ function main() {
     manualEvidenceRefs: manualEvidence,
     knownFieldLimitations: knownFieldLimitations(),
     fieldEvidenceSummary,
+    fieldEvidenceFollowUps,
     fieldEvidenceOpenItems,
     fieldEvidenceCommandRunbook,
     failedCommandCount: failedCommands.length,
