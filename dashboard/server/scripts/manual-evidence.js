@@ -46,6 +46,23 @@ function firstEmptyMarkdownField(content, fields) {
   return fields.find((field) => markdownTableValue(content, field) === "");
 }
 
+function markdownRowsAfterHeader(content, headerToken) {
+  const lines = content.split(/\r?\n/);
+  const headerIndex = lines.findIndex((line) => line.includes(headerToken));
+  if (headerIndex === -1) return [];
+  const rows = [];
+  for (let index = headerIndex + 2; index < lines.length; index += 1) {
+    const line = lines[index].trim();
+    if (!line.startsWith("|")) break;
+    const cells = line
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim());
+    if (cells.length > 0) rows.push(cells);
+  }
+  return rows;
+}
+
 function validateManualEvidence(type, content) {
   if (type === "Operator UI Walkthrough") {
     const requiredTokens = [
@@ -102,17 +119,34 @@ function validateManualEvidence(type, content) {
     ];
     const missingTokens = requiredTokens.filter((token) => !content.includes(token));
     if (missingTokens.length > 0) return `Missing required token(s): ${missingTokens.join(", ")}.`;
+    const emptySessionField = firstEmptyMarkdownField(content, [
+      "Site name",
+      "Reviewer",
+      "Operator",
+      "Delivery host",
+      "Base URL",
+      "Acceptance date",
+    ]);
+    if (emptySessionField) return `Evidence has an empty '${emptySessionField}' session value.`;
     if (/\|\s*TODO\s*\|/.test(content)) return "Evidence still contains TODO accepted-item rows.";
+    const acceptedRows = markdownRowsAfterHeader(content, "Risk Accepted").filter((row) => row[0] === "ACCEPTED");
+    if (acceptedRows.length === 0) return "Evidence must include at least one ACCEPTED risk item row.";
+    const emptyAcceptedCell = acceptedRows.find((row) => row.slice(1, 6).some((cell) => cell === ""));
+    if (emptyAcceptedCell) {
+      return "Accepted risk item rows must include area, risk, compensating control, evidence reference, and expiry/recheck.";
+    }
     if (/\|\s*Decision\s*\|\s*RECHECK_REQUIRED\s*\|/.test(content)) {
       return "Evidence decision is RECHECK_REQUIRED; close the recheck or keep the risk evidence invalid before final completion.";
     }
     if (!/\|\s*Decision\s*\|\s*ACCEPTED\s*\|/.test(content)) {
       return "Evidence must record a reviewer decision of ACCEPTED.";
     }
-    const emptyField = ["Follow-up owner", "Target recheck date", "Reviewer signature/name"].find((field) => {
-      const pattern = new RegExp(`\\|\\s*${field}\\s*\\|\\s*\\|`);
-      return pattern.test(content);
-    });
+    const emptyField = firstEmptyMarkdownField(content, [
+      "Required follow-up",
+      "Follow-up owner",
+      "Target recheck date",
+      "Reviewer signature/name",
+    ]);
     if (emptyField) return `Evidence has an empty '${emptyField}' value.`;
   }
 
@@ -137,6 +171,7 @@ function manualEvidenceRefs() {
 
 module.exports = {
   firstEmptyMarkdownField,
+  markdownRowsAfterHeader,
   manualEvidenceDefinitions,
   manualEvidenceRefs,
   markdownTableValue,

@@ -112,6 +112,16 @@ const invalidRiskAcceptanceReason = validateManualEvidence(
 const validRiskAcceptanceReason = validateManualEvidence(
   "Field Risk Acceptance",
   `
+## Session
+| Item | Value |
+| --- | --- |
+| Site name | delivery-site |
+| Reviewer | reviewer |
+| Operator | operator@example.local |
+| Delivery host | delivery-host-01 |
+| Base URL | https://dashboard.example.local |
+| Acceptance date | 2026-08-01 |
+
 ## Accepted Items
 | Status | Area | Risk Accepted | Compensating Control | Evidence Reference | Expiry Or Recheck |
 | --- | --- | --- | --- | --- | --- |
@@ -584,8 +594,8 @@ assert(
   "summary should explain manual evidence visibility",
 );
 assert(
-  invalidRiskAcceptanceReason.includes("TODO accepted-item rows"),
-  "risk acceptance template should be invalid until accepted rows are completed",
+  invalidRiskAcceptanceReason.includes("Site name"),
+  "risk acceptance template should be invalid until session values are completed",
 );
 assert(validRiskAcceptanceReason === "", "completed risk acceptance evidence should validate");
 assert(bomManifest.data.checks.length === 0, "latest manifest reader should tolerate UTF-8 BOM");

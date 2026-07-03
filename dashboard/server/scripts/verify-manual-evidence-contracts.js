@@ -92,11 +92,21 @@ assert(
 
 const riskTemplateReason = validateManualEvidence("Field Risk Acceptance", riskTemplate);
 assert(
-  riskTemplateReason.includes("TODO accepted-item rows"),
-  "risk acceptance template should remain invalid until accepted-item rows are completed",
+  riskTemplateReason.includes("Site name"),
+  "risk acceptance template should remain invalid until session values are completed",
 );
 
 const validRiskEvidence = `
+## Session
+| Item | Value |
+| --- | --- |
+| Site name | delivery-site |
+| Reviewer | reviewer |
+| Operator | operator@example.local |
+| Delivery host | delivery-host-01 |
+| Base URL | https://dashboard.example.local |
+| Acceptance date | 2026-08-01 |
+
 ## Accepted Items
 | Status | Area | Risk Accepted | Compensating Control | Evidence Reference | Expiry Or Recheck |
 | --- | --- | --- | --- | --- | --- |
@@ -106,12 +116,30 @@ const validRiskEvidence = `
 | Item | Value |
 | --- | --- |
 | Decision | ACCEPTED |
-| Required follow-up | Install approved scanner package. |
+| Required follow-up | Install approved scanner package and rerun security evidence. |
 | Follow-up owner | field-owner |
 | Target recheck date | 2026-08-01 |
 | Reviewer signature/name | reviewer |
 `;
 assert(validateManualEvidence("Field Risk Acceptance", validRiskEvidence) === "", "valid risk acceptance evidence should pass");
+
+const sessionOnlyRiskEvidence = validRiskEvidence.replace(
+  "| ACCEPTED | Security scanners | ZAP skipped on field PC. | Internal-only network and audit policy evidence. | artifacts/security/example/manifest.json | 2026-08-01 |",
+  "| TODO | Security scanners | ZAP skipped on field PC. | Internal-only network and audit policy evidence. | artifacts/security/example/manifest.json | 2026-08-01 |",
+);
+assert(
+  validateManualEvidence("Field Risk Acceptance", sessionOnlyRiskEvidence).includes("TODO accepted-item rows"),
+  "risk acceptance evidence should remain invalid until accepted-item rows are completed",
+);
+
+const missingEvidenceRisk = validRiskEvidence.replace(
+  "| ACCEPTED | Security scanners | ZAP skipped on field PC. | Internal-only network and audit policy evidence. | artifacts/security/example/manifest.json | 2026-08-01 |",
+  "| ACCEPTED | Security scanners | ZAP skipped on field PC. | Internal-only network and audit policy evidence. |  | 2026-08-01 |",
+);
+assert(
+  validateManualEvidence("Field Risk Acceptance", missingEvidenceRisk).includes("Accepted risk item rows"),
+  "risk acceptance evidence must reject accepted rows without evidence reference",
+);
 
 const recheckRiskEvidence = validRiskEvidence.replace("| Decision | ACCEPTED |", "| Decision | RECHECK_REQUIRED |");
 assert(
