@@ -1,0 +1,109 @@
+const fs = require("fs");
+const path = require("path");
+
+const {
+  manualEvidenceDefinitions,
+  manualEvidenceRefs,
+  validateManualEvidence,
+} = require("./manual-evidence");
+
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+function readProjectFile(relativePath) {
+  return fs.readFileSync(path.join(__dirname, "..", "..", "..", relativePath), "utf8");
+}
+
+function assertIncludes(content, token, label) {
+  assert(content.includes(token), `${label} is missing ${token}`);
+}
+
+const rootPackageJson = readProjectFile("package.json");
+const serverPackageJson = readProjectFile("dashboard/server/package.json");
+const deliveryEvidence = readProjectFile("dashboard/server/scripts/generate-delivery-evidence.js");
+const completionAudit = readProjectFile("dashboard/server/scripts/generate-completion-audit.js");
+const handoverIndex = readProjectFile("dashboard/server/scripts/generate-handover-index.js");
+const handoverPackage = readProjectFile("dashboard/server/scripts/generate-handover-package.js");
+const fieldClosurePlan = readProjectFile("dashboard/server/scripts/generate-field-closure-plan.js");
+const operatorTemplate = readProjectFile("docs/ops/operator-ui-walkthrough-template.md");
+const riskTemplate = readProjectFile("docs/ops/field-risk-acceptance-template.md");
+
+assert(manualEvidenceDefinitions.length === 2, "manual evidence definitions should cover two required artifacts");
+
+[
+  "Operator UI Walkthrough",
+  "Field Risk Acceptance",
+  "artifacts/manual/operator-ui-walkthrough.md",
+  "artifacts/manual/field-risk-acceptance.md",
+  "docs/ops/operator-ui-walkthrough-template.md",
+  "docs/ops/field-risk-acceptance-template.md",
+].forEach((token) => {
+  assert(
+    manualEvidenceDefinitions.some((item) =>
+      Object.values(item).some((value) => String(value).includes(token)),
+    ),
+    `manual evidence definitions are missing ${token}`,
+  );
+});
+
+const operatorTemplateReason = validateManualEvidence("Operator UI Walkthrough", operatorTemplate);
+assert(
+  operatorTemplateReason.includes("TODO screen rows"),
+  "operator UI template should remain invalid until walkthrough rows are completed",
+);
+
+const validOperatorEvidence = operatorTemplate
+  .replace(/\| TODO \|/g, "| PASS |")
+  .replace("| Walkthrough result | PASS / REVIEW |", "| Walkthrough result | PASS |")
+  .replace("| Reviewer signature/name |  |", "| Reviewer signature/name | reviewer |")
+  .replace("| Decision timestamp |  |", "| Decision timestamp | 2026-07-03T00:00:00Z |");
+assert(validateManualEvidence("Operator UI Walkthrough", validOperatorEvidence) === "", "valid operator evidence should pass");
+
+const riskTemplateReason = validateManualEvidence("Field Risk Acceptance", riskTemplate);
+assert(
+  riskTemplateReason.includes("TODO accepted-item rows"),
+  "risk acceptance template should remain invalid until accepted-item rows are completed",
+);
+
+const validRiskEvidence = `
+## Accepted Items
+| Status | Area | Risk Accepted | Compensating Control | Evidence Reference | Expiry Or Recheck |
+| --- | --- | --- | --- | --- | --- |
+| ACCEPTED | Security scanners | ZAP skipped on field PC. | Internal-only network and audit policy evidence. | artifacts/security/example/manifest.json | 2026-08-01 |
+
+## Reviewer Decision
+| Item | Value |
+| --- | --- |
+| Decision | RECHECK_REQUIRED |
+| Required follow-up | Install approved scanner package. |
+| Follow-up owner | field-owner |
+| Target recheck date | 2026-08-01 |
+| Reviewer signature/name | reviewer |
+`;
+assert(validateManualEvidence("Field Risk Acceptance", validRiskEvidence) === "", "valid risk acceptance evidence should pass");
+
+const manualEvidence = manualEvidenceRefs();
+assert(manualEvidence.length === manualEvidenceDefinitions.length, "manual evidence refs should mirror definitions");
+manualEvidence.forEach((item) => {
+  assert(["PRESENT", "MISSING", "INVALID"].includes(item.status), `unexpected manual evidence status: ${item.status}`);
+  if (item.status !== "PRESENT") {
+    assert(item.validationReason, `${item.type} should expose validationReason when not PRESENT`);
+  }
+});
+
+[
+  [deliveryEvidence, "manualEvidenceRefs", "delivery evidence generator"],
+  [completionAudit, "manualEvidenceRefs", "completion audit generator"],
+  [handoverIndex, "manualEvidenceRefs", "handover index generator"],
+  [handoverPackage, "manualEvidenceRefs", "handover package generator"],
+  [fieldClosurePlan, "manualEvidenceRefs", "field closure plan generator"],
+].forEach(([content, token, label]) => assertIncludes(content, token, label));
+
+[
+  [rootPackageJson, "verify:manual-evidence", "root package scripts"],
+  [rootPackageJson, "verify-manual-evidence-contracts.js", "root package scripts"],
+  [serverPackageJson, "verify-manual-evidence-contracts.js", "server package verify chain"],
+].forEach(([content, token, label]) => assertIncludes(content, token, label));
+
+console.log("manual evidence contracts ok");
