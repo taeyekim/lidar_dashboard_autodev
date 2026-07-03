@@ -44,6 +44,7 @@ function latestEvidenceRefs() {
     runtimeEvidence: readLatestJsonManifest("artifacts/runtime"),
     manualEvidenceReadiness: readLatestJsonManifest("artifacts/manual-evidence-readiness"),
     fieldRiskRegister: readLatestJsonManifest("artifacts/field-risk-register"),
+    fieldActionBoard: readLatestJsonManifest("artifacts/field-action-board"),
   };
 }
 
@@ -161,6 +162,7 @@ function refsAreFresh(handoverPackage, evidenceRefs) {
     securityEvidence: evidencePath(evidenceRefs.securityEvidence),
     manualEvidenceReadiness: evidencePath(evidenceRefs.manualEvidenceReadiness),
     fieldRiskRegister: evidencePath(evidenceRefs.fieldRiskRegister),
+    fieldActionBoard: evidencePath(evidenceRefs.fieldActionBoard),
     handoverIndex: evidencePath(evidenceRefs.handoverIndex),
     fieldClosurePlan: evidencePath(evidenceRefs.fieldClosurePlan),
   };

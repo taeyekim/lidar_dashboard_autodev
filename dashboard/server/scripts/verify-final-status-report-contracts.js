@@ -43,7 +43,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "strictAcceptanceBlocked", "final status report generator"],
   [generator, "referenceFreshness", "final status report generator"],
   [generator, "fieldRiskRegister", "final status report generator"],
+  [generator, "fieldActionBoard", "final status report generator"],
   [generator, "artifacts/field-risk-register", "final status report generator"],
+  [generator, "artifacts/field-action-board", "final status report generator"],
   [generator, "manualEvidence", "final status report generator"],
   [generator, "Do not mark the Codex goal complete", "final status report generator"],
   [finalStatusContracts, "final:status", "final status verifier"],
@@ -54,6 +56,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [acceptanceChecklist, "artifacts/final-status", "acceptance checklist"],
   [matrix, "artifacts/final-status", "delivery evidence matrix"],
   [matrix, "artifacts/field-risk-register", "delivery evidence matrix"],
+  [matrix, "artifacts/field-action-board", "delivery evidence matrix"],
 ].forEach(([content, token, label]) => assertIncludes(content, token, label));
 
 const manualPresent = [
@@ -85,6 +88,10 @@ const readyEvidence = {
     path: "artifacts/field-risk-register/20260101-000000/manifest.json",
     data: { status: "NO_OPEN_RISKS", openRiskCount: 0, copyToRiskAcceptanceCount: 0 },
   },
+  fieldActionBoard: {
+    path: "artifacts/field-action-board/20260101-000000/manifest.json",
+    data: { status: "READY_TO_CLOSE", openActionCount: 0 },
+  },
 };
 
 readyEvidence.handoverPackage = {
@@ -101,6 +108,7 @@ readyEvidence.handoverPackage = {
       securityEvidence: readyEvidence.securityEvidence.path,
       manualEvidenceReadiness: readyEvidence.manualEvidenceReadiness.path,
       fieldRiskRegister: readyEvidence.fieldRiskRegister.path,
+      fieldActionBoard: readyEvidence.fieldActionBoard.path,
       handoverIndex: readyEvidence.handoverIndex.path,
       fieldClosurePlan: readyEvidence.fieldClosurePlan.path,
     },
@@ -121,6 +129,10 @@ assert(ready.gateSummary.total === 0, "complete fixture should have zero gate su
 assert(
   ready.referenceFreshness.some((item) => item.key === "fieldRiskRegister" && item.fresh === true),
   "complete fixture should verify fresh field risk register reference",
+);
+assert(
+  ready.referenceFreshness.some((item) => item.key === "fieldActionBoard" && item.fresh === true),
+  "complete fixture should verify fresh field action board reference",
 );
 assert(buildMarkdown(ready).includes("READY_TO_CLOSE"), "markdown should include READY_TO_CLOSE");
 
@@ -221,6 +233,31 @@ assert(staleRiskRegister.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "stale 
 assert(
   staleRiskRegister.remainingGates.some((item) => item.category === "Evidence Freshness" && item.message.includes("fieldRiskRegister")),
   "stale risk register fixture should expose stale field risk register reference",
+);
+
+const staleActionBoard = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    handoverPackage: {
+      ...readyEvidence.handoverPackage,
+      data: {
+        ...readyEvidence.handoverPackage.data,
+        evidenceRefs: {
+          ...readyEvidence.handoverPackage.data.evidenceRefs,
+          fieldActionBoard: "artifacts/field-action-board/old/manifest.json",
+        },
+      },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  git: { branch: "dev", commit: "fixture", clean: true },
+});
+
+assert(staleActionBoard.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "stale action board fixture should require review");
+assert(
+  staleActionBoard.remainingGates.some((item) => item.category === "Evidence Freshness" && item.message.includes("fieldActionBoard")),
+  "stale action board fixture should expose stale field action board reference",
 );
 
 const objectBlocker = buildFinalStatusReport({
