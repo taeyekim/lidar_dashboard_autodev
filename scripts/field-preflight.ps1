@@ -68,6 +68,30 @@ function Split-ListValue {
   return @($Value.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 }
 
+function Get-GitValue {
+  param([string[]]$Arguments)
+
+  $result = & git @Arguments 2>$null
+  if ($null -eq $result) { return "" }
+  return (($result | Out-String).Trim())
+}
+
+function Get-GitState {
+  $upstream = Get-GitValue -Arguments @("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}")
+  $upstreamCommit = if ([string]::IsNullOrWhiteSpace($upstream)) { "" } else { Get-GitValue -Arguments @("rev-parse", "@{u}") }
+  $commit = Get-GitValue -Arguments @("rev-parse", "HEAD")
+  $status = Get-GitValue -Arguments @("status", "--short")
+
+  return [pscustomobject]@{
+    branch = Get-GitValue -Arguments @("rev-parse", "--abbrev-ref", "HEAD")
+    commit = $commit
+    clean = [string]::IsNullOrWhiteSpace($status)
+    upstream = if ([string]::IsNullOrWhiteSpace($upstream)) { $null } else { $upstream }
+    upstreamCommit = if ([string]::IsNullOrWhiteSpace($upstreamCommit)) { $null } else { $upstreamCommit }
+    pushed = ![string]::IsNullOrWhiteSpace($commit) -and ![string]::IsNullOrWhiteSpace($upstreamCommit) -and $commit -eq $upstreamCommit
+  }
+}
+
 $runId = (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmss")
 $outputDir = Join-Path $OutputRoot $runId
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
@@ -132,6 +156,7 @@ $manifest = [pscustomobject]@{
   baseUrl = $BaseUrl
   reviewer = $Reviewer
   siteName = $SiteName
+  git = Get-GitState
   status = $overallStatus
   strict = [bool]$Strict
   allowLiveTcp = [bool]$AllowLiveTcp
@@ -151,6 +176,11 @@ $markdownLines = @(
   "- Base URL: $BaseUrl",
   "- Reviewer: $Reviewer",
   "- Site name: $SiteName",
+  "- Git commit: $($manifest.git.commit)",
+  "- Git branch: $($manifest.git.branch)",
+  "- Git upstream: $($manifest.git.upstream)",
+  "- Git pushed to origin/dev: $($manifest.git.pushed)",
+  "- Working tree clean: $($manifest.git.clean)",
   "- Status: $overallStatus",
   "- Strict: $([bool]$Strict)",
   "- Review count: $reviewCount",
