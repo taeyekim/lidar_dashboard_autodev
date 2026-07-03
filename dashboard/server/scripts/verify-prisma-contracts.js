@@ -25,6 +25,7 @@ const trafficEventSummaryIndexMigration = readProjectFile(
   "dashboard/server/prisma/migrations/20260703071000_add_traffic_event_summary_indexes/migration.sql",
 );
 const seed = readProjectFile("dashboard/server/prisma/seed.js");
+const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
 const syntaxChecker = readProjectFile("dashboard/server/scripts/check-syntax.js");
 const wrongwayService = readProjectFile("dashboard/server/src/domains/wrongway/wrongway.service.js");
 const controlBoardService = readProjectFile("dashboard/server/src/domains/control-board/controlBoard.service.js");
@@ -167,6 +168,26 @@ const eventService = readProjectFile("dashboard/server/src/domains/events/events
 
 assert(!seed.includes("\uFFFD"), "Prisma seed contains replacement-character mojibake");
 assert(!/\?{2,}/.test(seed), "Prisma seed contains repeated question-mark mojibake");
+
+[
+  "Prisma seed",
+  "월출산휴게소",
+  "`ROUNDABOUT-01/02`",
+  "lidar PC",
+  "control board",
+  "without mojibake",
+].forEach((token) => assertIncludes(acceptanceChecklist, token, "acceptance checklist Prisma seed evidence"));
+
+[
+  "\uFFFD",
+  "�",
+  "?붿",
+  "텧",
+  "쑕",
+  "寃",
+].forEach((token) => {
+  assert(!acceptanceChecklist.includes(token), `acceptance checklist contains mojibake token: ${token}`);
+});
 
 assertIncludes(
   syntaxChecker,
