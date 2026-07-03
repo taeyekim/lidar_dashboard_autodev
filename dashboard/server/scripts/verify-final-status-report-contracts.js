@@ -46,6 +46,12 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "LIVE_TCP_READY", "final status report generator"],
   [generator, "requireScanners", "final status report generator"],
   [generator, "strictAcceptanceBlocked", "final status report generator"],
+  [generator, "scannerCloseout", "final status report generator"],
+  [generator, "scannerCloseoutSummary", "final status report generator"],
+  [generator, "Security Scanner Closeout", "final status report generator"],
+  [generator, "EVIDENCE_READY", "final status report generator"],
+  [generator, "RISK_ACCEPTED", "final status report generator"],
+  [generator, "closeoutWhenSkipped", "final status report generator"],
   [generator, "DELIVERY_FIX_REQUIRED", "final status report generator"],
   [generator, "BLOCKING_FINDINGS", "final status report generator"],
   [generator, "dispositionSummary", "final status report generator"],
@@ -104,6 +110,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [matrix, "DELIVERY_FIX_REQUIRED", "delivery evidence matrix"],
   [matrix, "BLOCKING_FINDINGS", "delivery evidence matrix"],
   [matrix, "zero blocking or delivery-fix security findings", "delivery evidence matrix"],
+  [matrix, "Scanner Closeout Matrix", "delivery evidence matrix"],
+  [matrix, "Security Scanner Closeout", "delivery evidence matrix"],
   [matrix, "Delivery Entrypoint Consistency", "delivery evidence matrix"],
   [matrix, "MISMATCH", "delivery evidence matrix"],
   [matrix, "pushed to `origin/dev`", "delivery evidence matrix"],
@@ -166,6 +174,40 @@ const readyEvidence = {
       options: { requireScanners: true },
       strictAcceptanceBlocked: false,
       dispositionSummary: { pass: 6, blocking: 0, deliveryFix: 0, riskAccepted: 0, unverified: 0 },
+      scannerCloseout: [
+        {
+          scanner: "gitleaks",
+          closeoutStatus: "EVIDENCE_READY",
+          requiredSwitch: "--require-scanners",
+          relatedChecks: ["gitleaks secret scan"],
+          evidenceFiles: ["gitleaks.json"],
+          closeoutWhenSkipped: "Install gitleaks or document reviewer risk acceptance.",
+        },
+        {
+          scanner: "Trivy filesystem",
+          closeoutStatus: "EVIDENCE_READY",
+          requiredSwitch: "--require-scanners",
+          relatedChecks: ["trivy filesystem scan"],
+          evidenceFiles: ["trivy-fs.json"],
+          closeoutWhenSkipped: "Install Trivy or document reviewer risk acceptance.",
+        },
+        {
+          scanner: "Trivy images",
+          closeoutStatus: "EVIDENCE_READY",
+          requiredSwitch: "--include-container-images --require-scanners",
+          relatedChecks: ["trivy backend image scan", "trivy frontend image scan"],
+          evidenceFiles: ["trivy-backend-image.json", "trivy-frontend-image.json"],
+          closeoutWhenSkipped: "Build images, run Trivy image scans, or document reviewer risk acceptance.",
+        },
+        {
+          scanner: "OWASP ZAP baseline",
+          closeoutStatus: "RISK_ACCEPTED",
+          requiredSwitch: "--include-zap --require-scanners --target-url=<nginx-url>",
+          relatedChecks: ["OWASP ZAP baseline"],
+          evidenceFiles: ["zap-baseline.html"],
+          closeoutWhenSkipped: "Run ZAP baseline or document reviewer risk acceptance.",
+        },
+      ],
     },
   },
   handoverIndex: { path: "artifacts/handover-index/20260101-000000/manifest.json", data: { status: "READY" } },
@@ -371,6 +413,75 @@ assert(
 assert(
   blockedSecurity.gateActionRunbook.some((item) => item.actionType === "SECURITY_REVIEW_REQUIRED"),
   "blocked security fixture should expose security action type",
+);
+
+const openScannerCloseout = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    securityEvidence: {
+      path: readyEvidence.securityEvidence.path,
+      data: {
+        ...readyEvidence.securityEvidence.data,
+        scannerCloseout: [
+          {
+            scanner: "gitleaks",
+            closeoutStatus: "BLOCKING",
+            requiredSwitch: "--require-scanners",
+            relatedChecks: ["gitleaks secret scan"],
+            evidenceFiles: ["gitleaks.json"],
+            closeoutWhenSkipped: "Install gitleaks or document reviewer risk acceptance.",
+          },
+        ],
+      },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
+  git: readyGit,
+});
+
+assert(openScannerCloseout.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "open scanner closeout fixture should require review");
+assert(
+  openScannerCloseout.remainingGates.some(
+    (item) => item.category === "Security Scanner Closeout" && item.status === "BLOCKING" && item.message.includes("gitleaks"),
+  ),
+  "open scanner closeout fixture should expose scanner-specific closeout gate",
+);
+assert(
+  openScannerCloseout.securityEvidence.scannerCloseoutSummary.open === 1,
+  "open scanner closeout fixture should count open scanner rows",
+);
+assert(
+  buildMarkdown(openScannerCloseout).includes("Security Scanner Closeout"),
+  "markdown should include Security Scanner Closeout",
+);
+
+const missingScannerCloseout = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    securityEvidence: {
+      path: readyEvidence.securityEvidence.path,
+      data: {
+        targetUrl: "http://field.local:8080",
+        options: { requireScanners: true },
+        strictAcceptanceBlocked: false,
+        dispositionSummary: { pass: 6, blocking: 0, deliveryFix: 0, riskAccepted: 0, unverified: 0 },
+      },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
+  git: readyGit,
+});
+
+assert(missingScannerCloseout.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "missing scanner closeout fixture should require review");
+assert(
+  missingScannerCloseout.remainingGates.some(
+    (item) => item.category === "Security Scanner Closeout" && item.status === "MISSING",
+  ),
+  "missing scanner closeout fixture should expose missing scanner closeout matrix",
 );
 
 const deliveryFixSecurity = buildFinalStatusReport({

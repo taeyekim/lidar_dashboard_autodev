@@ -165,12 +165,26 @@ function gateActionRunbook(gates) {
 
 function buildSecuritySummary(security) {
   const data = security?.data || {};
+  const scannerCloseout = Array.isArray(data.scannerCloseout) ? data.scannerCloseout : [];
+  const openScannerCloseout = scannerCloseout.filter(
+    (item) => !["EVIDENCE_READY", "RISK_ACCEPTED"].includes(item.closeoutStatus),
+  );
   return {
     path: evidencePath(security),
     exists: Boolean(security),
     requireScanners: data.options?.requireScanners === true,
     strictAcceptanceBlocked: data.strictAcceptanceBlocked === true,
     dispositionSummary: data.dispositionSummary || null,
+    scannerCloseout,
+    scannerCloseoutSummary: {
+      total: scannerCloseout.length,
+      evidenceReady: scannerCloseout.filter((item) => item.closeoutStatus === "EVIDENCE_READY").length,
+      riskAccepted: scannerCloseout.filter((item) => item.closeoutStatus === "RISK_ACCEPTED").length,
+      blocking: scannerCloseout.filter((item) => item.closeoutStatus === "BLOCKING").length,
+      unverified: scannerCloseout.filter((item) => item.closeoutStatus === "UNVERIFIED").length,
+      pending: scannerCloseout.filter((item) => item.closeoutStatus === "PENDING").length,
+      open: openScannerCloseout.length,
+    },
   };
 }
 
@@ -405,6 +419,28 @@ function buildFinalStatusReport(input = {}) {
   if (!security) {
     addGate(gates, "Security Evidence", "MISSING", "Latest security evidence manifest is missing.", "Run npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners --target-url=<delivery-url>.", null);
   } else {
+    if (securitySummary.scannerCloseout.length === 0) {
+      addGate(
+        gates,
+        "Security Scanner Closeout",
+        "MISSING",
+        "Security evidence does not include scannerCloseout rows.",
+        "Rerun npm.cmd run security:evidence so the Scanner Closeout Matrix is included in manifest.json and manifest.md.",
+        evidencePath(security),
+      );
+    }
+    securitySummary.scannerCloseout
+      .filter((item) => !["EVIDENCE_READY", "RISK_ACCEPTED"].includes(item.closeoutStatus))
+      .forEach((item) => {
+        addGate(
+          gates,
+          "Security Scanner Closeout",
+          item.closeoutStatus || "REVIEW",
+          `${item.scanner} scanner closeout is ${item.closeoutStatus || "REVIEW"}; related checks=${(item.relatedChecks || []).join(", ") || "none"}.`,
+          item.closeoutWhenSkipped || "Run the scanner, attach evidence, or document reviewer risk acceptance.",
+          evidencePath(security),
+        );
+      });
     if (!securitySummary.requireScanners) {
       addGate(gates, "Security Evidence", "REVIEW", "Security evidence was not generated with requireScanners=true.", "Rerun security:evidence with --require-scanners or attach accepted field-risk evidence.", evidencePath(security));
     }
@@ -641,6 +677,7 @@ function buildMarkdown(manifest) {
     `- Field acceptance ready for handover: ${manifest.fieldAcceptance.readyForHandover}`,
     `- Control-board safety: ${manifest.fieldReadiness.controlBoardSafetyStatus}`,
     `- Security evidence: ${manifest.securityEvidence.exists ? "present" : "missing"} (${manifest.securityEvidence.path || "missing"})`,
+    `- Security scanner closeout open: ${manifest.securityEvidence.scannerCloseoutSummary.open}/${manifest.securityEvidence.scannerCloseoutSummary.total}`,
     `- Manual evidence readiness: ${manifest.manualEvidenceReadiness.status} (${manifest.manualEvidenceReadiness.path || "missing"})`,
     `- Handover package: ${manifest.handoverPackage.status} (${manifest.handoverPackage.path || "missing"})`,
     `- Remaining gate count: ${manifest.gateSummary.total}`,
@@ -665,6 +702,17 @@ function buildMarkdown(manifest) {
             `| ${markdownCell(item.category)} | ${markdownCell(item.status)} | ${markdownCell(item.actionType)} | ${markdownCell(item.message)} | ${markdownCell(item.closeWhen)} | ${item.evidence ? `\`${markdownCell(item.evidence)}\`` : "missing"} |`,
         )
       : ["| none | PASS | REVIEW_REQUIRED | No remaining final gates. | - | - |"]),
+    "",
+    "## Security Scanner Closeout",
+    "",
+    "| Scanner | Status | Required Switch | Related Checks | Evidence Files | Closeout If Skipped |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ...(manifest.securityEvidence.scannerCloseout.length > 0
+      ? manifest.securityEvidence.scannerCloseout.map(
+          (item) =>
+            `| ${markdownCell(item.scanner)} | ${markdownCell(item.closeoutStatus)} | \`${markdownCell(item.requiredSwitch || "")}\` | ${markdownCell((item.relatedChecks || []).join(", ") || "none")} | ${markdownCell((item.evidenceFiles || []).join(", ") || "none")} | ${markdownCell(item.closeoutWhenSkipped || "Run scanner or attach accepted risk evidence.")} |`,
+        )
+      : ["| missing | MISSING | - | - | - | Rerun security:evidence with Scanner Closeout Matrix support. |"]),
     "",
     "## Field Acceptance",
     "",
