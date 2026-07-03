@@ -220,11 +220,29 @@ assert(
     wrongwayIngest.description.includes("승격하지 않습니다"),
   "POST /api/wrongway description must state that dashboard-side level-2 auto escalation is not active before field measurement criteria are approved",
 );
+assert(
+  wrongwayIngest.description.includes("situation-ended") &&
+    wrongwayIngest.description.includes("RESOLVED") &&
+    wrongwayIngest.description.includes("STAGE_2_RETURN"),
+  "POST /api/wrongway description must document situation-ended RESOLVED lifecycle and STAGE_2_RETURN command behavior",
+);
 const wrongwayRequestType = swaggerSpec.components?.schemas?.WrongwayRequest?.properties?.type;
 assert(
   wrongwayRequestType?.description?.includes("자동 승격하지 않으며") &&
     wrongwayRequestType?.description?.includes("현장 측량 기준"),
   "WrongwayRequest.type must document explicit payload type handling and pending field-measurement escalation criteria",
+);
+const wrongwayIngestResponse = swaggerSpec.components?.schemas?.WrongwayIngestResponse;
+assert(
+  wrongwayIngestResponse?.properties?.resolvedEventIds?.description?.includes("RESOLVED") &&
+    wrongwayIngestResponse.properties.resolvedEventIds.description.includes("closing event"),
+  "WrongwayIngestResponse.resolvedEventIds must document resolved active events and closing event linkage",
+);
+assert(
+  wrongwayIngestResponse?.properties?.controlCommand?.description?.includes("STAGE_1_ON") &&
+    wrongwayIngestResponse.properties.controlCommand.description.includes("STAGE_2_ON") &&
+    wrongwayIngestResponse.properties.controlCommand.description.includes("STAGE_2_RETURN"),
+  "WrongwayIngestResponse.controlCommand must document stage-1, stage-2, and situation-ended command mapping",
 );
 
 const controlBoardMockPacket =

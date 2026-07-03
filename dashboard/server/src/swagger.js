@@ -444,7 +444,7 @@ const swaggerSpec = {
         tags: ["Wrongway"],
         summary: "역주행 감지 이벤트 수신",
         description:
-          "라이다 PC 공식 수신 endpoint입니다. DEVICE_INGEST_API_KEY가 설정된 환경에서는 X-Device-Key header가 필요합니다. 현재 대시보드는 수신 type을 기준으로 저장/명령을 생성하며, wrong-way-level-1을 현장 측량 기준 없이 자동으로 wrong-way-level-2로 승격하지 않습니다. 대시보드 측 자동 2차 승격은 현장 측량 기준 확정 후 별도 구현/검증 대상입니다.",
+          "라이다 PC 공식 수신 endpoint입니다. DEVICE_INGEST_API_KEY가 설정된 환경에서는 X-Device-Key header가 필요합니다. 현재 대시보드는 수신 type을 기준으로 저장/명령을 생성하며, wrong-way-level-1을 현장 측량 기준 없이 자동으로 wrong-way-level-2로 승격하지 않습니다. 대시보드 측 자동 2차 승격은 현장 측량 기준 확정 후 별도 구현/검증 대상입니다. situation-ended creates a closing event, resolves active wrong-way events for the same track to RESOLVED, and creates or reuses the STAGE_2_RETURN control-board command.",
         security: [{ deviceKeyAuth: [] }, {}],
         requestBody: {
           required: false,
@@ -1503,11 +1503,14 @@ const swaggerSpec = {
           resolvedEventIds: {
             type: "array",
             items: { type: "string" },
-            description: "situation-ended payload로 종료 처리된 역주행 이벤트 ID 목록입니다.",
+            description:
+              "situation-ended payload로 종료 처리된 역주행 이벤트 ID 목록입니다. Active stage-1/stage-2 wrong-way events for the same track are marked RESOLVED and linked to the closing event.",
           },
           controlCommand: {
             nullable: true,
             oneOf: [{ $ref: "#/components/schemas/ControlBoardCommand" }],
+            description:
+              "Control-board command created or reused for the payload type: STAGE_1_ON, STAGE_2_ON, or STAGE_2_RETURN for situation-ended.",
           },
           event: {
             oneOf: [
