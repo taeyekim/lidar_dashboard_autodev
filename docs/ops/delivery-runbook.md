@@ -191,8 +191,11 @@ Before the final handover package, run
 when `artifacts/manual/operator-ui-walkthrough.md` or
 `artifacts/manual/field-risk-acceptance.md` is missing. It creates reviewer-fillable
 drafts and writes `artifacts/manual-evidence-drafts/<timestamp>/manifest.json`
-plus `manifest.md`. Existing manual evidence files are preserved unless
-`--force` is used after backing up reviewer content.
+plus `manifest.md`. When a latest `field:risk-register` manifest exists, the
+draft report also carries its copyable `Risk Acceptance Draft Rows` and uses
+those rows to replace the generic accepted-item rows in a newly created
+`artifacts/manual/field-risk-acceptance.md` draft. Existing manual evidence
+files are preserved unless `--force` is used after backing up reviewer content.
 
 Then run
 `npm.cmd run manual:evidence-readiness -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`.
@@ -223,7 +226,8 @@ remaining final-status gates, and required manual evidence into reviewer-facing
 risk groups and `Risk Acceptance Draft Rows`. This register is preparation
 evidence only; accepted risk still requires the reviewer-filled
 `artifacts/manual/field-risk-acceptance.md` file and must not include secret
-values.
+values. Re-run `manual:evidence-drafts` after this step when the reviewer wants
+the risk acceptance draft to include the latest register rows.
 
 After final status exists, run
 `npm.cmd run field:action-board -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`.

@@ -3,7 +3,7 @@ const os = require("os");
 const path = require("path");
 const { spawnSync } = require("child_process");
 
-const { timestampForPath } = require("./generate-delivery-evidence");
+const { readLatestJsonManifest, timestampForPath } = require("./generate-delivery-evidence");
 const { manualEvidenceDefinitions } = require("./manual-evidence");
 
 const root = path.join(__dirname, "..", "..", "..");
@@ -48,6 +48,42 @@ function replaceTableValue(content, item, value) {
     .join("\n");
 }
 
+function markdownCell(value) {
+  return String(value ?? "").replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+}
+
+function buildRiskAcceptanceDraftRows(fieldRiskRegister) {
+  const items = fieldRiskRegister?.data?.riskItems || [];
+  return items
+    .filter((item) => item.copyToRiskAcceptance)
+    .map((item) => ({
+      status: "TODO",
+      area: item.area || "Field risk",
+      riskAccepted: item.risk || "Open field/security/manual gate remains accepted for delivery.",
+      compensatingControl: "TODO: reviewer-approved compensating control.",
+      evidenceReference: item.evidenceReference || fieldRiskRegister?.path || "artifacts/field-risk-register/<timestamp>/manifest.json",
+      expiryOrRecheck: "TODO",
+      owner: item.owner || "Field Operations",
+    }));
+}
+
+function replaceAcceptedItemRows(content, rows) {
+  if (!rows || rows.length === 0) return content;
+  const lines = content.split(/\r?\n/);
+  const headerIndex = lines.findIndex((line) => line.includes("| Status | Area | Risk Accepted |"));
+  if (headerIndex === -1) return content;
+  const bodyStart = headerIndex + 2;
+  let bodyEnd = bodyStart;
+  while (bodyEnd < lines.length && lines[bodyEnd].trim().startsWith("|")) {
+    bodyEnd += 1;
+  }
+  const replacement = rows.map(
+    (row) =>
+      `| ${markdownCell(row.status)} | ${markdownCell(row.area)} | ${markdownCell(row.riskAccepted)} | ${markdownCell(row.compensatingControl)} | ${markdownCell(row.evidenceReference)} | ${markdownCell(row.expiryOrRecheck)} |`,
+  );
+  return [...lines.slice(0, bodyStart), ...replacement, ...lines.slice(bodyEnd)].join("\n");
+}
+
 function buildDraftContent(templateContent, definition, options = {}) {
   let content = templateContent;
   content = replaceTableValue(content, "Site name", options.siteName);
@@ -57,6 +93,9 @@ function buildDraftContent(templateContent, definition, options = {}) {
   content = replaceTableValue(content, "Base URL", options.baseUrl);
   content = replaceTableValue(content, "Captured at", options.generatedAt);
   content = replaceTableValue(content, "Acceptance date", options.generatedAt ? options.generatedAt.slice(0, 10) : "");
+  if (definition.type === "Field Risk Acceptance") {
+    content = replaceAcceptedItemRows(content, options.riskAcceptanceDraftRows || []);
+  }
 
   const header = [
     "<!--",
@@ -98,6 +137,8 @@ function buildManualEvidenceDraftPlan(options = {}) {
 
 function writeManualEvidenceDrafts(options = {}) {
   const generatedAt = options.generatedAt || new Date().toISOString();
+  const fieldRiskRegister = options.fieldRiskRegister || readLatestJsonManifest("artifacts/field-risk-register");
+  const riskAcceptanceDraftRows = options.riskAcceptanceDraftRows || buildRiskAcceptanceDraftRows(fieldRiskRegister);
   const plan = buildManualEvidenceDraftPlan({ ...options, generatedAt });
   const items = plan.map((item) => {
     if (item.status !== "READY_TO_WRITE") return item;
@@ -106,6 +147,7 @@ function writeManualEvidenceDrafts(options = {}) {
     const draftContent = buildDraftContent(templateContent, definition, {
       ...options,
       generatedAt,
+      riskAcceptanceDraftRows,
     });
     const targetPath = path.join(root, definition.path);
     ensureDir(path.dirname(targetPath));
@@ -125,6 +167,9 @@ function writeManualEvidenceDrafts(options = {}) {
       commit: gitValue(["rev-parse", "HEAD"]),
       clean: gitValue(["status", "--short"]) === "",
     },
+    sourceFieldRiskRegister: fieldRiskRegister?.path || null,
+    riskAcceptanceDraftRowCount: riskAcceptanceDraftRows.length,
+    riskAcceptanceDraftRows,
     createdCount: items.filter((item) => item.status === "CREATED").length,
     skippedCount: items.filter((item) => item.status === "SKIP_EXISTS").length,
     missingTemplateCount: items.filter((item) => item.status === "TEMPLATE_MISSING").length,
@@ -136,10 +181,6 @@ function writeManualEvidenceDrafts(options = {}) {
       "Run npm.cmd run manual:evidence-readiness after reviewer values are filled.",
     ],
   };
-}
-
-function markdownCell(value) {
-  return String(value ?? "").replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
 }
 
 function buildMarkdown(manifest) {
@@ -158,6 +199,8 @@ function buildMarkdown(manifest) {
     `- Git commit: ${manifest.git.commit}`,
     `- Git branch: ${manifest.git.branch}`,
     `- Working tree clean: ${manifest.git.clean ? "yes" : "no"}`,
+    `- Source field risk register: ${manifest.sourceFieldRiskRegister || "missing"}`,
+    `- Risk acceptance draft rows: ${manifest.riskAcceptanceDraftRowCount}`,
     "",
     "## Guardrails",
     "",
@@ -171,6 +214,19 @@ function buildMarkdown(manifest) {
       (item) =>
         `| ${markdownCell(item.type)} | ${markdownCell(item.status)} | \`${markdownCell(item.targetPath)}\` | \`${markdownCell(item.templatePath)}\` | ${markdownCell(item.nextAction)} |`,
     ),
+    "",
+    "## Risk Acceptance Draft Rows",
+    "",
+    "These rows are copied from the latest field risk register to help the reviewer fill `artifacts/manual/field-risk-acceptance.md`. They are not final acceptance until the reviewer replaces TODO values and `manual:evidence-readiness` reports PRESENT.",
+    "",
+    "| Status | Area | Risk Accepted | Compensating Control | Evidence Reference | Expiry Or Recheck | Owner |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+    ...(manifest.riskAcceptanceDraftRows.length > 0
+      ? manifest.riskAcceptanceDraftRows.map(
+          (row) =>
+            `| ${markdownCell(row.status)} | ${markdownCell(row.area)} | ${markdownCell(row.riskAccepted)} | ${markdownCell(row.compensatingControl)} | ${markdownCell(row.evidenceReference)} | ${markdownCell(row.expiryOrRecheck)} | ${markdownCell(row.owner)} |`,
+        )
+      : ["| none | - | No field-risk-register rows are currently marked for risk acceptance. | - | - | - | - |"]),
     "",
   ].join("\n");
 }
@@ -201,6 +257,8 @@ if (require.main === module) {
 module.exports = {
   buildDraftContent,
   buildManualEvidenceDraftPlan,
+  buildRiskAcceptanceDraftRows,
   buildMarkdown,
+  replaceAcceptedItemRows,
   writeManualEvidenceDrafts,
 };
