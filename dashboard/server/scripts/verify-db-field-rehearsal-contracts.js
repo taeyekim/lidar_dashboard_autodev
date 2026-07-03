@@ -22,6 +22,8 @@ const packageJson = readProjectFile("package.json");
 
 [
   "BaseUrl",
+  "Reviewer",
+  "SiteName",
   "RunDeploy",
   "RunSeed",
   "npm run db:status",
@@ -40,6 +42,8 @@ const packageJson = readProjectFile("package.json");
   "deviceStatusLogs",
   "manifest.json",
   "manifest.md",
+  "FIELD_REHEARSAL_PASS",
+  "hostName",
   "db prisma field rehearsal ok",
 ].forEach((token) => assertIncludes(script, token, "DB field rehearsal script"));
 

@@ -1,7 +1,9 @@
 param(
   [string]$BaseUrl = "http://localhost:8080",
   [string]$DeviceKey = "",
-  [string]$OutputRoot = "artifacts/field-lidar-rehearsal"
+  [string]$OutputRoot = "artifacts/field-lidar-rehearsal",
+  [string]$Reviewer = "",
+  [string]$SiteName = "unspecified"
 )
 
 Set-StrictMode -Version Latest
@@ -128,6 +130,9 @@ $timestampPrefix = $timestamp.ToString("yyyy-MM-ddTHH:mm:ss")
 $runId = $timestamp.ToString("yyyyMMdd-HHmmss")
 $outputDir = Join-Path $OutputRoot $runId
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
+if (!$Reviewer) {
+  $Reviewer = if ($env:USERNAME) { $env:USERNAME } elseif ($env:USER) { $env:USER } else { "field-reviewer" }
+}
 
 $normalTrackId = "field-normal-$([guid]::NewGuid().ToString('N'))"
 $wrongTrackId = "field-wrong-$([guid]::NewGuid().ToString('N'))"
@@ -238,7 +243,11 @@ Assert-NumberProperty -Object $summary -Name "wrongwayRate" -Label "Event summar
 
 $manifest = [pscustomobject]@{
   generatedAt = (Get-Date).ToUniversalTime().ToString("o")
+  evidenceType = "FIELD_REHEARSAL_PASS"
   baseUrl = $BaseUrl
+  reviewer = $Reviewer
+  siteName = $SiteName
+  hostName = [System.Net.Dns]::GetHostName()
   deviceKeyUsed = [bool]$DeviceKey
   normalTrackId = $normalTrackId
   wrongTrackId = $wrongTrackId
@@ -252,7 +261,11 @@ $markdownLines = @(
   "# Lidar Ingest Field Rehearsal",
   "",
   "- Generated at: $($manifest.generatedAt)",
+  "- Evidence type: $($manifest.evidenceType)",
   "- Base URL: $BaseUrl",
+  "- Reviewer: $Reviewer",
+  "- Site name: $SiteName",
+  "- Host name: $($manifest.hostName)",
   "- Device key used: $($manifest.deviceKeyUsed)",
   "- Normal track ID: $normalTrackId",
   "- Wrong-way track ID: $wrongTrackId",

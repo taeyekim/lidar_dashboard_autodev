@@ -1,6 +1,8 @@
 param(
   [string]$BaseUrl = "http://localhost:8080",
   [string]$OutputRoot = "artifacts/field-db-rehearsal",
+  [string]$Reviewer = "",
+  [string]$SiteName = "unspecified",
   [switch]$RunDeploy,
   [switch]$RunSeed
 )
@@ -67,6 +69,9 @@ function Assert-NumberProperty {
 $runId = (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmss")
 $outputDir = Join-Path $OutputRoot $runId
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
+if (!$Reviewer) {
+  $Reviewer = if ($env:USERNAME) { $env:USERNAME } elseif ($env:USER) { $env:USER } else { "field-reviewer" }
+}
 
 $results = @()
 if ($RunDeploy) {
@@ -126,7 +131,11 @@ $results += [pscustomobject]@{
 
 $manifest = [pscustomobject]@{
   generatedAt = (Get-Date).ToUniversalTime().ToString("o")
+  evidenceType = "FIELD_REHEARSAL_PASS"
   baseUrl = $BaseUrl
+  reviewer = $Reviewer
+  siteName = $SiteName
+  hostName = [System.Net.Dns]::GetHostName()
   runDeploy = [bool]$RunDeploy
   runSeed = [bool]$RunSeed
   results = $results
@@ -138,7 +147,11 @@ $markdownLines = @(
   "# DB Prisma Field Rehearsal",
   "",
   "- Generated at: $($manifest.generatedAt)",
+  "- Evidence type: $($manifest.evidenceType)",
   "- Base URL: $BaseUrl",
+  "- Reviewer: $Reviewer",
+  "- Site name: $SiteName",
+  "- Host name: $($manifest.hostName)",
   "- Run deploy: $($manifest.runDeploy)",
   "- Run seed: $($manifest.runSeed)",
   "",

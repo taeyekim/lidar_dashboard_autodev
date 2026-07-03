@@ -23,6 +23,8 @@ const packageJson = readProjectFile("package.json");
   "BaseUrl",
   "DeviceKey",
   "OutputRoot",
+  "Reviewer",
+  "SiteName",
   "DEVICE_INGEST_API_KEY",
   "/api/wrongway",
   "normal-driving",
@@ -43,6 +45,8 @@ const packageJson = readProjectFile("package.json");
   "packetHex",
   "manifest.json",
   "manifest.md",
+  "FIELD_REHEARSAL_PASS",
+  "hostName",
   "deviceKeyUsed",
   "lidar ingest field rehearsal ok",
 ].forEach((token) => assertIncludes(script, token, "lidar ingest rehearsal script"));

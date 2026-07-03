@@ -21,6 +21,8 @@ const packageJson = readProjectFile("package.json");
 
 [
   "BaseUrl",
+  "Reviewer",
+  "SiteName",
   "AllowLiveTcp",
   "SEED_ADMIN_USER_ID",
   "SEED_ADMIN_PASSWORD",
@@ -47,6 +49,8 @@ const packageJson = readProjectFile("package.json");
   "averageResponseMs",
   "manifest.json",
   "manifest.md",
+  "FIELD_REHEARSAL_PASS",
+  "hostName",
   "field hardware approval",
   "control-board field rehearsal ok",
 ].forEach((token) => assertIncludes(script, token, "control-board field rehearsal script"));

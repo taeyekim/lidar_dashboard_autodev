@@ -3,6 +3,8 @@ param(
   [string]$UserId = "",
   [string]$Password = "",
   [string]$OutputRoot = "artifacts/field-control-board-rehearsal",
+  [string]$Reviewer = "",
+  [string]$SiteName = "unspecified",
   [switch]$AllowLiveTcp
 )
 
@@ -156,6 +158,9 @@ if ($envValues.ContainsKey("AUTH_CSRF_COOKIE_NAME") -and $envValues["AUTH_CSRF_C
 $runId = (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmss")
 $outputDir = Join-Path $OutputRoot $runId
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
+if (!$Reviewer) {
+  $Reviewer = if ($env:USERNAME) { $env:USERNAME } elseif ($env:USER) { $env:USER } else { "field-reviewer" }
+}
 $cookieJar = Join-Path $env:TEMP "lidar-control-board-rehearsal-cookies-$([guid]::NewGuid().ToString('N')).txt"
 $results = @()
 
@@ -208,7 +213,11 @@ try {
 
   $manifest = [pscustomobject]@{
     generatedAt = (Get-Date).ToUniversalTime().ToString("o")
+    evidenceType = "FIELD_REHEARSAL_PASS"
     baseUrl = $BaseUrl
+    reviewer = $Reviewer
+    siteName = $SiteName
+    hostName = [System.Net.Dns]::GetHostName()
     allowLiveTcp = [bool]$AllowLiveTcp
     initialMode = $mode
     finalMode = $finalStatus.mode
@@ -222,7 +231,11 @@ try {
     "# Control Board Field Rehearsal",
     "",
     "- Generated at: $($manifest.generatedAt)",
+    "- Evidence type: $($manifest.evidenceType)",
     "- Base URL: $BaseUrl",
+    "- Reviewer: $Reviewer",
+    "- Site name: $SiteName",
+    "- Host name: $($manifest.hostName)",
     "- Allow LIVE_TCP: $($manifest.allowLiveTcp)",
     "- Initial mode: $($manifest.initialMode)",
     "- Final mode: $($manifest.finalMode)",

@@ -26,9 +26,9 @@ function actionForEntry(entry) {
     "Field Preflight": ["npm.cmd run field:preflight -- -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\""],
     "Field Acceptance": ["npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\""],
     "Field Readiness": ["npm.cmd run field:readiness -- --base-url=http://localhost:8080 --generated-by=\"field-reviewer-name\" --site-name=\"delivery-site-name\""],
-    "DB And Prisma Field Rehearsal": ["powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-field-rehearsal.ps1 -BaseUrl http://localhost:8080"],
-    "Lidar Ingest Field Rehearsal": ["powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl http://localhost:8080"],
-    "Control Board Field Rehearsal": ["powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080"],
+    "DB And Prisma Field Rehearsal": ["powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\""],
+    "Lidar Ingest Field Rehearsal": ["powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\""],
+    "Control Board Field Rehearsal": ["powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\""],
     "Runtime Evidence": ["npm.cmd run runtime:evidence -- --run-smoke --use-existing-stack --base-url=http://localhost:8080"],
     "Security Evidence": ["npm.cmd run security:evidence -- --include-container-images --include-zap --target-url=http://localhost:8080"],
   };
