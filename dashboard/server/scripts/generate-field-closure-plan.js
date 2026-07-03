@@ -101,6 +101,29 @@ function buildFieldRehearsalFollowUpActions(completion) {
   }));
 }
 
+function hasOpenRequiredFieldValue(item) {
+  const state = String(item.state || "").toLowerCase();
+  return [
+    "missing",
+    "open-or-missing",
+    "missing-or-trusted-lan-exception-required",
+    "not-approved",
+    "change-this-to-a-long-random-secret",
+    "admin1234!",
+  ].includes(state);
+}
+
+function closurePlanStatusFromCounts(counts) {
+  const openCount =
+    counts.openActionCount +
+    counts.completionBlockerCount +
+    counts.openRequiredFieldValueCount +
+    counts.fieldReadinessOpenCheckCount +
+    counts.fieldRehearsalFollowUpCount +
+    counts.manualEvidenceMissingCount;
+  return openCount > 0 ? "OPEN" : "READY";
+}
+
 function buildClosurePlan(options = {}) {
   const handover = readLatestJsonManifest("artifacts/handover-index");
   const completion = readLatestJsonManifest("artifacts/completion-audit");
@@ -118,6 +141,15 @@ function buildClosurePlan(options = {}) {
   const manualEvidenceActions = buildManualEvidenceActions();
   const fieldRehearsalFollowUpActions = buildFieldRehearsalFollowUpActions(completion);
   const actions = openEntries.map(actionForEntry);
+  const counts = {
+    openActionCount: actions.length,
+    completionBlockerCount: completionBlockers.length,
+    requiredFieldValueCount: requiredFieldValues.length,
+    openRequiredFieldValueCount: requiredFieldValues.filter(hasOpenRequiredFieldValue).length,
+    fieldReadinessOpenCheckCount: fieldReadinessOpenChecks.length,
+    fieldRehearsalFollowUpCount: fieldRehearsalFollowUpActions.length,
+    manualEvidenceMissingCount: manualEvidenceActions.filter((item) => item.status !== "PRESENT").length,
+  };
 
   return {
     generatedAt: new Date().toISOString(),
@@ -126,21 +158,14 @@ function buildClosurePlan(options = {}) {
     hostName: os.hostname(),
     sourceHandoverIndex: handover?.path || null,
     sourceCompletionAudit: completion?.path || null,
-    status: actions.length > 0 ? "OPEN" : "READY",
+    status: closurePlanStatusFromCounts(counts),
     canMarkGoalComplete: Boolean(completion?.data?.canMarkGoalComplete),
     controlBoardSafetyStatus:
       fieldReadiness?.data?.env?.controlBoardSafetyStatus ||
       completion?.data?.controlBoardSafetyStatus ||
       handover?.data?.controlBoardSafetyStatus ||
       "UNKNOWN",
-    counts: {
-      openActionCount: actions.length,
-      completionBlockerCount: completionBlockers.length,
-      requiredFieldValueCount: requiredFieldValues.length,
-      fieldReadinessOpenCheckCount: fieldReadinessOpenChecks.length,
-      fieldRehearsalFollowUpCount: fieldRehearsalFollowUpActions.length,
-      manualEvidenceMissingCount: manualEvidenceActions.filter((item) => item.status !== "PRESENT").length,
-    },
+    counts,
     completionBlockers,
     requiredFieldValues,
     fieldReadinessOpenChecks,
@@ -178,6 +203,7 @@ function buildMarkdown(manifest) {
     `- Open actions: ${manifest.counts.openActionCount}`,
     `- Completion blockers: ${manifest.counts.completionBlockerCount}`,
     `- Required field values: ${manifest.counts.requiredFieldValueCount}`,
+    `- Open required field values: ${manifest.counts.openRequiredFieldValueCount}`,
     `- Field readiness open checks: ${manifest.counts.fieldReadinessOpenCheckCount}`,
     `- Field rehearsal follow-ups: ${manifest.counts.fieldRehearsalFollowUpCount}`,
     `- Manual evidence missing: ${manifest.counts.manualEvidenceMissingCount}`,
@@ -271,4 +297,6 @@ if (require.main === module) {
 
 module.exports = {
   buildClosurePlan,
+  closurePlanStatusFromCounts,
+  hasOpenRequiredFieldValue,
 };

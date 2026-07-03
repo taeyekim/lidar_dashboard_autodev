@@ -1,5 +1,9 @@
 const fs = require("fs");
 const path = require("path");
+const {
+  closurePlanStatusFromCounts,
+  hasOpenRequiredFieldValue,
+} = require("./generate-field-closure-plan");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -29,6 +33,10 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "requiredFieldValues",
   "Required Field Values",
   "requiredFieldValueCount",
+  "openRequiredFieldValueCount",
+  "Open required field values",
+  "closurePlanStatusFromCounts",
+  "hasOpenRequiredFieldValue",
   "fieldReadinessOpenChecks",
   "fieldReadinessOpenCheckCount",
   "buildFieldReadinessOpenChecks",
@@ -98,5 +106,30 @@ assertIncludes(runbook, "npm.cmd run field:closure-plan", "delivery runbook");
 assertIncludes(runbook, "artifacts/field-closure-plan/<timestamp>/manifest.json", "delivery runbook");
 assertIncludes(checklist, "npm run field:closure-plan", "acceptance checklist");
 assertIncludes(matrix, "npm run field:closure-plan", "delivery evidence matrix");
+
+assert(
+  closurePlanStatusFromCounts({
+    openActionCount: 0,
+    completionBlockerCount: 1,
+    openRequiredFieldValueCount: 0,
+    fieldReadinessOpenCheckCount: 0,
+    fieldRehearsalFollowUpCount: 0,
+    manualEvidenceMissingCount: 0,
+  }) === "OPEN",
+  "field closure plan must stay OPEN while completion blockers remain",
+);
+assert(
+  closurePlanStatusFromCounts({
+    openActionCount: 0,
+    completionBlockerCount: 0,
+    openRequiredFieldValueCount: 0,
+    fieldReadinessOpenCheckCount: 0,
+    fieldRehearsalFollowUpCount: 0,
+    manualEvidenceMissingCount: 1,
+  }) === "OPEN",
+  "field closure plan must stay OPEN while manual evidence is missing",
+);
+assert(hasOpenRequiredFieldValue({ state: "not-approved" }), "not-approved field values must remain open");
+assert(!hasOpenRequiredFieldValue({ state: "configured" }), "configured field values must not remain open");
 
 console.log("field closure plan contracts ok");
