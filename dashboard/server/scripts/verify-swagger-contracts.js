@@ -58,6 +58,8 @@ function assertOptionalDeviceKey(operation, label) {
 }
 
 [
+  ["/api/health", "get", "HealthResponse"],
+  ["/api/database/health", "get", "DatabaseHealthResponse"],
   ["/api/auth/me", "get", "AuthMeResponse"],
   ["/api/auth/logout", "post", "OkResponse"],
   ["/api/status", "get", "SystemStatusResponse"],
@@ -79,6 +81,18 @@ function assertOptionalDeviceKey(operation, label) {
   const operation = assertPath(method, path);
   assertSchema(schema);
   assertResponseSchema(operation, schema, `${method.toUpperCase()} ${path}`);
+});
+
+const databaseHealth = assertPath("get", "/api/database/health");
+assert(
+  responseJsonSchema(databaseHealth, "GET /api/database/health", 503),
+  "GET /api/database/health must document the 503 database failure response",
+);
+["users", "sites", "zones", "devices", "trafficEvents", "vehicleTracks", "controlCommands"].forEach((field) => {
+  assert(
+    swaggerSpec.components?.schemas?.DatabaseHealthResponse?.properties?.tables?.properties?.[field]?.type === "integer",
+    `DatabaseHealthResponse tables must expose ${field}`,
+  );
 });
 
 [
