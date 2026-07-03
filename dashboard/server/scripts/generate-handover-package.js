@@ -122,7 +122,7 @@ function buildMarkdown(manifest) {
     "",
     "## Package Notes",
     "",
-    "- This command refreshes the final evidence chain in order: delivery evidence, field readiness, completion audit, handover index, then field closure plan.",
+    "- This command refreshes the final evidence chain in order: delivery evidence, field readiness, completion audit, field closure plan, then handover index.",
     "- Attach this manifest together with the referenced evidence folders.",
     "- `canMarkGoalComplete=false` means field/runtime/hardware evidence is still open.",
     "- Use `--strict` when the command should fail unless the refreshed package is READY and `canMarkGoalComplete=true`.",
@@ -143,8 +143,8 @@ function main() {
     ["delivery evidence", ["run", "delivery:evidence"]],
     ["field readiness", ["run", "field:readiness", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["completion audit", ["run", "completion:audit"]],
-    ["handover index", ["run", "handover:index", "--", `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["field closure plan", ["run", "field:closure-plan", "--", `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
+    ["handover index", ["run", "handover:index", "--", `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
   ].map(([label, args]) => runCommand(label, args));
 
   const evidenceRefs = latestEvidenceRefs();

@@ -41,6 +41,12 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "handover package strict gate failed",
 ].forEach((token) => assertIncludes(generator, token, "handover package generator"));
 
+assert(
+  generator.indexOf('["field closure plan", ["run", "field:closure-plan"') <
+    generator.indexOf('["handover index", ["run", "handover:index"'),
+  "handover package must refresh field closure plan before handover index",
+);
+
 [
   "handover:package",
   "verify:handover-package",

@@ -138,8 +138,8 @@ For the final attachment refresh, run
 `npm.cmd run handover:package -- --base-url=http://localhost:8080`. Replace
 the base URL with the delivery Nginx entrypoint when it is not localhost. It
 runs `delivery:evidence`, `field:readiness`, `completion:audit`,
-`handover:index`, and `field:closure-plan` in order, passing the same base URL
-into the refreshed readiness report, then writes
+`field:closure-plan`, and `handover:index` in order, passing the same base URL
+into the refreshed readiness report and indexing the refreshed closure plan, then writes
 `artifacts/handover-package/<timestamp>/manifest.json` plus `manifest.md` with
 the refreshed evidence references, command logs, base URL, strict gate reasons,
 and latest control-board safety status. The completion audit, handover index,
