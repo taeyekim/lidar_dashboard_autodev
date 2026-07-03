@@ -450,6 +450,15 @@ try {
   if ($null -eq $summary.vehiclesPassed) {
     throw "Event summary did not include vehiclesPassed unique track count."
   }
+  if ($null -eq $summary.wrongwayVehicles) {
+    throw "Event summary did not include wrongwayVehicles unique wrong-way vehicle count."
+  }
+  if ($null -eq $summary.wrongWayEvents) {
+    throw "Event summary did not include wrongWayEvents raw event count."
+  }
+  if ($null -eq $summary.wrongwayRate) {
+    throw "Event summary did not include wrongwayRate."
+  }
   $statistics = Invoke-CurlJson -Url "$BaseUrl/api/statistics/traffic?range=daily"
   if (!$statistics.ok -or !$statistics.totals -or !$statistics.buckets -or !$statistics.zones) {
     throw "Traffic statistics smoke did not include ok, totals, buckets, and zones."

@@ -52,7 +52,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `wrong-way-level-2` creates or updates a traffic event and stage 2 control command.
 - [ ] `situation-ended` creates an end event and barrier return command.
 - [ ] Raw payload is retained for diagnostics.
-- [ ] `/api/events/summary` reports `vehiclesPassed` from DB unique `vehicle_tracks`, not from the lidar raw counter.
+- [ ] `/api/events/summary` reports `vehiclesPassed` from DB unique `vehicle_tracks`, plus `wrongwayVehicles`, `wrongWayEvents`, and `wrongwayRate` for operator KPI review.
 - [ ] `scripts/runtime-smoke.ps1` passes with `DEVICE_INGEST_API_KEY` enabled when field ingest keys are configured.
 
 ## Control Board

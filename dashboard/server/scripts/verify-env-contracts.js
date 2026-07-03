@@ -192,6 +192,8 @@ assert(
   [runtimeSmoke, "packetHex", "runtime smoke script"],
   [runtimeSmoke, "rawPayload", "runtime smoke script"],
   [runtimeSmoke, "vehiclesPassed", "runtime smoke script"],
+  [runtimeSmoke, "wrongWayEvents", "runtime smoke script"],
+  [runtimeSmoke, "wrongwayRate", "runtime smoke script"],
   [runtimeSmoke, "/api/statistics/traffic?range=daily", "runtime smoke script"],
   [runtimeSmoke, "normalVehicles", "runtime smoke script"],
   [runtimeSmoke, "wrongwayVehicles", "runtime smoke script"],
