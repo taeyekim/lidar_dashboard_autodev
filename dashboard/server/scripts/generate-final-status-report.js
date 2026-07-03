@@ -275,9 +275,17 @@ function buildFinalStatusReport(input = {}) {
   const fieldAcceptance = evidenceRefs.fieldAcceptance;
   const security = evidenceRefs.securityEvidence;
   const handoverPackage = evidenceRefs.handoverPackage;
+  const fieldRiskRegister = evidenceRefs.fieldRiskRegister;
+  const fieldActionBoard = evidenceRefs.fieldActionBoard;
+  const fieldGateClosureMap = evidenceRefs.fieldGateClosureMap;
+  const fieldOwnerBriefs = evidenceRefs.fieldOwnerBriefs;
   const completionData = completion?.data || {};
   const readinessData = readiness?.data || {};
   const packageData = handoverPackage?.data || {};
+  const fieldRiskRegisterData = fieldRiskRegister?.data || {};
+  const fieldActionBoardData = fieldActionBoard?.data || {};
+  const fieldGateClosureMapData = fieldGateClosureMap?.data || {};
+  const fieldOwnerBriefsData = fieldOwnerBriefs?.data || {};
   const manualReadiness = evidenceRefs.manualEvidenceReadiness;
   const manualReadinessData = manualReadiness?.data || {};
   const securitySummary = buildSecuritySummary(security);
@@ -468,7 +476,59 @@ function buildFinalStatusReport(input = {}) {
       .filter((item) => !item.fresh)
       .forEach((item) => {
         addGate(gates, "Evidence Freshness", "STALE", `${item.key} reference is not latest.`, "Refresh handover:package after regenerating all final evidence.", evidencePath(handoverPackage));
-      });
+    });
+  }
+
+  if (!fieldRiskRegister) {
+    addGate(gates, "Field Risk Register", "MISSING", "Latest field risk register manifest is missing.", "Run npm.cmd run field:risk-register.", null);
+  } else if (fieldRiskRegisterData.status !== "NO_OPEN_RISKS" || Number(fieldRiskRegisterData.openRiskCount || 0) > 0) {
+    addGate(
+      gates,
+      "Field Risk Register",
+      fieldRiskRegisterData.status || "OPEN",
+      `Field risk register has ${fieldRiskRegisterData.openRiskCount ?? "unknown"} open risk item(s).`,
+      "Resolve the risks or attach accepted field-risk evidence, then rerun field:risk-register and final:status.",
+      evidencePath(fieldRiskRegister),
+    );
+  }
+
+  if (!fieldActionBoard) {
+    addGate(gates, "Field Action Board", "MISSING", "Latest field action board manifest is missing.", "Run npm.cmd run field:action-board.", null);
+  } else if (fieldActionBoardData.status !== "READY_TO_CLOSE" || Number(fieldActionBoardData.openActionCount || 0) > 0) {
+    addGate(
+      gates,
+      "Field Action Board",
+      fieldActionBoardData.status || "OPEN",
+      `Field action board has ${fieldActionBoardData.openActionCount ?? "unknown"} open action item(s).`,
+      "Close the listed field actions, refresh final:status, then rerun field:action-board.",
+      evidencePath(fieldActionBoard),
+    );
+  }
+
+  if (!fieldGateClosureMap) {
+    addGate(gates, "Field Gate Closure Map", "MISSING", "Latest field gate closure map manifest is missing.", "Run npm.cmd run field:gate-closure-map.", null);
+  } else if (fieldGateClosureMapData.status !== "READY_TO_CLOSE" || Number(fieldGateClosureMapData.openGateCount || 0) > 0) {
+    addGate(
+      gates,
+      "Field Gate Closure Map",
+      fieldGateClosureMapData.status || "OPEN",
+      `Field gate closure map has ${fieldGateClosureMapData.openGateCount ?? "unknown"} open gate(s).`,
+      "Run the mapped commands until all gates are closed, then refresh field:action-board, field:gate-closure-map, and final:status.",
+      evidencePath(fieldGateClosureMap),
+    );
+  }
+
+  if (!fieldOwnerBriefs) {
+    addGate(gates, "Field Owner Briefs", "MISSING", "Latest field owner briefs manifest is missing.", "Run npm.cmd run field:owner-briefs.", null);
+  } else if (fieldOwnerBriefsData.status !== "READY_TO_CLOSE" || Number(fieldOwnerBriefsData.openItemCount || 0) > 0) {
+    addGate(
+      gates,
+      "Field Owner Briefs",
+      fieldOwnerBriefsData.status || "OPEN",
+      `Field owner briefs have ${fieldOwnerBriefsData.openItemCount ?? "unknown"} open owner item(s).`,
+      "Close the owner brief items, refresh field:action-board and field:owner-briefs, then rerun final:status.",
+      evidencePath(fieldOwnerBriefs),
+    );
   }
 
   sourceRevisionFreshness

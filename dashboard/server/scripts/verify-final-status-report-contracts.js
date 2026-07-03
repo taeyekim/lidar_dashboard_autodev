@@ -68,6 +68,14 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "fieldActionBoard", "final status report generator"],
   [generator, "fieldGateClosureMap", "final status report generator"],
   [generator, "fieldOwnerBriefs", "final status report generator"],
+  [generator, "Field Risk Register", "final status report generator"],
+  [generator, "Field Action Board", "final status report generator"],
+  [generator, "Field Gate Closure Map", "final status report generator"],
+  [generator, "Field Owner Briefs", "final status report generator"],
+  [generator, "openRiskCount", "final status report generator"],
+  [generator, "openActionCount", "final status report generator"],
+  [generator, "openGateCount", "final status report generator"],
+  [generator, "openItemCount", "final status report generator"],
   [generator, "artifacts/field-risk-register", "final status report generator"],
   [generator, "artifacts/field-action-board", "final status report generator"],
   [generator, "artifacts/field-gate-closure-map", "final status report generator"],
@@ -556,6 +564,62 @@ assert(staleOwnerBriefs.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "stale o
 assert(
   staleOwnerBriefs.remainingGates.some((item) => item.category === "Evidence Freshness" && item.message.includes("fieldOwnerBriefs")),
   "stale owner briefs fixture should expose stale field owner briefs reference",
+);
+
+const openFieldRiskRegister = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    fieldRiskRegister: {
+      ...readyEvidence.fieldRiskRegister,
+      data: { status: "OPEN", openRiskCount: 1, copyToRiskAcceptanceCount: 1 },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
+  git: readyGit,
+});
+
+assert(openFieldRiskRegister.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "open risk register fixture should require review");
+assert(
+  openFieldRiskRegister.remainingGates.some((item) => item.category === "Field Risk Register" && item.status === "OPEN"),
+  "open risk register fixture should expose Field Risk Register OPEN",
+);
+
+const openFieldActionArtifacts = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    fieldActionBoard: {
+      ...readyEvidence.fieldActionBoard,
+      data: { status: "OPEN", openActionCount: 2, git: { branch: "dev", commit: "fixture", clean: true } },
+    },
+    fieldGateClosureMap: {
+      ...readyEvidence.fieldGateClosureMap,
+      data: { status: "OPEN", commandCount: 1, openGateCount: 2, git: { branch: "dev", commit: "fixture", clean: true } },
+    },
+    fieldOwnerBriefs: {
+      ...readyEvidence.fieldOwnerBriefs,
+      data: { status: "OPEN", ownerCount: 1, openItemCount: 2, git: { branch: "dev", commit: "fixture", clean: true } },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
+  git: readyGit,
+});
+
+assert(openFieldActionArtifacts.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "open field action artifacts fixture should require review");
+assert(
+  openFieldActionArtifacts.remainingGates.some((item) => item.category === "Field Action Board" && item.status === "OPEN"),
+  "open field action artifacts fixture should expose Field Action Board OPEN",
+);
+assert(
+  openFieldActionArtifacts.remainingGates.some((item) => item.category === "Field Gate Closure Map" && item.status === "OPEN"),
+  "open field action artifacts fixture should expose Field Gate Closure Map OPEN",
+);
+assert(
+  openFieldActionArtifacts.remainingGates.some((item) => item.category === "Field Owner Briefs" && item.status === "OPEN"),
+  "open field action artifacts fixture should expose Field Owner Briefs OPEN",
 );
 
 const objectBlocker = buildFinalStatusReport({
