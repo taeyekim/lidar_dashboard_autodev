@@ -28,6 +28,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "field:closure-plan",
   "field:readiness",
   "evidenceRefs",
+  "runtimeEvidence",
+  "securityEvidence",
   "canMarkGoalComplete",
   "controlBoardSafetyStatus",
   "Control-board safety status",
@@ -37,6 +39,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "Strict Gate",
   "failedCommandCount",
   "strictFailureReasons",
+  "--require-scanners",
+  "Strict security acceptance",
   "--strict",
   "handover package strict gate failed",
 ].forEach((token) => assertIncludes(generator, token, "handover package generator"));

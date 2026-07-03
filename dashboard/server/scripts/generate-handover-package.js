@@ -73,6 +73,8 @@ function latestEvidenceRefs() {
     handoverIndex: readLatestJsonManifest("artifacts/handover-index")?.path || null,
     fieldClosurePlan: readLatestJsonManifest("artifacts/field-closure-plan")?.path || null,
     fieldReadiness: readLatestJsonManifest("artifacts/field-readiness")?.path || null,
+    runtimeEvidence: readLatestJsonManifest("artifacts/runtime")?.path || null,
+    securityEvidence: readLatestJsonManifest("artifacts/security")?.path || null,
   };
 }
 
@@ -105,6 +107,8 @@ function buildMarkdown(manifest) {
     `- Handover index: ${manifest.evidenceRefs.handoverIndex || "missing"}`,
     `- Field closure plan: ${manifest.evidenceRefs.fieldClosurePlan || "missing"}`,
     `- Field readiness: ${manifest.evidenceRefs.fieldReadiness || "missing"}`,
+    `- Runtime evidence: ${manifest.evidenceRefs.runtimeEvidence || "missing"}`,
+    `- Security evidence: ${manifest.evidenceRefs.securityEvidence || "missing"}`,
     "",
     "## Commands",
     "",
@@ -125,6 +129,7 @@ function buildMarkdown(manifest) {
     "- This command refreshes the final evidence chain in order: delivery evidence, field readiness, completion audit, field closure plan, then handover index.",
     "- Attach this manifest together with the referenced evidence folders.",
     "- `canMarkGoalComplete=false` means field/runtime/hardware evidence is still open.",
+    "- Strict security acceptance should attach `npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners --target-url=<delivery-url>` output so skipped scanners become blocking evidence.",
     "- Use `--strict` when the command should fail unless the refreshed package is READY and `canMarkGoalComplete=true`.",
     "",
   ].join("\n");
