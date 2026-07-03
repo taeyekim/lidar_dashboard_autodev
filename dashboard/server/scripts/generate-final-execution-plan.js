@@ -62,6 +62,14 @@ function commandCatalog(baseUrl) {
       doneWhen: "The board shows owner-ready commands for every remaining final-status gate.",
     },
     {
+      id: "field-owner-briefs",
+      phase: "Field Runtime",
+      actionTypes: ["FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED", "REVIEW_REQUIRED"],
+      command: `npm.cmd run field:owner-briefs -- --base-url=${baseUrl} --site-name="delivery-site-name" --generated-by="field-reviewer-name"`,
+      purpose: "Split the latest action board into per-owner field execution briefs.",
+      doneWhen: "Each owner has a brief file with commands, evidence paths, and close criteria for their gates.",
+    },
+    {
       id: "field-preflight",
       phase: "Field Runtime",
       actionTypes: ["FIELD_ACTION_REQUIRED"],

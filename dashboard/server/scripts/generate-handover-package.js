@@ -97,6 +97,7 @@ function latestEvidenceRefs() {
     manualEvidenceReadiness: readLatestJsonManifest("artifacts/manual-evidence-readiness")?.path || null,
     fieldRiskRegister: readLatestJsonManifest("artifacts/field-risk-register")?.path || null,
     fieldActionBoard: readLatestJsonManifest("artifacts/field-action-board")?.path || null,
+    fieldOwnerBriefs: readLatestJsonManifest("artifacts/field-owner-briefs")?.path || null,
   };
 }
 
@@ -339,6 +340,7 @@ function buildMarkdown(manifest) {
     `- Manual evidence readiness: ${manifest.evidenceRefs.manualEvidenceReadiness || "missing"}`,
     `- Field risk register: ${manifest.evidenceRefs.fieldRiskRegister || "missing"}`,
     `- Field action board: ${manifest.evidenceRefs.fieldActionBoard || "missing"}`,
+    `- Field owner briefs: ${manifest.evidenceRefs.fieldOwnerBriefs || "missing"}`,
     "",
     "## Manual Evidence References",
     "",
@@ -415,7 +417,7 @@ function buildMarkdown(manifest) {
     "",
     "## Package Notes",
     "",
-    "- This command refreshes the final evidence chain in order: delivery evidence, manual evidence drafts, manual evidence readiness, field readiness, field risk register, field action board, completion audit, field closure plan, then handover index.",
+    "- This command refreshes the final evidence chain in order: delivery evidence, manual evidence drafts, manual evidence readiness, field readiness, field risk register, field action board, field owner briefs, completion audit, field closure plan, then handover index.",
     "- Attach this manifest together with the referenced evidence folders.",
     "- `canMarkGoalComplete=false` means field/runtime/hardware evidence is still open.",
     "- Strict security acceptance should attach `npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners --target-url=<delivery-url>` output so skipped scanners become blocking evidence.",
@@ -440,6 +442,7 @@ function main() {
     ["field readiness", ["run", "field:readiness", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["field risk register", ["run", "field:risk-register", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["field action board", ["run", "field:action-board", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
+    ["field owner briefs", ["run", "field:owner-briefs", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["completion audit", ["run", "completion:audit"]],
     ["field closure plan", ["run", "field:closure-plan", "--", `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["handover index", ["run", "handover:index", "--", `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],

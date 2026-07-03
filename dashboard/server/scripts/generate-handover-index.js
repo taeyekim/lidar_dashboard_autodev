@@ -152,6 +152,13 @@ function buildIndexManifest(options = {}) {
       notes: "Owner-prioritized execution board that maps final-status gates to field commands, evidence paths, and close criteria.",
     },
     {
+      area: "Field Owner Briefs",
+      required: true,
+      outputRoot: "artifacts/field-owner-briefs",
+      command: "npm run field:owner-briefs",
+      notes: "Per-owner field execution briefs generated from the latest action board for handoff to field owners.",
+    },
+    {
       area: "Field Closure Plan",
       required: true,
       outputRoot: "artifacts/field-closure-plan",
