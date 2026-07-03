@@ -230,7 +230,14 @@ zap-baseline.py -t http://localhost:8080 -r zap-baseline.html
 Windows evidence collection:
 
 ```powershell
+npm.cmd run security:evidence
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/security-scan.ps1
+```
+
+For container image and ZAP evidence after the delivery stack is running:
+
+```powershell
+npm.cmd run security:evidence -- --include-container-images --include-zap --target-url=http://localhost:8080
 ```
 
 Do not run active DAST/fuzzing against the real control board.
@@ -252,6 +259,7 @@ Evidence package:
 - `npm.cmd run ci` or `npm run ci` result
 - frontend lint result
 - `npm.cmd run verify:audit-policy` or `npm run verify:audit-policy` result
+- `npm.cmd run security:evidence` manifest under `artifacts/security/<timestamp>/`
 - `scripts/runtime-smoke.ps1` result when Docker runtime smoke is available
 - raw `npm audit --workspaces` result
 - `artifacts/security/**` security scan evidence, with skipped checks explained

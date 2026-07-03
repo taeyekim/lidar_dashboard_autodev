@@ -95,6 +95,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `npm run ci` passes.
 - [ ] `npm --prefix dashboard/dashboard-web run lint` passes.
 - [ ] `npm run verify:audit-policy` passes.
+- [ ] `npm run security:evidence` creates `artifacts/security/<timestamp>/manifest.md` and `manifest.json`.
 - [ ] Raw `npm audit --workspaces` result is documented.
 - [ ] Runtime smoke confirms security headers through the Nginx entrypoint.
 - [ ] Runtime smoke confirms `Content-Security-Policy` through the Nginx entrypoint.

@@ -52,11 +52,15 @@ zap-baseline.py -t http://localhost:8080 -r zap-baseline.html
 Windows evidence script:
 
 ```powershell
+npm.cmd run security:evidence
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/security-scan.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/security-scan.ps1 -IncludeContainerImages -IncludeZap
 ```
 
-The script writes raw results and skipped-check reasons under `artifacts/security/`.
+The Node evidence script is the preferred cross-platform path. It writes
+`manifest.md`, `manifest.json`, raw command logs, and skipped-check reasons
+under `artifacts/security/`. The PowerShell script remains available for
+Windows field rehearsals.
 The `artifacts/` directory is intentionally ignored by Git.
 
 ## Notes

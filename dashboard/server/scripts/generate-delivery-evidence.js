@@ -89,7 +89,8 @@ function buildMarkdown(manifest) {
     "",
     "- Real integrated control board TCP test requires field IP/port and hardware approval.",
     "- Dashboard-side wrong-way level-2 escalation criteria remain field-measurement dependent.",
-    "- Optional external tools such as gitleaks, Trivy, and OWASP ZAP are captured by `scripts/security-scan.ps1` when installed.",
+    "- Optional external tools such as gitleaks, Trivy, and OWASP ZAP are captured by `npm run security:evidence` or `scripts/security-scan.ps1` when installed.",
+    "- Cross-platform security evidence can be generated with `npm run security:evidence`.",
     "- Runtime smoke with real Docker services and device ingest key should be attached here when performed on the delivery machine.",
     "",
     "## Evidence Notes",
@@ -136,7 +137,8 @@ function main() {
     fieldVerificationStillRequired: [
       "Real integrated control board TCP test requires field IP/port and hardware approval.",
       "Dashboard-side wrong-way level-2 escalation criteria remain field-measurement dependent.",
-      "Optional gitleaks, Trivy, and OWASP ZAP evidence depends on installed tools and explicit security-scan run.",
+      "Optional gitleaks, Trivy, and OWASP ZAP evidence depends on installed tools and explicit security evidence run.",
+      "Run npm run security:evidence to capture npm audit, policy gate, optional scan results, and skipped-check reasons.",
       "Runtime smoke against live Docker services should be attached when performed on the delivery machine.",
     ],
   };
