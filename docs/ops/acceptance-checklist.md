@@ -27,7 +27,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `npm run handover:index` creates `artifacts/handover-index/<timestamp>/manifest.json` plus `manifest.md` listing the latest required handover manifests and missing/review/stale areas.
 - [ ] `npm run field:closure-plan` creates `artifacts/field-closure-plan/<timestamp>/manifest.json` plus `manifest.md` listing the field commands and done-when criteria needed to close open REVIEW/STALE/MISSING areas.
 - [ ] `npm run field:readiness` creates `artifacts/field-readiness/<timestamp>/manifest.json` plus `manifest.md` checking Docker, Nginx/API health, env readiness, control-board TCP mode, Swagger exposure, and optional scanner availability.
-- [ ] `npm run handover:package` refreshes delivery evidence, completion audit, handover index, and field closure plan in order, then writes `artifacts/handover-package/<timestamp>/manifest.json` plus `manifest.md`; strict completion uses `npm run handover:package -- --strict`.
+- [ ] `npm run handover:package` refreshes delivery evidence, field readiness, completion audit, handover index, and field closure plan in order, then writes `artifacts/handover-package/<timestamp>/manifest.json` plus `manifest.md`; strict completion uses `npm run handover:package -- --strict`.
 - [ ] `npm run field:acceptance` or `scripts/field-acceptance.ps1` runs the field acceptance orchestrator and creates `artifacts/field-acceptance/<timestamp>/manifest.json` plus `manifest.md`.
 - [ ] Field acceptance manifest records the field reviewer, site name, handover readiness, skipped/review step counts, and next actions.
 - [ ] `docker compose up --build` starts DB, backend, frontend, and reverse proxy.

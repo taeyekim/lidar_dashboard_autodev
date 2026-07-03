@@ -72,6 +72,7 @@ function latestEvidenceRefs() {
     completionAudit: readLatestJsonManifest("artifacts/completion-audit")?.path || null,
     handoverIndex: readLatestJsonManifest("artifacts/handover-index")?.path || null,
     fieldClosurePlan: readLatestJsonManifest("artifacts/field-closure-plan")?.path || null,
+    fieldReadiness: readLatestJsonManifest("artifacts/field-readiness")?.path || null,
   };
 }
 
@@ -92,6 +93,7 @@ function buildMarkdown(manifest) {
     `- Completion audit: ${manifest.evidenceRefs.completionAudit || "missing"}`,
     `- Handover index: ${manifest.evidenceRefs.handoverIndex || "missing"}`,
     `- Field closure plan: ${manifest.evidenceRefs.fieldClosurePlan || "missing"}`,
+    `- Field readiness: ${manifest.evidenceRefs.fieldReadiness || "missing"}`,
     "",
     "## Commands",
     "",
@@ -101,7 +103,7 @@ function buildMarkdown(manifest) {
     "",
     "## Package Notes",
     "",
-    "- This command refreshes the final evidence chain in order: delivery evidence, completion audit, handover index, then field closure plan.",
+    "- This command refreshes the final evidence chain in order: delivery evidence, field readiness, completion audit, handover index, then field closure plan.",
     "- Attach this manifest together with the referenced evidence folders.",
     "- `canMarkGoalComplete=false` means field/runtime/hardware evidence is still open.",
     "- Use `--strict` when the command should fail unless the refreshed package is READY and `canMarkGoalComplete=true`.",
@@ -119,6 +121,7 @@ function main() {
 
   const commands = [
     ["delivery evidence", ["run", "delivery:evidence"]],
+    ["field readiness", ["run", "field:readiness", "--", `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["completion audit", ["run", "completion:audit"]],
     ["handover index", ["run", "handover:index", "--", `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["field closure plan", ["run", "field:closure-plan", "--", `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],

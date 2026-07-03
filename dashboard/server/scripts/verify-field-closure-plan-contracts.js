@@ -26,12 +26,14 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "sourceCompletionAudit",
   "completionBlockers",
   "finalCommands",
+  "Field Readiness",
   "DB And Prisma Field Rehearsal",
   "Lidar Ingest Field Rehearsal",
   "Control Board Field Rehearsal",
   "npm.cmd run delivery:evidence",
   "npm.cmd run completion:audit",
   "npm.cmd run handover:index",
+  "npm.cmd run field:readiness",
 ].forEach((token) => assertIncludes(generator, token, "field closure plan generator"));
 
 [

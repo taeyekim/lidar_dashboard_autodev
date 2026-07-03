@@ -26,6 +26,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "completion:audit",
   "handover:index",
   "field:closure-plan",
+  "field:readiness",
   "evidenceRefs",
   "canMarkGoalComplete",
   "failedCommandCount",

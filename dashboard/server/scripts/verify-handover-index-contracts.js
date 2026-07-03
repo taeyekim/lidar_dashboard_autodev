@@ -26,6 +26,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "Completion Audit",
   "Field Preflight",
   "Field Acceptance",
+  "Field Readiness",
   "DB And Prisma Field Rehearsal",
   "Lidar Ingest Field Rehearsal",
   "Control Board Field Rehearsal",

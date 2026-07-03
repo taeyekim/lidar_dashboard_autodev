@@ -124,8 +124,8 @@ required `.env` posture, control-board TCP mode, Swagger exposure, and optional
 security scanner availability without printing secret values.
 
 For the final attachment refresh, run `npm.cmd run handover:package`. It runs
-`delivery:evidence`, `completion:audit`, `handover:index`, and
-`field:closure-plan` in order, then writes
+`delivery:evidence`, `field:readiness`, `completion:audit`,
+`handover:index`, and `field:closure-plan` in order, then writes
 `artifacts/handover-package/<timestamp>/manifest.json` plus `manifest.md` with
 the refreshed evidence references and command logs. Use
 `npm.cmd run handover:package -- --strict` when the command should fail unless

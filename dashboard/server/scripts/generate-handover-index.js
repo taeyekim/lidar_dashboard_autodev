@@ -79,6 +79,13 @@ function buildIndexManifest(options = {}) {
       notes: "Ordered acceptance orchestrator manifest with reviewer, site, PASS/REVIEW/SKIPPED counts, and next actions.",
     },
     {
+      area: "Field Readiness",
+      required: true,
+      outputRoot: "artifacts/field-readiness",
+      command: "npm run field:readiness",
+      notes: "Pre-delivery readiness report for .env posture, Docker daemon, Nginx/API health, control-board TCP live values, Swagger allowlist, and optional scanner availability.",
+    },
+    {
       area: "DB And Prisma Field Rehearsal",
       required: true,
       outputRoot: "artifacts/field-db-rehearsal",

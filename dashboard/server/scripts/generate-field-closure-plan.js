@@ -25,6 +25,7 @@ function actionForEntry(entry) {
     "Completion Audit": ["npm.cmd run completion:audit", "npm.cmd run handover:index"],
     "Field Preflight": ["npm.cmd run field:preflight -- -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\""],
     "Field Acceptance": ["npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\""],
+    "Field Readiness": ["npm.cmd run field:readiness -- --base-url=http://localhost:8080 --generated-by=\"field-reviewer-name\" --site-name=\"delivery-site-name\""],
     "DB And Prisma Field Rehearsal": ["powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-field-rehearsal.ps1 -BaseUrl http://localhost:8080"],
     "Lidar Ingest Field Rehearsal": ["powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl http://localhost:8080"],
     "Control Board Field Rehearsal": ["powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080"],
@@ -37,6 +38,7 @@ function actionForEntry(entry) {
     "Completion Audit": "Latest completion audit references the latest delivery manifest and canMarkGoalComplete reflects current evidence.",
     "Field Preflight": "Preflight manifest has no REVIEW or SKIPPED checks required by the field acceptance policy.",
     "Field Acceptance": "Field acceptance manifest is PASS and has no skipped/review steps.",
+    "Field Readiness": "Readiness report is PASS or explicitly accepted PASS_WITH_SKIPS, with Docker daemon, Nginx/API health, .env posture, control-board TCP values, cookie security, and Swagger allowlist reviewed.",
     "DB And Prisma Field Rehearsal": "DB field rehearsal manifest results are all PASS against the delivery runtime.",
     "Lidar Ingest Field Rehearsal": "LiDAR rehearsal manifest proves normal-driving de-duplication and wrong-way command creation using representative payloads.",
     "Control Board Field Rehearsal": "Control-board rehearsal manifest proves DRY_RUN command lifecycle or approved LIVE_TCP command/ACK evidence.",
@@ -82,6 +84,7 @@ function buildClosurePlan(options = {}) {
     actions,
     finalCommands: [
       "npm.cmd run delivery:evidence",
+      "npm.cmd run field:readiness -- --base-url=http://localhost:8080",
       "npm.cmd run completion:audit",
       "npm.cmd run handover:index",
       "npm.cmd run field:closure-plan",
