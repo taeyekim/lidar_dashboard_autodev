@@ -31,6 +31,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [completionAudit, "canMarkGoalComplete", "completion audit generator"],
   [completionAudit, "FIELD_VERIFICATION_REQUIRED", "completion audit generator"],
   [completionAudit, "goal remains active", "completion audit generator"],
+  [completionAudit, "fieldReadinessStatus", "completion audit generator"],
+  [completionAudit, "controlBoardSafetyStatus", "completion audit generator"],
+  [completionAudit, "requiredFieldValues", "completion audit generator"],
   [handoverPackage, "Residual Field Gates", "handover package generator"],
   [handoverPackage, "residualFieldGates", "handover package generator"],
   [handoverPackage, "canMarkGoalComplete=false", "handover package generator"],
@@ -40,11 +43,25 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [deliveryRunbook, "Residual Field Gates", "delivery runbook"],
   [acceptanceChecklist, "canMarkGoalComplete=false", "acceptance checklist"],
   [matrix, "canMarkGoalComplete", "delivery evidence matrix"],
+  [matrix, "field readiness", "delivery evidence matrix"],
+  [matrix, "LIVE_TCP_READY", "delivery evidence matrix"],
   [matrix, "Final Status", "delivery evidence matrix"],
 ].forEach(([content, token, label]) => assertIncludes(content, token, label));
 
 const latestCompletion = readLatestJsonManifest("artifacts/completion-audit");
 const latestPackage = readLatestJsonManifest("artifacts/handover-package");
+const latestReadiness = readLatestJsonManifest("artifacts/field-readiness");
+
+function hasOpenRequiredFieldValue(item) {
+  const state = String(item.state || "").toLowerCase();
+  return [
+    "missing",
+    "open-or-missing",
+    "missing-or-trusted-lan-exception-required",
+    "change-this-to-a-long-random-secret",
+    "admin1234!",
+  ].includes(state);
+}
 
 if (latestCompletion) {
   const data = latestCompletion.data || {};
@@ -56,6 +73,34 @@ if (latestCompletion) {
     assert(
       Array.isArray(data.completionBlockers) && data.completionBlockers.length > 0,
       "incomplete completion audit must expose completionBlockers",
+    );
+  }
+  if (data.canMarkGoalComplete) {
+    assert(data.fieldReadinessStatus === "PASS", "complete audit requires PASS field readiness");
+    assert(
+      data.controlBoardSafetyStatus === "LIVE_TCP_READY",
+      "complete audit requires LIVE_TCP_READY control-board safety status",
+    );
+    assert(
+      Array.isArray(data.requiredFieldValues) && data.requiredFieldValues.every((item) => !hasOpenRequiredFieldValue(item)),
+      "complete audit requires no open required field values",
+    );
+  }
+}
+
+if (latestReadiness) {
+  const data = latestReadiness.data || {};
+  const requiredFieldValues = Array.isArray(data.env?.requiredFieldValues)
+    ? data.env.requiredFieldValues
+    : [];
+  if (data.status === "PASS") {
+    assert(
+      data.env?.controlBoardSafetyStatus === "LIVE_TCP_READY",
+      "PASS field readiness requires LIVE_TCP_READY control-board safety status",
+    );
+    assert(
+      requiredFieldValues.every((item) => !hasOpenRequiredFieldValue(item)),
+      "PASS field readiness requires no open required field values",
     );
   }
 }
