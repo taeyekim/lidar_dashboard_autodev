@@ -51,15 +51,25 @@ assertIncludes(api, "URLSearchParams", "statistics api query builder");
   "RANGE_OPTIONS",
   "fetchTrafficStatistics({ range })",
   "setRange(option.value)",
+  "교통 운영 통계",
+  "정주행/역주행 운영 통계",
+  "정주행 차량",
+  "역주행 차량",
+  "역주행률",
+  "구역별 위험도",
+  "상위 구역",
   "normalVehicles",
   "wrongwayVehicles",
   "wrongwayRate",
   "commandSuccessRate",
   "ResponsiveContainer",
   "ComposedChart",
-  "Top zones",
   "TCP ACK",
 ].forEach((token) => assertIncludes(panel, token, "traffic statistics panel"));
+
+["Traffic operations", "Top zones"].forEach((token) => {
+  assert(!panel.includes(token), `traffic statistics panel must not expose English placeholder copy: ${token}`);
+});
 
 const operation = swaggerSpec.paths?.["/api/statistics/traffic"]?.get;
 assert(operation, "GET /api/statistics/traffic is missing from Swagger");

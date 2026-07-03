@@ -30,6 +30,11 @@ function formatRate(value, suffix = "%") {
   return `${Number(value).toFixed(2)}${suffix}`;
 }
 
+function formatPeriod(data) {
+  if (!data?.period?.start || !data?.period?.end) return "집계 대기";
+  return `${new Date(data.period.start).toLocaleString()} - ${new Date(data.period.end).toLocaleString()}`;
+}
+
 function MetricTile({ icon, label, value, subLabel, tone = "slate" }) {
   const TileIcon = icon;
   const toneClass = {
@@ -88,7 +93,7 @@ export function TrafficStatisticsPanel() {
         setError("");
       } catch (err) {
         if (ignore) return;
-        setError(err.message || "통계를 불러오지 못했습니다.");
+        setError(err.message || "교통 통계를 불러오지 못했습니다.");
       } finally {
         if (!ignore) setLoading(false);
       }
@@ -117,13 +122,11 @@ export function TrafficStatisticsPanel() {
   const topZones = (data?.zones || []).slice(0, 4);
 
   return (
-    <Card className="border-solid bg-white" title="Traffic operations">
+    <Card className="border-solid bg-white" title="교통 운영 통계">
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <div className="text-lg font-black text-gray-900">정주행/역주행 운영 통계</div>
-          <div className="mt-1 truncate text-xs font-semibold text-gray-500">
-            {data?.period?.start ? `${new Date(data.period.start).toLocaleString()} - ${new Date(data.period.end).toLocaleString()}` : "집계 대기"}
-          </div>
+          <div className="mt-1 truncate text-xs font-semibold text-gray-500">{formatPeriod(data)}</div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -210,12 +213,12 @@ export function TrafficStatisticsPanel() {
         <div className="rounded border border-gray-200 bg-gray-50 p-3">
           <div className="mb-3 flex items-center justify-between">
             <div className="text-sm font-black text-gray-900">구역별 위험도</div>
-            <div className="text-[11px] font-black uppercase tracking-wider text-gray-400">Top zones</div>
+            <div className="text-[11px] font-black uppercase tracking-wider text-gray-400">상위 구역</div>
           </div>
           <div className="space-y-2">
             {topZones.length === 0 && (
               <div className="rounded border border-dashed border-gray-200 bg-white p-4 text-sm font-semibold text-gray-400">
-                집계된 구역 데이터가 없습니다.
+                집계할 구역 데이터가 없습니다.
               </div>
             )}
             {topZones.map((zone) => (
@@ -223,7 +226,9 @@ export function TrafficStatisticsPanel() {
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="truncate text-sm font-black text-gray-900">{zone.name}</div>
-                    <div className="mt-0.5 truncate text-xs font-semibold text-gray-400">{zone.zoneCode || "UNKNOWN"}</div>
+                    <div className="mt-0.5 truncate text-xs font-semibold text-gray-400">
+                      {zone.zoneCode || "UNKNOWN"}
+                    </div>
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-black text-red-600">{formatRate(zone.wrongwayRate)}</div>
