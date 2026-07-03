@@ -43,6 +43,20 @@ function gitValue(args) {
   return result.stdout.trim();
 }
 
+function buildGitState() {
+  const upstream = gitValue(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]);
+  const upstreamCommit = upstream ? gitValue(["rev-parse", "@{u}"]) : "";
+  const commit = gitValue(["rev-parse", "HEAD"]);
+  return {
+    branch: gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
+    commit,
+    clean: gitValue(["status", "--short"]) === "",
+    upstream: upstream || null,
+    upstreamCommit: upstreamCommit || null,
+    pushed: Boolean(commit && upstreamCommit && commit === upstreamCommit),
+  };
+}
+
 function writeCommandLog(dir, item) {
   const fileName = `${item.label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "command"}.log`;
   fs.writeFileSync(
@@ -663,6 +677,9 @@ function buildMarkdown(manifest) {
     `- Generated at: ${manifest.generatedAt}`,
     `- Git commit: ${manifest.git.commit}`,
     `- Git branch: ${manifest.git.branch}`,
+    `- Git upstream: ${manifest.git.upstream || "missing"}`,
+    `- Git upstream commit: ${manifest.git.upstreamCommit || "missing"}`,
+    `- Git pushed to origin/dev: ${manifest.git.pushed ? "yes" : "no"}`,
     `- Working tree clean: ${manifest.git.clean ? "yes" : "no"}`,
     "",
     "## Handover Summary",
@@ -936,11 +953,7 @@ function main() {
 
   const manifest = {
     generatedAt: new Date().toISOString(),
-    git: {
-      branch: gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
-      commit: gitValue(["rev-parse", "HEAD"]),
-      clean: gitValue(["status", "--short"]) === "",
-    },
+    git: buildGitState(),
     commands: commands.map((item) => ({
       label: item.label,
       command: item.command,
