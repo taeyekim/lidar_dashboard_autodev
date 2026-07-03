@@ -164,7 +164,9 @@ function buildIndexManifest(options = {}) {
 
   const missingRequired = entries.filter((entry) => entry.required && !entry.manifestPath);
   const staleEntries = entries.filter((entry) => entry.status === "STALE");
-  const reviewEntries = entries.filter((entry) => ["REVIEW", "AUTOMATED_CHECKS_REVIEW", "FIELD_VERIFICATION_REQUIRED", "PASS_WITH_SKIPS"].includes(entry.status));
+  const reviewEntries = entries.filter((entry) =>
+    ["REVIEW", "OPEN", "AUTOMATED_CHECKS_REVIEW", "FIELD_VERIFICATION_REQUIRED", "PASS_WITH_SKIPS"].includes(entry.status),
+  );
   const completion = entries.find((entry) => entry.area === "Completion Audit");
   const completionManifest = completion?.manifestPath ? readLatestJsonManifest("artifacts/completion-audit") : null;
   const controlBoardSafetyStatus =

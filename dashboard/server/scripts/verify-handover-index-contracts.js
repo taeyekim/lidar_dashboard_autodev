@@ -43,6 +43,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "Run npm run field:closure-plan again",
   "staleEntryCount",
   "STALE",
+  "OPEN",
   "canMarkGoalComplete",
   "controlBoardSafetyStatus",
   "Control-board safety status",
