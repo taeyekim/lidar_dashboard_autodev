@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const {
+  buildClosurePlan,
   buildFieldActionArtifactActions,
   closurePlanStatusFromCounts,
   hasOpenRequiredFieldValue,
@@ -62,6 +63,10 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "manualEvidenceMissingCount",
   "buildManualEvidenceActions",
   "manualEvidenceRefs",
+  "isPlaceholderFieldText",
+  "metadataReviewItems",
+  "metadataReviewCount",
+  "Field Closure Plan Metadata",
   "validationReason",
   "status !== \"PRESENT\"",
   "completionGate",
@@ -88,6 +93,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "npm.cmd run completion:audit",
   "npm.cmd run handover:index",
   "npm.cmd run field:readiness",
+  "--generated-by",
+  "--site-name",
   "FIELD_REVIEWER",
   "FIELD_SITE_NAME",
   "--require-scanners",
@@ -186,5 +193,20 @@ assert(hasOpenRequiredFieldValue({ state: "not-approved" }), "not-approved field
 assert(hasOpenRequiredFieldValue({ state: "open-or-wildcard" }), "wildcard/open field values must remain open");
 assert(hasOpenRequiredFieldValue({ state: "invalid" }), "invalid field values must remain open");
 assert(!hasOpenRequiredFieldValue({ state: "configured" }), "configured field values must not remain open");
+
+const placeholderMetadataPlan = buildClosurePlan({
+  generatedBy: "field-reviewer",
+  siteName: "field-site",
+});
+assert(placeholderMetadataPlan.status === "OPEN", "field closure plan must stay OPEN with placeholder metadata");
+assert(placeholderMetadataPlan.counts.metadataReviewCount === 2, "field closure plan should count placeholder reviewer and site metadata");
+assert(
+  placeholderMetadataPlan.actions.some((action) => action.area === "Field Closure Plan Metadata" && action.currentStatus === "PLACEHOLDER_METADATA"),
+  "field closure plan should expose placeholder metadata as an action",
+);
+assert(
+  placeholderMetadataPlan.finalCommands.some((command) => command.includes("--generated-by=") && command.includes("--site-name=")),
+  "field closure plan final commands should pass reviewer/site metadata args",
+);
 
 console.log("field closure plan contracts ok");

@@ -6,6 +6,7 @@ const {
   readLatestJsonManifest,
   timestampForPath,
 } = require("./generate-delivery-evidence");
+const { isPlaceholderFieldText } = require("./generate-final-status-report");
 const { manualEvidenceRefs } = require("./manual-evidence");
 
 const root = path.join(__dirname, "..", "..", "..");
@@ -57,6 +58,13 @@ function actionForEntry(entry) {
     doneWhen: doneWhen[entry.area] || "Replacement manifest is generated and the area is no longer REVIEW, STALE, or MISSING.",
     notes: entry.notes,
   };
+}
+
+function metadataReviewItems(generatedBy, siteName) {
+  return [
+    isPlaceholderFieldText(generatedBy) ? "Generated-by reviewer metadata is missing or placeholder." : "",
+    isPlaceholderFieldText(siteName) ? "Site name metadata is missing or placeholder." : "",
+  ].filter(Boolean);
 }
 
 function buildFieldReadinessOpenChecks(fieldReadiness) {
@@ -162,8 +170,11 @@ function buildClosurePlan(options = {}) {
   const fieldRehearsalFollowUpActions = buildFieldRehearsalFollowUpActions(completion);
   const fieldActionArtifactActions = buildFieldActionArtifactActions(completion);
   const actions = openEntries.map(actionForEntry);
+  const generatedBy = options.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
+  const siteName = options.siteName || handover?.data?.siteName || "unspecified";
+  const metadataReview = metadataReviewItems(generatedBy, siteName);
   const counts = {
-    openActionCount: actions.length,
+    openActionCount: actions.length + metadataReview.length,
     completionBlockerCount: completionBlockers.length,
     requiredFieldValueCount: requiredFieldValues.length,
     openRequiredFieldValueCount: requiredFieldValues.filter(hasOpenRequiredFieldValue).length,
@@ -171,12 +182,13 @@ function buildClosurePlan(options = {}) {
     fieldActionArtifactOpenCount: fieldActionArtifactActions.length,
     fieldRehearsalFollowUpCount: fieldRehearsalFollowUpActions.length,
     manualEvidenceMissingCount: manualEvidenceActions.filter((item) => item.status !== "PRESENT").length,
+    metadataReviewCount: metadataReview.length,
   };
 
   return {
     generatedAt: new Date().toISOString(),
-    generatedBy: options.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
-    siteName: options.siteName || handover?.data?.siteName || "unspecified",
+    generatedBy,
+    siteName,
     hostName: os.hostname(),
     sourceHandoverIndex: handover?.path || null,
     sourceCompletionAudit: completion?.path || null,
@@ -194,14 +206,25 @@ function buildClosurePlan(options = {}) {
     fieldActionArtifactActions,
     fieldRehearsalFollowUpActions,
     manualEvidenceActions,
-    actions,
+    metadataReview,
+    actions: [
+      ...metadataReview.map((message) => ({
+        area: "Field Closure Plan Metadata",
+        currentStatus: "PLACEHOLDER_METADATA",
+        currentManifest: handover?.path || null,
+        doneWhen: "Rerun npm.cmd run field:closure-plan with concrete --generated-by=<field-reviewer> and --site-name=<delivery-site> values.",
+        commands: [`npm.cmd run field:closure-plan -- --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg}`],
+        notes: message,
+      })),
+      ...actions,
+    ],
     finalCommands: [
       "npm.cmd run delivery:evidence",
-      "npm.cmd run field:readiness -- --base-url=http://localhost:8080",
+      `npm.cmd run field:readiness -- --base-url=http://localhost:8080 --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg}`,
       "npm.cmd run completion:audit",
-      "npm.cmd run handover:index",
-      "npm.cmd run field:closure-plan",
-      "npm.cmd run handover:package -- --base-url=http://localhost:8080 --strict",
+      `npm.cmd run handover:index -- --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg}`,
+      `npm.cmd run field:closure-plan -- --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg}`,
+      `npm.cmd run handover:package -- --base-url=http://localhost:8080 --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg} --strict`,
     ],
   };
 }
@@ -231,6 +254,7 @@ function buildMarkdown(manifest) {
     `- Field action artifact open: ${manifest.counts.fieldActionArtifactOpenCount}`,
     `- Field rehearsal follow-ups: ${manifest.counts.fieldRehearsalFollowUpCount}`,
     `- Manual evidence missing: ${manifest.counts.manualEvidenceMissingCount}`,
+    `- Metadata review: ${manifest.counts.metadataReviewCount || 0}`,
     "",
     "## Actions",
     "",

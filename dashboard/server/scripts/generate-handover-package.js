@@ -10,6 +10,7 @@ const {
   summarizeFieldRehearsal,
   timestampForPath,
 } = require("./generate-delivery-evidence");
+const { isPlaceholderFieldText } = require("./generate-final-status-report");
 const { manualEvidenceRefs } = require("./manual-evidence");
 
 const root = path.join(__dirname, "..", "..", "..");
@@ -29,6 +30,13 @@ function argValue(name, fallback) {
 
 function hasFlag(name) {
   return process.argv.includes(`--${name}`);
+}
+
+function metadataReviewItems(generatedBy, siteName) {
+  return [
+    isPlaceholderFieldText(generatedBy) ? "Generated-by reviewer metadata is missing or placeholder." : "",
+    isPlaceholderFieldText(siteName) ? "Site name metadata is missing or placeholder." : "",
+  ].filter(Boolean);
 }
 
 function runCommand(label, args) {
@@ -529,9 +537,11 @@ function main() {
   const openManualEvidence = manualEvidence.filter((item) => item.required && item.status !== "PRESENT");
   const knownLimitations = knownFieldLimitations();
   const strictFailureReasons = [];
+  const metadataReview = metadataReviewItems(generatedBy, siteName);
   if (failedCommands.length > 0) {
     strictFailureReasons.push(`${failedCommands.length} package command(s) failed.`);
   }
+  strictFailureReasons.push(...metadataReview);
   if (git.clean !== true) {
     strictFailureReasons.push("working tree is not clean.");
   }
@@ -601,6 +611,7 @@ function main() {
     fieldEvidenceOpenItems,
     fieldEvidenceCommandRunbook,
     failedCommandCount: failedCommands.length,
+    metadataReview,
     strictFailureReasons,
   };
 

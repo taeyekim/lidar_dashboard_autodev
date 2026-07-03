@@ -42,6 +42,10 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "strictAcceptanceBlocked",
   "manualEvidenceEntries",
   "manualEvidenceRefs",
+  "isPlaceholderFieldText",
+  "metadataReviewItems",
+  "metadataReviewCount",
+  "Metadata Review",
   "manualEvidence",
   "manualEvidenceCount",
   "missingManualEvidenceCount",
@@ -128,5 +132,17 @@ if (securityEntry?.manifestPath) {
     "handover index must not mark non-strict security evidence as READY",
   );
 }
+
+const placeholderMetadataManifest = buildIndexManifest({ generatedBy: "field-reviewer", siteName: "field-site" });
+assert(placeholderMetadataManifest.status !== "READY", "handover index must not be READY with placeholder metadata");
+assert(placeholderMetadataManifest.counts.metadataReviewCount === 2, "handover index should count placeholder reviewer and site metadata");
+assert(
+  placeholderMetadataManifest.metadataReview.some((item) => item.includes("Generated-by reviewer")),
+  "handover index should expose placeholder reviewer metadata review item",
+);
+assert(
+  placeholderMetadataManifest.metadataReview.some((item) => item.includes("Site name")),
+  "handover index should expose placeholder site metadata review item",
+);
 
 console.log("handover index contracts ok");

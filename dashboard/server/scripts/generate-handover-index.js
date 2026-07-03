@@ -6,6 +6,7 @@ const {
   readLatestJsonManifest,
   timestampForPath,
 } = require("./generate-delivery-evidence");
+const { isPlaceholderFieldText } = require("./generate-final-status-report");
 const { manualEvidenceRefs } = require("./manual-evidence");
 
 const root = path.join(__dirname, "..", "..", "..");
@@ -35,6 +36,13 @@ function manifestStatus(entry, manifest) {
   if (data.checks?.some((item) => item.status === "skipped" || item.exitCode !== 0)) return "REVIEW";
   if (entry.required && !manifest.path) return "MISSING";
   return "PRESENT";
+}
+
+function metadataReviewItems(generatedBy, siteName) {
+  return [
+    isPlaceholderFieldText(generatedBy) ? "Generated-by reviewer metadata is missing or placeholder." : "",
+    isPlaceholderFieldText(siteName) ? "Site name metadata is missing or placeholder." : "",
+  ].filter(Boolean);
 }
 
 function indexEntry(entry) {
@@ -278,17 +286,20 @@ function buildIndexManifest(options = {}) {
     completionManifest?.data?.controlBoardSafetyStatus ||
     "UNKNOWN";
 
+  const generatedBy = options.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
+  const siteName = options.siteName || "unspecified";
+  const metadataReview = metadataReviewItems(generatedBy, siteName);
   return {
     generatedAt: new Date().toISOString(),
-    generatedBy: options.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
-    siteName: options.siteName || "unspecified",
+    generatedBy,
+    siteName,
     hostName: os.hostname(),
     status:
       missingRequired.length > 0
         ? "INCOMPLETE"
         : staleEntries.length > 0
           ? "STALE"
-          : reviewEntries.length > 0 || missingManualEvidence.length > 0
+          : metadataReview.length > 0 || reviewEntries.length > 0 || missingManualEvidence.length > 0
             ? "REVIEW"
             : "READY",
     canMarkGoalComplete: Boolean(completionManifest?.data?.canMarkGoalComplete),
@@ -303,7 +314,9 @@ function buildIndexManifest(options = {}) {
       missingManualEvidenceCount: missingManualEvidence.length,
       fieldRehearsalFollowUpCount: fieldRehearsalFollowUps.length,
       fieldActionArtifactOpenCount: openFieldActionArtifacts.length,
+      metadataReviewCount: metadataReview.length,
     },
+    metadataReview,
     entries,
     manualEvidence,
     fieldRehearsalFollowUps,
@@ -340,6 +353,7 @@ function buildMarkdown(manifest) {
     `- Missing manual evidence: ${manifest.counts.missingManualEvidenceCount}`,
     `- Field rehearsal follow-ups: ${manifest.counts.fieldRehearsalFollowUpCount}`,
     `- Field action artifacts open: ${manifest.counts.fieldActionArtifactOpenCount}`,
+    `- Metadata review: ${manifest.counts.metadataReviewCount || 0}`,
     "",
     "## Evidence Entries",
     "",
@@ -398,6 +412,10 @@ function buildMarkdown(manifest) {
     "## Review Areas",
     "",
     ...(manifest.reviewAreas.length > 0 ? manifest.reviewAreas.map((area) => `- ${area}`) : ["- none"]),
+    "",
+    "## Metadata Review",
+    "",
+    ...(manifest.metadataReview?.length > 0 ? manifest.metadataReview.map((item) => `- ${item}`) : ["- none"]),
     "",
     "## Consistency Issues",
     "",
