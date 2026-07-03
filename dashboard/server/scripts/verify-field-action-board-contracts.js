@@ -5,6 +5,7 @@ const {
   buildManifest,
   buildMarkdown,
   buildActionItems,
+  buildExecutionQueue,
   commandForGate,
   groupByOwner,
   groupByPhase,
@@ -39,6 +40,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "artifacts/field-action-board",
   "Owner Summary",
   "Owner Commands",
+  "Execution Queue",
   "Phase Summary",
   "This board organizes final-status gates for field execution",
   "Auth/Security",
@@ -75,10 +77,13 @@ assertIncludes(finalExecutionPlan, "field-action-board", "final execution plan g
 assertIncludes(finalExecutionPlan, "npm.cmd run field:action-board", "final execution plan generator");
 assertIncludes(runbook, "npm.cmd run field:action-board", "delivery runbook");
 assertIncludes(runbook, "artifacts/field-action-board/<timestamp>/manifest.json", "delivery runbook");
+assertIncludes(runbook, "Execution Queue", "delivery runbook");
 assertIncludes(checklist, "npm run field:action-board", "acceptance checklist");
 assertIncludes(checklist, "artifacts/field-action-board/<timestamp>/manifest.json", "acceptance checklist");
+assertIncludes(checklist, "Execution Queue", "acceptance checklist");
 assertIncludes(matrix, "field:action-board", "delivery evidence matrix");
 assertIncludes(matrix, "artifacts/field-action-board/<timestamp>/manifest.json", "delivery evidence matrix");
+assertIncludes(matrix, "Execution Queue", "delivery evidence matrix");
 
 const gates = [
   {
@@ -165,6 +170,11 @@ assert(groupByOwner(actionItems).some((group) => group.owner === "Auth/Security"
 assert(groupByOwner(actionItems).some((group) => group.byPhase["Security Evidence"] === 2), "owner grouping should count phases");
 assert(groupByPhase(actionItems).some((group) => group.phase === "Security Evidence" && group.total === 2), "phase grouping should count security phase");
 assert(groupByPhase(actionItems).some((group) => group.phase === "Field Preflight" && group.total === 1), "phase grouping should count CORS/CSP preflight phase");
+const executionQueue = buildExecutionQueue(actionItems);
+assert(executionQueue.length === 5, "execution queue should dedupe commands by phase");
+assert(executionQueue[0].phase === "Manual Evidence", "execution queue should start with manual evidence phase");
+assert(executionQueue.some((item) => item.phase === "Security Evidence" && item.command.includes("--use-docker-scanners")), "execution queue should expose scanner closeout command");
+assert(executionQueue.every((item, index) => item.order === index + 1), "execution queue order should be stable and one-based");
 
 const manifest = buildManifest({
   generatedAt: "2026-01-01T00:00:00.000Z",
@@ -184,12 +194,14 @@ assert(manifest.status === "OPEN", "fixture with gates should produce OPEN board
 assert(manifest.openActionCount === 5, "manifest should preserve open action count");
 assert(manifest.ownerGroups.length === 3, "manifest should group by owner");
 assert(manifest.phaseGroups.length === 4, "manifest should group by phase");
+assert(manifest.executionQueue.length === 5, "manifest should expose execution queue");
 assert(manifest.sourceFinalStatus.includes("artifacts/final-status"), "manifest should reference final status");
 
 const markdown = buildMarkdown(manifest);
 assert(markdown.includes("Field Action Board"), "markdown should include title");
 assert(markdown.includes("Owner Summary"), "markdown should include owner summary");
 assert(markdown.includes("Owner Commands"), "markdown should include owner commands");
+assert(markdown.includes("Execution Queue"), "markdown should include execution queue");
 assert(markdown.includes("Phase Summary"), "markdown should include phase summary");
 assert(markdown.includes("control-board-field-rehearsal.ps1"), "markdown should include mapped field command");
 assert(markdown.includes("field:preflight"), "markdown should include mapped preflight command");

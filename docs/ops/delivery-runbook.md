@@ -237,9 +237,9 @@ After final status exists, run
 `npm.cmd run field:action-board -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`.
 It writes `artifacts/field-action-board/<timestamp>/manifest.json` plus
 `manifest.md`, grouping remaining final-status gates by owner, priority,
-execution phase, mapped command, evidence path, and done-when criteria. This
-board is an execution aid for field owners; it does not replace final field
-evidence.
+execution phase, mapped command, evidence path, done-when criteria, and a
+phase-ordered `Execution Queue` of deduplicated commands. This board is an
+execution aid for field owners; it does not replace final field evidence.
 
 After the action board exists, run
 `npm.cmd run field:gate-closure-map -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`.

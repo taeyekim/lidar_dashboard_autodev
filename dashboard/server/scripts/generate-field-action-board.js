@@ -231,6 +231,62 @@ function groupByOwner(items) {
   ).sort((a, b) => b.total - a.total || a.owner.localeCompare(b.owner));
 }
 
+function buildExecutionQueue(items) {
+  const phaseOrder = [
+    "Manual Evidence",
+    "Security Evidence",
+    "Field Preflight",
+    "Field Rehearsal",
+    "Field Acceptance",
+    "Handover Package",
+    "Final Status",
+    "Field Review",
+  ];
+  const priorityScore = { P0: 0, P1: 1, P2: 2, P3: 3 };
+  const queued = [];
+  const seen = new Map();
+
+  items.forEach((item) => {
+    const key = `${item.phase}::${item.command}`;
+    if (!seen.has(key)) {
+      const entry = {
+        order: 0,
+        phase: item.phase,
+        command: item.command,
+        owner: item.owner,
+        owners: [item.owner],
+        priority: item.priority,
+        gateCount: 0,
+        categories: [],
+        evidence: [],
+      };
+      seen.set(key, entry);
+      queued.push(entry);
+    }
+
+    const entry = seen.get(key);
+    entry.gateCount += 1;
+    if (!entry.owners.includes(item.owner)) entry.owners.push(item.owner);
+    if (priorityScore[item.priority] < priorityScore[entry.priority]) entry.priority = item.priority;
+    if (!entry.categories.includes(item.category)) entry.categories.push(item.category);
+    if (item.evidence && !entry.evidence.includes(item.evidence)) entry.evidence.push(item.evidence);
+  });
+
+  return queued
+    .sort(
+      (a, b) =>
+        phaseOrder.indexOf(a.phase) - phaseOrder.indexOf(b.phase) ||
+        priorityScore[a.priority] - priorityScore[b.priority] ||
+        b.gateCount - a.gateCount ||
+        a.command.localeCompare(b.command),
+    )
+    .map((entry, index) => ({
+      ...entry,
+      order: index + 1,
+      owner: entry.owners.join(", "),
+    }));
+}
+
 function buildManifest(input = {}) {
   const finalStatus = input.finalStatus || readLatestJsonManifest("artifacts/final-status");
   const baseUrl = input.baseUrl || finalStatus?.data?.baseUrl || "http://localhost:8080";
@@ -252,6 +308,7 @@ function buildManifest(input = {}) {
     git: buildGitState(input.git),
     ownerGroups: groupByOwner(items),
     phaseGroups: groupByPhase(items),
+    executionQueue: buildExecutionQueue(items),
     actionItems: items,
     guardrails: [
       "This board organizes final-status gates for field execution; it does not prove completion.",
@@ -309,6 +366,17 @@ function buildMarkdown(manifest) {
       ? manifest.ownerGroups.flatMap((group) => group.commands.map((command) => `| ${markdownCell(group.owner)} | \`${markdownCell(command)}\` |`))
       : ["| none | No commands required. |"]),
     "",
+    "## Execution Queue",
+    "",
+    "| Order | Phase | Priority | Gate Count | Owners | Categories | Evidence | Command |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    ...(manifest.executionQueue.length > 0
+      ? manifest.executionQueue.map(
+          (item) =>
+            `| ${item.order} | ${markdownCell(item.phase)} | ${markdownCell(item.priority)} | ${item.gateCount} | ${markdownCell(item.owner)} | ${markdownCell(item.categories.join(", "))} | ${markdownCell(item.evidence.join(", ") || "missing")} | \`${markdownCell(item.command)}\` |`,
+        )
+      : ["| 0 | none | - | 0 | - | - | - | No commands required. |"]),
+    "",
     "## Action Items",
     "",
     "| ID | Priority | Phase | Owner | Action Type | Category | Status | Message | Close When | Evidence | Scanner | Risk Acceptance Evidence | Command |",
@@ -349,6 +417,7 @@ module.exports = {
   buildManifest,
   buildMarkdown,
   buildActionItems,
+  buildExecutionQueue,
   groupByOwner,
   groupByPhase,
   ownerForGate,
