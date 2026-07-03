@@ -49,7 +49,9 @@ npm.cmd run delivery:evidence
 npm.cmd run completion:audit
 npm.cmd run handover:index
 npm.cmd run field:closure-plan
-npm.cmd run manual:evidence-drafts -- --base-url=http://localhost:8080 --site-name="delivery-site-name" --reviewer="field-reviewer-name"
+$env:FIELD_REVIEWER="<actual reviewer name>"
+$env:FIELD_SITE_NAME="<actual delivery site name>"
+npm.cmd run manual:evidence-drafts -- --base-url=http://localhost:8080 --site-name="$env:FIELD_SITE_NAME" --reviewer="$env:FIELD_REVIEWER"
 npm.cmd run manual:evidence-readiness
 npm.cmd run field:readiness -- --base-url=http://localhost:8080
 npm.cmd run field:risk-register -- --base-url=http://localhost:8080
@@ -73,10 +75,12 @@ push state does not match the direct-push delivery policy.
 For a single ordered field acceptance pass, use the orchestrator:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/field-preflight.ps1 -BaseUrl http://localhost:8080 -Reviewer "field-reviewer-name" -SiteName "delivery-site-name"
-npm.cmd run field:preflight -- -BaseUrl http://localhost:8080 -Reviewer "field-reviewer-name" -SiteName "delivery-site-name"
+$env:FIELD_REVIEWER="<actual reviewer name>"
+$env:FIELD_SITE_NAME="<actual delivery site name>"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/field-preflight.ps1 -BaseUrl http://localhost:8080 -Reviewer "$env:FIELD_REVIEWER" -SiteName "$env:FIELD_SITE_NAME"
+npm.cmd run field:preflight -- -BaseUrl http://localhost:8080 -Reviewer "$env:FIELD_REVIEWER" -SiteName "$env:FIELD_SITE_NAME"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/field-acceptance.ps1 -BaseUrl http://localhost:8080
-npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -Reviewer "field-reviewer-name" -SiteName "delivery-site-name"
+npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -Reviewer "$env:FIELD_REVIEWER" -SiteName "$env:FIELD_SITE_NAME"
 ```
 
 The preflight records `.env` readiness, `JWT_SECRET`, seed admin password,
@@ -133,7 +137,9 @@ handover.
 Strict field acceptance example after the delivery stack is already running:
 
 ```powershell
-npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -Reviewer "field-reviewer" -SiteName "delivery-site" -OperatorUiWalkthroughEvidence artifacts/manual/operator-ui-walkthrough.md -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -StrictPreflight -IncludeContainerImages -IncludeZap -RequireScanners
+$env:FIELD_REVIEWER="<actual reviewer name>"
+$env:FIELD_SITE_NAME="<actual delivery site name>"
+npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -Reviewer "$env:FIELD_REVIEWER" -SiteName "$env:FIELD_SITE_NAME" -OperatorUiWalkthroughEvidence artifacts/manual/operator-ui-walkthrough.md -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -StrictPreflight -IncludeContainerImages -IncludeZap -RequireScanners
 ```
 
 After `npm.cmd run delivery:evidence`, run `npm.cmd run completion:audit`.
@@ -175,7 +181,7 @@ must show the owner, target recheck date, next action, done-when condition, and
 source manifest.
 
 Before the final handover package, run
-`npm.cmd run manual:evidence-drafts -- --base-url=http://localhost:8080 --site-name="delivery-site-name" --reviewer="field-reviewer-name"`
+`npm.cmd run manual:evidence-drafts -- --base-url=http://localhost:8080 --site-name="$env:FIELD_SITE_NAME" --reviewer="$env:FIELD_REVIEWER"`
 when `artifacts/manual/operator-ui-walkthrough.md` or
 `artifacts/manual/field-risk-acceptance.md` is missing. It creates reviewer-fillable
 drafts and writes `artifacts/manual-evidence-drafts/<timestamp>/manifest.json`

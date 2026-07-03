@@ -54,6 +54,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "phaseGroups",
   "byPhase",
   "sourceFinalStatus",
+  "FIELD_REVIEWER",
+  "FIELD_SITE_NAME",
 ].forEach((token) => assertIncludes(generator, token, "field action board generator"));
 
 [
@@ -118,6 +120,9 @@ assert(ownerForGate(gates[3]) === "Auth/Security", "CORS gate should map to Auth
 assert(priorityForGate(gates[0]) === "P0", "blocked security gate should be P0");
 assert(phaseForGate(gates[0]) === "Security Evidence", "security gate should map to Security Evidence phase");
 assert(phaseForGate(gates[1]) === "Field Rehearsal", "control-board gate should map to Field Rehearsal phase");
+assert(commandForGate(gates[1], "http://field.local:8080").includes("FIELD_REVIEWER"), "field command should use reviewer environment variable");
+assert(commandForGate(gates[1], "http://field.local:8080").includes("FIELD_SITE_NAME"), "field command should use site environment variable");
+assert(!commandForGate(gates[1], "http://field.local:8080").includes("field-reviewer-name"), "field command should not emit reviewer placeholder");
 assert(phaseForGate(gates[2]) === "Manual Evidence", "manual gate should map to Manual Evidence phase");
 assert(phaseForGate(gates[3]) === "Field Preflight", "CORS/CSP gate should map to Field Preflight phase");
 assert(commandForGate(gates[1], "http://field.local:8080").includes("control-board-field-rehearsal.ps1"), "control-board gate should map to control-board rehearsal command");

@@ -9,6 +9,8 @@ const {
 const { manualEvidenceRefs } = require("./manual-evidence");
 
 const root = path.join(__dirname, "..", "..", "..");
+const fieldReviewerArg = '"$env:FIELD_REVIEWER"';
+const fieldSiteArg = '"$env:FIELD_SITE_NAME"';
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -24,12 +26,12 @@ function actionForEntry(entry) {
   const commands = {
     "Delivery Evidence": ["npm.cmd run delivery:evidence", "npm.cmd run completion:audit", "npm.cmd run handover:index"],
     "Completion Audit": ["npm.cmd run completion:audit", "npm.cmd run handover:index"],
-    "Field Preflight": ["npm.cmd run field:preflight -- -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\""],
-    "Field Acceptance": ["npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\" -OperatorUiWalkthroughEvidence artifacts/manual/operator-ui-walkthrough.md"],
-    "Field Readiness": ["npm.cmd run field:readiness -- --base-url=http://localhost:8080 --generated-by=\"field-reviewer-name\" --site-name=\"delivery-site-name\""],
-    "DB And Prisma Field Rehearsal": ["powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\""],
-    "Lidar Ingest Field Rehearsal": ["powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\""],
-    "Control Board Field Rehearsal": ["powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\""],
+    "Field Preflight": [`npm.cmd run field:preflight -- -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg}`],
+    "Field Acceptance": [`npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} -OperatorUiWalkthroughEvidence artifacts/manual/operator-ui-walkthrough.md`],
+    "Field Readiness": [`npm.cmd run field:readiness -- --base-url=http://localhost:8080 --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg}`],
+    "DB And Prisma Field Rehearsal": [`powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg}`],
+    "Lidar Ingest Field Rehearsal": [`powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg}`],
+    "Control Board Field Rehearsal": [`powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg}`],
     "Runtime Evidence": ["npm.cmd run runtime:evidence -- --run-smoke --use-existing-stack --base-url=http://localhost:8080"],
     "Security Evidence": ["npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners --target-url=http://localhost:8080"],
   };

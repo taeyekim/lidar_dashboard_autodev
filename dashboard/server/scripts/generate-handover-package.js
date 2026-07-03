@@ -13,6 +13,8 @@ const {
 const { manualEvidenceRefs } = require("./manual-evidence");
 
 const root = path.join(__dirname, "..", "..", "..");
+const fieldReviewerArg = '"$env:FIELD_REVIEWER"';
+const fieldSiteArg = '"$env:FIELD_SITE_NAME"';
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 
 function ensureDir(dir) {
@@ -221,15 +223,15 @@ function fieldActionArtifactStrictFailures({
 function fieldEvidenceNextAction(type) {
   const actions = {
     "Field Preflight":
-      "Run npm.cmd run field:preflight -- -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\" after final .env values are set.",
+      `Run npm.cmd run field:preflight -- -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} after final .env values are set.`,
     "Field Acceptance":
-      "Run npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\" -OperatorUiWalkthroughEvidence artifacts/manual/operator-ui-walkthrough.md after runtime, rehearsal, security, and UI walkthrough evidence are ready.",
+      `Run npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} -OperatorUiWalkthroughEvidence artifacts/manual/operator-ui-walkthrough.md after runtime, rehearsal, security, and UI walkthrough evidence are ready.`,
     "DB And Prisma":
-      "Run powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\" against the delivery runtime.",
+      `Run powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} against the delivery runtime.`,
     "Lidar Ingest":
-      "Run powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\" with representative lidar payloads.",
+      `Run powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} with representative lidar payloads.`,
     "Control Board TCP":
-      "Run powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\" after control-board dry-run or approved live TCP conditions are confirmed.",
+      `Run powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} after control-board dry-run or approved live TCP conditions are confirmed.`,
   };
   return actions[type] || "Refresh the related field evidence manifest and rerun npm.cmd run handover:package.";
 }

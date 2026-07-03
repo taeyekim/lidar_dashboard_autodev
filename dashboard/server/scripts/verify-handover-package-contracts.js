@@ -119,6 +119,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "scripts/db-field-rehearsal.ps1",
   "scripts/lidar-ingest-rehearsal.ps1",
   "scripts/control-board-field-rehearsal.ps1",
+  "FIELD_REVIEWER",
+  "FIELD_SITE_NAME",
   "-OperatorUiWalkthroughEvidence",
   "No field evidence review/skipped items.",
   "canMarkGoalComplete",

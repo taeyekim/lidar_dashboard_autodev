@@ -6,6 +6,8 @@ const { spawnSync } = require("child_process");
 const { readLatestJsonManifest, timestampForPath } = require("./generate-delivery-evidence");
 
 const root = path.join(__dirname, "..", "..", "..");
+const fieldReviewerArg = '"$env:FIELD_REVIEWER"';
+const fieldSiteArg = '"$env:FIELD_SITE_NAME"';
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -63,25 +65,25 @@ function commandForGate(gate, baseUrl) {
     return "npm.cmd run manual:evidence-readiness";
   }
   if (text.includes("preflight") || text.includes("jwt") || text.includes("cookie") || text.includes("cors") || text.includes("swagger") || text.includes("rate limit") || text.includes("burst") || text.includes("content security") || text.includes("csp")) {
-    return `npm.cmd run field:preflight -- -BaseUrl ${baseUrl} -Reviewer "field-reviewer-name" -SiteName "delivery-site-name" -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -StrictPreflight`;
+    return `npm.cmd run field:preflight -- -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -StrictPreflight`;
   }
   if (text.includes("security") || text.includes("scanner") || text.includes("zap") || text.includes("trivy") || text.includes("gitleaks")) {
     return `npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners --target-url=${baseUrl}`;
   }
   if (text.includes("db") || text.includes("prisma")) {
-    return `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-field-rehearsal.ps1 -BaseUrl ${baseUrl} -Reviewer "field-reviewer-name" -SiteName "delivery-site-name"`;
+    return `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-field-rehearsal.ps1 -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg}`;
   }
   if (text.includes("lidar") || text.includes("ingest")) {
-    return `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl ${baseUrl} -Reviewer "field-reviewer-name" -SiteName "delivery-site-name"`;
+    return `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg}`;
   }
   if (text.includes("control-board") || text.includes("tcp") || text.includes("hardware")) {
-    return `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl ${baseUrl} -Reviewer "field-reviewer-name" -SiteName "delivery-site-name"`;
+    return `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg}`;
   }
   if (text.includes("field readiness") || text.includes("readiness")) {
-    return `npm.cmd run field:readiness -- --base-url=${baseUrl} --generated-by="field-reviewer-name" --site-name="delivery-site-name"`;
+    return `npm.cmd run field:readiness -- --base-url=${baseUrl} --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg}`;
   }
   if (text.includes("field acceptance")) {
-    return `npm.cmd run field:acceptance -- -BaseUrl ${baseUrl} -Reviewer "field-reviewer-name" -SiteName "delivery-site-name" -OperatorUiWalkthroughEvidence artifacts/manual/operator-ui-walkthrough.md -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -StrictPreflight -IncludeContainerImages -IncludeZap -RequireScanners`;
+    return `npm.cmd run field:acceptance -- -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} -OperatorUiWalkthroughEvidence artifacts/manual/operator-ui-walkthrough.md -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -StrictPreflight -IncludeContainerImages -IncludeZap -RequireScanners`;
   }
   if (text.includes("handover")) return `npm.cmd run handover:package -- --base-url=${baseUrl} --strict`;
   if (text.includes("completion")) return "npm.cmd run completion:audit";

@@ -88,6 +88,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "npm.cmd run completion:audit",
   "npm.cmd run handover:index",
   "npm.cmd run field:readiness",
+  "FIELD_REVIEWER",
+  "FIELD_SITE_NAME",
   "--require-scanners",
   "handover:package",
   "--strict",

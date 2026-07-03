@@ -55,8 +55,12 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "scripts/control-board-field-rehearsal.ps1", "final execution plan generator"],
   [generator, "scripts/lidar-ingest-rehearsal.ps1", "final execution plan generator"],
   [generator, "scripts/db-field-rehearsal.ps1", "final execution plan generator"],
+  [generator, "FIELD_REVIEWER", "final execution plan generator"],
+  [generator, "FIELD_SITE_NAME", "final execution plan generator"],
   [generator, "--require-scanners", "final execution plan generator"],
   [runbook, "npm.cmd run final:execution-plan", "delivery runbook"],
+  [runbook, "FIELD_REVIEWER", "delivery runbook"],
+  [runbook, "FIELD_SITE_NAME", "delivery runbook"],
   [runbook, "source revision closeout", "delivery runbook"],
   [runbook, "git push origin dev", "delivery runbook"],
   [runbook, "field:gate-closure-map", "delivery runbook"],
@@ -112,6 +116,14 @@ const openPlan = buildFinalExecutionPlan({
 });
 
 assert(openPlan.status === "OPEN", "open final status should produce OPEN execution plan");
+assert(
+  openPlan.orderedCommands.some((item) => item.command.includes("FIELD_REVIEWER") && item.command.includes("FIELD_SITE_NAME")),
+  "field execution commands should use concrete reviewer/site environment variables",
+);
+assert(
+  openPlan.orderedCommands.every((item) => !item.command.includes("field-reviewer-name") && !item.command.includes("delivery-site-name")),
+  "field execution commands must not emit copy-paste placeholder reviewer/site values",
+);
 assert(openPlan.remainingGateCount === 4, "execution plan should preserve remaining gate count");
 assert(openPlan.commandGateCoverage.some((item) => item.id === "security-evidence" && item.gateCount === 1), "security command coverage should count matching security gates");
 assert(
