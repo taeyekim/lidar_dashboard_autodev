@@ -52,6 +52,7 @@ npm.cmd run field:closure-plan
 npm.cmd run manual:evidence-drafts -- --base-url=http://localhost:8080 --site-name="delivery-site-name" --reviewer="field-reviewer-name"
 npm.cmd run manual:evidence-readiness
 npm.cmd run field:readiness -- --base-url=http://localhost:8080
+npm.cmd run field:risk-register -- --base-url=http://localhost:8080
 npm.cmd run handover:package
 npm.cmd run final:status -- --base-url=http://localhost:8080
 npm.cmd run final:execution-plan -- --base-url=http://localhost:8080
@@ -186,15 +187,25 @@ safety status is recorded as `DRY_RUN_SAFE`, `LIVE_TCP_READY`, or
 and Nginx delivery owners can close blocking `.env` values without exposing
 secret values.
 
+After field readiness and security evidence exist, run
+`npm.cmd run field:risk-register -- --base-url=http://localhost:8080`.
+It writes `artifacts/field-risk-register/<timestamp>/manifest.json` plus
+`manifest.md`, collecting open field values, strict scanner skips/failures,
+remaining final-status gates, and required manual evidence into reviewer-facing
+risk groups and `Risk Acceptance Draft Rows`. This register is preparation
+evidence only; accepted risk still requires the reviewer-filled
+`artifacts/manual/field-risk-acceptance.md` file and must not include secret
+values.
+
 For the final attachment refresh, run
 `npm.cmd run handover:package -- --base-url=http://localhost:8080`. Replace
 the base URL with the delivery Nginx entrypoint when it is not localhost. It
-runs `delivery:evidence`, `manual:evidence-drafts`, `manual:evidence-readiness`, `field:readiness`, `completion:audit`,
+runs `delivery:evidence`, `manual:evidence-drafts`, `manual:evidence-readiness`, `field:readiness`, `field:risk-register`, `completion:audit`,
 `field:closure-plan`, and `handover:index` in order, passing the same base URL
-into the refreshed manual draft report and readiness report and indexing the refreshed closure plan, then writes
+into the refreshed manual draft report, readiness report, and risk register and indexing the refreshed closure plan, then writes
 `artifacts/handover-package/<timestamp>/manifest.json` plus `manifest.md` with
 the refreshed evidence references, command logs, base URL, strict gate reasons,
-manual evidence draft/readiness references, and latest control-board safety status. The completion audit, handover index,
+manual evidence draft/readiness/risk-register references, and latest control-board safety status. The completion audit, handover index,
 closure plan, and handover package all surface this status so `DRY_RUN_SAFE` or
 `LIVE_TCP_REVIEW` cannot be mistaken for field-ready TCP operation. Use
 `npm.cmd run handover:package -- --base-url=http://localhost:8080 --strict`

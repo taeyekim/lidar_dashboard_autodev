@@ -46,6 +46,14 @@ function commandCatalog(baseUrl) {
       doneWhen: "Manual evidence readiness is READY and required manual evidence files are PRESENT.",
     },
     {
+      id: "field-risk-register",
+      phase: "Manual Evidence",
+      actionTypes: ["FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED"],
+      command: `npm.cmd run field:risk-register -- --base-url=${baseUrl} --site-name="delivery-site-name" --generated-by="field-reviewer-name"`,
+      purpose: "Collect open field/security/manual gates into reviewer-copyable risk acceptance rows.",
+      doneWhen: "The register identifies every risk that must be resolved directly or copied into artifacts/manual/field-risk-acceptance.md.",
+    },
+    {
       id: "field-preflight",
       phase: "Field Runtime",
       actionTypes: ["FIELD_ACTION_REQUIRED"],

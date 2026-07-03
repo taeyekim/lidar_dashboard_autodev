@@ -138,6 +138,13 @@ function buildIndexManifest(options = {}) {
       notes: "Reviewer-fillable draft files for required manual evidence; existing evidence is preserved unless --force is used.",
     },
     {
+      area: "Field Risk Register",
+      required: true,
+      outputRoot: "artifacts/field-risk-register",
+      command: "npm run field:risk-register",
+      notes: "Reviewer-preparation register that maps open field, security, and manual gates into risk acceptance draft rows.",
+    },
+    {
       area: "Field Closure Plan",
       required: true,
       outputRoot: "artifacts/field-closure-plan",
