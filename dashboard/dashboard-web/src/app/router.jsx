@@ -1,40 +1,45 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { lazy, Suspense } from "react";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import RequireAuth from "../features/auth/RequireAuth";
 
-import LoginPage from "../pages/Login/LoginPage";
-import DashboardPage from "../pages/Dashboard/DashboardPage";
-import WrongwayLogPage from "../pages/Dashboard/WrongwayLogPage";
-import EventLogPage from "../pages/EventLog/EventLogPage";
-import DevicesPage from "../pages/Devices/DevicesPage";
-import SettingsPage from "../pages/Settings/SettingsPage";
+const LoginPage = lazy(() => import("../pages/Login/LoginPage"));
+const DashboardPage = lazy(() => import("../pages/Dashboard/DashboardPage"));
+const WrongwayLogPage = lazy(() => import("../pages/Dashboard/WrongwayLogPage"));
+const EventLogPage = lazy(() => import("../pages/EventLog/EventLogPage"));
+const DevicesPage = lazy(() => import("../pages/Devices/DevicesPage"));
+const SettingsPage = lazy(() => import("../pages/Settings/SettingsPage"));
+const MainLayout = lazy(() => import("../layouts/MainLayout"));
 
-import MainLayout from "../layouts/MainLayout";
+function RouteFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-white text-sm font-bold text-gray-500">
+      화면을 불러오는 중입니다.
+    </div>
+  );
+}
 
-// 앱에서 사용하는 URL 경로와 화면 컴포넌트의 연결을 정의한다.
-// 라우팅을 App.jsx에서 분리해 페이지 추가/수정 위치를 명확하게 한다.
 export default function AppRouter() {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* 로그인 화면은 인증 없이 접근할 수 있다. */}
-        <Route path="/login" element={<LoginPage />} />
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
 
-        {/* 아래 라우트들은 로그인한 사용자만 접근할 수 있다. */}
-        <Route
-          element={
-            <RequireAuth>
-              <MainLayout />
-            </RequireAuth>
-          }
-        >
-          {/* MainLayout 안에서 Outlet으로 표시되는 실제 페이지들이다. */}
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/dashboard/wrongway" element={<WrongwayLogPage />} />
-          <Route path="/events" element={<EventLogPage />} />
-          <Route path="/devices" element={<DevicesPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Route>
-      </Routes>
+          <Route
+            element={
+              <RequireAuth>
+                <MainLayout />
+              </RequireAuth>
+            }
+          >
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/dashboard/wrongway" element={<WrongwayLogPage />} />
+            <Route path="/events" element={<EventLogPage />} />
+            <Route path="/devices" element={<DevicesPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

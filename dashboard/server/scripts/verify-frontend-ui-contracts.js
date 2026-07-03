@@ -13,6 +13,7 @@ const card = readProjectFile("dashboard/dashboard-web/src/shared/components/Card
 const devicesPage = readProjectFile("dashboard/dashboard-web/src/pages/Devices/DevicesPage.jsx");
 const dashboardPage = readProjectFile("dashboard/dashboard-web/src/pages/Dashboard/DashboardPage.jsx");
 const eventLogPage = readProjectFile("dashboard/dashboard-web/src/pages/EventLog/EventLogPage.jsx");
+const appRouter = readProjectFile("dashboard/dashboard-web/src/app/router.jsx");
 const todaysEventsPath = path.join(
   __dirname,
   "..",
@@ -34,6 +35,25 @@ const todaysEventsPath = path.join(
 });
 
 assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component must not remain in frontend source");
+
+[
+  "lazy(() => import(\"../pages/Dashboard/DashboardPage\"))",
+  "lazy(() => import(\"../pages/EventLog/EventLogPage\"))",
+  "lazy(() => import(\"../pages/Devices/DevicesPage\"))",
+  "<Suspense fallback={<RouteFallback />}>",
+].forEach((token) => {
+  assert(appRouter.includes(token), `App router must keep route-level lazy loading token: ${token}`);
+});
+
+[
+  "import DashboardPage from",
+  "import EventLogPage from",
+  "import DevicesPage from",
+  "import SettingsPage from",
+  "import WrongwayLogPage from",
+].forEach((token) => {
+  assert(!appRouter.includes(token), `App router must not statically import route page: ${token}`);
+});
 
 [
   "장비 상태",
