@@ -169,6 +169,14 @@ function commandCatalog(baseUrl) {
       doneWhen: "Working tree is clean, current branch is dev, and HEAD matches origin/dev before final evidence refresh.",
     },
     {
+      id: "docs-text-quality",
+      phase: "Package Refresh",
+      actionTypes: ["AUTOMATED_REFRESH_AVAILABLE", "REVIEW_REQUIRED"],
+      command: "npm.cmd run verify:docs-text-quality",
+      purpose: "Confirm delivery Markdown and acceptance labels do not contain mojibake before packaging handover evidence.",
+      doneWhen: "Docs text quality contracts pass.",
+    },
+    {
       id: "completion-audit",
       phase: "Package Refresh",
       actionTypes: ["AUTOMATED_REFRESH_AVAILABLE", "FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED", "REVIEW_REQUIRED"],
