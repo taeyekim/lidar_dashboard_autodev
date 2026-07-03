@@ -144,6 +144,18 @@ function validateManualEvidence(type, content) {
     if (filledEvidenceRows.some((row) => isPlaceholderMarkdownCell(row[1]))) {
       return "Evidence file rows must not use placeholder path or reference values such as TBD, N/A, none, pending, or unknown.";
     }
+    const requiredEvidenceTypes = [
+      "Screenshot",
+      "Related field acceptance manifest",
+      "Related handover package manifest",
+    ];
+    const missingEvidenceType = requiredEvidenceTypes.find((requiredType) => {
+      const row = evidenceRows.find((candidate) => candidate[0] === requiredType);
+      return !row || !row[1] || row[1].trim() === "";
+    });
+    if (missingEvidenceType) {
+      return `Evidence must include a filled '${missingEvidenceType}' evidence reference.`;
+    }
   }
 
   if (type === "Field Risk Acceptance") {

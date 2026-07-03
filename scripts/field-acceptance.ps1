@@ -145,6 +145,32 @@ function Get-MarkdownTableValue {
   return $match.Groups[1].Value.Trim()
 }
 
+function Get-MarkdownRowsAfterHeader {
+  param(
+    [string]$Content,
+    [string]$HeaderToken
+  )
+
+  $lines = $Content -split "`r?`n"
+  $headerIndex = -1
+  for ($index = 0; $index -lt $lines.Count; $index += 1) {
+    if ($lines[$index].Contains($HeaderToken)) {
+      $headerIndex = $index
+      break
+    }
+  }
+  if ($headerIndex -lt 0) { return @() }
+
+  $rows = @()
+  for ($index = $headerIndex + 2; $index -lt $lines.Count; $index += 1) {
+    $line = $lines[$index].Trim()
+    if (!$line.StartsWith("|")) { break }
+    $cells = @($line.Split("|") | Select-Object -Skip 1 | Select-Object -SkipLast 1 | ForEach-Object { $_.Trim() })
+    if ($cells.Count -gt 0) { $rows += ,$cells }
+  }
+  return $rows
+}
+
 function Add-OperatorUiWalkthroughGate {
   $now = (Get-Date).ToUniversalTime().ToString("o")
   if ($SkipOperatorUiWalkthrough) {
@@ -204,6 +230,15 @@ function Add-OperatorUiWalkthroughGate {
     return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "validate $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence still contains TODO screen rows; complete each required screen row before final field acceptance."
   }
 
+  $screenRows = @(Get-MarkdownRowsAfterHeader -Content $evidence -HeaderToken "Evidence To Capture")
+  if ($screenRows.Count -lt 8) {
+    return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "validate $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence must include every required operator screen row."
+  }
+  $incompleteScreenRows = @($screenRows | Where-Object { $_[0] -ne "PASS" })
+  if ($incompleteScreenRows.Count -gt 0) {
+    return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "validate $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Every required operator screen row must have PASS status before final field acceptance."
+  }
+
   if ($evidence -notmatch "\|\s*Walkthrough result\s*\|\s*PASS\s*\|") {
     return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "validate $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence must record '| Walkthrough result | PASS |' before final field acceptance."
   }
@@ -219,6 +254,24 @@ function Add-OperatorUiWalkthroughGate {
     }
     if (Test-PlaceholderFieldText -Value $value) {
       return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "validate $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence has a placeholder '$field' decision value."
+    }
+  }
+
+  $evidenceRows = @(Get-MarkdownRowsAfterHeader -Content $evidence -HeaderToken "Path Or Reference")
+  $requiredEvidenceTypes = @("Screenshot", "Related field acceptance manifest", "Related handover package manifest")
+  foreach ($type in $requiredEvidenceTypes) {
+    $referenceValue = ""
+    foreach ($candidate in $evidenceRows) {
+      if ($candidate[0] -eq $type) {
+        $referenceValue = $candidate[1]
+        break
+      }
+    }
+    if ([string]::IsNullOrWhiteSpace($referenceValue)) {
+      return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "validate $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence must include a filled '$type' evidence reference."
+    }
+    if (Test-PlaceholderFieldText -Value $referenceValue) {
+      return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "validate $OperatorUiWalkthroughEvidence" -LogPath $OperatorUiWalkthroughEvidence -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Operator UI walkthrough evidence has a placeholder '$type' evidence reference."
     }
   }
 

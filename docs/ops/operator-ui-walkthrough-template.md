@@ -6,8 +6,9 @@ before running field acceptance with
 Do not record passwords, JWTs, cookies, private IP ranges outside the approved
 handover audience, or other secret values.
 Empty session or reviewer decision values are not valid field evidence.
-At least one `Evidence Files` path or reference must be filled before final
-acceptance.
+`Screenshot`, `Related field acceptance manifest`, and
+`Related handover package manifest` evidence references must be filled before
+final acceptance.
 Placeholder values such as `TBD`, `N/A`, `none`, `pending`, `unknown`,
 `field-reviewer`, `field-site`, or `delivery-site-name` are not valid operator
 walkthrough evidence.

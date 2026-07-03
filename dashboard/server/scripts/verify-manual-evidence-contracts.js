@@ -66,6 +66,8 @@ const validOperatorEvidence = operatorTemplate
   .replace("| Base API URL |  |", "| Base API URL | https://dashboard.example.local/api |")
   .replace("| Captured at |  |", "| Captured at | 2026-07-03T00:00:00Z |")
   .replace("| Screenshot |  |  |", "| Screenshot | artifacts/manual/screenshots/operator-ui-dashboard.png | Dashboard, event detail, devices, statistics, and Swagger captures. |")
+  .replace("| Related field acceptance manifest |  |  |", "| Related field acceptance manifest | artifacts/field-acceptance/20260703-000000/manifest.json | Field acceptance PASS evidence. |")
+  .replace("| Related handover package manifest |  |  |", "| Related handover package manifest | artifacts/handover-package/20260703-000000/manifest.json | Handover package evidence. |")
   .replace("| Walkthrough result | PASS / REVIEW |", "| Walkthrough result | PASS |")
   .replace("| Reviewer signature/name |  |", "| Reviewer signature/name | reviewer |")
   .replace("| Decision timestamp |  |", "| Decision timestamp | 2026-07-03T00:00:00Z |");
@@ -102,8 +104,17 @@ const missingEvidenceReferenceOperatorEvidence = validOperatorEvidence.replace(
   "| Screenshot |  | Dashboard, event detail, devices, statistics, and Swagger captures. |",
 );
 assert(
-  validateManualEvidence("Operator UI Walkthrough", missingEvidenceReferenceOperatorEvidence).includes("at least one screenshot"),
-  "operator evidence must reject PASS walkthroughs without screenshot or artifact references",
+  validateManualEvidence("Operator UI Walkthrough", missingEvidenceReferenceOperatorEvidence).includes("filled 'Screenshot' evidence reference"),
+  "operator evidence must reject PASS walkthroughs without a screenshot reference",
+);
+
+const missingAcceptanceReferenceOperatorEvidence = validOperatorEvidence.replace(
+  "| Related field acceptance manifest | artifacts/field-acceptance/20260703-000000/manifest.json | Field acceptance PASS evidence. |",
+  "| Related field acceptance manifest |  | Field acceptance PASS evidence. |",
+);
+assert(
+  validateManualEvidence("Operator UI Walkthrough", missingAcceptanceReferenceOperatorEvidence).includes("filled 'Related field acceptance manifest' evidence reference"),
+  "operator evidence must reject PASS walkthroughs without a field acceptance manifest reference",
 );
 
 const placeholderSessionOperatorEvidence = validOperatorEvidence.replace(
@@ -143,7 +154,7 @@ assert(
 [
   "liveApproved",
   "LIVE_TCP_APPROVAL_REQUIRED",
-  "At least one `Evidence Files` path or reference",
+  "`Screenshot`, `Related field acceptance manifest`, and",
   "Placeholder values",
 ].forEach((token) => assertIncludes(operatorTemplate, token, "operator UI walkthrough template"));
 
