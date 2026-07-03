@@ -30,7 +30,7 @@ function actionForEntry(entry) {
     "Lidar Ingest Field Rehearsal": ["powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\""],
     "Control Board Field Rehearsal": ["powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer \"field-reviewer-name\" -SiteName \"delivery-site-name\""],
     "Runtime Evidence": ["npm.cmd run runtime:evidence -- --run-smoke --use-existing-stack --base-url=http://localhost:8080"],
-    "Security Evidence": ["npm.cmd run security:evidence -- --include-container-images --include-zap --target-url=http://localhost:8080"],
+    "Security Evidence": ["npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners --target-url=http://localhost:8080"],
   };
 
   const doneWhen = {
