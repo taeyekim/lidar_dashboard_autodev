@@ -59,6 +59,12 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "readLatestJsonManifest",
   "sourceDeliveryManifest",
   "sourceFieldReadinessManifest",
+  "sourceManualEvidenceReadinessManifest",
+  "latestManualEvidenceReadinessManifest",
+  "manualEvidenceReadiness",
+  "Manual evidence readiness",
+  "manualEvidenceReadinessMissingCount",
+  "manualEvidenceReadinessInvalidCount",
   "latestFieldReadinessManifest",
   "buildReadinessSignals",
   "buildRequiredFieldValueSignals",
@@ -166,6 +172,14 @@ const cleanFieldReadinessManifest = {
 const missingManualEvidenceBlockers = buildCompletionBlockers(
   cleanDeliveryManifest,
   cleanFieldReadinessManifest,
+  {
+    data: {
+      status: "MISSING",
+      readyForFinalClose: false,
+      missingCount: 1,
+      invalidCount: 0,
+    },
+  },
   [{
     type: "Operator UI Walkthrough",
     required: true,
@@ -176,6 +190,10 @@ const missingManualEvidenceBlockers = buildCompletionBlockers(
 assert(
   missingManualEvidenceBlockers.some((item) => item.message === "Required manual evidence Operator UI Walkthrough is MISSING."),
   "completion audit must block COMPLETE when required manual evidence is missing",
+);
+assert(
+  missingManualEvidenceBlockers.some((item) => item.message === "Manual evidence readiness is MISSING with missing=1 invalid=0."),
+  "completion audit must block COMPLETE when manual evidence readiness is not ready",
 );
 
 console.log("completion audit contracts ok");

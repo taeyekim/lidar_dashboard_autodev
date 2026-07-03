@@ -28,6 +28,10 @@ function latestFieldReadinessManifest(outputRoot = "artifacts/field-readiness") 
   return readLatestJsonManifest(outputRoot);
 }
 
+function latestManualEvidenceReadinessManifest(outputRoot = "artifacts/manual-evidence-readiness") {
+  return readLatestJsonManifest(outputRoot);
+}
+
 function addBlocker(blockers, category, message, nextAction = "") {
   blockers.push({ category, message, nextAction });
 }
@@ -45,6 +49,7 @@ function blockerNextAction(kind) {
     fieldVerification: "Complete the listed field verification areas and attach PASS manifests to the handover package.",
     readiness: "Run npm run field:readiness after filling required field values and starting the delivery Nginx/API entrypoint.",
     controlBoard: "Set CONTROL_BOARD_HOST/PORT and use LIVE TCP only after hardware approval, then rerun readiness and control-board rehearsal.",
+    manualReadiness: "Run npm run manual:evidence-readiness after filling required manual evidence, then rerun npm run completion:audit.",
   };
   return actions[kind] || "Refresh the related evidence manifest and rerun npm run completion:audit.";
 }
@@ -138,7 +143,7 @@ function buildManualEvidenceSignals() {
   return manualEvidenceRefs();
 }
 
-function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest, manualEvidenceSignals = []) {
+function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest, manualEvidenceReadinessManifest, manualEvidenceSignals = []) {
   if (!deliveryManifest) {
     return [{
       category: "automated",
@@ -162,6 +167,7 @@ function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest, manua
   const operatorUiEvidence = manualEvidenceSignals.find((item) => item.type === "Operator UI Walkthrough");
   const riskAcceptanceEvidence = manualEvidenceSignals.find((item) => item.type === "Field Risk Acceptance");
   const openRequiredManualEvidence = manualEvidenceSignals.filter((item) => item.required && item.status !== "PRESENT");
+  const manualReadiness = manualEvidenceReadinessManifest?.data || null;
 
   if (summary.status !== "AUTOMATED_CHECKS_PASS") {
     addBlocker(blockers, "field", `Delivery handover summary status is ${summary.status || "UNKNOWN"}.`, blockerNextAction("deliveryStatus"));
@@ -217,6 +223,21 @@ function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest, manua
       item.nextAction || "Attach accepted manual evidence before completion:audit can be COMPLETE.",
     );
   });
+  if (!manualReadiness) {
+    addBlocker(
+      blockers,
+      "field",
+      "Manual evidence readiness manifest is missing.",
+      blockerNextAction("manualReadiness"),
+    );
+  } else if (manualReadiness.readyForFinalClose !== true) {
+    addBlocker(
+      blockers,
+      "field",
+      `Manual evidence readiness is ${manualReadiness.status || "REVIEW"} with missing=${manualReadiness.missingCount ?? "unknown"} invalid=${manualReadiness.invalidCount ?? "unknown"}.`,
+      blockerNextAction("manualReadiness"),
+    );
+  }
 
   if ((fieldAcceptanceReviewCount > 0 || fieldAcceptanceSkippedCount > 0) && operatorUiEvidence?.status !== "PRESENT") {
     addBlocker(
@@ -245,14 +266,20 @@ function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest, manua
   return blockers;
 }
 
-function buildCompletionAudit(deliveryManifest, fieldReadinessManifest) {
+function buildCompletionAudit(deliveryManifest, fieldReadinessManifest, manualEvidenceReadinessManifest) {
   const summary = deliveryManifest?.data?.handoverSummary || {};
   const readinessSignals = buildReadinessSignals(fieldReadinessManifest);
   const requiredFieldValues = buildRequiredFieldValueSignals(fieldReadinessManifest);
   const companionEvidenceMetadata = buildCompanionEvidenceMetadata(deliveryManifest);
   const fieldRehearsalFollowUps = buildFieldRehearsalFollowUps(deliveryManifest);
   const manualEvidenceSignals = buildManualEvidenceSignals();
-  const completionBlockers = buildCompletionBlockers(deliveryManifest, fieldReadinessManifest, manualEvidenceSignals);
+  const manualEvidenceReadiness = manualEvidenceReadinessManifest?.data || {};
+  const completionBlockers = buildCompletionBlockers(
+    deliveryManifest,
+    fieldReadinessManifest,
+    manualEvidenceReadinessManifest,
+    manualEvidenceSignals,
+  );
   const automatedBlockers = completionBlockers.filter((item) => item.category === "automated");
   const fieldBlockers = completionBlockers.filter((item) => item.category === "field");
   const failedCommandCount = normalizeNumber(summary.failedCommandCount);
@@ -279,6 +306,7 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest) {
     generatedAt: new Date().toISOString(),
     sourceDeliveryManifest: deliveryManifest?.path || null,
     sourceFieldReadinessManifest: fieldReadinessManifest?.path || null,
+    sourceManualEvidenceReadinessManifest: manualEvidenceReadinessManifest?.path || null,
     status,
     canMarkGoalComplete: status === "COMPLETE",
     completionBlockers,
@@ -299,6 +327,8 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest) {
       fieldReadinessReviewCount: readinessSignals.reviewCount,
       fieldReadinessSkippedCount: readinessSignals.skippedCount,
       manualEvidenceMissingCount: manualEvidenceSignals.filter((item) => item.status !== "PRESENT").length,
+      manualEvidenceReadinessMissingCount: manualEvidenceReadinessManifest ? 0 : 1,
+      manualEvidenceReadinessInvalidCount: manualEvidenceReadiness.invalidCount ?? 0,
       automatedBlockerCount: automatedBlockers.length,
       fieldBlockerCount: fieldBlockers.length,
     },
@@ -311,6 +341,12 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest) {
     companionEvidenceMetadata,
     fieldRehearsalFollowUps,
     manualEvidenceSignals,
+    manualEvidenceReadiness: {
+      status: manualEvidenceReadiness.status || "MISSING",
+      readyForFinalClose: manualEvidenceReadiness.readyForFinalClose === true,
+      missingCount: manualEvidenceReadiness.missingCount ?? null,
+      invalidCount: manualEvidenceReadiness.invalidCount ?? null,
+    },
     handoverSummaryStatus: summary.status || null,
     decisionRule:
       "canMarkGoalComplete is true only when automated delivery checks pass and no field readiness, companion, acceptance, preflight, skipped, manual evidence, or required verification item remains.",
@@ -330,6 +366,7 @@ function buildMarkdown(manifest) {
     `- Can mark goal complete: ${manifest.canMarkGoalComplete}`,
     `- Source delivery manifest: ${manifest.sourceDeliveryManifest || "missing"}`,
     `- Source field readiness manifest: ${manifest.sourceFieldReadinessManifest || "missing"}`,
+    `- Source manual evidence readiness manifest: ${manifest.sourceManualEvidenceReadinessManifest || "missing"}`,
     `- Delivery handover status: ${manifest.handoverSummaryStatus || "missing"}`,
     `- Field readiness status: ${manifest.fieldReadinessStatus || "missing"}`,
     `- Control-board safety status: ${manifest.controlBoardSafetyStatus || "missing"}`,
@@ -351,6 +388,8 @@ function buildMarkdown(manifest) {
     `- Field readiness review items: ${manifest.counts.fieldReadinessReviewCount}`,
     `- Field readiness skipped items: ${manifest.counts.fieldReadinessSkippedCount}`,
     `- Manual evidence missing: ${manifest.counts.manualEvidenceMissingCount}`,
+    `- Manual evidence readiness missing: ${manifest.counts.manualEvidenceReadinessMissingCount}`,
+    `- Manual evidence readiness invalid: ${manifest.counts.manualEvidenceReadinessInvalidCount}`,
     `- Field verification required areas: ${manifest.counts.fieldVerificationRequiredCount}`,
     "",
     "## Field Verification Required",
@@ -392,6 +431,13 @@ function buildMarkdown(manifest) {
     "| --- | --- | --- | --- | --- |",
     ...manifest.manualEvidenceSignals.map((item) => `| ${item.type} | ${item.status} | ${item.path} | ${item.template} | ${item.requiredWhen}${item.validationReason ? ` (${item.validationReason})` : ""} |`),
     "",
+    "## Manual Evidence Readiness",
+    "",
+    `- Status: ${manifest.manualEvidenceReadiness.status}`,
+    `- Ready for final close: ${manifest.manualEvidenceReadiness.readyForFinalClose}`,
+    `- Missing count: ${manifest.manualEvidenceReadiness.missingCount}`,
+    `- Invalid count: ${manifest.manualEvidenceReadiness.invalidCount}`,
+    "",
     "## Completion Blockers",
     "",
     ...(manifest.completionBlockers.length > 0
@@ -413,13 +459,19 @@ function main() {
   const outputRootArg = process.argv.find((arg) => arg.startsWith("--output-root="));
   const deliveryRootArg = process.argv.find((arg) => arg.startsWith("--delivery-root="));
   const fieldReadinessRootArg = process.argv.find((arg) => arg.startsWith("--field-readiness-root="));
+  const manualReadinessRootArg = process.argv.find((arg) => arg.startsWith("--manual-readiness-root="));
   const outputRoot = outputRootArg ? outputRootArg.slice("--output-root=".length) : "artifacts/completion-audit";
   const deliveryRoot = deliveryRootArg ? deliveryRootArg.slice("--delivery-root=".length) : "artifacts/delivery";
   const fieldReadinessRoot = fieldReadinessRootArg ? fieldReadinessRootArg.slice("--field-readiness-root=".length) : "artifacts/field-readiness";
+  const manualReadinessRoot = manualReadinessRootArg ? manualReadinessRootArg.slice("--manual-readiness-root=".length) : "artifacts/manual-evidence-readiness";
   const outputDir = path.join(root, outputRoot, timestampForPath());
   ensureDir(outputDir);
 
-  const manifest = buildCompletionAudit(latestDeliveryManifest(deliveryRoot), latestFieldReadinessManifest(fieldReadinessRoot));
+  const manifest = buildCompletionAudit(
+    latestDeliveryManifest(deliveryRoot),
+    latestFieldReadinessManifest(fieldReadinessRoot),
+    latestManualEvidenceReadinessManifest(manualReadinessRoot),
+  );
   fs.writeFileSync(path.join(outputDir, "manifest.json"), JSON.stringify(manifest, null, 2));
   fs.writeFileSync(path.join(outputDir, "manifest.md"), buildMarkdown(manifest));
 
@@ -441,4 +493,5 @@ module.exports = {
   validateManualEvidence,
   buildReadinessSignals,
   buildRequiredFieldValueSignals,
+  latestManualEvidenceReadinessManifest,
 };

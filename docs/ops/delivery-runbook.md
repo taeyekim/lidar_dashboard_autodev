@@ -120,7 +120,7 @@ npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -Reviewer "field-
 After `npm.cmd run delivery:evidence`, run `npm.cmd run completion:audit`.
 The audit writes `artifacts/completion-audit/<timestamp>/manifest.json` and
 `artifacts/completion-audit/<timestamp>/manifest.md`, references the latest
-delivery evidence and field readiness manifests, records redacted required field value states,
+delivery evidence, manual evidence readiness, and field readiness manifests, records redacted required field value states,
 checks required manual evidence for `artifacts/manual/operator-ui-walkthrough.md` and
 `artifacts/manual/field-risk-acceptance.md`, then sets
 `canMarkGoalComplete` to `false` until automated checks pass and no field
@@ -198,7 +198,7 @@ Run `npm.cmd run verify:final-status` after the final handover package refresh.
 This verifier checks that READY/COMPLETE claims require `canMarkGoalComplete=true`,
 `LIVE_TCP_READY`, PRESENT manual evidence, a security evidence manifest,
 non-blocking strict security evidence, empty `Residual Field Gates`, and fresh
-delivery/readiness/security/index/closure references.
+delivery/readiness/manual-readiness/security/index/closure references.
 Then run `npm.cmd run final:status -- --base-url=http://localhost:8080` to
 write `artifacts/final-status/<timestamp>/manifest.json` plus `manifest.md`.
 Share this report as the final close/no-close decision. It reports

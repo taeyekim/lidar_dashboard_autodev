@@ -29,6 +29,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "Field Preflight",
   "Field Acceptance",
   "Field Readiness",
+  "Manual Evidence Readiness",
   "Field Closure Plan",
   "DB And Prisma Field Rehearsal",
   "Lidar Ingest Field Rehearsal",
@@ -65,6 +66,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "sourceDeliveryManifest",
   "sourceCompletionAudit",
   "sourceFieldReadinessManifest",
+  "sourceManualEvidenceReadinessManifest",
+  "Run npm run completion:audit again",
   "Run npm run field:closure-plan again",
   "staleEntryCount",
   "STALE",
@@ -96,6 +99,7 @@ assertIncludes(runbook, "npm.cmd run handover:index", "delivery runbook");
 assertIncludes(runbook, "artifacts/handover-index/<timestamp>/manifest.json", "delivery runbook");
 assertIncludes(checklist, "npm run handover:index", "acceptance checklist");
 assertIncludes(matrix, "npm run handover:index", "delivery evidence matrix");
+assertIncludes(matrix, "manual evidence readiness", "delivery evidence matrix");
 
 const vectorManifest = buildIndexManifest({ generatedBy: "contract-vector", siteName: "contract-vector" });
 if (vectorManifest.counts.missingManualEvidenceCount > 0) {

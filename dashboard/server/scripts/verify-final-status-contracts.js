@@ -46,6 +46,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [completionAudit, "manualEvidenceSignals", "completion audit generator"],
   [completionAudit, "sourceDeliveryManifest", "completion audit generator"],
   [completionAudit, "sourceFieldReadinessManifest", "completion audit generator"],
+  [completionAudit, "sourceManualEvidenceReadinessManifest", "completion audit generator"],
   [handoverPackage, "Residual Field Gates", "handover package generator"],
   [handoverPackage, "residualFieldGates", "handover package generator"],
   [handoverPackage, "evidenceRefs", "handover package generator"],
@@ -64,7 +65,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [deliveryRunbook, "verify:final-status", "delivery runbook"],
   [deliveryRunbook, "npm.cmd run final:status", "delivery runbook"],
   [deliveryRunbook, "artifacts/final-status", "delivery runbook"],
-  [deliveryRunbook, "delivery/readiness/security/index/closure references", "delivery runbook"],
+  [deliveryRunbook, "delivery/readiness/manual-readiness/security/index/closure references", "delivery runbook"],
   [deliveryRunbook, "a security evidence manifest", "delivery runbook"],
   [acceptanceChecklist, "canMarkGoalComplete=false", "acceptance checklist"],
   [acceptanceChecklist, "npm run verify:final-status", "acceptance checklist"],
@@ -138,6 +139,10 @@ if (latestCompletion) {
     assert(
       data.sourceFieldReadinessManifest === latestReadiness?.path,
       "complete audit must reference the latest field readiness manifest",
+    );
+    assert(
+      data.sourceManualEvidenceReadinessManifest === latestManualReadiness?.path,
+      "complete audit must reference the latest manual evidence readiness manifest",
     );
     assert(data.fieldReadinessStatus === "PASS", "complete audit requires PASS field readiness");
     assert(

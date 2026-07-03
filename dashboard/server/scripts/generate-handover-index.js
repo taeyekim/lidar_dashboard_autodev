@@ -53,6 +53,7 @@ function indexEntry(entry) {
     sourceDeliveryManifest: data.sourceDeliveryManifest || null,
     sourceCompletionAudit: data.sourceCompletionAudit || null,
     sourceFieldReadinessManifest: data.sourceFieldReadinessManifest || null,
+    sourceManualEvidenceReadinessManifest: data.sourceManualEvidenceReadinessManifest || null,
     controlBoardSafetyStatus: data.env?.controlBoardSafetyStatus || data.controlBoardSafetyStatus || null,
   };
 }
@@ -123,6 +124,13 @@ function buildIndexManifest(options = {}) {
       notes: "Pre-delivery readiness report for .env posture, Docker daemon, Nginx/API health, control-board TCP live values, Swagger allowlist, and optional scanner availability.",
     },
     {
+      area: "Manual Evidence Readiness",
+      required: true,
+      outputRoot: "artifacts/manual-evidence-readiness",
+      command: "npm run manual:evidence-readiness",
+      notes: "Preparation checklist for required reviewer-filled manual evidence files and validation failures.",
+    },
+    {
       area: "Field Closure Plan",
       required: true,
       outputRoot: "artifacts/field-closure-plan",
@@ -169,6 +177,7 @@ function buildIndexManifest(options = {}) {
   const deliveryEntry = entries.find((entry) => entry.area === "Delivery Evidence");
   const completionEntry = entries.find((entry) => entry.area === "Completion Audit");
   const fieldReadinessEntry = entries.find((entry) => entry.area === "Field Readiness");
+  const manualReadinessEntry = entries.find((entry) => entry.area === "Manual Evidence Readiness");
   const fieldClosurePlanEntry = entries.find((entry) => entry.area === "Field Closure Plan");
   const consistencyIssues = [];
 
@@ -183,6 +192,15 @@ function buildIndexManifest(options = {}) {
       completionEntry.status = "STALE";
       consistencyIssues.push(
         `Completion Audit sourceFieldReadinessManifest (${completionEntry.sourceFieldReadinessManifest || "missing"}) does not match latest Field Readiness (${fieldReadinessEntry.manifestPath}). Run npm run completion:audit again.`,
+      );
+    }
+    if (
+      manualReadinessEntry?.manifestPath &&
+      completionEntry.sourceManualEvidenceReadinessManifest !== manualReadinessEntry.manifestPath
+    ) {
+      completionEntry.status = "STALE";
+      consistencyIssues.push(
+        `Completion Audit sourceManualEvidenceReadinessManifest (${completionEntry.sourceManualEvidenceReadinessManifest || "missing"}) does not match latest Manual Evidence Readiness (${manualReadinessEntry.manifestPath}). Run npm run completion:audit again.`,
       );
     }
   }
