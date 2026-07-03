@@ -199,6 +199,8 @@ assertIncludes(runbook, "npm.cmd run handover:package", "delivery runbook");
 assertIncludes(runbook, "artifacts/handover-package/<timestamp>/manifest.json", "delivery runbook");
 assertIncludes(runbook, "Working tree clean", "delivery runbook");
 assertIncludes(checklist, "npm run handover:package", "acceptance checklist");
+assertIncludes(checklist, "field gate closure map", "acceptance checklist");
+assertIncludes(checklist, "gate-closure-map/owner-brief references", "acceptance checklist");
 assertIncludes(checklist, "Git commit", "acceptance checklist");
 assertIncludes(matrix, "npm run handover:package", "delivery evidence matrix");
 
