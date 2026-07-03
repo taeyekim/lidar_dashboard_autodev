@@ -20,9 +20,16 @@ function latestDeliveryManifest(outputRoot = "artifacts/delivery") {
   return readLatestJsonManifest(outputRoot);
 }
 
+function addBlocker(blockers, category, message) {
+  blockers.push({ category, message });
+}
+
 function buildCompletionBlockers(deliveryManifest) {
   if (!deliveryManifest) {
-    return ["Delivery evidence manifest is missing. Run npm run delivery:evidence first."];
+    return [{
+      category: "automated",
+      message: "Delivery evidence manifest is missing. Run npm run delivery:evidence first.",
+    }];
   }
 
   const summary = deliveryManifest.data.handoverSummary || {};
@@ -38,37 +45,41 @@ function buildCompletionBlockers(deliveryManifest) {
   const fieldVerificationRequiredCount = normalizeNumber(summary.fieldVerificationRequiredCount);
 
   if (summary.status !== "AUTOMATED_CHECKS_PASS") {
-    blockers.push(`Delivery handover summary status is ${summary.status || "UNKNOWN"}.`);
+    addBlocker(blockers, "field", `Delivery handover summary status is ${summary.status || "UNKNOWN"}.`);
   }
   if (failedCommandCount > 0) {
-    blockers.push(`${failedCommandCount} automated delivery command(s) failed.`);
+    addBlocker(blockers, "automated", `${failedCommandCount} automated delivery command(s) failed.`);
   }
   if (companionReviewCount > 0) {
-    blockers.push(`${companionReviewCount} companion evidence item(s) require review.`);
+    addBlocker(blockers, "field", `${companionReviewCount} companion evidence item(s) require review.`);
   }
   if (companionSkippedCount > 0) {
-    blockers.push(`${companionSkippedCount} companion evidence item(s) were skipped.`);
+    addBlocker(blockers, "field", `${companionSkippedCount} companion evidence item(s) were skipped.`);
   }
   if (fieldRehearsalReviewCount > 0) {
-    blockers.push(`${fieldRehearsalReviewCount} field rehearsal item(s) require review.`);
+    addBlocker(blockers, "field", `${fieldRehearsalReviewCount} field rehearsal item(s) require review.`);
   }
   if (fieldAcceptanceReviewCount > 0) {
-    blockers.push(`${fieldAcceptanceReviewCount} field acceptance step(s) require review.`);
+    addBlocker(blockers, "field", `${fieldAcceptanceReviewCount} field acceptance step(s) require review.`);
   }
   if (fieldAcceptanceSkippedCount > 0) {
-    blockers.push(`${fieldAcceptanceSkippedCount} field acceptance step(s) were skipped.`);
+    addBlocker(blockers, "field", `${fieldAcceptanceSkippedCount} field acceptance step(s) were skipped.`);
   }
   if (fieldPreflightReviewCount > 0) {
-    blockers.push(`${fieldPreflightReviewCount} field preflight check(s) require review.`);
+    addBlocker(blockers, "field", `${fieldPreflightReviewCount} field preflight check(s) require review.`);
   }
   if (fieldPreflightSkippedCount > 0) {
-    blockers.push(`${fieldPreflightSkippedCount} field preflight check(s) were skipped.`);
+    addBlocker(blockers, "field", `${fieldPreflightSkippedCount} field preflight check(s) were skipped.`);
   }
   if (fieldVerificationRequiredCount > 0) {
     const areas = Array.isArray(summary.fieldVerificationRequiredAreas)
       ? summary.fieldVerificationRequiredAreas.join(", ")
       : "unknown areas";
-    blockers.push(`${fieldVerificationRequiredCount} requirement area(s) still need field verification: ${areas}.`);
+    addBlocker(
+      blockers,
+      "field",
+      `${fieldVerificationRequiredCount} requirement area(s) still need field verification: ${areas}.`,
+    );
   }
 
   return blockers;
@@ -77,12 +88,10 @@ function buildCompletionBlockers(deliveryManifest) {
 function buildCompletionAudit(deliveryManifest) {
   const summary = deliveryManifest?.data?.handoverSummary || {};
   const completionBlockers = buildCompletionBlockers(deliveryManifest);
+  const automatedBlockers = completionBlockers.filter((item) => item.category === "automated");
+  const fieldBlockers = completionBlockers.filter((item) => item.category === "field");
   const failedCommandCount = normalizeNumber(summary.failedCommandCount);
-  const automatedReviewSignals = [
-    failedCommandCount,
-    normalizeNumber(summary.companionReviewCount),
-    normalizeNumber(summary.companionSkippedCount),
-  ].reduce((total, value) => total + value, 0);
+  const automatedReviewSignals = automatedBlockers.length;
   const fieldReviewSignals = [
     normalizeNumber(summary.fieldRehearsalReviewCount),
     normalizeNumber(summary.fieldAcceptanceReviewCount),
@@ -93,9 +102,9 @@ function buildCompletionAudit(deliveryManifest) {
   ].reduce((total, value) => total + value, 0);
 
   let status = "COMPLETE";
-  if (!deliveryManifest || automatedReviewSignals > 0 || summary.status !== "AUTOMATED_CHECKS_PASS") {
+  if (!deliveryManifest || automatedReviewSignals > 0) {
     status = "AUTOMATED_REVIEW_REQUIRED";
-  } else if (fieldReviewSignals > 0) {
+  } else if (fieldReviewSignals > 0 || fieldBlockers.length > 0) {
     status = "FIELD_VERIFICATION_REQUIRED";
   }
 
@@ -105,6 +114,8 @@ function buildCompletionAudit(deliveryManifest) {
     status,
     canMarkGoalComplete: status === "COMPLETE",
     completionBlockers,
+    automatedBlockers,
+    fieldBlockers,
     counts: {
       requirementAreaCount: normalizeNumber(summary.requirementAreaCount),
       automatedEvidenceItemCount: normalizeNumber(summary.automatedEvidenceItemCount),
@@ -117,6 +128,8 @@ function buildCompletionAudit(deliveryManifest) {
       fieldPreflightReviewCount: normalizeNumber(summary.fieldPreflightReviewCount),
       fieldPreflightSkippedCount: normalizeNumber(summary.fieldPreflightSkippedCount),
       fieldVerificationRequiredCount: normalizeNumber(summary.fieldVerificationRequiredCount),
+      automatedBlockerCount: automatedBlockers.length,
+      fieldBlockerCount: fieldBlockers.length,
     },
     fieldVerificationRequiredAreas: Array.isArray(summary.fieldVerificationRequiredAreas)
       ? summary.fieldVerificationRequiredAreas
@@ -141,6 +154,8 @@ function buildMarkdown(manifest) {
     `- Requirement areas: ${manifest.counts.requirementAreaCount}`,
     `- Automated evidence items: ${manifest.counts.automatedEvidenceItemCount}`,
     `- Failed automated commands: ${manifest.counts.failedCommandCount}`,
+    `- Automated blockers: ${manifest.counts.automatedBlockerCount}`,
+    `- Field blockers: ${manifest.counts.fieldBlockerCount}`,
     `- Companion review items: ${manifest.counts.companionReviewCount}`,
     `- Companion skipped items: ${manifest.counts.companionSkippedCount}`,
     `- Field rehearsal review items: ${manifest.counts.fieldRehearsalReviewCount}`,
@@ -159,7 +174,7 @@ function buildMarkdown(manifest) {
     "## Completion Blockers",
     "",
     ...(manifest.completionBlockers.length > 0
-      ? manifest.completionBlockers.map((item) => `- ${item}`)
+      ? manifest.completionBlockers.map((item) => `- [${item.category}] ${item.message}`)
       : ["- none"]),
     "",
     "## Decision Rule",
