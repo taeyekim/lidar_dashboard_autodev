@@ -69,6 +69,25 @@ function readDeliveryEvidenceMatrix() {
   return fs.existsSync(matrixPath) ? fs.readFileSync(matrixPath, "utf8") : "";
 }
 
+function parseEvidenceMatrix(content) {
+  const rows = [];
+  content.split(/\r?\n/).forEach((line) => {
+    if (!line.startsWith("| ")) return;
+    const cells = line
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim());
+    if (cells.length !== 4 || cells[0] === "Requirement Area" || cells[0] === "---") return;
+    rows.push({
+      area: cells[0],
+      requirement: cells[1],
+      automatedEvidence: cells[2],
+      fieldEvidenceStillRequired: cells[3],
+    });
+  });
+  return rows;
+}
+
 function buildMarkdown(manifest) {
   const lines = [
     "# Delivery Evidence Manifest",
@@ -103,8 +122,17 @@ function buildMarkdown(manifest) {
     "",
     "## Field Verification Still Required",
     "",
-    "- Real integrated control board TCP test requires field IP/port and hardware approval.",
-    "- Dashboard-side wrong-way level-2 escalation criteria remain field-measurement dependent.",
+    "| Requirement Area | Field Evidence |",
+    "| --- | --- |",
+  );
+  manifest.evidenceMatrix.rows.forEach((row) => {
+    lines.push(`| ${row.area} | ${row.fieldEvidenceStillRequired} |`);
+  });
+
+  lines.push(
+    "",
+    "Additional field gates:",
+    "",
     "- Optional external tools such as gitleaks, Trivy, and OWASP ZAP are captured by `npm run security:evidence` or `scripts/security-scan.ps1` when installed.",
     "- Cross-platform security evidence can be generated with `npm run security:evidence`.",
     "- Runtime smoke with real Docker services and device ingest key should be attached here when performed on the delivery machine.",
@@ -136,9 +164,8 @@ function main() {
   ].map(([label, command, args]) => runCommand(label, command, args));
 
   const evidenceMatrix = readDeliveryEvidenceMatrix();
-  const requirementAreas = Array.from(evidenceMatrix.matchAll(/^\| ([^|]+) \|/gm))
-    .map((match) => match[1].trim())
-    .filter((area) => area && !["Requirement Area", "---"].includes(area));
+  const matrixRows = parseEvidenceMatrix(evidenceMatrix);
+  const requirementAreas = matrixRows.map((row) => row.area);
 
   const manifest = {
     generatedAt: new Date().toISOString(),
@@ -159,14 +186,12 @@ function main() {
     evidenceMatrix: {
       source: "docs/ops/delivery-evidence-matrix.md",
       requirementAreas,
+      rows: matrixRows,
     },
-    fieldVerificationStillRequired: [
-      "Real integrated control board TCP test requires field IP/port and hardware approval.",
-      "Dashboard-side wrong-way level-2 escalation criteria remain field-measurement dependent.",
-      "Optional gitleaks, Trivy, and OWASP ZAP evidence depends on installed tools and explicit security evidence run.",
-      "Run npm run security:evidence to capture npm audit, policy gate, optional scan results, and skipped-check reasons.",
-      "Runtime smoke against live Docker services should be attached when performed on the delivery machine.",
-    ],
+    fieldVerificationStillRequired: matrixRows.map((row) => ({
+      area: row.area,
+      evidence: row.fieldEvidenceStillRequired,
+    })),
   };
 
   fs.writeFileSync(path.join(outputDir, "manifest.json"), JSON.stringify(manifest, null, 2));
