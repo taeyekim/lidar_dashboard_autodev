@@ -161,6 +161,7 @@ function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest, manua
   const readinessSignals = buildReadinessSignals(fieldReadinessManifest);
   const operatorUiEvidence = manualEvidenceSignals.find((item) => item.type === "Operator UI Walkthrough");
   const riskAcceptanceEvidence = manualEvidenceSignals.find((item) => item.type === "Field Risk Acceptance");
+  const openRequiredManualEvidence = manualEvidenceSignals.filter((item) => item.required && item.status !== "PRESENT");
 
   if (summary.status !== "AUTOMATED_CHECKS_PASS") {
     addBlocker(blockers, "field", `Delivery handover summary status is ${summary.status || "UNKNOWN"}.`, blockerNextAction("deliveryStatus"));
@@ -208,6 +209,15 @@ function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest, manua
       message.includes("Control-board safety status") ? blockerNextAction("controlBoard") : blockerNextAction("readiness"),
     );
   });
+  openRequiredManualEvidence.forEach((item) => {
+    addBlocker(
+      blockers,
+      "field",
+      `Required manual evidence ${item.type} is ${item.status}.`,
+      item.nextAction || "Attach accepted manual evidence before completion:audit can be COMPLETE.",
+    );
+  });
+
   if ((fieldAcceptanceReviewCount > 0 || fieldAcceptanceSkippedCount > 0) && operatorUiEvidence?.status !== "PRESENT") {
     addBlocker(
       blockers,

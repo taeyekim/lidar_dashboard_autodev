@@ -121,10 +121,10 @@ After `npm.cmd run delivery:evidence`, run `npm.cmd run completion:audit`.
 The audit writes `artifacts/completion-audit/<timestamp>/manifest.json` and
 `artifacts/completion-audit/<timestamp>/manifest.md`, references the latest
 delivery evidence and field readiness manifests, records redacted required field value states,
-checks manual evidence for `artifacts/manual/operator-ui-walkthrough.md` and
+checks required manual evidence for `artifacts/manual/operator-ui-walkthrough.md` and
 `artifacts/manual/field-risk-acceptance.md`, then sets
 `canMarkGoalComplete` to `false` until automated checks pass and no field
-readiness, companion, skipped, preflight, acceptance, manual evidence, or
+readiness, companion, skipped, preflight, acceptance, required manual evidence, or
 required verification item remains.
 When `FIELD_REHEARSAL_UNAVAILABLE` manifests are present, confirm the audit's
 `Field Rehearsal Follow-ups` table lists the replacement owner, target recheck

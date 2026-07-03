@@ -1,5 +1,8 @@
 const fs = require("fs");
 const path = require("path");
+const {
+  buildCompletionBlockers,
+} = require("./generate-completion-audit");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -64,6 +67,8 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "buildManualEvidenceSignals",
   "manualEvidenceRefs",
   "manualEvidenceSignals",
+  "openRequiredManualEvidence",
+  "Required manual evidence",
   "manualEvidenceMissingCount",
   "Manual Evidence",
   "manual evidence",
@@ -116,6 +121,7 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "field readiness",
   "required field value states",
   "manual evidence",
+  "required manual evidence",
   "artifacts/manual/operator-ui-walkthrough.md",
   "artifacts/manual/field-risk-acceptance.md",
 ].forEach((token) => {
@@ -130,5 +136,46 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
 ].forEach((token) => {
   assert(deliveryMatrix.includes(token), `delivery evidence matrix is missing ${token}`);
 });
+
+const cleanDeliveryManifest = {
+  data: {
+    handoverSummary: {
+      status: "AUTOMATED_CHECKS_PASS",
+      failedCommandCount: 0,
+      companionReviewCount: 0,
+      companionSkippedCount: 0,
+      fieldRehearsalReviewCount: 0,
+      fieldAcceptanceReviewCount: 0,
+      fieldAcceptanceSkippedCount: 0,
+      fieldPreflightReviewCount: 0,
+      fieldPreflightSkippedCount: 0,
+      fieldVerificationRequiredCount: 0,
+    },
+  },
+};
+const cleanFieldReadinessManifest = {
+  data: {
+    status: "PASS",
+    reviewCount: 0,
+    skippedCount: 0,
+    env: {
+      controlBoardSafetyStatus: "LIVE_TCP_READY",
+    },
+  },
+};
+const missingManualEvidenceBlockers = buildCompletionBlockers(
+  cleanDeliveryManifest,
+  cleanFieldReadinessManifest,
+  [{
+    type: "Operator UI Walkthrough",
+    required: true,
+    status: "MISSING",
+    nextAction: "Attach operator walkthrough evidence.",
+  }],
+);
+assert(
+  missingManualEvidenceBlockers.some((item) => item.message === "Required manual evidence Operator UI Walkthrough is MISSING."),
+  "completion audit must block COMPLETE when required manual evidence is missing",
+);
 
 console.log("completion audit contracts ok");
