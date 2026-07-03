@@ -79,6 +79,7 @@ async function createCommandRow(tx, commandType, packet, options = {}) {
       requestedByUserId: options.requestedByUserId || null,
       metadata: {
         dryRun: options.config?.dryRun ?? true,
+        liveApproved: options.config?.liveApproved ?? false,
         hostConfigured: Boolean(options.config?.host),
         portConfigured: Boolean(options.config?.port),
         trigger: options.trigger || "MANUAL",
@@ -198,6 +199,38 @@ async function sendCommand(commandType, options = {}) {
       commandId: command.id,
       commandType,
       packetHex: packet.packetHex,
+    });
+
+    return serializeCommand(updated);
+  }
+
+  if (!config.liveApproved) {
+    const updated = await updateCommand(
+      command.id,
+      {
+        status: COMMAND_STATUS.FAILED,
+        errorMessage: "CONTROL_BOARD_LIVE_APPROVED is not true; live TCP send blocked.",
+        completedAt: new Date(),
+      },
+      {
+        action: "LIVE_TCP_APPROVAL_REQUIRED",
+        message: "CONTROL_BOARD_DRY_RUN=false but CONTROL_BOARD_LIVE_APPROVED is not true; TCP send blocked.",
+        metadata: {
+          packetHex: packet.packetHex,
+          hostConfigured: Boolean(config.host),
+          portConfigured: Boolean(config.port),
+          liveApproved: Boolean(config.liveApproved),
+        },
+      },
+    );
+
+    broadcastRealtime("control-command.updated", serializeCommand(updated));
+
+    logger.warn("control board live TCP blocked without approval", {
+      commandId: command.id,
+      commandType,
+      hostConfigured: Boolean(config.host),
+      portConfigured: Boolean(config.port),
     });
 
     return serializeCommand(updated);
@@ -351,7 +384,7 @@ async function getStatus() {
     }),
   ]);
   const latency = summarizeResponseLatency(recentAckCommands);
-  const liveTcpReady = !config.dryRun && Boolean(config.host) && Boolean(config.port);
+  const liveTcpReady = !config.dryRun && config.liveApproved && Boolean(config.host) && Boolean(config.port);
   const safetyStatus = config.dryRun
     ? "DRY_RUN_SAFE"
     : liveTcpReady
@@ -363,6 +396,7 @@ async function getStatus() {
     mode: config.dryRun ? "DRY_RUN" : "LIVE_TCP",
     liveTcpReady,
     safetyStatus,
+    liveApproved: Boolean(config.liveApproved),
     transport: config.transport,
     hostConfigured: Boolean(config.host),
     portConfigured: Boolean(config.port),

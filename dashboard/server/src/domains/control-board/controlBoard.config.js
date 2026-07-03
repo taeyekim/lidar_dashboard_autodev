@@ -23,6 +23,7 @@ function getControlBoardConfig() {
     retryCount: toInteger(process.env.CONTROL_BOARD_RETRY_COUNT, 1),
     heartbeatIntervalMs: toInteger(process.env.CONTROL_BOARD_HEARTBEAT_INTERVAL_MS, 5000),
     dryRun: toBoolean(process.env.CONTROL_BOARD_DRY_RUN, true),
+    liveApproved: toBoolean(process.env.CONTROL_BOARD_LIVE_APPROVED, false),
   };
 }
 

@@ -96,6 +96,9 @@ function Assert-ControlBoardSafetyStatus {
   if ($null -eq $Status.PSObject.Properties["liveTcpReady"]) {
     throw "Control-board status did not expose liveTcpReady."
   }
+  if ($null -eq $Status.PSObject.Properties["liveApproved"]) {
+    throw "Control-board status did not expose liveApproved."
+  }
   if ($null -eq $Status.PSObject.Properties["safetyStatus"]) {
     throw "Control-board status did not expose safetyStatus."
   }
@@ -108,7 +111,7 @@ function Assert-ControlBoardSafetyStatus {
   if ($Status.mode -eq "LIVE_TCP" -and !$AllowLiveTcp) {
     throw "Control board is LIVE_TCP. Re-run with -AllowLiveTcp only after field hardware approval."
   }
-  if ($Status.mode -eq "LIVE_TCP" -and $Status.liveTcpReady -and $Status.safetyStatus -ne "LIVE_TCP_READY") {
+  if ($Status.mode -eq "LIVE_TCP" -and $Status.liveTcpReady -and (!$Status.liveApproved -or $Status.safetyStatus -ne "LIVE_TCP_READY")) {
     throw "LIVE_TCP ready state must report LIVE_TCP_READY."
   }
   if ($Status.mode -eq "LIVE_TCP" -and !$Status.liveTcpReady -and $Status.safetyStatus -ne "LIVE_TCP_REVIEW") {

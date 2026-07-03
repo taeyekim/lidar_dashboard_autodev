@@ -257,9 +257,13 @@ const controlCommandLog = swaggerSpec.components?.schemas?.ControlCommandLog;
 });
 
 const controlBoardStatus = swaggerSpec.components?.schemas?.ControlBoardStatusResponse;
-["averageResponseMs", "responseSampleCount", "latestCommand", "liveTcpReady", "safetyStatus"].forEach((field) => {
+["averageResponseMs", "responseSampleCount", "latestCommand", "liveTcpReady", "liveApproved", "safetyStatus"].forEach((field) => {
   assert(controlBoardStatus?.properties?.[field], `ControlBoardStatusResponse must expose ${field}`);
 });
+assert(
+  controlBoardStatus?.properties?.liveTcpReady?.description?.includes("CONTROL_BOARD_LIVE_APPROVED=true"),
+  "ControlBoardStatusResponse liveTcpReady must document live approval requirement",
+);
 assert(
   controlBoardStatus?.properties?.safetyStatus?.enum?.includes("LIVE_TCP_REVIEW"),
   "ControlBoardStatusResponse safetyStatus must document LIVE_TCP_REVIEW",

@@ -261,6 +261,7 @@ assert(
   [runtimeSmoke, "averageResponseMs", "runtime smoke script"],
   [runtimeSmoke, "responseSampleCount", "runtime smoke script"],
   [runtimeSmoke, "liveTcpReady", "runtime smoke script"],
+  [runtimeSmoke, "liveApproved", "runtime smoke script"],
   [runtimeSmoke, "safetyStatus", "runtime smoke script"],
   [runtimeSmoke, "DRY_RUN_SAFE", "runtime smoke script"],
   [runtimeSmoke, "LIVE_TCP_READY", "runtime smoke script"],

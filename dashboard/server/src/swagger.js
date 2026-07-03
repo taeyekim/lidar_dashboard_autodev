@@ -1296,7 +1296,12 @@ const swaggerSpec = {
           liveTcpReady: {
             type: "boolean",
             example: false,
-            description: "True only when LIVE_TCP is active and both control-board host and port are configured.",
+            description: "True only when LIVE_TCP is active, CONTROL_BOARD_LIVE_APPROVED=true, and both control-board host and port are configured.",
+          },
+          liveApproved: {
+            type: "boolean",
+            example: false,
+            description: "Reflects CONTROL_BOARD_LIVE_APPROVED for operator-visible live TCP approval state.",
           },
           safetyStatus: {
             type: "string",
