@@ -110,6 +110,8 @@ async function main() {
     assert(login.json?.ok === true, "login response must be successful");
     assert(login.json?.authMode === "httpOnlyCookie", "login response must advertise HttpOnly cookie auth mode");
     assert(!Object.prototype.hasOwnProperty.call(login.json || {}, "token"), "login response body must not expose JWT token");
+    assert(!Object.prototype.hasOwnProperty.call(login.json || {}, "accessToken"), "login response body must not expose accessToken");
+    assert(!Object.prototype.hasOwnProperty.call(login.json || {}, "refreshToken"), "login response body must not expose refreshToken");
 
     const setCookie = login.headers["set-cookie"] || [];
     assert(setCookie.length === 2, "login must set auth and CSRF cookies");

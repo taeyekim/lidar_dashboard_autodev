@@ -44,6 +44,7 @@ const http = readProjectFile("dashboard/dashboard-web/src/shared/api/http.js");
 const frontendConfig = readProjectFile("dashboard/dashboard-web/src/shared/api/config.js");
 const authContext = readProjectFile("dashboard/dashboard-web/src/context/AuthContext.jsx");
 const authApi = readProjectFile("dashboard/dashboard-web/src/features/auth/authApi.js");
+const loginPage = readProjectFile("dashboard/dashboard-web/src/pages/Login/LoginPage.jsx");
 const envExample = readProjectFile(".env.example");
 
 [
@@ -81,7 +82,17 @@ assert(!authContext.includes("setAuthToken"), "AuthContext must not persist JWT 
 assert(authContext.includes("logoutOperator"), "AuthContext must call the logout API before local logout cleanup");
 assert(authApi.includes('postJson("/api/auth/logout", {})'), "frontend auth API must call POST /api/auth/logout");
 assert(!http.includes("Authorization: `Bearer"), "frontend http client must not attach Bearer tokens");
-assert(!http.includes("localStorage"), "frontend http client must not read or write auth tokens in localStorage");
+[
+  [http, "frontend http client"],
+  [authApi, "frontend auth API"],
+  [authContext, "AuthContext"],
+  [loginPage, "LoginPage"],
+].forEach(([content, label]) => {
+  assert(!content.includes("localStorage"), `${label} must not read or write auth tokens in localStorage`);
+  assert(!content.includes("sessionStorage"), `${label} must not read or write auth tokens in sessionStorage`);
+  assert(!content.includes("accessToken"), `${label} must not expose accessToken`);
+  assert(!content.includes("refreshToken"), `${label} must not expose refreshToken`);
+});
 assertAscii(http, "frontend http client");
 assertAscii(frontendConfig, "frontend API config");
 
@@ -150,6 +161,8 @@ try {
 const authLogin = swaggerSpec.components?.schemas?.AuthLoginResponse;
 assert(authLogin?.properties?.authMode, "Swagger AuthLoginResponse must expose authMode");
 assert(!authLogin?.properties?.token, "Swagger AuthLoginResponse must not expose token");
+assert(!authLogin?.properties?.accessToken, "Swagger AuthLoginResponse must not expose accessToken");
+assert(!authLogin?.properties?.refreshToken, "Swagger AuthLoginResponse must not expose refreshToken");
 assert(swaggerSpec.components?.securitySchemes?.cookieAuth?.in === "cookie", "Swagger must define cookieAuth");
 assert(
   swaggerSpec.components?.securitySchemes?.csrfHeaderAuth?.name === "X-CSRF-Token",
