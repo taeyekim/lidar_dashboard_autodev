@@ -62,7 +62,7 @@ function buildClosurePlan(options = {}) {
   const fieldReadiness = readLatestJsonManifest("artifacts/field-readiness");
   const entries = handover?.data?.entries || [];
   const openEntries = entries.filter((entry) =>
-    ["MISSING", "STALE", "REVIEW", "AUTOMATED_CHECKS_REVIEW", "FIELD_VERIFICATION_REQUIRED", "PASS_WITH_SKIPS"].includes(entry.status),
+    ["MISSING", "STALE", "REVIEW", "OPEN", "AUTOMATED_CHECKS_REVIEW", "FIELD_VERIFICATION_REQUIRED", "PASS_WITH_SKIPS"].includes(entry.status),
   );
 
   const completionBlockers = completion?.data?.completionBlockers || [];

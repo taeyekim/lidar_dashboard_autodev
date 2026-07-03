@@ -32,6 +32,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "redacted",
   "controlBoardSafetyStatus",
   "Control-board safety status",
+  "OPEN",
   "finalCommands",
   "Field Readiness",
   "DB And Prisma Field Rehearsal",
