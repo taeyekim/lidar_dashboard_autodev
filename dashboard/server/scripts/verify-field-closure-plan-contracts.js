@@ -182,6 +182,7 @@ assert(fieldActionArtifactActions[0].artifact === "Field risk register", "field 
 assert(fieldActionArtifactActions[0].openCount === 1, "field closure plan should preserve artifact open counts");
 assert(hasOpenRequiredFieldValue({ state: "not-approved" }), "not-approved field values must remain open");
 assert(hasOpenRequiredFieldValue({ state: "open-or-wildcard" }), "wildcard/open field values must remain open");
+assert(hasOpenRequiredFieldValue({ state: "invalid" }), "invalid field values must remain open");
 assert(!hasOpenRequiredFieldValue({ state: "configured" }), "configured field values must not remain open");
 
 console.log("field closure plan contracts ok");

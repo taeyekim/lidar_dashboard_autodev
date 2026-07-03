@@ -124,6 +124,7 @@ function hasOpenRequiredFieldValue(item) {
     "open-or-wildcard",
     "missing-or-trusted-lan-exception-required",
     "not-approved",
+    "invalid",
     "change-this-to-a-long-random-secret",
     "admin1234!",
   ].includes(state);

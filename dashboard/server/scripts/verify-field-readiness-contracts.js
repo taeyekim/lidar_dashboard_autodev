@@ -34,7 +34,12 @@ const riskAcceptanceTemplate = readProjectFile("docs/ops/field-risk-acceptance-t
   "NGINX_WRONGWAY_BURST",
   "NGINX_CONTENT_SECURITY_POLICY",
   "CONTROL_BOARD_LIVE_APPROVED",
+  "CONTROL_BOARD_CONNECT_TIMEOUT_MS",
+  "CONTROL_BOARD_RESPONSE_TIMEOUT_MS",
+  "CONTROL_BOARD_RETRY_COUNT",
+  "CONTROL_BOARD_HEARTBEAT_INTERVAL_MS",
   "control-board live approval",
+  "control-board TCP timing",
   "SameSite cookie setting",
   "CORS trusted origins",
   "Nginx wrong-way rate limit",
@@ -70,6 +75,10 @@ const riskAcceptanceTemplate = readProjectFile("docs/ops/field-risk-acceptance-t
   "redacted",
   "missing-or-trusted-lan-exception-required",
   "Blocks live control-board TCP evidence",
+  "Blocks live TCP timing acceptance",
+  "Blocks live TCP ACK evidence",
+  "Blocks live TCP retry policy acceptance",
+  "Blocks live TCP heartbeat acceptance",
   "Blocks cookie topology acceptance",
   "Blocks browser/API exposure review",
   "Blocks Nginx delivery posture review",
@@ -79,6 +88,8 @@ const riskAcceptanceTemplate = readProjectFile("docs/ops/field-risk-acceptance-t
   "docker compose config --quiet",
   "gitleaks detect --source . --redact",
   "The Nginx entrypoint returns a successful /api/health response.",
+  "numericState",
+  "Control-board TCP timing values are missing or invalid.",
 ].forEach((token) => assertIncludes(generator, token, "field readiness generator"));
 
 [

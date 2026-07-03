@@ -55,6 +55,10 @@ function riskAreaForFieldValue(name) {
     CONTROL_BOARD_HOST: "Control-board live TCP",
     CONTROL_BOARD_PORT: "Control-board live TCP",
     CONTROL_BOARD_LIVE_APPROVED: "Control-board live approval",
+    CONTROL_BOARD_CONNECT_TIMEOUT_MS: "Control-board TCP timing",
+    CONTROL_BOARD_RESPONSE_TIMEOUT_MS: "Control-board TCP timing",
+    CONTROL_BOARD_RETRY_COUNT: "Control-board TCP timing",
+    CONTROL_BOARD_HEARTBEAT_INTERVAL_MS: "Control-board TCP timing",
   };
   return mapping[name] || `${name} field value`;
 }

@@ -48,6 +48,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "Nginx content security policy",
   "Control-board live TCP",
   "Control-board live approval",
+  "Control-board TCP timing",
   "Operator UI walkthrough",
   "sourceFinalStatus",
   "sourceFieldReadiness",
@@ -118,6 +119,12 @@ const fieldReadiness = {
               priority: "BLOCKING",
               nextAction: "Fill CONTROL_BOARD_HOST.",
             },
+            {
+              name: "CONTROL_BOARD_RESPONSE_TIMEOUT_MS",
+              state: "invalid",
+              priority: "REVIEW",
+              nextAction: "Set CONTROL_BOARD_RESPONSE_TIMEOUT_MS.",
+            },
           ],
         },
         {
@@ -186,7 +193,7 @@ const finalStatus = {
   },
 };
 
-assert(buildFieldValueRisks(fieldReadiness).length === 6, "field value risks should include open field values");
+assert(buildFieldValueRisks(fieldReadiness).length === 7, "field value risks should include open field values");
 assert(
   buildFieldValueRisks(fieldReadiness).some((item) => item.area === "Cookie SameSite posture"),
   "field value risks should map AUTH_COOKIE_SAMESITE to Cookie SameSite posture",
@@ -202,6 +209,10 @@ assert(
 assert(
   buildFieldValueRisks(fieldReadiness).some((item) => item.area === "CORS trusted origins" && item.owner === "Auth/Security"),
   "field value risks should map CORS trusted origins to Auth/Security",
+);
+assert(
+  buildFieldValueRisks(fieldReadiness).some((item) => item.area === "Control-board TCP timing" && item.owner === "Control-board TCP"),
+  "field value risks should map control-board TCP timing values to Control-board TCP",
 );
 assert(buildSecurityRisks(security).length === 2, "security risks should include blocking and delivery-fix scanner checks");
 assert(

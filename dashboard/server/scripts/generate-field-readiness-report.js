@@ -69,6 +69,7 @@ function checkEvidenceCommand(name) {
     "device ingest key": "Confirm DEVICE_INGEST_API_KEY is configured or attach the trusted-LAN exception note.",
     "control-board TCP mode": "Confirm CONTROL_BOARD_DRY_RUN, CONTROL_BOARD_HOST, and CONTROL_BOARD_PORT in .env before live TCP rehearsal.",
     "control-board live approval": "Confirm CONTROL_BOARD_LIVE_APPROVED=true only after the hardware owner approves live TCP testing.",
+    "control-board TCP timing": "Confirm CONTROL_BOARD_CONNECT_TIMEOUT_MS, CONTROL_BOARD_RESPONSE_TIMEOUT_MS, CONTROL_BOARD_RETRY_COUNT, and CONTROL_BOARD_HEARTBEAT_INTERVAL_MS match the field board firmware/network.",
     "HTTPS cookie setting": "Confirm AUTH_COOKIE_SECURE=true in the HTTPS/TLS delivery topology.",
     "SameSite cookie setting": "Confirm AUTH_COOKIE_SAMESITE matches the delivery topology; SameSite=None requires Secure cookies.",
     "CORS trusted origins": "Confirm CORS_ORIGINS contains only approved operator UI origins.",
@@ -94,6 +95,7 @@ function checkDoneWhen(name) {
     "device ingest key": "DEVICE_INGEST_API_KEY is configured, or a signed trusted-LAN exception is attached.",
     "control-board TCP mode": "Dry-run is explicitly accepted or live TCP host/port are configured with hardware approval.",
     "control-board live approval": "CONTROL_BOARD_LIVE_APPROVED=true is recorded after hardware owner approval.",
+    "control-board TCP timing": "TCP connect timeout, response timeout, retry count, and heartbeat interval are configured as non-negative numeric values approved for the field board.",
     "HTTPS cookie setting": "AUTH_COOKIE_SECURE=true for the HTTPS/TLS delivery route.",
     "SameSite cookie setting": "AUTH_COOKIE_SAMESITE matches the same-site or cross-site HTTPS delivery route.",
     "CORS trusted origins": "CORS_ORIGINS contains only approved operator UI origins and no wildcard/open entry.",
@@ -141,6 +143,15 @@ function corsOriginState(value) {
   if (origins.length === 0) return "missing";
   if (origins.some((origin) => ["*", "all"].includes(origin.toLowerCase()))) return "open-or-wildcard";
   return "trusted-only";
+}
+
+function numericState(value, options = {}) {
+  if (!value) return "missing";
+  if (!/^\d+$/.test(String(value))) return "invalid";
+  const numericValue = Number(value);
+  const minimum = options.minimum ?? 1;
+  if (numericValue < minimum) return "invalid";
+  return "configured";
 }
 
 function buildRequiredFieldValue(name, state, requiredForPass, completionGate, nextAction, redacted = true) {
@@ -231,10 +242,20 @@ function buildEnvChecks() {
   const liveApproved = envValue(values, "CONTROL_BOARD_LIVE_APPROVED").toLowerCase() === "true";
   const host = envValue(values, "CONTROL_BOARD_HOST");
   const port = envValue(values, "CONTROL_BOARD_PORT");
+  const connectTimeout = envValue(values, "CONTROL_BOARD_CONNECT_TIMEOUT_MS");
+  const responseTimeout = envValue(values, "CONTROL_BOARD_RESPONSE_TIMEOUT_MS");
+  const retryCount = envValue(values, "CONTROL_BOARD_RETRY_COUNT");
+  const heartbeatInterval = envValue(values, "CONTROL_BOARD_HEARTBEAT_INTERVAL_MS");
+  const connectTimeoutState = numericState(connectTimeout);
+  const responseTimeoutState = numericState(responseTimeout);
+  const retryCountState = numericState(retryCount, { minimum: 0 });
+  const heartbeatIntervalState = numericState(heartbeatInterval);
+  const tcpTimingReady = [connectTimeoutState, responseTimeoutState, retryCountState, heartbeatIntervalState].every((state) => state === "configured");
   const liveReady = dryRun === "false" && liveApproved && host && port;
   const safetyStatus = dryRun === "false" ? (liveReady ? "LIVE_TCP_READY" : "LIVE_TCP_REVIEW") : "DRY_RUN_SAFE";
   checks.push(buildCheck("control-board TCP mode", liveReady ? "PASS" : "REVIEW", "critical", `${safetyStatus}: ${liveReady ? "LIVE_TCP values are configured." : "Control-board is dry-run or live TCP values are incomplete."}`, "Set CONTROL_BOARD_DRY_RUN=false only after field IP/port and hardware approval are confirmed."));
   checks.push(buildCheck("control-board live approval", liveApproved ? "PASS" : "REVIEW", "critical", liveApproved ? "CONTROL_BOARD_LIVE_APPROVED=true." : "CONTROL_BOARD_LIVE_APPROVED is not true.", "Set CONTROL_BOARD_LIVE_APPROVED=true only after hardware owner approval is recorded."));
+  checks.push(buildCheck("control-board TCP timing", tcpTimingReady ? "PASS" : "REVIEW", "warning", tcpTimingReady ? "Control-board TCP timing values are numeric and configured." : "Control-board TCP timing values are missing or invalid.", "Set CONTROL_BOARD_CONNECT_TIMEOUT_MS, CONTROL_BOARD_RESPONSE_TIMEOUT_MS, CONTROL_BOARD_RETRY_COUNT, and CONTROL_BOARD_HEARTBEAT_INTERVAL_MS for the field board."));
 
   const secureCookie = envValue(values, "AUTH_COOKIE_SECURE").toLowerCase();
   const sameSiteCookie = envValue(values, "AUTH_COOKIE_SAMESITE").toLowerCase();
@@ -305,6 +326,38 @@ function buildEnvChecks() {
       "Keep true before approval; set false only for approved live TCP rehearsal.",
       "Blocks final live TCP completion while true, but protects hardware before approval.",
       "Use CONTROL_BOARD_DRY_RUN=false only with field IP/port and hardware approval.",
+      false,
+    ),
+    buildRequiredFieldValue(
+      "CONTROL_BOARD_CONNECT_TIMEOUT_MS",
+      connectTimeoutState,
+      "Set a positive TCP connect timeout before approved live TCP rehearsal.",
+      "Blocks live TCP timing acceptance when missing or invalid.",
+      "Confirm the field board/network connect timeout and set CONTROL_BOARD_CONNECT_TIMEOUT_MS.",
+      false,
+    ),
+    buildRequiredFieldValue(
+      "CONTROL_BOARD_RESPONSE_TIMEOUT_MS",
+      responseTimeoutState,
+      "Set a positive TCP response timeout before approved live TCP rehearsal.",
+      "Blocks live TCP ACK evidence when missing or invalid.",
+      "Confirm the field board ACK response timeout and set CONTROL_BOARD_RESPONSE_TIMEOUT_MS.",
+      false,
+    ),
+    buildRequiredFieldValue(
+      "CONTROL_BOARD_RETRY_COUNT",
+      retryCountState,
+      "Set a non-negative retry count before approved live TCP rehearsal.",
+      "Blocks live TCP retry policy acceptance when missing or invalid.",
+      "Confirm the field retry policy and set CONTROL_BOARD_RETRY_COUNT.",
+      false,
+    ),
+    buildRequiredFieldValue(
+      "CONTROL_BOARD_HEARTBEAT_INTERVAL_MS",
+      heartbeatIntervalState,
+      "Set a positive heartbeat interval before approved live TCP rehearsal.",
+      "Blocks live TCP heartbeat acceptance when missing or invalid.",
+      "Confirm the field heartbeat policy and set CONTROL_BOARD_HEARTBEAT_INTERVAL_MS.",
       false,
     ),
     buildRequiredFieldValue(

@@ -123,6 +123,9 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "CORS_ORIGINS",
   "open-or-wildcard",
   "CORS trusted origins",
+  "CONTROL_BOARD_RESPONSE_TIMEOUT_MS",
+  "control-board TCP timing",
+  "invalid",
 ].forEach((token) => {
   assert(fieldReadiness.includes(token), `field readiness generator is missing ${token}`);
 });

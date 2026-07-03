@@ -127,6 +127,7 @@ function hasOpenRequiredFieldValue(item) {
     "open-or-wildcard",
     "missing-or-trusted-lan-exception-required",
     "not-approved",
+    "invalid",
     "change-this-to-a-long-random-secret",
     "admin1234!",
   ].includes(state);
@@ -135,6 +136,8 @@ function hasOpenRequiredFieldValue(item) {
 function requiredFieldState(items, name) {
   return String((items || []).find((item) => item.name === name)?.state || "").toLowerCase();
 }
+
+assert(hasOpenRequiredFieldValue({ state: "invalid" }), "invalid required field values must remain open");
 
 if (latestCompletion) {
   const data = latestCompletion.data || {};
