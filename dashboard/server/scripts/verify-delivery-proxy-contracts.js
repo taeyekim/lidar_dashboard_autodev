@@ -16,6 +16,7 @@ const frontendConfig = fs.readFileSync(
   "utf8",
 );
 const envExample = fs.readFileSync(path.join(root, ".env.example"), "utf8");
+const runtimeSmoke = fs.readFileSync(path.join(root, "scripts", "runtime-smoke.ps1"), "utf8");
 
 assert(
   compose.includes("VITE_WS_BASE_URL: ws://${PUBLIC_HOST:-localhost}:${NGINX_PORT:-8080}/ws"),
@@ -51,6 +52,13 @@ assert(
 assert(
   nginxTemplate.includes('add_header Cache-Control "no-store" always'),
   "Nginx template must keep the SPA entrypoint uncached",
+);
+assert(
+  runtimeSmoke.includes("SPA cache header smoke") &&
+    runtimeSmoke.includes("frontend asset cache header smoke") &&
+    runtimeSmoke.includes("max-age=2592000") &&
+    runtimeSmoke.includes("immutable"),
+  "Runtime smoke must verify SPA no-store and immutable frontend asset cache headers",
 );
 assert(
   frontendConfig.includes("`ws://${API_HOST}:${API_PORT}/ws`"),

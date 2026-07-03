@@ -173,6 +173,20 @@ function Assert-ResponseHeader {
   }
 }
 
+function Assert-ResponseHeaderContains {
+  param(
+    [hashtable]$Response,
+    [string]$Name,
+    [string]$ExpectedPart,
+    [string]$Label
+  )
+
+  $key = $Name.ToLowerInvariant()
+  if (!$Response.headers.ContainsKey($key) -or !$Response.headers[$key].Contains($ExpectedPart)) {
+    throw "$Label expected ${Name} to contain: $ExpectedPart."
+  }
+}
+
 function Get-CookieJarValue {
   param(
     [string]$CookieJar,
@@ -228,6 +242,24 @@ try {
   if (!$cspHeader -or !$cspHeader.Contains("default-src 'self'") -or !$cspHeader.Contains("object-src 'none'")) {
     throw "healthz security header smoke expected Content-Security-Policy with default-src 'self' and object-src 'none'."
   }
+
+  $spaHeaders = Invoke-CurlStatus -Url "$BaseUrl/"
+  Assert-HttpStatus -Response $spaHeaders -Expected 200 -Label "SPA cache header smoke"
+  Assert-ResponseHeader -Response $spaHeaders -Name "Cache-Control" -Expected "no-store" -Label "SPA cache header smoke"
+
+  $indexHtml = & curl.exe -sS -f "$BaseUrl/"
+  if ($LASTEXITCODE -ne 0 -or !$indexHtml) {
+    throw "SPA index smoke failed to load index HTML."
+  }
+  $assetMatch = [regex]::Match([string]$indexHtml, '(?<path>/assets/[^"'' >]+)')
+  if (!$assetMatch.Success) {
+    throw "SPA index smoke could not find a hashed /assets/ reference."
+  }
+  $assetHeaders = Invoke-CurlStatus -Url "$BaseUrl$($assetMatch.Groups["path"].Value)"
+  Assert-HttpStatus -Response $assetHeaders -Expected 200 -Label "frontend asset cache header smoke"
+  Assert-ResponseHeaderContains -Response $assetHeaders -Name "Cache-Control" -ExpectedPart "public" -Label "frontend asset cache header smoke"
+  Assert-ResponseHeaderContains -Response $assetHeaders -Name "Cache-Control" -ExpectedPart "max-age=2592000" -Label "frontend asset cache header smoke"
+  Assert-ResponseHeaderContains -Response $assetHeaders -Name "Cache-Control" -ExpectedPart "immutable" -Label "frontend asset cache header smoke"
 
   $unauthMutation = Invoke-CurlStatus -Method "PATCH" -Url "$BaseUrl/api/events/runtime-smoke-missing/status" -Body @{
     status = "RESOLVED"

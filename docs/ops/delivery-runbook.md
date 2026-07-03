@@ -130,6 +130,7 @@ The same runtime smoke checks baseline delivery security behavior:
 
 - Nginx/security headers include `X-Content-Type-Options: nosniff` and `X-Frame-Options: SAMEORIGIN`.
 - Nginx/security headers include `Content-Security-Policy` with `default-src 'self'` and `object-src 'none'`.
+- Nginx/cache headers keep the SPA entry route `no-store` and hashed `/assets/` files immutable.
 - Mutation APIs without an operator token return `401`.
 - Cookie-authenticated mutation APIs without `X-CSRF-Token` return `403`.
 - Non-JSON mutation requests return `415`.
