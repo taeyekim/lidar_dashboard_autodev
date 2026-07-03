@@ -63,15 +63,9 @@ function statusLabel(status) {
 }
 
 function statusBadgeClass(status) {
-  if (status === "pending" || status === "new") {
-    return "bg-orange-50 text-orange-700 border-orange-200";
-  }
-  if (status === "resolved" || status === "reviewed") {
-    return "bg-green-50 text-green-700 border-green-200";
-  }
-  if (status === "dismissed" || status === "ignored") {
-    return "bg-gray-50 text-gray-600 border-gray-200";
-  }
+  if (status === "pending" || status === "new") return "bg-orange-50 text-orange-700 border-orange-200";
+  if (status === "resolved" || status === "reviewed") return "bg-green-50 text-green-700 border-green-200";
+  if (status === "dismissed" || status === "ignored") return "bg-gray-50 text-gray-600 border-gray-200";
   return "bg-blue-50 text-blue-700 border-blue-200";
 }
 
@@ -89,9 +83,7 @@ function iconWrapClass(status) {
 
 function AnalyticsView({ summary, loading, error }) {
   const hourlyData =
-    summary.hourlyEvents && summary.hourlyEvents.length > 0
-      ? summary.hourlyEvents
-      : INITIAL_HOURLY_DATA;
+    summary.hourlyEvents && summary.hourlyEvents.length > 0 ? summary.hourlyEvents : INITIAL_HOURLY_DATA;
 
   return (
     <div className="space-y-6">
@@ -213,9 +205,7 @@ function ControlCommandTimeline({ commands = [] }) {
 
           {Array.isArray(command.logs) && command.logs.length > 0 && (
             <details className="mt-3 rounded border border-gray-100 bg-gray-50">
-              <summary className="cursor-pointer px-2 py-1 font-bold uppercase text-gray-400">
-                명령 로그
-              </summary>
+              <summary className="cursor-pointer px-2 py-1 font-bold uppercase text-gray-400">명령 로그</summary>
               <div className="space-y-1 border-t border-gray-100 p-2">
                 {command.logs.map((log) => (
                   <div key={log.id} className="text-gray-600">
@@ -243,9 +233,7 @@ export default function EventLogPage() {
   const [searchParams] = useSearchParams();
   const tabParam = (searchParams.get("tab") || "all").toLowerCase();
   const eventIdParam = searchParams.get("eventId") || "";
-  const safeTab = ["all", "analytics", "vehicles", "unidentified"].includes(tabParam)
-    ? tabParam
-    : "all";
+  const safeTab = ["all", "analytics", "vehicles", "unidentified"].includes(tabParam) ? tabParam : "all";
 
   const [activeTab, setActiveTab] = useState(safeTab);
   const [events, setEvents] = useState([]);
@@ -331,8 +319,7 @@ export default function EventLogPage() {
   }, [loadEvents, loadSummary]);
 
   useEffect(() => {
-    if (!eventIdParam) return;
-    if (selectedEvent?.id === eventIdParam) return;
+    if (!eventIdParam || selectedEvent?.id === eventIdParam) return;
 
     const listedEvent = events.find((event) => event.id === eventIdParam);
     if (listedEvent) {
@@ -351,9 +338,7 @@ export default function EventLogPage() {
         setEvents((prev) => upsertEvent(prev, normalized));
       })
       .catch((err) => {
-        if (!ignore) {
-          setDetailError(err.message || "이벤트 상세를 불러오지 못했습니다.");
-        }
+        if (!ignore) setDetailError(err.message || "이벤트 상세를 불러오지 못했습니다.");
       })
       .finally(() => {
         if (!ignore) setDetailLoading(false);
@@ -377,11 +362,7 @@ export default function EventLogPage() {
   }, [loadSelectedDetail, selectedEvent?.id]);
 
   useEffect(() => {
-    if (!selectedEvent) {
-      setMemoDraft("");
-    } else {
-      setMemoDraft(selectedEvent.memo || "");
-    }
+    setMemoDraft(selectedEvent?.memo || "");
   }, [selectedEvent]);
 
   const { status: realtimeStatus } = useRealtimeSocket({
@@ -408,16 +389,11 @@ export default function EventLogPage() {
   const filteredEvents = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return events;
-    return events.filter((event) => {
-      return (
-        event.id.toLowerCase().includes(q) ||
-        event.type.toLowerCase().includes(q) ||
-        event.category.toLowerCase().includes(q) ||
-        event.message.toLowerCase().includes(q) ||
-        event.location.toLowerCase().includes(q) ||
-        event.status.toLowerCase().includes(q)
-      );
-    });
+    return events.filter((event) =>
+      [event.id, event.type, event.category, event.message, event.location, event.status]
+        .map((value) => String(value || "").toLowerCase())
+        .some((value) => value.includes(q)),
+    );
   }, [events, query]);
 
   const handleSelect = (event) => {
@@ -482,74 +458,36 @@ export default function EventLogPage() {
             >
               <RefreshCcw className="mr-2 h-4 w-4" /> 새로고침
             </button>
-            <button
-              className="flex items-center rounded bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600"
-              type="button"
-            >
+            <button className="flex items-center rounded bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600" type="button">
               <Download className="mr-2 h-4 w-4" /> CSV 내보내기
             </button>
           </div>
         </div>
 
         <div className="flex items-center space-x-1 border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab("all")}
-            className={`flex px-4 py-2 text-sm font-bold border-b-2 ${
-              activeTab === "all"
-                ? "border-gray-800 text-gray-800"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-            type="button"
-          >
-            전체 이벤트
-          </button>
-
-          <button
-            onClick={() => setActiveTab("analytics")}
-            className={`flex items-center px-4 py-2 text-sm font-bold border-b-2 ${
-              activeTab === "analytics"
-                ? "border-gray-800 text-gray-800"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-            type="button"
-          >
-            <Activity className="mr-2 h-4 w-4" />
-            분석
-          </button>
-
-          <button
-            onClick={() => setActiveTab("vehicles")}
-            className={`flex items-center px-4 py-2 text-sm font-bold border-b-2 ${
-              activeTab === "vehicles"
-                ? "border-gray-800 text-gray-800"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-            type="button"
-          >
-            <Calendar className="mr-2 h-4 w-4" />
-            차량 이력
-          </button>
-
-          <button
-            onClick={() => setActiveTab("unidentified")}
-            className={`flex items-center px-4 py-2 text-sm font-bold border-b-2 ${
-              activeTab === "unidentified"
-                ? "border-gray-800 text-gray-800"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-            type="button"
-          >
-            <Eye className="mr-2 h-4 w-4" />
-            미식별
-          </button>
+          {[
+            ["all", "전체 이벤트", null],
+            ["analytics", "분석", Activity],
+            ["vehicles", "차량 이력", Calendar],
+            ["unidentified", "미식별", Eye],
+          ].map(([tab, label, Icon]) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex items-center px-4 py-2 text-sm font-bold border-b-2 ${
+                activeTab === tab ? "border-gray-800 text-gray-800" : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+              type="button"
+            >
+              {Icon ? <Icon className="mr-2 h-4 w-4" /> : null}
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
       <div className="min-h-[500px]">
-        {activeTab === "analytics" && (
-          <AnalyticsView summary={summary} loading={summaryLoading} error={summaryError} />
-        )}
-
+        {activeTab === "analytics" && <AnalyticsView summary={summary} loading={summaryLoading} error={summaryError} />}
         {activeTab === "vehicles" && <ContractEmptyView title="차량 이력은 현재 API 계약 범위 밖입니다" />}
         {activeTab === "unidentified" && <ContractEmptyView title="미식별 차량 데이터는 현재 API 계약 범위 밖입니다" />}
 
@@ -567,11 +505,7 @@ export default function EventLogPage() {
                 />
               </div>
 
-              {listError && (
-                <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  {listError}
-                </div>
-              )}
+              {listError && <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{listError}</div>}
 
               <div className="space-y-2">
                 {listLoading && (
@@ -579,7 +513,6 @@ export default function EventLogPage() {
                     이벤트를 불러오는 중입니다.
                   </div>
                 )}
-
                 {!listLoading && !listError && filteredEvents.length === 0 && (
                   <div className="rounded border border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
                     조건에 맞는 이벤트가 없습니다.
@@ -599,18 +532,11 @@ export default function EventLogPage() {
                       type="button"
                     >
                       <div className="flex min-w-0 items-center space-x-4">
-                        <div className={`rounded-full p-2 ${iconWrapClass(event.status)}`}>
-                          {iconByStatus(event.status)}
-                        </div>
-
+                        <div className={`rounded-full p-2 ${iconWrapClass(event.status)}`}>{iconByStatus(event.status)}</div>
                         <div className="min-w-0">
                           <div className="mb-0.5 flex items-center space-x-2">
                             <span className="font-mono text-xs font-bold text-gray-400">{event.id}</span>
-                            <span
-                              className={`rounded border px-1.5 py-0.5 text-[10px] font-bold ${statusBadgeClass(
-                                event.status,
-                              )}`}
-                            >
+                            <span className={`rounded border px-1.5 py-0.5 text-[10px] font-bold ${statusBadgeClass(event.status)}`}>
                               {statusLabel(event.status)}
                             </span>
                           </div>
@@ -618,11 +544,8 @@ export default function EventLogPage() {
                           <div className="mt-1 text-xs text-gray-500">{event.location}</div>
                         </div>
                       </div>
-
                       <div className="ml-4 shrink-0 text-right">
-                        <div className="mb-1 font-mono text-xs text-gray-500">
-                          {formatEventTime(event.timestamp)}
-                        </div>
+                        <div className="mb-1 font-mono text-xs text-gray-500">{formatEventTime(event.timestamp)}</div>
                         <div className="text-xs text-gray-400">{event.category}</div>
                       </div>
                     </button>
@@ -686,18 +609,10 @@ export default function EventLogPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 border-t border-gray-100 pt-4">
-                      <button
-                        className="rounded bg-green-600 py-2 text-sm font-bold text-white hover:bg-green-700"
-                        onClick={() => handleStatus("resolved")}
-                        type="button"
-                      >
+                      <button className="rounded bg-green-600 py-2 text-sm font-bold text-white hover:bg-green-700" onClick={() => handleStatus("resolved")} type="button">
                         조치 완료
                       </button>
-                      <button
-                        className="rounded border border-gray-300 bg-white py-2 text-sm font-bold text-gray-700 hover:bg-gray-50"
-                        onClick={() => handleStatus("dismissed")}
-                        type="button"
-                      >
+                      <button className="rounded border border-gray-300 bg-white py-2 text-sm font-bold text-gray-700 hover:bg-gray-50" onClick={() => handleStatus("dismissed")} type="button">
                         무시
                       </button>
                     </div>

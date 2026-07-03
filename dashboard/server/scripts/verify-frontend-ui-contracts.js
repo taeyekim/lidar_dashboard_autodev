@@ -77,9 +77,20 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
   "Prisma seed 또는 현장 장비 등록",
 ].forEach((token) => assertIncludes(devicesPage, token, "Devices page operations copy"));
 
-["占", "沃", "筌", "獄", "癰", "揶", "?λ퉬", "誘몄닔", "援ъ꽦"].forEach((token) => {
-  assertExcludes(devicesPage, token, "Devices page mojibake copy");
-});
+[
+  "이벤트 로그",
+  "라이다 수신 이벤트, 관제 상태, 제어 명령 이력",
+  "오늘 이벤트",
+  "역주행 이벤트",
+  "시간대별 이벤트 분포",
+  "전체 이벤트",
+  "ID, 유형, 상태, 구역 검색",
+  "이벤트 상세",
+  "운영 메모",
+  "통합제어보드 명령",
+  "원본 payload JSON",
+  "현재 이벤트 API 계약에는 CCTV, 번호판, 차주, 차량 등록 정보가 포함되어 있지 않습니다.",
+].forEach((token) => assertIncludes(eventLogPage, token, "Event log operations copy"));
 
 [
   "handleViewDashboardEvent",
@@ -90,6 +101,59 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
   "latestCommandSummary",
   "sendControlBoardTestCommand",
 ].forEach((token) => assertIncludes(dashboardPage, token, "Dashboard operations behavior"));
+
+[
+  'searchParams.get("eventId")',
+  "fetchEvent(eventIdParam)",
+  "upsertEvent(prev, normalized)",
+  "ControlCommandTimeline",
+  "selectedEvent.raw?.controlCommands",
+  "RawPayloadBlock",
+  "updateEventMemo",
+  "updateEventStatus",
+].forEach((token) => assertIncludes(eventLogPage, token, "Event log operations behavior"));
+
+[
+  "handleExportReport",
+  "wrongway-events-",
+  "rawPayload",
+  "JSON.stringify",
+].forEach((token) => assertIncludes(wrongwayLogPage, token, "Wrongway log operations behavior"));
+
+[
+  "교통 운영 통계",
+  "정주행/역주행 운영 통계",
+  "정주행 차량",
+  "역주행 차량",
+  "역주행률",
+  "구역별 위험도",
+  "집계된 구역 데이터가 없습니다.",
+].forEach((token) => assertIncludes(trafficStatisticsPanel, token, "Traffic statistics panel copy"));
+
+[
+  "Today events",
+  "Wrong-way events",
+  "Pending events",
+  "API summary",
+  "Needs review",
+  "From event API",
+  "Events from the backend event API",
+  "Search id, type, status, location",
+  "Add operator memo",
+  "Select an event.",
+].forEach((token) => assertExcludes(eventLogPage, token, "Event log generic/sample copy"));
+
+[
+  "Wrong-way event log",
+  "Back to dashboard",
+  "Export report",
+  "Search id, location, status",
+  "Loading wrong-way events",
+  "No wrong-way events found",
+  "Event information",
+  "Evidence payload",
+  "Select an event to view detail",
+].forEach((token) => assertExcludes(wrongwayLogPage, token, "Wrongway log generic/sample copy"));
 
 [
   "<span>12%</span>",
@@ -106,57 +170,21 @@ assert(!fs.existsSync(todaysEventsPath), "Unused mock TodaysEvents component mus
 ].forEach((token) => assertExcludes(dashboardPage, token, "Dashboard sample or placeholder copy"));
 
 [
-  'searchParams.get("eventId")',
-  "fetchEvent(eventIdParam)",
-  "upsertEvent(prev, normalized)",
-  "ControlCommandTimeline",
-  "selectedEvent.raw?.controlCommands",
-  "RawPayloadBlock",
-  "updateEventMemo",
-  "updateEventStatus",
-].forEach((token) => assertIncludes(eventLogPage, token, "Event log operations behavior"));
-
-[
-  "Today events",
-  "Wrong-way events",
-  "Pending events",
-  "API summary",
-  "Needs review",
-  "From event API",
-  "Events from the backend event API",
-  "Search id, type, status, location",
-  "Add operator memo",
-  "No control board command is linked to this event.",
-  "Select an event.",
-].forEach((token) => assertExcludes(eventLogPage, token, "Event log generic/sample copy"));
-
-[
-  "handleExportReport",
-  "wrongway-events-",
-  "rawPayload",
-  "JSON.stringify",
-].forEach((token) => assertIncludes(wrongwayLogPage, token, "Wrongway log operations behavior"));
-
-[
-  "Wrong-way event log",
-  "Back to dashboard",
-  "Export report",
-  "Search id, location, status",
-  "Loading wrong-way events",
-  "No wrong-way events found",
-  "Event information",
-  "Evidence payload",
-  "Select an event to view detail",
-].forEach((token) => assertExcludes(wrongwayLogPage, token, "Wrongway log generic/sample copy"));
-
-[
-  "교통 운영 통계",
-  "정주행/역주행 운영 통계",
-  "정주행 차량",
-  "역주행 차량",
-  "역주행률",
-  "구역별 위험도",
-  "집계된 구역 데이터가 없습니다.",
-].forEach((token) => assertIncludes(trafficStatisticsPanel, token, "Traffic statistics panel copy"));
+  "占",
+  "沃",
+  "筌",
+  "獄",
+  "癰",
+  "揶",
+  "?대깽",
+  "?λ퉬",
+  "援먰넻",
+  "吏묎퀎",
+  "??＜",
+].forEach((token) => {
+  assertExcludes(devicesPage, token, "Devices page mojibake copy");
+  assertExcludes(eventLogPage, token, "Event log mojibake copy");
+  assertExcludes(trafficStatisticsPanel, token, "Traffic statistics mojibake copy");
+});
 
 console.log("frontend UI contracts ok");
