@@ -29,6 +29,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "evidenceRefs",
   "canMarkGoalComplete",
   "failedCommandCount",
+  "strictFailureReasons",
+  "--strict",
+  "handover package strict gate failed",
 ].forEach((token) => assertIncludes(generator, token, "handover package generator"));
 
 [

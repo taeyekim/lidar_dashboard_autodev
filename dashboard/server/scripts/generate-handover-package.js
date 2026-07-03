@@ -21,6 +21,10 @@ function argValue(name, fallback) {
   return match ? match.slice(prefix.length) : fallback;
 }
 
+function hasFlag(name) {
+  return process.argv.includes(`--${name}`);
+}
+
 function runCommand(label, args) {
   const startedAt = new Date();
   const result = spawnSync(npmCommand, args, {
@@ -100,6 +104,7 @@ function buildMarkdown(manifest) {
     "- This command refreshes the final evidence chain in order: delivery evidence, completion audit, handover index, then field closure plan.",
     "- Attach this manifest together with the referenced evidence folders.",
     "- `canMarkGoalComplete=false` means field/runtime/hardware evidence is still open.",
+    "- Use `--strict` when the command should fail unless the refreshed package is READY and `canMarkGoalComplete=true`.",
     "",
   ].join("\n");
 }
@@ -108,6 +113,7 @@ function main() {
   const outputRoot = argValue("output-root", "artifacts/handover-package");
   const siteName = argValue("site-name", "unspecified");
   const generatedBy = argValue("generated-by", process.env.USERNAME || process.env.USER || "Codex");
+  const strict = hasFlag("strict");
   const outputDir = path.join(root, outputRoot, timestampForPath());
   ensureDir(outputDir);
 
@@ -122,13 +128,26 @@ function main() {
   const completion = readLatestJsonManifest("artifacts/completion-audit");
   const handoverIndex = readLatestJsonManifest("artifacts/handover-index");
   const failedCommands = commands.filter((item) => item.exitCode !== 0);
+  const packageStatus = failedCommands.length > 0 ? "FAILED" : handoverIndex?.data?.status || "UNKNOWN";
+  const canMarkGoalComplete = Boolean(completion?.data?.canMarkGoalComplete);
+  const strictFailureReasons = [];
+  if (failedCommands.length > 0) {
+    strictFailureReasons.push(`${failedCommands.length} package command(s) failed.`);
+  }
+  if (packageStatus !== "READY") {
+    strictFailureReasons.push(`handover package status is ${packageStatus}.`);
+  }
+  if (!canMarkGoalComplete) {
+    strictFailureReasons.push("canMarkGoalComplete is false.");
+  }
   const manifest = {
     generatedAt: new Date().toISOString(),
     generatedBy,
     siteName,
     hostName: os.hostname(),
-    status: failedCommands.length > 0 ? "FAILED" : handoverIndex?.data?.status || "UNKNOWN",
-    canMarkGoalComplete: Boolean(completion?.data?.canMarkGoalComplete),
+    strict,
+    status: packageStatus,
+    canMarkGoalComplete,
     commands: commands.map((item) => ({
       label: item.label,
       command: item.command,
@@ -140,6 +159,7 @@ function main() {
     })),
     evidenceRefs,
     failedCommandCount: failedCommands.length,
+    strictFailureReasons,
   };
 
   fs.writeFileSync(path.join(outputDir, "manifest.json"), JSON.stringify(manifest, null, 2));
@@ -147,6 +167,10 @@ function main() {
   console.log(`handover package written to ${path.relative(root, outputDir)}`);
   console.log(`handover package status: ${manifest.status}`);
   if (failedCommands.length > 0) {
+    process.exit(1);
+  }
+  if (strict && strictFailureReasons.length > 0) {
+    console.error(`handover package strict gate failed: ${strictFailureReasons.join(" ")}`);
     process.exit(1);
   }
 }
