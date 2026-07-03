@@ -86,6 +86,19 @@ function fieldRehearsalFollowUpEntries(completionManifest, fieldClosurePlanEntry
   }));
 }
 
+function fieldActionArtifactEntries(completionManifest, fieldClosurePlanEntry) {
+  const artifacts = completionManifest?.data?.fieldActionArtifactSignals;
+  if (!Array.isArray(artifacts)) return [];
+  return artifacts.map((item) => ({
+    artifact: item.label || item.key || "unknown",
+    status: item.status || "UNKNOWN",
+    openCount: Number.isFinite(Number(item.openCount)) ? Number(item.openCount) : 0,
+    ready: item.ready === true,
+    manifestPath: item.path || null,
+    closurePlanManifest: fieldClosurePlanEntry?.manifestPath || null,
+  }));
+}
+
 function buildIndexManifest(options = {}) {
   const entries = [
     {
@@ -256,6 +269,8 @@ function buildIndexManifest(options = {}) {
   const completion = entries.find((entry) => entry.area === "Completion Audit");
   const completionManifest = completion?.manifestPath ? readLatestJsonManifest("artifacts/completion-audit") : null;
   const fieldRehearsalFollowUps = fieldRehearsalFollowUpEntries(completionManifest, fieldClosurePlanEntry);
+  const fieldActionArtifacts = fieldActionArtifactEntries(completionManifest, fieldClosurePlanEntry);
+  const openFieldActionArtifacts = fieldActionArtifacts.filter((entry) => entry.ready !== true || entry.openCount > 0);
   const manualEvidence = manualEvidenceEntries();
   const missingManualEvidence = manualEvidence.filter((entry) => entry.required && entry.status !== "PRESENT");
   const controlBoardSafetyStatus =
@@ -287,10 +302,13 @@ function buildIndexManifest(options = {}) {
       manualEvidenceCount: manualEvidence.length,
       missingManualEvidenceCount: missingManualEvidence.length,
       fieldRehearsalFollowUpCount: fieldRehearsalFollowUps.length,
+      fieldActionArtifactOpenCount: openFieldActionArtifacts.length,
     },
     entries,
     manualEvidence,
     fieldRehearsalFollowUps,
+    fieldActionArtifacts,
+    openFieldActionArtifactAreas: openFieldActionArtifacts.map((entry) => entry.artifact),
     missingRequiredAreas: missingRequired.map((entry) => entry.area),
     missingManualEvidenceAreas: missingManualEvidence.map((entry) => entry.area),
     staleAreas: staleEntries.map((entry) => entry.area),
@@ -321,6 +339,7 @@ function buildMarkdown(manifest) {
     `- Manual evidence: ${manifest.counts.manualEvidenceCount}`,
     `- Missing manual evidence: ${manifest.counts.missingManualEvidenceCount}`,
     `- Field rehearsal follow-ups: ${manifest.counts.fieldRehearsalFollowUpCount}`,
+    `- Field action artifacts open: ${manifest.counts.fieldActionArtifactOpenCount}`,
     "",
     "## Evidence Entries",
     "",
@@ -348,6 +367,21 @@ function buildMarkdown(manifest) {
             `| ${entry.type} | ${entry.evidenceType} | ${entry.owner} | ${entry.targetRecheckDate} | ${entry.ownerStatus} | ${entry.recheckStatus} | ${entry.reason} | ${entry.manifestPath ? `\`${entry.manifestPath}\`` : "missing"} | ${entry.closurePlanManifest ? `\`${entry.closurePlanManifest}\`` : "missing"} |`,
         )
       : ["| none | - | - | - | - | - | - | - | - |"]),
+    "",
+    "## Field Action Artifacts",
+    "",
+    "| Artifact | Status | Open Count | Ready | Source Manifest | Closure Plan |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ...(manifest.fieldActionArtifacts.length > 0
+      ? manifest.fieldActionArtifacts.map(
+          (entry) =>
+            `| ${entry.artifact} | ${entry.status} | ${entry.openCount} | ${entry.ready ? "yes" : "no"} | ${entry.manifestPath ? `\`${entry.manifestPath}\`` : "missing"} | ${entry.closurePlanManifest ? `\`${entry.closurePlanManifest}\`` : "missing"} |`,
+        )
+      : ["| none | PASS | 0 | yes | - | - |"]),
+    "",
+    "## Open Field Action Artifacts",
+    "",
+    ...(manifest.openFieldActionArtifactAreas.length > 0 ? manifest.openFieldActionArtifactAreas.map((area) => `- ${area}`) : ["- none"]),
     "",
     "## Missing Required Areas",
     "",
