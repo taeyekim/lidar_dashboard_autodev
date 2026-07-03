@@ -157,6 +157,14 @@ fs.writeFileSync(
     reviewer: "field-reviewer",
     siteName: "delivery-site",
     hostName: "field-host",
+    unavailableAcceptance: {
+      reason: "CONTROL_BOARD_NOT_CONNECTED",
+      replacementOwner: "ops-lead",
+      targetRecheckDate: "2026-07-10",
+      approvalNote: "Approved by project owner for dry-run delivery packaging.",
+      ownerStatus: "ASSIGNED",
+      recheckStatus: "SCHEDULED",
+    },
     results: [
       {
         name: "field rehearsal pass vector",
@@ -386,6 +394,22 @@ assert(
 assert(
   fieldRehearsalMetadataSummary.metadata.hostName === "field-host",
   "field rehearsal summary should expose host name",
+);
+assert(
+  fieldRehearsalMetadataSummary.metadata.unavailableAcceptance.replacementOwner === "ops-lead",
+  "field rehearsal summary should expose unavailable replacement owner",
+);
+assert(
+  fieldRehearsalMetadataSummary.metadata.unavailableAcceptance.targetRecheckDate === "2026-07-10",
+  "field rehearsal summary should expose unavailable target recheck date",
+);
+assert(
+  fieldRehearsalMetadataSummary.metadata.unavailableAcceptance.ownerStatus === "ASSIGNED",
+  "field rehearsal summary should expose unavailable owner status",
+);
+assert(
+  fieldRehearsalMetadataSummary.metadata.unavailableAcceptance.recheckStatus === "SCHEDULED",
+  "field rehearsal summary should expose unavailable recheck status",
 );
 assert(
   coverage.some(

@@ -220,6 +220,7 @@ function summarizeFieldRehearsal(type, outputRoot) {
       reviewer: manifest.data.reviewer || null,
       siteName: manifest.data.siteName || null,
       hostName: manifest.data.hostName || null,
+      unavailableAcceptance: manifest.data.unavailableAcceptance || null,
     },
     reviewCount: reviewItems.length,
     passCount: results.filter((item) => item.status === "PASS").length,
@@ -623,13 +624,22 @@ function buildMarkdown(manifest) {
   };
   const formatFieldRehearsalMetadata = (item) => {
     const metadata = item.metadata || {};
-    return [
+    const lines = [
       `evidenceType=${metadata.evidenceType || "unknown"}`,
       `baseUrl=${metadata.baseUrl || "unknown"}`,
       `reviewer=${metadata.reviewer || "unknown"}`,
       `siteName=${metadata.siteName || "unknown"}`,
       `hostName=${metadata.hostName || "unknown"}`,
-    ].join("<br>");
+    ];
+    if (metadata.unavailableAcceptance) {
+      lines.push(
+        `replacementOwner=${metadata.unavailableAcceptance.replacementOwner || "unknown"}`,
+        `targetRecheckDate=${metadata.unavailableAcceptance.targetRecheckDate || "unknown"}`,
+        `ownerStatus=${metadata.unavailableAcceptance.ownerStatus || "unknown"}`,
+        `recheckStatus=${metadata.unavailableAcceptance.recheckStatus || "unknown"}`,
+      );
+    }
+    return lines.join("<br>");
   };
 
   const lines = [
