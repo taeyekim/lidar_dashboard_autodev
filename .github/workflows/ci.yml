@@ -64,3 +64,6 @@ jobs:
 
       - name: Run audit policy
         run: npm run verify:audit-policy
+
+      - name: Validate Docker Compose config
+        run: docker compose config --quiet

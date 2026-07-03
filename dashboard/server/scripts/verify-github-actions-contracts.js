@@ -27,5 +27,6 @@ assertIncludes("npm run ci:db");
 assertIncludes("npm --prefix dashboard/dashboard-web run lint");
 assertIncludes("npm run ci");
 assertIncludes("npm run verify:audit-policy");
+assertIncludes("docker compose config --quiet");
 
 console.log("github actions contracts ok");
