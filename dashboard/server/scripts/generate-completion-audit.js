@@ -67,6 +67,18 @@ function buildReadinessSignals(fieldReadinessManifest) {
   };
 }
 
+function buildRequiredFieldValueSignals(fieldReadinessManifest) {
+  const values = fieldReadinessManifest?.data?.env?.requiredFieldValues;
+  if (!Array.isArray(values)) return [];
+  return values.map((item) => ({
+    name: item.name || "unknown",
+    state: item.state || "unknown",
+    completionGate: item.completionGate || "",
+    nextAction: item.nextAction || "",
+    redacted: item.redacted !== false,
+  }));
+}
+
 function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest) {
   if (!deliveryManifest) {
     return [{
@@ -133,6 +145,7 @@ function buildCompletionBlockers(deliveryManifest, fieldReadinessManifest) {
 function buildCompletionAudit(deliveryManifest, fieldReadinessManifest) {
   const summary = deliveryManifest?.data?.handoverSummary || {};
   const readinessSignals = buildReadinessSignals(fieldReadinessManifest);
+  const requiredFieldValues = buildRequiredFieldValueSignals(fieldReadinessManifest);
   const completionBlockers = buildCompletionBlockers(deliveryManifest, fieldReadinessManifest);
   const automatedBlockers = completionBlockers.filter((item) => item.category === "automated");
   const fieldBlockers = completionBlockers.filter((item) => item.category === "field");
@@ -187,6 +200,7 @@ function buildCompletionAudit(deliveryManifest, fieldReadinessManifest) {
     fieldVerificationRequiredAreas: Array.isArray(summary.fieldVerificationRequiredAreas)
       ? summary.fieldVerificationRequiredAreas
       : [],
+    requiredFieldValues,
     handoverSummaryStatus: summary.status || null,
     decisionRule:
       "canMarkGoalComplete is true only when automated delivery checks pass and no field readiness, companion, acceptance, preflight, skipped, or required verification item remains.",
@@ -228,6 +242,14 @@ function buildMarkdown(manifest) {
     ...(manifest.fieldVerificationRequiredAreas.length > 0
       ? manifest.fieldVerificationRequiredAreas.map((area) => `- ${area}`)
       : ["- none"]),
+    "",
+    "## Required Field Values",
+    "",
+    "| Name | State | Completion Gate | Next Action | Redacted |",
+    "| --- | --- | --- | --- | --- |",
+    ...(manifest.requiredFieldValues.length > 0
+      ? manifest.requiredFieldValues.map((item) => `| ${item.name} | ${item.state} | ${item.completionGate || ""} | ${item.nextAction || ""} | ${item.redacted} |`)
+      : ["| none | n/a | n/a | n/a | true |"]),
     "",
     "## Completion Blockers",
     "",
@@ -271,4 +293,5 @@ module.exports = {
   buildCompletionAudit,
   buildCompletionBlockers,
   buildReadinessSignals,
+  buildRequiredFieldValueSignals,
 };

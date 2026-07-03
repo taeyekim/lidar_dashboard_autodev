@@ -55,6 +55,11 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "sourceFieldReadinessManifest",
   "latestFieldReadinessManifest",
   "buildReadinessSignals",
+  "buildRequiredFieldValueSignals",
+  "requiredFieldValues",
+  "Required Field Values",
+  "completionGate",
+  "redacted",
   "artifacts/field-readiness",
   "npm run field:readiness",
   "goal remains active",
@@ -68,6 +73,7 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "artifacts/completion-audit/<timestamp>/manifest.md",
   "canMarkGoalComplete",
   "field readiness",
+  "required field value states",
 ].forEach((token) => {
   assert(deliveryMatrix.includes(token), `delivery evidence matrix is missing ${token}`);
   assert(deliveryRunbook.includes(token), `delivery runbook is missing ${token}`);

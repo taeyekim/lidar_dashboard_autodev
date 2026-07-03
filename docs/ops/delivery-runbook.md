@@ -103,9 +103,11 @@ npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -RequireDeviceKey
 
 After `npm.cmd run delivery:evidence`, run `npm.cmd run completion:audit`.
 The audit writes `artifacts/completion-audit/<timestamp>/manifest.json` and
-`artifacts/completion-audit/<timestamp>/manifest.md`, then sets
-`canMarkGoalComplete` to `false` until automated checks pass and no field readiness,
-companion, skipped, preflight, acceptance, or required verification item remains.
+`artifacts/completion-audit/<timestamp>/manifest.md`, references the latest
+delivery evidence and field readiness manifests, records redacted required field value states, then sets
+`canMarkGoalComplete` to `false` until automated checks pass and no field
+readiness, companion, skipped, preflight, acceptance, or required verification
+item remains.
 
 After `npm.cmd run completion:audit`, run `npm.cmd run handover:index`.
 The index writes `artifacts/handover-index/<timestamp>/manifest.json` and
