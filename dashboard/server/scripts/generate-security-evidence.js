@@ -175,6 +175,34 @@ function dockerScannerSkipped(label, scannerName) {
   return skipped(label, `${scannerName} command is not installed and --use-docker-scanners was not provided or Docker is unavailable`);
 }
 
+function addDockerTrivyImageScan(checks, outputDir, imageName, label, outputFile) {
+  const tarFileName = `${outputFile.replace(/\.json$/i, "")}.tar`;
+  const exportResult = runCommand(`${label} image export`, "docker", ["save", "-o", path.join(outputDir, tarFileName), imageName]);
+  checks.push(exportResult);
+
+  if (exportResult.exitCode !== 0) {
+    checks.push(skipped(label, `docker save failed for ${imageName}; build the delivery image before container scanner evidence.`));
+    return;
+  }
+
+  checks.push(
+    runCommand(label, "docker", [
+      "run",
+      "--rm",
+      "-v",
+      `${dockerVolumePath(outputDir)}:/out`,
+      "aquasec/trivy:latest",
+      "image",
+      "--input",
+      `/out/${tarFileName}`,
+      "--format",
+      "json",
+      "--output",
+      `/out/${outputFile}`,
+    ]),
+  );
+}
+
 function gitValue(args) {
   const result = runCommand(`git ${args.join(" ")}`, "git", args);
   return result.stdout.trim();
@@ -406,7 +434,14 @@ function skipped(label, reason) {
 
 function requiredScannerFailure(item, requireScanners) {
   if (!requireScanners || item.status !== "skipped") return false;
-  return ["gitleaks secret scan", "trivy filesystem scan", "trivy image scan", "OWASP ZAP baseline"].includes(item.label);
+  return [
+    "gitleaks secret scan",
+    "trivy filesystem scan",
+    "trivy image scan",
+    "trivy backend image scan",
+    "trivy frontend image scan",
+    "OWASP ZAP baseline",
+  ].includes(item.label);
 }
 
 function main() {
@@ -530,36 +565,8 @@ function main() {
     );
 
     if (includeContainerImages) {
-      checks.push(
-        runCommand("trivy backend image scan", "docker", [
-          "run",
-          "--rm",
-          "-v",
-          `${dockerVolumePath(outputDir)}:/out`,
-          "aquasec/trivy:latest",
-          "image",
-          "--format",
-          "json",
-          "--output",
-          "/out/trivy-backend-image.json",
-          "lidar_dashboard_autodev-backend",
-        ]),
-      );
-      checks.push(
-        runCommand("trivy frontend image scan", "docker", [
-          "run",
-          "--rm",
-          "-v",
-          `${dockerVolumePath(outputDir)}:/out`,
-          "aquasec/trivy:latest",
-          "image",
-          "--format",
-          "json",
-          "--output",
-          "/out/trivy-frontend-image.json",
-          "lidar_dashboard_autodev-frontend",
-        ]),
-      );
+      addDockerTrivyImageScan(checks, outputDir, "lidar_dashboard_autodev-backend", "trivy backend image scan", "trivy-backend-image.json");
+      addDockerTrivyImageScan(checks, outputDir, "lidar_dashboard_autodev-frontend", "trivy frontend image scan", "trivy-frontend-image.json");
     } else {
       checks.push(skipped("trivy image scan", "Run with --include-container-images after Docker images are built"));
     }
