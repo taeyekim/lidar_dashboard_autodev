@@ -30,6 +30,7 @@ const routes = readProjectFile("dashboard/server/src/domains/auth/auth.routes.js
 const http = readProjectFile("dashboard/dashboard-web/src/shared/api/http.js");
 const frontendConfig = readProjectFile("dashboard/dashboard-web/src/shared/api/config.js");
 const authContext = readProjectFile("dashboard/dashboard-web/src/context/AuthContext.jsx");
+const authApi = readProjectFile("dashboard/dashboard-web/src/features/auth/authApi.js");
 const envExample = readProjectFile(".env.example");
 
 [
@@ -42,6 +43,8 @@ const envExample = readProjectFile(".env.example");
   "getCsrfCookieToken(req)",
   "authMode: \"httpOnlyCookie\"",
   'router.post("/auth/logout", controller.logout)',
+  "buildClearAuthCookie()",
+  "buildClearCsrfCookie()",
   'credentials: "include"',
   '"X-CSRF-Token"',
 ].forEach((token) => {
@@ -62,6 +65,8 @@ const envExample = readProjectFile(".env.example");
 
 assert(!authContext.includes("getAuthToken"), "AuthContext must not bootstrap from localStorage token");
 assert(!authContext.includes("setAuthToken"), "AuthContext must not persist JWT token in localStorage");
+assert(authContext.includes("logoutOperator"), "AuthContext must call the logout API before local logout cleanup");
+assert(authApi.includes('postJson("/api/auth/logout", {})'), "frontend auth API must call POST /api/auth/logout");
 assert(!http.includes("Authorization: `Bearer"), "frontend http client must not attach Bearer tokens");
 assert(!http.includes("localStorage"), "frontend http client must not read or write auth tokens in localStorage");
 
@@ -95,6 +100,16 @@ assert(swaggerSpec.components?.securitySchemes?.cookieAuth?.in === "cookie", "Sw
 assert(
   swaggerSpec.components?.securitySchemes?.csrfHeaderAuth?.name === "X-CSRF-Token",
   "Swagger must define CSRF header security",
+);
+assert(swaggerSpec.paths?.["/api/auth/logout"]?.post, "Swagger must document POST /api/auth/logout");
+assert(
+  swaggerSpec.paths?.["/api/auth/logout"]?.post?.responses?.[200]?.headers?.["Set-Cookie"],
+  "Swagger logout response must document cookie clearing Set-Cookie headers",
+);
+assert(
+  swaggerSpec.paths?.["/api/auth/logout"]?.post?.responses?.[200]?.content?.["application/json"]?.schema?.$ref ===
+    "#/components/schemas/OkResponse",
+  "Swagger logout response must use OkResponse",
 );
 
 console.log("auth cookie contracts ok");
