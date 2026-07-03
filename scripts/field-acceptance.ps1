@@ -106,7 +106,7 @@ function Add-OperatorUiWalkthroughGate {
   }
 
   if ([string]::IsNullOrWhiteSpace($OperatorUiWalkthroughEvidence)) {
-    return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "attach browser walkthrough evidence with -OperatorUiWalkthroughEvidence <path>" -LogPath "" -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Browser walkthrough evidence for the delivery display resolution was not attached. Capture login, dashboard status, DRY_RUN/LIVE_TCP state, event detail, Devices, Event Log realtime/degraded state, and Swagger entrypoint."
+    return New-StepResult -Name "operator UI browser walkthrough" -Status "REVIEW" -Command "attach browser walkthrough evidence with -OperatorUiWalkthroughEvidence <path>" -LogPath "" -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Browser walkthrough evidence for the delivery display resolution was not attached. Capture login, dashboard status, DRY_RUN/LIVE_TCP state, liveApproved, LIVE_TCP_APPROVAL_REQUIRED if applicable, event detail, Devices, Event Log realtime/degraded state, and Swagger entrypoint."
   }
 
   if (!(Test-Path -LiteralPath $OperatorUiWalkthroughEvidence)) {
@@ -119,6 +119,8 @@ function Add-OperatorUiWalkthroughGate {
     "Login",
     "Dashboard",
     "Control-board mode",
+    "liveApproved",
+    "LIVE_TCP_APPROVAL_REQUIRED",
     "Event detail",
     "Devices",
     "Event Log",

@@ -12,7 +12,7 @@ const manualEvidenceDefinitions = [
     required: true,
     requiredWhen: "Field acceptance requires browser walkthrough evidence.",
     notes:
-      "Browser walkthrough evidence for login, dashboard, DRY_RUN/LIVE_TCP, event detail, devices, realtime state, statistics, and Swagger.",
+      "Browser walkthrough evidence for login, dashboard, DRY_RUN/LIVE_TCP, liveApproved, LIVE_TCP_APPROVAL_REQUIRED, event detail, devices, realtime state, statistics, and Swagger.",
     nextAction:
       "Fill docs/ops/operator-ui-walkthrough-template.md after browser walkthrough and save the field copy to artifacts/manual/operator-ui-walkthrough.md.",
     doneWhen:
@@ -42,6 +42,8 @@ function validateManualEvidence(type, content) {
       "Login",
       "Dashboard",
       "Control-board mode",
+      "liveApproved",
+      "LIVE_TCP_APPROVAL_REQUIRED",
       "Event detail",
       "Devices",
       "Event Log",

@@ -25,7 +25,7 @@ handover audience, or other secret values.
 | --- | --- | --- | --- |
 | TODO | Login | Login form, successful operator session, `/api/auth/me` state if inspected | Operator can sign in without exposing credentials in the evidence. |
 | TODO | Dashboard | Server, detector, control-board status, latest event, latest command panel | Dashboard clearly shows current operating state and does not show placeholder or broken layout. |
-| TODO | Control-board mode | DRY_RUN or LIVE_TCP state, packet hex, latest command status | Reviewer can distinguish dry-run from live TCP before any barrier action. |
+| TODO | Control-board mode | DRY_RUN or LIVE_TCP state, `liveApproved`, packet hex, latest command status, `LIVE_TCP_APPROVAL_REQUIRED` if live send was blocked | Reviewer can distinguish dry-run, live approval, and approval-blocked live TCP before any barrier action. |
 | TODO | Event detail | Raw LiDAR payload, wrong-way stage, linked command timeline, response/CRC if available | Wrong-way event can be traced from payload to control-board command evidence. |
 | TODO | Devices | LiDAR PC, control board, connection/status history or empty configured state | Device status is understandable for operators and maintenance. |
 | TODO | Event Log | Realtime connected/degraded/disabled state and polling fallback behavior | Operator can tell whether realtime updates are active or degraded. |

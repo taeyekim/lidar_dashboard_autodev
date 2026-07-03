@@ -60,6 +60,11 @@ const validOperatorEvidence = operatorTemplate
   .replace("| Decision timestamp |  |", "| Decision timestamp | 2026-07-03T00:00:00Z |");
 assert(validateManualEvidence("Operator UI Walkthrough", validOperatorEvidence) === "", "valid operator evidence should pass");
 
+[
+  "liveApproved",
+  "LIVE_TCP_APPROVAL_REQUIRED",
+].forEach((token) => assertIncludes(operatorTemplate, token, "operator UI walkthrough template"));
+
 const riskTemplateReason = validateManualEvidence("Field Risk Acceptance", riskTemplate);
 assert(
   riskTemplateReason.includes("TODO accepted-item rows"),

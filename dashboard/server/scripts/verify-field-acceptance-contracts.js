@@ -159,6 +159,8 @@ assert(
   "Walkthrough result",
   "Control-board mode",
   "DRY_RUN or LIVE_TCP state",
+  "liveApproved",
+  "LIVE_TCP_APPROVAL_REQUIRED",
   "Event detail",
   "Raw LiDAR payload",
   "Event Log",
