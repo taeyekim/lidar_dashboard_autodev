@@ -85,7 +85,8 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Dry-run command does not open a TCP socket.
 - [ ] `scripts/control-board-field-rehearsal.ps1` records `DRY_RUN` command lifecycle evidence before live hardware approval.
 - [ ] `scripts/control-board-field-rehearsal.ps1 -AllowLiveTcp` is used only after live `CONTROL_BOARD_HOST`/`PORT` and hardware approval are confirmed.
-- [ ] Control-board rehearsal confirms `safetyStatus`, `liveTcpReady`, 10-byte `packetHex`, and `DRY_RUN_SKIPPED_SEND` evidence while dry-run is enabled.
+- [ ] Control-board rehearsal confirms `safetyStatus`, `liveTcpReady`, `liveApproved`, 10-byte `packetHex`, and `DRY_RUN_SKIPPED_SEND` evidence while dry-run is enabled.
+- [ ] If `CONTROL_BOARD_DRY_RUN=false` but `CONTROL_BOARD_LIVE_APPROVED=true` is not recorded, manual or automatic commands are blocked with `LIVE_TCP_APPROVAL_REQUIRED` evidence instead of sending TCP.
 - [ ] Live TCP command records response hex and CRC status.
 - [ ] Connect timeout and response timeout are distinguishable in error messages.
 - [ ] Timeout/failure records `FAILED` status, final error message, and per-attempt retry logs.
@@ -135,7 +136,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Runtime smoke confirms `Content-Security-Policy` through the Nginx entrypoint.
 - [ ] Runtime smoke confirms CSRF rejection for cookie-authenticated mutation requests without `X-CSRF-Token`.
 - [ ] Runtime smoke confirms `GET /api/statistics/traffic?range=daily` counters and `averageResponseMs`.
-- [ ] Runtime smoke confirms `GET /api/control-board/status` exposes `averageResponseMs`, `responseSampleCount`, and latest-command `responseDurationMs`.
+- [ ] Runtime smoke confirms `GET /api/control-board/status` exposes `averageResponseMs`, `responseSampleCount`, `liveApproved`, and latest-command `responseDurationMs`.
 - [ ] If `DEVICE_INGEST_API_KEY` is configured, ingest without `X-Device-Key` returns `401`.
 - [ ] `scripts/security-scan.ps1` evidence exists under `artifacts/security/`, or skipped tools are documented with reasons.
 - [ ] Strict security acceptance uses `--require-scanners` or `-RequireScanners` so skipped gitleaks, Trivy, and OWASP ZAP checks fail the evidence run.
@@ -151,5 +152,5 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] `wrong-way-level-2` dashboard-side escalation criteria are still field-measurement dependent.
 - [ ] If `DEVICE_INGEST_API_KEY` is not used, lidar/device network authentication remains a documented follow-up or accepted trusted-LAN risk.
 - [ ] If any field risk is accepted instead of resolved, the reviewer decision, compensating control, expiry/recheck date, and owner are recorded.
-- [ ] Real integrated control board TCP test requires field IP/port and hardware approval.
+- [ ] Real integrated control board TCP test requires field IP/port, `CONTROL_BOARD_LIVE_APPROVED=true`, and hardware approval.
 - [ ] Docker Desktop/PostgreSQL availability is recorded for the test machine.

@@ -102,7 +102,7 @@ function knownFieldLimitations() {
       area: "Control Board TCP",
       limitation: "Live integrated control-board TCP test requires field IP/port and hardware approval.",
       source: "docs/ops/delivery-evidence-matrix.md",
-      closeWhen: "CONTROL_BOARD_HOST/PORT are configured, hardware owner approves live TCP, and control-board field rehearsal records command/ACK evidence.",
+      closeWhen: "CONTROL_BOARD_HOST/PORT are configured, CONTROL_BOARD_LIVE_APPROVED=true is recorded, hardware owner approves live TCP, and control-board field rehearsal records command/ACK evidence.",
     },
     {
       area: "Level-2 Escalation",

@@ -68,6 +68,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "| Type | Status | Path | Template | Required When | Validation |",
   "Known Field Limitations",
   "| Area | Limitation | Source | Close When |",
+  "Control Board TCP",
+  "CONTROL_BOARD_LIVE_APPROVED=true",
   "Level-2 Escalation",
   "Dashboard-side wrong-way-level-2 escalation threshold remains field-measurement dependent.",
   "Traffic KPI Wording",
