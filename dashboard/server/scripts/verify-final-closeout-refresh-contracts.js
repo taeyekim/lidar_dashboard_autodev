@@ -48,6 +48,9 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "--require-scanners", "final closeout refresh generator"],
   [generator, "--use-docker-scanners", "final closeout refresh generator"],
   [generator, "preserving scanner blockers as review evidence", "final closeout refresh generator"],
+  [generator, "runtime:evidence", "final closeout refresh generator"],
+  [generator, "--run-smoke", "final closeout refresh generator"],
+  [generator, "--use-existing-stack", "final closeout refresh generator"],
   [generator, "field:preflight", "final closeout refresh generator"],
   [generator, "field:readiness", "final closeout refresh generator"],
   [generator, "field:rehearsal-unavailable", "final closeout refresh generator"],
@@ -79,6 +82,7 @@ const ids = steps.map((step) => step.id);
   "manual-evidence-readiness",
   "ci-status",
   "security-evidence",
+  "runtime-evidence",
   "field-preflight",
   "field-readiness",
   "field-rehearsal-unavailable",
@@ -114,6 +118,11 @@ assert(
   "refresh should record unavailable field rehearsal evidence before completion audit",
 );
 assert(
+  ids.indexOf("security-evidence") < ids.indexOf("runtime-evidence") &&
+    ids.indexOf("runtime-evidence") < ids.indexOf("field-readiness"),
+  "refresh should record strict security and runtime evidence before field readiness",
+);
+assert(
   steps.find((step) => step.id === "ci-status").command.includes("npm"),
   "CI status step should record CI evidence through npm",
 );
@@ -136,6 +145,10 @@ assert(
 assert(
   steps.find((step) => step.id === "security-evidence").args.includes("--use-docker-scanners"),
   "security refresh should use Docker scanner fallback when available",
+);
+assert(
+  steps.find((step) => step.id === "runtime-evidence").args.includes("--run-smoke"),
+  "runtime refresh should run smoke checks",
 );
 assert(
   !buildSteps({
