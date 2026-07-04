@@ -5,6 +5,7 @@ const {
   buildBundleHandoff,
   buildBundleMarkdown,
   buildIndexMarkdown,
+  commandGuardrail,
   slug,
 } = require("./generate-final-bundle-handoff");
 
@@ -34,6 +35,9 @@ const finalExecutionPlanGenerator = readProjectFile("dashboard/server/scripts/ge
   [generator, "Final bundle handoff files are field execution aids", "final bundle handoff generator"],
   [generator, "Reviewer Checklist", "final bundle handoff generator"],
   [generator, "Evidence Targets", "final bundle handoff generator"],
+  [generator, "commandGuardrail", "final bundle handoff generator"],
+  [generator, "approved external CI closeout window", "final bundle handoff generator"],
+  [generator, "CONTROL_BOARD_LIVE_APPROVED=true", "final bundle handoff generator"],
   [generator, "canMarkGoalComplete=true", "final bundle handoff generator"],
   [generator, "buildBundleHandoff", "final bundle handoff generator"],
   [generator, "buildBundleMarkdown", "final bundle handoff generator"],
@@ -72,6 +76,20 @@ const fixture = buildBundleHandoff({
               command: "npm.cmd run manual:evidence-readiness -- --generated-by=\"$env:FIELD_REVIEWER\"",
               doneWhen: "Manual evidence readiness is READY.",
             },
+            {
+              id: "control-board-field-rehearsal",
+              order: 4,
+              phase: "Field Rehearsal",
+              command: "powershell.exe -File scripts/control-board-field-rehearsal.ps1 -AllowLiveTcp",
+              doneWhen: "Control-board rehearsal is ACKNOWLEDGED.",
+            },
+            {
+              id: "ci-closeout",
+              order: 5,
+              phase: "Package Refresh",
+              command: "npm.cmd run ci:closeout -- --dispatch --generated-by=\"$env:FIELD_REVIEWER\"",
+              doneWhen: "CI status is PASS for the final pushed dev commit.",
+            },
           ],
           outcome: "Field reviewer fills required manual evidence.",
           closeWhen: "Manual evidence readiness is READY.",
@@ -97,6 +115,16 @@ assert(bundleMarkdown.includes("Bundle Handoff - Field Input And Risk Acceptance
 assert(bundleMarkdown.includes("- [ ] Operator UI walkthrough"), "bundle markdown should render reviewer checklist");
 assert(bundleMarkdown.includes("manual:evidence-readiness"), "bundle markdown should include commands");
 assert(bundleMarkdown.includes("artifacts/manual/operator-ui-walkthrough.md"), "bundle markdown should include evidence targets");
+assert(bundleMarkdown.includes("approved external CI closeout window"), "bundle markdown should warn before CI dispatch");
+assert(bundleMarkdown.includes("CONTROL_BOARD_LIVE_APPROVED=true"), "bundle markdown should warn before live TCP commands");
+assert(
+  commandGuardrail({ command: "npm.cmd run ci:closeout -- --dispatch" }).includes("approved external CI closeout window"),
+  "ci dispatch command should expose external approval guardrail",
+);
+assert(
+  commandGuardrail({ command: "powershell.exe -File scripts/control-board-field-rehearsal.ps1 -AllowLiveTcp" }).includes("CONTROL_BOARD_LIVE_APPROVED=true"),
+  "live TCP command should expose hardware approval guardrail",
+);
 
 const ready = buildBundleHandoff({
   generatedAt: "2026-01-01T00:00:00.000Z",

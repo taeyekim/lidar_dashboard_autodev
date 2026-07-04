@@ -106,6 +106,26 @@ function buildBundleHandoff(input = {}) {
   };
 }
 
+function commandGuardrail(command) {
+  const text = String(command?.command || "").toLowerCase();
+  if (text.includes("ci:closeout") && text.includes("--dispatch")) {
+    return "Requires an approved external CI closeout window; do not dispatch from local auto-mode.";
+  }
+  if (text.includes("-allowlivetcp")) {
+    return "Requires hardware owner approval, field CONTROL_BOARD_HOST/PORT, and CONTROL_BOARD_LIVE_APPROVED=true.";
+  }
+  if (text.includes("field:preflight") || text.includes("field:acceptance")) {
+    return "Do not paste or publish secrets; attach only redacted manifests and signed field evidence.";
+  }
+  if (text.includes("security:evidence")) {
+    return "Attach scanner reports or signed risk acceptance for unavailable scanners.";
+  }
+  if (text.includes("handover:package") && text.includes("--strict")) {
+    return "Strict package must be run only after upstream field/security/manual evidence is refreshed.";
+  }
+  return "No special guardrail beyond the bundle checklist.";
+}
+
 function buildIndexMarkdown(manifest) {
   return [
     "# Final Bundle Handoff",
@@ -169,14 +189,14 @@ function buildBundleMarkdown(bundle, manifest) {
     "",
     "## Commands",
     "",
-    "| Order | ID | Phase | Command | Done When |",
-    "| --- | --- | --- | --- | --- |",
+    "| Order | ID | Phase | Command | Guardrail | Done When |",
+    "| --- | --- | --- | --- | --- | --- |",
     ...(bundle.commands?.length
       ? bundle.commands.map(
           (command) =>
-            `| ${command.order} | ${markdownCell(command.id)} | ${markdownCell(command.phase)} | \`${markdownCell(command.command)}\` | ${markdownCell(command.doneWhen)} |`,
+            `| ${command.order} | ${markdownCell(command.id)} | ${markdownCell(command.phase)} | \`${markdownCell(command.command)}\` | ${markdownCell(commandGuardrail(command))} | ${markdownCell(command.doneWhen)} |`,
         )
-      : ["| none | none | none | No command recorded. | - |"]),
+      : ["| none | none | none | No command recorded. | - | - |"]),
     "",
     "## Close When",
     "",
@@ -217,6 +237,7 @@ module.exports = {
   buildBundleHandoff,
   buildBundleMarkdown,
   buildIndexMarkdown,
+  commandGuardrail,
   metadataReviewItems,
   slug,
   writeBundleFiles,
