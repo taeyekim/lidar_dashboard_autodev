@@ -25,6 +25,13 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
 [
   "artifacts/handover-package",
   "delivery:evidence",
+  "DEFAULT_COMMAND_TIMEOUT_MS",
+  "DELIVERY_EVIDENCE_TIMEOUT_MS",
+  "timeoutMs",
+  "timedOut",
+  "reuse-existing-evidence",
+  "reusedExistingEvidence",
+  "Existing evidence refs were packaged without rerunning refresh commands.",
   "completion:audit",
   "handover:index",
   "field:closure-plan",

@@ -7,6 +7,7 @@ const { readLatestJsonManifest, timestampForPath } = require("./generate-deliver
 const { buildGitState } = require("./generate-final-status-report");
 
 const root = path.join(__dirname, "..", "..", "..");
+const HANDOVER_PACKAGE_TIMEOUT_MS = 900000;
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -250,7 +251,8 @@ function buildSteps(options) {
       id: "handover-package-pass-1",
       phase: "Package Refresh",
       command: npm,
-      args: ["run", "handover:package", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      args: ["run", "handover:package", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`, "--reuse-existing-evidence"],
+      timeoutMs: HANDOVER_PACKAGE_TIMEOUT_MS,
       purpose: "Package the latest evidence before final status.",
       doneWhen: "Handover package has current field/manual/security refs.",
     },
@@ -298,7 +300,8 @@ function buildSteps(options) {
       id: "handover-package-pass-2",
       phase: "Package Refresh",
       command: npm,
-      args: ["run", "handover:package", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      args: ["run", "handover:package", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`, "--reuse-existing-evidence"],
+      timeoutMs: HANDOVER_PACKAGE_TIMEOUT_MS,
       purpose: "Repackage after field action artifacts are refreshed.",
       doneWhen: "Handover package references latest field action artifacts.",
     },
@@ -338,7 +341,8 @@ function buildSteps(options) {
       id: "handover-package-final-index",
       phase: "Final Decision",
       command: npm,
-      args: ["run", "handover:package", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      args: ["run", "handover:package", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`, "--reuse-existing-evidence"],
+      timeoutMs: HANDOVER_PACKAGE_TIMEOUT_MS,
       purpose: "Repackage the handover bundle after final bundle handoff is generated so the delivery package indexes the latest reviewer-facing closeout files.",
       doneWhen: "Handover package evidenceRefs.finalBundleHandoff points to the latest final-bundle-handoff manifest.",
     },

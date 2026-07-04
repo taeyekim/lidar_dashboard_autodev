@@ -64,6 +64,8 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "handover:index", "final closeout refresh generator"],
   [generator, "field:closure-plan", "final closeout refresh generator"],
   [generator, "handover:package", "final closeout refresh generator"],
+  [generator, "--reuse-existing-evidence", "final closeout refresh generator"],
+  [generator, "HANDOVER_PACKAGE_TIMEOUT_MS", "final closeout refresh generator"],
   [generator, "final:status", "final closeout refresh generator"],
   [generator, "field:risk-register", "final closeout refresh generator"],
   [generator, "field:action-board", "final closeout refresh generator"],
@@ -177,6 +179,11 @@ assert(
   steps.find((step) => step.id === "security-evidence").timeoutMs > 0,
   "strict security refresh should define a bounded timeout",
 );
+["handover-package-pass-1", "handover-package-pass-2", "handover-package-final-index"].forEach((id) => {
+  const step = steps.find((item) => item.id === id);
+  assert(step.timeoutMs >= 900000, `${id} should define a bounded timeout for package generation`);
+  assert(step.args.includes("--reuse-existing-evidence"), `${id} should reuse already refreshed evidence refs`);
+});
 assert(
   steps.find((step) => step.id === "security-evidence").args.includes("--require-scanners"),
   "security refresh should require scanners",

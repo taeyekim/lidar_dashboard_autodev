@@ -17,6 +17,8 @@ const root = path.join(__dirname, "..", "..", "..");
 const fieldReviewerArg = '"$env:FIELD_REVIEWER"';
 const fieldSiteArg = '"$env:FIELD_SITE_NAME"';
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+const DEFAULT_COMMAND_TIMEOUT_MS = 180000;
+const DELIVERY_EVIDENCE_TIMEOUT_MS = 900000;
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -39,20 +41,28 @@ function metadataReviewItems(generatedBy, siteName) {
   ].filter(Boolean);
 }
 
-function runCommand(label, args) {
+function runCommand(label, args, options = {}) {
   const startedAt = new Date();
+  const timeoutMs = options.timeoutMs || DEFAULT_COMMAND_TIMEOUT_MS;
   const result = spawnSync(npmCommand, args, {
     cwd: root,
     encoding: "utf8",
     shell: process.platform === "win32",
+    timeout: timeoutMs,
   });
+  const timedOut = result.error?.code === "ETIMEDOUT";
+  if (timedOut && process.platform === "win32" && result.pid) {
+    spawnSync("taskkill", ["/PID", String(result.pid), "/T", "/F"], { encoding: "utf8" });
+  }
 
   return {
     label,
     command: [npmCommand, ...args].join(" "),
     startedAt: startedAt.toISOString(),
     finishedAt: new Date().toISOString(),
-    exitCode: result.status ?? (result.error ? 1 : 0),
+    exitCode: timedOut ? 124 : result.status ?? (result.error ? 1 : 0),
+    timeoutMs,
+    timedOut,
     stdout: result.stdout || "",
     stderr: result.stderr || "",
     error: result.error?.message || null,
@@ -92,6 +102,8 @@ function writeCommandLog(dir, item) {
       `startedAt=${item.startedAt}`,
       `finishedAt=${item.finishedAt}`,
       `exitCode=${item.exitCode}`,
+      `timeoutMs=${item.timeoutMs}`,
+      `timedOut=${item.timedOut}`,
       item.error ? `error=${item.error}` : "",
       "## stdout",
       item.stdout,
@@ -522,11 +534,14 @@ function buildMarkdown(manifest) {
     "",
     "| Status | Command | Log |",
     "| --- | --- | --- |",
-    ...manifest.commands.map((item) => `| ${item.exitCode === 0 ? "PASS" : "FAIL"} | \`${item.command}\` | \`${item.logFile}\` |`),
+    ...(manifest.commands.length > 0
+      ? manifest.commands.map((item) => `| ${item.exitCode === 0 ? "PASS" : "FAIL"} | \`${item.command}\` | \`${item.logFile}\` |`)
+      : ["| REUSED | Existing evidence refs were packaged without rerunning refresh commands. | - |"]),
     "",
     "## Strict Gate",
     "",
     `- Strict mode: ${manifest.strict}`,
+    `- Reused existing evidence: ${manifest.reusedExistingEvidence}`,
     `- Failed command count: ${manifest.failedCommandCount}`,
     ...(manifest.strictFailureReasons.length > 0
       ? manifest.strictFailureReasons.map((reason) => `- ${reason}`)
@@ -537,6 +552,7 @@ function buildMarkdown(manifest) {
     "- This command refreshes the final evidence chain in order: delivery evidence, field readiness, field risk register, manual evidence drafts, manual evidence readiness, field action board, field gate closure map, field owner briefs, CI status, completion audit, field closure plan, then handover index.",
     "- Attach this manifest together with the referenced evidence folders.",
     "- Attach the latest final bundle handoff when available so field reviewers can open bundle-specific closeout files.",
+    "- `--reuse-existing-evidence` packages the latest evidence refs without rerunning refresh commands; use it only inside an orchestrator that has already refreshed those refs.",
     "- `canMarkGoalComplete=false` means field/runtime/hardware evidence is still open.",
     "- Strict security acceptance should attach `npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners --target-url=<delivery-url>` output so skipped scanners become blocking evidence.",
     "- Use `--strict` when the command should fail unless the refreshed package is READY and `canMarkGoalComplete=true`.",
@@ -550,10 +566,11 @@ function main() {
   const generatedBy = argValue("generated-by", process.env.USERNAME || process.env.USER || "Codex");
   const baseUrl = argValue("base-url", "http://localhost:8080");
   const strict = hasFlag("strict");
+  const reusedExistingEvidence = hasFlag("reuse-existing-evidence");
   const outputDir = path.join(root, outputRoot, timestampForPath());
   ensureDir(outputDir);
 
-  const commands = [
+  const refreshCommands = reusedExistingEvidence ? [] : [
     [
       "delivery evidence",
       [
@@ -569,6 +586,7 @@ function main() {
         `--base-url=${baseUrl}`,
         `--target-url=${baseUrl}`,
       ],
+      { timeoutMs: DELIVERY_EVIDENCE_TIMEOUT_MS },
     ],
     ["field readiness", ["run", "field:readiness", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["field risk register", ["run", "field:risk-register", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
@@ -581,7 +599,8 @@ function main() {
     ["completion audit", ["run", "completion:audit"]],
     ["field closure plan", ["run", "field:closure-plan", "--", `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["handover index", ["run", "handover:index", "--", `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
-  ].map(([label, args]) => runCommand(label, args));
+  ];
+  const commands = refreshCommands.map(([label, args, options]) => runCommand(label, args, options));
 
   const evidenceRefs = latestEvidenceRefs();
   const completion = readLatestJsonManifest("artifacts/completion-audit");
@@ -662,6 +681,7 @@ function main() {
     baseUrl,
     git,
     strict,
+    reusedExistingEvidence,
     status: packageStatus,
     canMarkGoalComplete,
     controlBoardSafetyStatus,
@@ -671,6 +691,8 @@ function main() {
       startedAt: item.startedAt,
       finishedAt: item.finishedAt,
       exitCode: item.exitCode,
+      timeoutMs: item.timeoutMs,
+      timedOut: item.timedOut,
       error: item.error,
       logFile: writeCommandLog(outputDir, item),
     })),
