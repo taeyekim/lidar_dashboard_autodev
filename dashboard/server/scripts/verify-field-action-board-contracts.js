@@ -204,6 +204,28 @@ assert(
   commandForGate({ category: "Handover Package", message: "handover package needs refresh" }, "http://field.local:8080").includes("--generated-by="),
   "handover gate should pass reviewer/site metadata args to package refresh",
 );
+assert(
+  commandForGate(
+    {
+      category: "Evidence Source Revision",
+      message: "fieldAcceptance evidence is not tied to the clean final source revision.",
+      closeWhen: "Regenerate the referenced evidence after the final delivery commit and rerun final:status.",
+    },
+    "http://field.local:8080",
+  ).includes("field:acceptance"),
+  "stale fieldAcceptance source evidence should map to field acceptance rerun",
+);
+assert(
+  commandForGate(
+    {
+      category: "Evidence Source Revision",
+      message: "ciStatus evidence is not tied to the clean final source revision.",
+      closeWhen: "Regenerate the referenced evidence after the final delivery commit and rerun final:status.",
+    },
+    "http://field.local:8080",
+  ).includes("ci:status"),
+  "stale ciStatus source evidence should map to read-only CI status rerun",
+);
 
 const actionItems = buildActionItems({ data: { remainingGates: gates } }, "http://field.local:8080");
 assert(actionItems.length === 5, "action items should preserve gate count");

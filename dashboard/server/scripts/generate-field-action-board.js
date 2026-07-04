@@ -116,6 +116,12 @@ function commandForGate(gate, baseUrl) {
   if (text.includes("field acceptance")) {
     return `npm.cmd run field:acceptance -- -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} -OperatorUiWalkthroughEvidence artifacts/manual/operator-ui-walkthrough.md -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -StrictPreflight -IncludeContainerImages -IncludeZap -RequireScanners`;
   }
+  if (text.includes("evidence source revision") && text.includes("fieldacceptance")) {
+    return `npm.cmd run field:acceptance -- -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} -OperatorUiWalkthroughEvidence artifacts/manual/operator-ui-walkthrough.md -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -StrictPreflight -IncludeContainerImages -IncludeZap -RequireScanners`;
+  }
+  if (text.includes("evidence source revision") && text.includes("cistatus")) {
+    return `npm.cmd run ci:status -- --generated-by=${fieldReviewerArg}`;
+  }
   if (text.includes("handover")) return `npm.cmd run handover:package -- --base-url=${baseUrl} --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg} --strict`;
   if (text.includes("completion")) return "npm.cmd run completion:audit";
   return `npm.cmd run final:execution-plan -- --base-url=${baseUrl}`;
