@@ -14,6 +14,7 @@ async function main() {
     where: { userId: adminUserId },
     update: {
       name: adminName,
+      passwordHash: hashPassword(adminPassword),
       role: "SUPER_ADMIN",
       isActive: true,
     },
