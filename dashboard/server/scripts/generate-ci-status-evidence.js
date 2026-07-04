@@ -59,17 +59,42 @@ function parseJsonArray(text) {
   }
 }
 
+function parseJsonObject(text) {
+  try {
+    const parsed = JSON.parse(text);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 function latestRunForHead(runs, commit) {
   return runs.find((item) => item.headSha === commit) || runs[0] || null;
 }
 
-function workflowDispatchConfigured() {
+function workflowFileText() {
   try {
-    const workflowText = fs.readFileSync(path.join(root, ".github", "workflows", "ci.yml"), "utf8");
-    return /^\s*workflow_dispatch\s*:/m.test(workflowText);
+    return fs.readFileSync(path.join(root, ".github", "workflows", "ci.yml"), "utf8");
   } catch {
-    return false;
+    return "";
   }
+}
+
+function workflowDispatchConfigured(workflowText = workflowFileText()) {
+  return /^\s*workflow_dispatch\s*:/m.test(workflowText);
+}
+
+function workflowPushConfiguredForBranch(branch, workflowText = workflowFileText()) {
+  const pushIndex = workflowText.search(/^\s*push\s*:/m);
+  if (pushIndex < 0) return false;
+  const pushBlock = workflowText.slice(pushIndex).split(/\r?\n(?=\S)/)[0] || "";
+  return new RegExp(`-\\s*${branch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "m").test(pushBlock);
+}
+
+function remoteSlug() {
+  const remote = gitValue(["remote", "get-url", "origin"]);
+  const match = remote.match(/github\.com[:/](.+?)(?:\.git)?$/i);
+  return match ? match[1].replace(/\.git$/i, "") : "";
 }
 
 function parseWorkflowList(text, workflow) {
@@ -84,15 +109,47 @@ function parseWorkflowList(text, workflow) {
     .find((item) => item.name === workflow) || null;
 }
 
+function buildActionsPermissions(input = {}) {
+  const slug = input.remoteSlug || remoteSlug();
+  if (!slug) {
+    return {
+      command: null,
+      exitCode: null,
+      available: false,
+      enabled: null,
+      allowedActions: null,
+      shaPinningRequired: null,
+      error: "GitHub origin remote could not be parsed.",
+      stderr: "",
+    };
+  }
+  const result = input.result || run("gh", ["api", `repos/${slug}/actions/permissions`]);
+  const data = parseJsonObject(result.stdout);
+  return {
+    command: result.command,
+    exitCode: result.exitCode,
+    available: result.exitCode === 0 && Boolean(data),
+    enabled: typeof data?.enabled === "boolean" ? data.enabled : null,
+    allowedActions: data?.allowed_actions || null,
+    shaPinningRequired: typeof data?.sha_pinning_required === "boolean" ? data.sha_pinning_required : null,
+    error: result.error || null,
+    stderr: result.stderr || "",
+  };
+}
+
 function buildCiStatusEvidence(input = {}) {
   const git = input.git || buildGitState();
   const workflow = input.workflow || "CI";
   const branch = input.branch || "dev";
   const generatedBy = input.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
+  const workflowText = typeof input.workflowText === "string" ? input.workflowText : workflowFileText();
   const workflowListResult = input.workflowListResult || run("gh", ["workflow", "list", "--all"]);
   const workflowInfo = input.workflowInfo || parseWorkflowList(workflowListResult.stdout, workflow);
   const dispatchConfigured =
-    typeof input.workflowDispatchConfigured === "boolean" ? input.workflowDispatchConfigured : workflowDispatchConfigured();
+    typeof input.workflowDispatchConfigured === "boolean" ? input.workflowDispatchConfigured : workflowDispatchConfigured(workflowText);
+  const pushConfigured =
+    typeof input.workflowPushConfiguredForBranch === "boolean" ? input.workflowPushConfiguredForBranch : workflowPushConfiguredForBranch(branch, workflowText);
+  const actionsPermissions = input.actionsPermissions || buildActionsPermissions(input.actionsPermissionsInput || {});
   const ghResult =
     input.ghResult ||
     run("gh", [
@@ -117,7 +174,10 @@ function buildCiStatusEvidence(input = {}) {
   const reviewReasons = [
     workflowInfo ? "" : `${workflow} workflow is not listed by gh workflow list --all.`,
     workflowInfo && workflowInfo.state !== "active" ? `${workflow} workflow state is ${workflowInfo.state || "missing"} instead of active.` : "",
+    actionsPermissions.available ? "" : `GitHub Actions permissions lookup failed: ${actionsPermissions.error || actionsPermissions.stderr || "gh api unavailable or unauthenticated"}.`,
+    actionsPermissions.available && actionsPermissions.enabled !== true ? `GitHub Actions repository permission enabled=${actionsPermissions.enabled}.` : "",
     dispatchConfigured ? "" : `${workflow} workflow_dispatch trigger is not configured in .github/workflows/ci.yml.`,
+    pushConfigured ? "" : `${workflow} push trigger for branch ${branch} is not configured in .github/workflows/ci.yml.`,
     toolAvailable ? "" : `GitHub CLI run lookup failed: ${ghResult.error || ghResult.stderr || "gh unavailable or unauthenticated"}.`,
     latestRun ? "" : `No ${workflow} workflow run was found for branch ${branch}.`,
     latestRun && !runMatchesHead ? `Latest ${workflow} run headSha ${latestRun.headSha || "missing"} does not match ${git.commit}.` : "",
@@ -153,7 +213,9 @@ function buildCiStatusEvidence(input = {}) {
       state: workflowInfo?.state || null,
       id: workflowInfo?.id || null,
       dispatchConfigured,
+      pushConfigured,
     },
+    actionsPermissions,
     latestRun: latestRun
       ? {
           databaseId: latestRun.databaseId ?? null,
@@ -200,6 +262,8 @@ function buildMarkdown(manifest) {
     `- Workflow listed: ${manifest.workflowState.listed ? "yes" : "no"}`,
     `- Workflow state: ${manifest.workflowState.state || "missing"}`,
     `- Workflow dispatch configured: ${manifest.workflowState.dispatchConfigured ? "yes" : "no"}`,
+    `- Workflow push trigger for ${manifest.branch}: ${manifest.workflowState.pushConfigured ? "yes" : "no"}`,
+    `- GitHub Actions enabled: ${manifest.actionsPermissions.enabled === null ? "unknown" : manifest.actionsPermissions.enabled ? "yes" : "no"}`,
     `- Branch: ${manifest.branch}`,
     `- Git commit: ${manifest.git.commit}`,
     `- Git branch: ${manifest.git.branch}`,
@@ -219,6 +283,10 @@ function buildMarkdown(manifest) {
     `| workflow state | ${markdownCell(manifest.workflowState.state || "missing")} |`,
     `| workflow id | ${markdownCell(manifest.workflowState.id || "missing")} |`,
     `| workflow_dispatch | ${manifest.workflowState.dispatchConfigured ? "yes" : "no"} |`,
+    `| push trigger for branch | ${manifest.workflowState.pushConfigured ? "yes" : "no"} |`,
+    `| actions permissions command | \`${markdownCell(manifest.actionsPermissions.command || "missing")}\` |`,
+    `| actions enabled | ${manifest.actionsPermissions.enabled === null ? "unknown" : manifest.actionsPermissions.enabled ? "yes" : "no"} |`,
+    `| allowed actions | ${markdownCell(manifest.actionsPermissions.allowedActions || "missing")} |`,
     `| run id | ${markdownCell(manifest.latestRun?.databaseId || "missing")} |`,
     `| head sha | ${markdownCell(manifest.latestRun?.headSha || "missing")} |`,
     `| status | ${markdownCell(manifest.latestRun?.status || "missing")} |`,
