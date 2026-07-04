@@ -8,6 +8,8 @@ const {
   buildSecurityRisks,
   buildFinalStatusRisks,
   groupRiskItems,
+  buildRiskAcceptanceDraftRows,
+  buildOwnerRiskBriefs,
 } = require("./generate-field-risk-register");
 
 function assert(condition, message) {
@@ -37,6 +39,12 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "This risk register is preparation evidence, not reviewer acceptance.",
   "Final completion still requires artifacts/manual/field-risk-acceptance.md",
   "Risk Acceptance Draft Rows",
+  "riskAcceptanceDraftRows",
+  "Owner Risk Briefs",
+  "ownerRiskBriefs",
+  "Owner Risk Next Actions",
+  "buildRiskAcceptanceDraftRows",
+  "buildOwnerRiskBriefs",
   "copyToRiskAcceptance",
   "Security scanners",
   "DEVICE_INGEST_API_KEY trusted-LAN exception",
@@ -72,8 +80,12 @@ assertIncludes(handoverPackage, "fieldRiskRegister", "handover package generator
 assertIncludes(handoverIndex, "Field Risk Register", "handover index generator");
 assertIncludes(runbook, "npm.cmd run field:risk-register", "delivery runbook");
 assertIncludes(runbook, "artifacts/field-risk-register/<timestamp>/manifest.json", "delivery runbook");
+assertIncludes(runbook, "Owner Risk Briefs", "delivery runbook");
+assertIncludes(runbook, "Owner Risk Next Actions", "delivery runbook");
 assertIncludes(checklist, "npm run field:risk-register", "acceptance checklist");
 assertIncludes(checklist, "artifacts/field-risk-register/<timestamp>/manifest.json", "acceptance checklist");
+assertIncludes(checklist, "Owner Risk Briefs", "acceptance checklist");
+assertIncludes(checklist, "Owner Risk Next Actions", "acceptance checklist");
 assertIncludes(matrix, "field:risk-register", "delivery evidence matrix");
 assertIncludes(matrix, "artifacts/field-risk-register/<timestamp>/manifest.json", "delivery evidence matrix");
 
@@ -221,6 +233,17 @@ assert(
 );
 assert(buildFinalStatusRisks(finalStatus).length === 2, "final status risks should include actionable gates");
 assert(groupRiskItems([{ area: "Security scanners", owner: "Auth/Security", requiresReviewerDecision: true, copyToRiskAcceptance: true }])[0].copyToRiskAcceptanceCount === 1, "risk grouping should count acceptance rows");
+assert(
+  buildRiskAcceptanceDraftRows([{ area: "Swagger exposure", risk: "open swagger", owner: "Nginx Delivery", evidenceReference: "manifest.json", copyToRiskAcceptance: true }])[0].owner === "Nginx Delivery",
+  "risk acceptance draft rows should preserve owner",
+);
+assert(
+  buildOwnerRiskBriefs([
+    { area: "Swagger exposure", owner: "Nginx Delivery", requiresReviewerDecision: true, copyToRiskAcceptance: true, preferredResolution: "restrict", acceptableRiskPath: "accept", evidenceReference: "manifest.json" },
+    { area: "CORS trusted origins", owner: "Auth/Security", requiresReviewerDecision: true, copyToRiskAcceptance: false, preferredResolution: "set origins", acceptableRiskPath: "none", evidenceReference: "manifest.json" },
+  ])[0].riskCount === 1,
+  "owner risk briefs should summarize risks per owner",
+);
 
 const manifest = buildManifest({
   generatedAt: "2026-01-01T00:00:00.000Z",
@@ -236,11 +259,15 @@ const manifest = buildManifest({
 assert(manifest.status === "OPEN", "fixture should produce open risk register");
 assert(manifest.openRiskCount >= 5, "manifest should collect field, security, final status, and manual risks");
 assert(manifest.copyToRiskAcceptanceCount > 0, "manifest should expose acceptance-copy count");
+assert(manifest.riskAcceptanceDraftRows.length === manifest.copyToRiskAcceptanceCount, "manifest should expose structured risk acceptance draft rows");
+assert(manifest.ownerRiskBriefs.some((brief) => brief.owner === "Auth/Security"), "manifest should expose owner risk briefs");
 assert(manifest.sourceFinalStatus === finalStatus.path, "manifest should reference final status");
 assert(manifest.riskGroups.some((group) => group.area === "Security scanners"), "manifest should group security scanner risks");
 
 const markdown = buildMarkdown(manifest);
 assert(markdown.includes("Field Risk Register"), "markdown should include title");
+assert(markdown.includes("Owner Risk Briefs"), "markdown should include owner risk brief section");
+assert(markdown.includes("Owner Risk Next Actions"), "markdown should include owner risk next actions section");
 assert(markdown.includes("Risk Acceptance Draft Rows"), "markdown should include risk acceptance draft rows");
 assert(markdown.includes("This risk register is preparation evidence"), "markdown should include guardrail");
 assert(markdown.includes("AUTH_COOKIE_SECURE"), "markdown should include field-value risk detail");

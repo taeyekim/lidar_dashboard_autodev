@@ -227,6 +227,51 @@ function groupRiskItems(items) {
   );
 }
 
+function buildRiskAcceptanceDraftRows(items) {
+  return (items || [])
+    .filter((item) => item.copyToRiskAcceptance)
+    .map((item) => ({
+      decision: "TODO",
+      area: item.area,
+      acceptedRisk: item.risk,
+      compensatingControl: "TODO: reviewer-approved compensating control.",
+      owner: item.owner || "Field Operations",
+      evidence: item.evidenceReference || "missing",
+      recheckDate: item.targetRecheckDate || "TODO",
+      source: item.source,
+    }));
+}
+
+function buildOwnerRiskBriefs(items) {
+  const ownerMap = (items || []).reduce((acc, item) => {
+    const owner = item.owner || "Field Operations";
+    if (!acc[owner]) {
+      acc[owner] = {
+        owner,
+        riskCount: 0,
+        reviewerDecisionCount: 0,
+        copyToRiskAcceptanceCount: 0,
+        areas: [],
+        nextActions: [],
+      };
+    }
+    acc[owner].riskCount += 1;
+    if (item.requiresReviewerDecision) acc[owner].reviewerDecisionCount += 1;
+    if (item.copyToRiskAcceptance) acc[owner].copyToRiskAcceptanceCount += 1;
+    acc[owner].areas = [...new Set([...acc[owner].areas, item.area].filter(Boolean))];
+    acc[owner].nextActions.push({
+      area: item.area,
+      status: item.status,
+      preferredResolution: item.preferredResolution,
+      acceptableRiskPath: item.acceptableRiskPath,
+      evidenceReference: item.evidenceReference,
+    });
+    return acc;
+  }, {});
+
+  return Object.values(ownerMap).sort((a, b) => b.riskCount - a.riskCount || a.owner.localeCompare(b.owner));
+}
+
 function buildMetadataReviewItems(generatedBy, siteName) {
   const items = [];
   if (isPlaceholderFieldText(generatedBy)) {
@@ -277,6 +322,8 @@ function buildManifest(options = {}) {
     ...buildMetadataReviewItems(generatedBy, siteName),
   ]);
   const groups = groupRiskItems(riskItems);
+  const riskAcceptanceDraftRows = buildRiskAcceptanceDraftRows(riskItems);
+  const ownerRiskBriefs = buildOwnerRiskBriefs(riskItems);
 
   return {
     generatedAt: options.generatedAt || new Date().toISOString(),
@@ -294,6 +341,8 @@ function buildManifest(options = {}) {
     sourceManualEvidenceReadiness: evidencePath(manualReadiness),
     git: buildGitState(options.git),
     riskGroups: groups,
+    ownerRiskBriefs,
+    riskAcceptanceDraftRows,
     riskItems,
     guardrails: [
       "This risk register is preparation evidence, not reviewer acceptance.",
@@ -340,6 +389,30 @@ function buildMarkdown(manifest) {
       ? manifest.riskGroups.map((group) => `| ${markdownCell(group.area)} | ${group.count} | ${group.reviewerDecisionCount} | ${group.copyToRiskAcceptanceCount} | ${markdownCell(group.owners.join(", "))} |`)
       : ["| none | 0 | 0 | 0 | - |"]),
     "",
+    "## Owner Risk Briefs",
+    "",
+    "| Owner | Risks | Reviewer Decisions | Copy To Risk Acceptance | Areas |",
+    "| --- | --- | --- | --- | --- |",
+    ...(manifest.ownerRiskBriefs.length > 0
+      ? manifest.ownerRiskBriefs.map(
+          (brief) =>
+            `| ${markdownCell(brief.owner)} | ${brief.riskCount} | ${brief.reviewerDecisionCount} | ${brief.copyToRiskAcceptanceCount} | ${markdownCell(brief.areas.join(", "))} |`,
+        )
+      : ["| none | 0 | 0 | 0 | - |"]),
+    "",
+    "## Owner Risk Next Actions",
+    "",
+    "| Owner | Area | Status | Preferred Resolution | Acceptable Risk Path | Evidence |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ...(manifest.ownerRiskBriefs.length > 0
+      ? manifest.ownerRiskBriefs.flatMap((brief) =>
+          brief.nextActions.map(
+            (item) =>
+              `| ${markdownCell(brief.owner)} | ${markdownCell(item.area)} | ${markdownCell(item.status)} | ${markdownCell(item.preferredResolution)} | ${markdownCell(item.acceptableRiskPath)} | ${item.evidenceReference ? `\`${markdownCell(item.evidenceReference)}\`` : "missing"} |`,
+          ),
+        )
+      : ["| none | PASS | - | No owner risk next actions. | - | - |"]),
+    "",
     "## Risk Items",
     "",
     "| Area | Status | Owner | Risk | Preferred Resolution | Acceptable Risk Path | Evidence | Copy To Risk Acceptance | Target Recheck Date |",
@@ -355,13 +428,11 @@ function buildMarkdown(manifest) {
     "",
     "| Decision | Area | Accepted Risk | Compensating Control | Evidence | Recheck Date |",
     "| --- | --- | --- | --- | --- | --- |",
-    ...(manifest.riskItems.filter((item) => item.copyToRiskAcceptance).length > 0
-      ? manifest.riskItems
-          .filter((item) => item.copyToRiskAcceptance)
-          .map(
-            (item) =>
-              `| TODO | ${markdownCell(item.area)} | ${markdownCell(item.risk)} | TODO: reviewer-approved compensating control. | ${item.evidenceReference ? `\`${markdownCell(item.evidenceReference)}\`` : "missing"} | TODO |`,
-          )
+    ...(manifest.riskAcceptanceDraftRows.length > 0
+      ? manifest.riskAcceptanceDraftRows.map(
+          (item) =>
+            `| ${markdownCell(item.decision)} | ${markdownCell(item.area)} | ${markdownCell(item.acceptedRisk)} | ${markdownCell(item.compensatingControl)} | ${item.evidence ? `\`${markdownCell(item.evidence)}\`` : "missing"} | ${markdownCell(item.recheckDate)} |`,
+        )
       : ["| none | - | No risk acceptance rows are required by the latest evidence. | - | - | - |"]),
     "",
   ].join("\n");
@@ -397,4 +468,6 @@ module.exports = {
   buildSecurityRisks,
   buildFinalStatusRisks,
   groupRiskItems,
+  buildRiskAcceptanceDraftRows,
+  buildOwnerRiskBriefs,
 };

@@ -239,8 +239,9 @@ After field readiness and security evidence exist, run
 It writes `artifacts/field-risk-register/<timestamp>/manifest.json` plus
 `manifest.md`, collecting open field values, strict scanner skips/failures,
 remaining final-status gates, and required manual evidence into reviewer-facing
-risk groups and `Risk Acceptance Draft Rows`. This register is preparation
-evidence only; accepted risk still requires the reviewer-filled
+risk groups, `Owner Risk Briefs`, `Owner Risk Next Actions`, and structured
+`Risk Acceptance Draft Rows`. This register is preparation evidence only;
+accepted risk still requires the reviewer-filled
 `artifacts/manual/field-risk-acceptance.md` file and must not include secret
 values. Re-run `manual:evidence-drafts` after this step when the reviewer wants
 the risk acceptance draft to include the latest register rows.
