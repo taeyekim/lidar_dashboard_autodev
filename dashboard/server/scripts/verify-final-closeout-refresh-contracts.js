@@ -149,6 +149,10 @@ assert(
   "field acceptance REVIEW exit should be recorded without failing refresh",
 );
 assert(
+  steps.find((step) => step.id === "field-acceptance-carry-forward").acceptReviewExitCodes.includes(1),
+  "field acceptance carry-forward runtime-change exit should be recorded without failing refresh",
+);
+assert(
   steps.find((step) => step.id === "security-evidence").acceptReviewExitCodes.includes(1),
   "strict security REVIEW exit should be recorded without failing refresh",
 );
