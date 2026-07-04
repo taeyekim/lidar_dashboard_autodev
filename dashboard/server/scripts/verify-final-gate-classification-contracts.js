@@ -36,6 +36,7 @@ const checklist = readProjectFile("docs/ops/acceptance-checklist.md");
   [generator, "conditionalLocalCount", "final gate classification generator"],
   [generator, "refreshOnlyCount", "final gate classification generator"],
   [generator, "fieldRequiredCount", "final gate classification generator"],
+  [generator, "All Gates By Bucket", "final gate classification generator"],
   [generator, "Codex must not fabricate reviewer signatures", "final gate classification generator"],
   [generator, "final:status READY_TO_CLOSE", "final gate classification generator"],
   [generator, "security-tooling-closeout", "final gate classification generator"],
@@ -63,6 +64,11 @@ const buckets = summarizeBuckets([
 assert(buckets.some((bucket) => bucket.id === "hardware_runtime" && bucket.gateCount === 1), "summary should include hardware runtime bucket");
 assert(buckets.some((bucket) => bucket.id === "security_tooling" && bucket.gateCount === 1), "summary should include security tooling bucket");
 assert(buckets.some((bucket) => bucket.id === "manual_reviewer" && bucket.gateCount === 1), "summary should include manual reviewer bucket");
+assert(buckets.every((bucket) => bucket.gates.length === bucket.gateCount), "each bucket should retain every classified gate row");
+assert(
+  buckets.reduce((sum, bucket) => sum + bucket.gates.length, 0) === 3,
+  "bucket gate rows should cover the full remaining gate set",
+);
 
 const manifest = buildManifest({
   baseUrl: "http://field.local:8080",
@@ -72,6 +78,10 @@ const manifest = buildManifest({
 assert(manifest.sourceFinalStatus, "manifest should include source final status");
 assert(manifest.summary, "manifest should include summary");
 assert(Array.isArray(manifest.buckets), "manifest should include buckets");
+assert(
+  manifest.buckets.reduce((sum, bucket) => sum + (bucket.gates || []).length, 0) === manifest.summary.remainingGateCount,
+  "manifest bucket gate rows should add up to the remaining gate count",
+);
 assert(Array.isArray(manifest.nextCodexActions), "manifest should include next Codex actions");
 assert(manifest.guardrails.some((item) => item.includes("must not fabricate")), "manifest should include fabrication guardrail");
 
@@ -92,6 +102,7 @@ assert(markdown.includes("Final Gate Classification"), "markdown should include 
 assert(markdown.includes("Field-required gates"), "markdown should include field-required summary");
 assert(markdown.includes("Refresh-only gates"), "markdown should include refresh-only summary");
 assert(markdown.includes("Next Codex Actions"), "markdown should include next action table");
+assert(markdown.includes("All Gates By Bucket"), "markdown should include the full gate table section");
 assert(markdown.includes("This classification is routing evidence"), "markdown should include evidence guardrail");
 
 console.log("final gate classification contracts ok");

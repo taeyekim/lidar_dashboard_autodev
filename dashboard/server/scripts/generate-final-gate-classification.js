@@ -105,6 +105,7 @@ function summarizeBuckets(gates) {
         actionTypes: {},
         categories: {},
         examples: [],
+        gates: [],
       },
     ]),
   );
@@ -117,15 +118,17 @@ function summarizeBuckets(gates) {
     const category = gate.category || "Unknown";
     bucket.actionTypes[actionType] = (bucket.actionTypes[actionType] || 0) + 1;
     bucket.categories[category] = (bucket.categories[category] || 0) + 1;
+    const gateRow = {
+      category: gate.category || "Unknown",
+      status: gate.status || "UNKNOWN",
+      actionType,
+      message: gate.message || "",
+      evidence: gate.evidence || null,
+      closeWhen: gate.closeWhen || "",
+    };
+    bucket.gates.push(gateRow);
     if (bucket.examples.length < 5) {
-      bucket.examples.push({
-        category: gate.category || "Unknown",
-        status: gate.status || "UNKNOWN",
-        actionType,
-        message: gate.message || "",
-        evidence: gate.evidence || null,
-        closeWhen: gate.closeWhen || "",
-      });
+      bucket.examples.push(gateRow);
     }
   });
 
@@ -272,6 +275,19 @@ function buildMarkdown(manifest) {
       ...bucket.examples.map(
         (gate) =>
           `| ${markdownCell(gate.category)} | ${markdownCell(gate.status)} | ${markdownCell(gate.actionType)} | ${markdownCell(gate.message)} | ${markdownCell(gate.evidence || "missing")} | ${markdownCell(gate.closeWhen)} |`,
+      ),
+      "",
+    ]),
+    "## All Gates By Bucket",
+    "",
+    ...manifest.buckets.flatMap((bucket) => [
+      `### ${bucket.label}`,
+      "",
+      "| # | Category | Status | Action Type | Message | Evidence | Close When |",
+      "| ---: | --- | --- | --- | --- | --- | --- |",
+      ...(bucket.gates || []).map(
+        (gate, index) =>
+          `| ${index + 1} | ${markdownCell(gate.category)} | ${markdownCell(gate.status)} | ${markdownCell(gate.actionType)} | ${markdownCell(gate.message)} | ${markdownCell(gate.evidence || "missing")} | ${markdownCell(gate.closeWhen)} |`,
       ),
       "",
     ]),
