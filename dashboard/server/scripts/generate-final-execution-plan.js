@@ -337,6 +337,7 @@ function rootCauseForGate(gate) {
       label: "External CI Evidence",
       owner: "Release/PM",
       closeoutCommandIds: ["ci-status", "ci-closeout", "final-status"],
+      evidenceTargets: ["artifacts/ci-status/<timestamp>/manifest.json", "GitHub Actions CI run for final dev commit"],
       closeWhen: "GitHub Actions CI has a PASS run for the final pushed dev commit and ci:status records it.",
     };
   }
@@ -346,6 +347,7 @@ function rootCauseForGate(gate) {
       label: "Source Revision Closeout",
       owner: "Release",
       closeoutCommandIds: ["source-revision-closeout", "docs-text-quality", "final-status"],
+      evidenceTargets: ["git status --short --branch", "origin/dev HEAD matching local dev HEAD"],
       closeWhen: "Working tree is clean, branch is dev, and HEAD is pushed to origin/dev before final evidence refresh.",
     };
   }
@@ -355,6 +357,11 @@ function rootCauseForGate(gate) {
       label: "Handover And Final Review",
       owner: "PM + Release",
       closeoutCommandIds: ["completion-audit", "handover-index", "field-closure-plan", "handover-package", "final-status", "final-execution-plan"],
+      evidenceTargets: [
+        "artifacts/completion-audit/<timestamp>/manifest.json",
+        "artifacts/handover-package/<timestamp>/manifest.json",
+        "artifacts/final-status/<timestamp>/manifest.json",
+      ],
       closeWhen: "Completion audit, handover package, and final status converge to READY_TO_CLOSE after all upstream evidence is accepted.",
     };
   }
@@ -364,6 +371,11 @@ function rootCauseForGate(gate) {
       label: "Manual Field Evidence",
       owner: "Field Operations",
       closeoutCommandIds: ["manual-evidence-drafts", "manual-evidence-readiness", "field-acceptance", "final-status"],
+      evidenceTargets: [
+        "artifacts/manual/operator-ui-walkthrough.md",
+        "artifacts/manual/field-risk-acceptance.md",
+        "artifacts/manual-evidence-readiness/<timestamp>/manifest.json",
+      ],
       closeWhen: "Required operator walkthrough and risk acceptance evidence files are filled with non-placeholder values and accepted.",
     };
   }
@@ -373,26 +385,11 @@ function rootCauseForGate(gate) {
       label: "Security Scanner Evidence",
       owner: "Auth/Security",
       closeoutCommandIds: ["security-evidence", "field-readiness", "field-acceptance", "final-status"],
+      evidenceTargets: [
+        "artifacts/security/<timestamp>/manifest.json",
+        "gitleaks/Trivy/ZAP reports or artifacts/manual/field-risk-acceptance.md",
+      ],
       closeWhen: "Required scanners run successfully, Docker scanner fallback is available, or signed risk acceptance evidence is attached.",
-    };
-  }
-  if (
-    text.includes("jwt") ||
-    text.includes("seed admin") ||
-    text.includes("cors") ||
-    text.includes("cookie") ||
-    text.includes("swagger") ||
-    text.includes("nginx wrong-way") ||
-    text.includes("content security policy") ||
-    text.includes("device ingest key") ||
-    text.includes("field preflight")
-  ) {
-    return {
-      id: "delivery-env-preflight",
-      label: "Delivery Environment Preflight",
-      owner: "Auth/Security + Nginx Delivery",
-      closeoutCommandIds: ["field-preflight", "field-readiness", "field-acceptance", "final-status"],
-      closeWhen: "Delivery .env values, auth cookie posture, CORS, Swagger allowlist, Nginx limits/CSP, and device ingest policy pass strict preflight.",
     };
   }
   if (
@@ -411,7 +408,43 @@ function rootCauseForGate(gate) {
       label: "Field Runtime And Hardware Rehearsal",
       owner: "Backend + Hardware + Field Operations",
       closeoutCommandIds: ["runtime-evidence", "db-field-rehearsal", "lidar-field-rehearsal", "control-board-field-rehearsal", "field-acceptance", "final-status"],
+      evidenceTargets: [
+        "artifacts/runtime/<timestamp>/manifest.json",
+        "artifacts/field-db-rehearsal/<timestamp>/manifest.json",
+        "artifacts/field-lidar-rehearsal/<timestamp>/manifest.json",
+        "artifacts/field-control-board-rehearsal/<timestamp>/manifest.json",
+      ],
       closeWhen: "DB, LiDAR representative payload, runtime, and control-board TCP rehearsals pass against the approved delivery runtime/hardware.",
+    };
+  }
+  if (
+    text.includes("jwt") ||
+    text.includes("seed admin") ||
+    text.includes("cors") ||
+    text.includes("cookie") ||
+    text.includes("swagger") ||
+    text.includes("nginx wrong-way") ||
+    text.includes("content security policy") ||
+    text.includes("device ingest key") ||
+    text.includes("field preflight")
+  ) {
+    return {
+      id: "delivery-env-preflight",
+      label: "Delivery Environment Preflight",
+      owner: "Auth/Security + Nginx Delivery",
+      closeoutCommandIds: ["field-preflight", "field-readiness", "field-acceptance", "final-status"],
+      evidenceTargets: ["artifacts/field-preflight/<timestamp>/manifest.json", ".env configured with field-only non-placeholder values"],
+      closeWhen: "Delivery .env values, auth cookie posture, CORS, Swagger allowlist, Nginx limits/CSP, and device ingest policy pass strict preflight.",
+    };
+  }
+  if (text.includes("field readiness") || text.includes("field acceptance")) {
+    return {
+      id: "field-readiness-acceptance",
+      label: "Field Readiness And Acceptance Summary",
+      owner: "Field Operations",
+      closeoutCommandIds: ["field-readiness", "field-acceptance", "handover-package", "final-status"],
+      evidenceTargets: ["artifacts/field-readiness/<timestamp>/manifest.json", "artifacts/field-acceptance/<timestamp>/manifest.json"],
+      closeWhen: "Field readiness and field acceptance both report PASS after upstream runtime, env, manual, and security evidence is closed.",
     };
   }
   if (text.includes("known limitation") || text.includes("level-2") || text.includes("kpi wording")) {
@@ -420,6 +453,7 @@ function rootCauseForGate(gate) {
       label: "Field Policy And Known Limitation Acceptance",
       owner: "PM + Field Operations",
       closeoutCommandIds: ["field-risk-register", "manual-evidence-drafts", "manual-evidence-readiness", "final-status"],
+      evidenceTargets: ["artifacts/manual/field-risk-acceptance.md", "artifacts/field-risk-register/<timestamp>/manifest.json"],
       closeWhen: "Field owner accepts or resolves policy-dependent limits such as level-2 escalation thresholds and KPI wording.",
     };
   }
@@ -429,6 +463,12 @@ function rootCauseForGate(gate) {
       label: "Field Action Artifact Refresh",
       owner: "PM + Field Operations",
       closeoutCommandIds: ["field-risk-register", "field-action-board", "field-gate-closure-map", "field-owner-briefs", "handover-package", "final-status"],
+      evidenceTargets: [
+        "artifacts/field-risk-register/<timestamp>/manifest.json",
+        "artifacts/field-action-board/<timestamp>/manifest.json",
+        "artifacts/field-gate-closure-map/<timestamp>/manifest.json",
+        "artifacts/field-owner-briefs/<timestamp>/manifest.json",
+      ],
       closeWhen: "Field action artifacts are regenerated after the underlying field/security/manual gates are closed.",
     };
   }
@@ -437,6 +477,7 @@ function rootCauseForGate(gate) {
     label: "General Review",
     owner: "PM",
     closeoutCommandIds: ["final-status"],
+    evidenceTargets: ["Referenced evidence manifest"],
     closeWhen: "Referenced gate is resolved and final status is regenerated.",
   };
 }
@@ -453,6 +494,7 @@ function buildRootCauseGroups(gates) {
         categories: new Set(),
         statuses: new Set(),
         evidence: new Set(),
+        evidenceTargets: rootCause.evidenceTargets || [],
         sampleMessages: [],
       });
     }
@@ -605,14 +647,14 @@ function buildMarkdown(manifest) {
     "",
     "## Root Cause Groups",
     "",
-    "| Root Cause | Owner | Gates | Action Types | Categories | Closeout Commands | Close When | Sample Messages |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Root Cause | Owner | Gates | Action Types | Categories | Evidence Targets | Closeout Commands | Close When | Sample Messages |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(manifest.rootCauseGroups.length > 0
       ? manifest.rootCauseGroups.map(
           (group) =>
-            `| ${markdownCell(group.label)} | ${markdownCell(group.owner)} | ${group.gateCount} | ${markdownCell(group.actionTypes.join(", ") || "none")} | ${markdownCell(group.categories.join(", ") || "none")} | ${markdownCell(group.closeoutCommandIds.join(", ") || "none")} | ${markdownCell(group.closeWhen)} | ${markdownCell(group.sampleMessages.join("; "))} |`,
+            `| ${markdownCell(group.label)} | ${markdownCell(group.owner)} | ${group.gateCount} | ${markdownCell(group.actionTypes.join(", ") || "none")} | ${markdownCell(group.categories.join(", ") || "none")} | ${markdownCell((group.evidenceTargets || []).join(", ") || "none")} | ${markdownCell(group.closeoutCommandIds.join(", ") || "none")} | ${markdownCell(group.closeWhen)} | ${markdownCell(group.sampleMessages.join("; "))} |`,
         )
-      : ["| none | none | 0 | none | none | none | No remaining root causes. | - |"]),
+      : ["| none | none | 0 | none | none | none | none | No remaining root causes. | - |"]),
     "",
     "## Ordered Commands",
     "",
