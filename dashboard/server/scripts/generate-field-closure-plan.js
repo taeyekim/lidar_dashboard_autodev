@@ -32,7 +32,7 @@ function actionForEntry(entry) {
     "Field Readiness": [`npm.cmd run field:readiness -- --base-url=http://localhost:8080 --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg}`],
     "DB And Prisma Field Rehearsal": [`powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg}`],
     "Lidar Ingest Field Rehearsal": [`powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg}`],
-    "Control Board Field Rehearsal": [`powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg}`],
+    "Control Board Field Rehearsal": [`powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} -AllowLiveTcp`],
     "Runtime Evidence": ["npm.cmd run runtime:evidence -- --run-smoke --use-existing-stack --base-url=http://localhost:8080"],
     "Security Evidence": ["npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners --target-url=http://localhost:8080"],
   };
@@ -45,7 +45,7 @@ function actionForEntry(entry) {
     "Field Readiness": "Readiness report is PASS or explicitly accepted PASS_WITH_SKIPS, with Docker daemon, Nginx/API health, .env posture, control-board TCP values, cookie security, and Swagger allowlist reviewed.",
     "DB And Prisma Field Rehearsal": "DB field rehearsal manifest results are all PASS against the delivery runtime.",
     "Lidar Ingest Field Rehearsal": "LiDAR rehearsal manifest proves normal-driving de-duplication and wrong-way command creation using representative payloads.",
-    "Control Board Field Rehearsal": "Control-board rehearsal manifest proves DRY_RUN command lifecycle or approved LIVE_TCP command/ACK evidence.",
+    "Control Board Field Rehearsal": "Control-board rehearsal manifest proves approved LIVE_TCP command/ACK evidence after hardware owner approval.",
     "Runtime Evidence": "Runtime evidence includes Docker daemon, compose config, Nginx entrypoint, health, security header, statistics, and control-board status checks.",
     "Security Evidence": "Security evidence has audit policy pass and required scanner results or accepted skipped-tool reasons per field policy.",
   };

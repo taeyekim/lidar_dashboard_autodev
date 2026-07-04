@@ -150,8 +150,8 @@ function commandCatalog(baseUrl) {
       id: "control-board-field-rehearsal",
       phase: "Field Rehearsal",
       actionTypes: ["FIELD_ACTION_REQUIRED"],
-      command: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg}`,
-      purpose: "Prove control-board command lifecycle in DRY_RUN or approved LIVE_TCP mode.",
+      command: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} -AllowLiveTcp`,
+      purpose: "Prove approved LIVE_TCP control-board command lifecycle after hardware owner approval.",
       doneWhen: "Control-board field rehearsal manifest is PASS and LIVE_TCP evidence is attached when required.",
     },
     {

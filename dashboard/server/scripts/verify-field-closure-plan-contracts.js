@@ -87,6 +87,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "DB And Prisma Field Rehearsal",
   "Lidar Ingest Field Rehearsal",
   "Control Board Field Rehearsal",
+  "-AllowLiveTcp",
   "-OperatorUiWalkthroughEvidence",
   "artifacts/manual/operator-ui-walkthrough.md",
   "npm.cmd run delivery:evidence",

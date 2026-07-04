@@ -229,6 +229,10 @@ assert(
   "manual evidence readiness command should pass concrete reviewer/site metadata args",
 );
 assert(openPlan.orderedCommands.some((item) => item.id === "control-board-field-rehearsal"), "field gate should include control-board rehearsal command");
+assert(
+  openPlan.orderedCommands.some((item) => item.id === "control-board-field-rehearsal" && item.command.includes("-AllowLiveTcp")),
+  "final live TCP closeout command should include explicit -AllowLiveTcp approval switch",
+);
 assert(openPlan.orderedCommands.some((item) => item.id === "security-evidence"), "security gate should include strict security evidence command");
 assert(openPlan.gatesByActionType.SECURITY_REVIEW_REQUIRED.some((gate) => gate.status === "DELIVERY_FIX_REQUIRED"), "security delivery-fix status should be preserved in gate groups");
 assert(openPlan.orderedCommands.some((item) => item.id === "field-gate-closure-map"), "open plan should include field gate closure map refresh command");
