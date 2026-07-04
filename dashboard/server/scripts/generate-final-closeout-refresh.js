@@ -290,6 +290,7 @@ function buildMarkdown(manifest) {
     `- Working tree clean: ${manifest.git.clean ? "yes" : "no"}`,
     `- Latest final status: ${manifest.latestFinalStatus.status} (${manifest.latestFinalStatus.path || "missing"})`,
     `- Latest final status remaining gates: ${manifest.latestFinalStatus.remainingGateCount ?? "unknown"}`,
+    `- Latest handover package: ${manifest.latestHandoverPackage.status} (${manifest.latestHandoverPackage.path || "missing"})`,
     `- Latest final execution plan: ${manifest.latestFinalExecutionPlan.status} (${manifest.latestFinalExecutionPlan.path || "missing"})`,
     `- Latest final execution plan remaining gates: ${manifest.latestFinalExecutionPlan.remainingGateCount ?? "unknown"}`,
     `- Latest final bundle handoff: ${manifest.latestFinalBundleHandoff.status} (${manifest.latestFinalBundleHandoff.path || "missing"})`,
@@ -315,6 +316,7 @@ function buildManifest(options, stepResults) {
   const failedSteps = stepResults.filter((step) => step.status === "FAIL");
   const reviewSteps = stepResults.filter((step) => step.status === "REVIEW_RECORDED");
   const latestFinalStatus = readLatestJsonManifest("artifacts/final-status");
+  const latestHandoverPackage = readLatestJsonManifest("artifacts/handover-package");
   const latestFinalExecutionPlan = readLatestJsonManifest("artifacts/final-execution-plan");
   const latestFinalBundleHandoff = readLatestJsonManifest("artifacts/final-bundle-handoff");
   const canMarkGoalComplete =
@@ -339,6 +341,11 @@ function buildManifest(options, stepResults) {
       canMarkGoalComplete: latestFinalStatus?.data?.canMarkGoalComplete === true,
       remainingGateCount: latestFinalStatus?.data?.remainingGates?.length ?? null,
     },
+    latestHandoverPackage: {
+      path: latestHandoverPackage?.path || null,
+      status: latestHandoverPackage?.data?.status || "MISSING",
+      finalBundleHandoff: latestHandoverPackage?.data?.evidenceRefs?.finalBundleHandoff || null,
+    },
     latestFinalExecutionPlan: {
       path: latestFinalExecutionPlan?.path || null,
       status: latestFinalExecutionPlan?.data?.status || "MISSING",
@@ -357,6 +364,7 @@ function buildManifest(options, stepResults) {
       "This refresh does not dispatch external GitHub Actions.",
       "OPEN_GATES means the refresh commands completed, but final field/security/manual gates remain open.",
       "REVIEW_RECORDED means an individual command wrote evidence but still needs field/security/manual closeout.",
+      "The final closeout refresh manifest is the authoritative latest final-bundle-handoff pointer after the refresh sequence completes.",
       "Do not mark the Codex goal complete until final:status reports READY_TO_CLOSE and canMarkGoalComplete=true.",
     ],
     steps: stepResults,

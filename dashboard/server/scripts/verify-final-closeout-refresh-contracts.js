@@ -33,6 +33,7 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "REVIEW_RECORDED", "final closeout refresh generator"],
   [generator, "OPEN_GATES", "final closeout refresh generator"],
   [generator, "latestFinalStatus", "final closeout refresh generator"],
+  [generator, "latestHandoverPackage", "final closeout refresh generator"],
   [generator, "latestFinalExecutionPlan", "final closeout refresh generator"],
   [generator, "latestFinalBundleHandoff", "final closeout refresh generator"],
   [generator, "Can mark goal complete", "final closeout refresh generator"],
@@ -158,6 +159,7 @@ assert(manifest.canMarkGoalComplete === false, "open refresh should not allow go
 assert(manifest.reviewRecordedStepCount === 1, "manifest should count review-recorded steps");
 assert(manifest.externalCiDispatch === false, "manifest should record that external CI dispatch did not occur");
 assert(manifest.latestFinalStatus, "manifest should include latest final status summary");
+assert(manifest.latestHandoverPackage, "manifest should include latest handover package summary");
 assert(manifest.latestFinalExecutionPlan, "manifest should include latest final execution plan summary");
 assert(manifest.latestFinalBundleHandoff, "manifest should include latest final bundle handoff summary");
 
@@ -191,6 +193,11 @@ assert(markdown.includes("Final Closeout Refresh"), "markdown should include tit
 assert(markdown.includes("This refresh does not dispatch external GitHub Actions"), "markdown should include external CI guardrail");
 assert(markdown.includes("OPEN_GATES"), "markdown should include open gate status");
 assert(markdown.includes("Latest final status"), "markdown should include latest final status summary");
+assert(markdown.includes("Latest handover package"), "markdown should include latest handover package summary");
 assert(markdown.includes("Latest final bundle handoff"), "markdown should include latest final bundle handoff summary");
+assert(
+  markdown.includes("authoritative latest final-bundle-handoff pointer"),
+  "markdown should identify final closeout refresh as the latest bundle pointer",
+);
 
 console.log("final closeout refresh contracts ok");
