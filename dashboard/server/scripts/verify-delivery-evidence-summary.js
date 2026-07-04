@@ -252,6 +252,27 @@ const bomVectorDir = path.join(bomVectorRoot, "20260703-000000");
 fs.mkdirSync(bomVectorDir, { recursive: true });
 fs.writeFileSync(path.join(bomVectorDir, "manifest.json"), `\uFEFF${JSON.stringify({ checks: [] })}`);
 const bomManifest = readLatestJsonManifest("artifacts/delivery-summary-vector-bom");
+const fieldAcceptanceVectorRoot = path.join(__dirname, "..", "..", "..", "artifacts", "delivery-summary-vector-field-acceptance");
+fs.rmSync(fieldAcceptanceVectorRoot, { recursive: true, force: true });
+fs.mkdirSync(path.join(fieldAcceptanceVectorRoot, "20260101-000001"), { recursive: true });
+fs.writeFileSync(
+  path.join(fieldAcceptanceVectorRoot, "20260101-000001", "manifest.json"),
+  JSON.stringify({
+    status: "REVIEW",
+    handover: { readyForHandover: false, requiresFieldReview: true },
+    steps: [{ name: "field preflight manifest gate", status: "REVIEW" }],
+  }),
+);
+fs.mkdirSync(path.join(fieldAcceptanceVectorRoot, "20260101-000000"), { recursive: true });
+fs.writeFileSync(
+  path.join(fieldAcceptanceVectorRoot, "20260101-000000", "manifest.json"),
+  JSON.stringify({
+    status: "PASS",
+    handover: { readyForHandover: true, requiresFieldReview: false },
+    steps: [{ name: "operator UI browser walkthrough", status: "PASS" }],
+  }),
+);
+const passFieldAcceptance = readLatestJsonManifest("artifacts/delivery-summary-vector-field-acceptance");
 const policyAcceptedRoot = path.join(__dirname, "..", "..", "..", "artifacts", "delivery-summary-policy-accepted");
 const policyAcceptedDir = path.join(policyAcceptedRoot, "20260703-000000");
 fs.mkdirSync(policyAcceptedDir, { recursive: true });
@@ -656,5 +677,9 @@ assert(
 );
 assert(validRiskAcceptanceReason === "", "completed risk acceptance evidence should validate");
 assert(bomManifest.data.checks.length === 0, "latest manifest reader should tolerate UTF-8 BOM");
+assert(
+  passFieldAcceptance.path.endsWith("20260101-000000/manifest.json"),
+  "field acceptance manifest selection should prefer PASS handover evidence over newer REVIEW refresh evidence",
+);
 
 console.log("delivery evidence summary vectors ok");

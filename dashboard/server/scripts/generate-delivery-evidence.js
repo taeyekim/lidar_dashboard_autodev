@@ -160,6 +160,22 @@ function readLatestJsonManifest(outputRoot) {
           return false;
         }
       }) || manifests[0]
+    : outputRoot === "artifacts/field-acceptance" || outputRoot.includes("field-acceptance")
+      ? manifests.find((manifestPath) => {
+          try {
+            const data = JSON.parse(fs.readFileSync(manifestPath, "utf8").replace(/^\uFEFF/, ""));
+            const steps = Array.isArray(data.steps) ? data.steps : [];
+            return (
+              data.status === "PASS" &&
+              data.handover?.readyForHandover === true &&
+              data.handover?.requiresFieldReview === false &&
+              steps.length > 0 &&
+              steps.every((step) => step.status === "PASS")
+            );
+          } catch {
+            return false;
+          }
+        }) || manifests[0]
     : manifests[0];
   const manifestContent = fs.readFileSync(selectedManifest, "utf8").replace(/^\uFEFF/, "");
   return {
