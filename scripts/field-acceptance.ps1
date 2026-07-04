@@ -488,6 +488,20 @@ function Get-StepsByStatus {
   })
 }
 
+function Get-ObjectPropertyValue {
+  param(
+    $InputObject,
+    [string]$Name,
+    $Default = ""
+  )
+
+  if ($null -eq $InputObject) { return $Default }
+  $property = $InputObject.PSObject.Properties[$Name]
+  if ($null -eq $property) { return $Default }
+  if ($null -eq $property.Value) { return $Default }
+  return $property.Value
+}
+
 function ConvertTo-AcceptanceOpenItems {
   param([object[]]$Steps)
 
@@ -511,6 +525,40 @@ function ConvertTo-AcceptanceOpenItems {
   })
 }
 
+function ConvertTo-PreflightOpenItems {
+  param($Manifest)
+
+  if ($null -eq $Manifest) {
+    return @([pscustomobject]@{
+      status = "REVIEW"
+      check = "field preflight manifest"
+      reason = "Latest field preflight manifest was not found."
+      nextAction = "Run field:preflight before field acceptance."
+      closeWhen = "A latest field preflight manifest exists and reports PASS."
+      source = "artifacts/field-preflight"
+    })
+  }
+
+  $checks = @($Manifest.checks | Where-Object {
+    $_.status -eq "REVIEW" -or $_.status -eq "SKIPPED"
+  })
+
+  return @($checks | ForEach-Object {
+    [pscustomobject]@{
+      status = Get-ObjectPropertyValue -InputObject $_ -Name "status" -Default "REVIEW"
+      check = Get-ObjectPropertyValue -InputObject $_ -Name "name" -Default "unknown preflight check"
+      reason = Get-ObjectPropertyValue -InputObject $_ -Name "reason" -Default ""
+      nextAction = Get-ObjectPropertyValue -InputObject $_ -Name "nextAction" -Default "Resolve the preflight check and rerun field:preflight."
+      closeWhen = if ($_.status -eq "REVIEW") {
+        "Resolve this preflight check and rerun field:preflight until it is PASS."
+      } else {
+        "Provide the required field value or attach reviewer risk acceptance, then rerun strict field:preflight."
+      }
+      source = "artifacts/field-preflight/latest/manifest.json"
+    }
+  })
+}
+
 function New-AcceptanceManifest {
   param(
     [string]$Status,
@@ -526,6 +574,7 @@ function New-AcceptanceManifest {
   $latestPreflightManifest = Get-LatestManifest -Root "artifacts/field-preflight"
   $latestPreflightStatus = if ($null -eq $latestPreflightManifest) { "MISSING" } else { $latestPreflightManifest.status }
   $latestPreflightPassed = $latestPreflightStatus -eq "PASS"
+  $preflightOpenItems = @(ConvertTo-PreflightOpenItems -Manifest $latestPreflightManifest)
   $readyForHandover = $Status -eq "PASS" -and $latestPreflightPassed -and $hasReviewer -and $hasSiteName
   $requiresFieldReview = $Status -eq "REVIEW" -or $Status -eq "IN_PROGRESS" -or $skippedSteps.Count -gt 0 -or !$latestPreflightPassed -or !$hasReviewer -or !$hasSiteName
   $nextActions = @()
@@ -599,6 +648,7 @@ function New-AcceptanceManifest {
       delivery = Get-LatestManifestPath -Root "artifacts/delivery"
     }
     openAcceptanceItems = $openAcceptanceItems
+    preflightOpenItems = $preflightOpenItems
     steps = $stepList
   }
 }
@@ -695,6 +745,16 @@ function Write-AcceptanceManifest {
       $manifest.openAcceptanceItems | ForEach-Object { "| $($_.status) | $($_.step) | $($_.reason) | ``$($_.command)`` | $($_.logPath) | $($_.closeWhen) |" }
     } else {
       "| PASS | none | No open acceptance items. | - | - | Attach this manifest to the handover package. |"
+    })),
+    "",
+    "## Preflight Open Items",
+    "",
+    "| Status | Check | Reason | Next Action | Close When | Source |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ($(if ($manifest.preflightOpenItems.Count -gt 0) {
+      $manifest.preflightOpenItems | ForEach-Object { "| $($_.status) | $($_.check) | $($_.reason) | $($_.nextAction) | $($_.closeWhen) | $($_.source) |" }
+    } else {
+      "| PASS | none | No open preflight checks. | - | Field preflight is PASS. | artifacts/field-preflight/latest/manifest.json |"
     })),
     "",
     "## Steps",

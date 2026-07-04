@@ -32,7 +32,9 @@ const operatorUiTemplate = readProjectFile("docs/ops/operator-ui-walkthrough-tem
   "OperatorUiWalkthroughEvidence",
   "ConvertTo-StepList",
   "Get-StepsByStatus",
+  "Get-ObjectPropertyValue",
   "ConvertTo-AcceptanceOpenItems",
+  "ConvertTo-PreflightOpenItems",
   "Get-LatestManifest",
   "Get-LatestManifestPath",
   "Get-GitState",
@@ -86,9 +88,13 @@ const operatorUiTemplate = readProjectFile("docs/ops/operator-ui-walkthrough-tem
   "IsNullOrWhiteSpace($SiteName)",
   "nextActions",
   "openAcceptanceItems",
+  "preflightOpenItems",
   "Open Acceptance Items",
+  "Preflight Open Items",
   "Resolve the reason and rerun field:acceptance until this step is PASS",
   "Attach reviewer acceptance for the skipped evidence",
+  "Resolve this preflight check and rerun field:preflight until it is PASS",
+  "Provide the required field value or attach reviewer risk acceptance",
   "Field Acceptance Decision",
   "Field Acceptance Orchestrator",
   "Evidence References",
@@ -166,6 +172,7 @@ assert(
   "docs/ops/operator-ui-walkthrough-template.md",
   "artifacts/manual/operator-ui-walkthrough.md",
   "preflight manifest status is `PASS`",
+  "Preflight Open Items",
 ].forEach((token) => assertIncludes(runbook, token, "delivery runbook"));
 
 [
@@ -179,6 +186,7 @@ assert(
   "scripts/field-acceptance.ps1",
   "field acceptance orchestrator",
   "open acceptance items",
+  "Preflight Open Items",
   "field reviewer",
   "operator UI browser walkthrough",
   "docs/ops/operator-ui-walkthrough-template.md",
@@ -187,6 +195,7 @@ assert(
   "readyForHandover=true",
   "child evidence references",
   "latest preflight status is `PASS`",
+  "Preflight Open Items",
   "artifacts/field-acceptance",
   "-SkipDeliveryEvidence",
 ].forEach((token) => assertIncludes(acceptance, token, "acceptance checklist"));

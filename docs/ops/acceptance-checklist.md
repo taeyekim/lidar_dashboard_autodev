@@ -56,6 +56,7 @@ Use this checklist during delivery rehearsal and field acceptance.
 - [ ] Field acceptance reads the latest preflight manifest and adds a review/skipped gate when preflight status is not `PASS`.
 - [ ] Field acceptance manifest records the field reviewer, site name, handover readiness, skipped/review step counts, and next actions.
 - [ ] Field acceptance manifest records open acceptance items for every REVIEW/SKIPPED step, including the reason, command, log path, and close criteria.
+- [ ] Field acceptance manifest records `Preflight Open Items` from the latest field preflight manifest so REVIEW/SKIPPED preflight checks include next actions and close criteria inside the acceptance package.
 - [ ] Field acceptance manifest records child evidence references for preflight, runtime, DB, LiDAR, control-board, security, and delivery manifests.
 - [ ] Field acceptance records the operator UI browser walkthrough gate; pass `-OperatorUiWalkthroughEvidence <path>` after capturing the delivery display resolution walkthrough, or keep the step in REVIEW/SKIPPED with reviewer acceptance.
 - [ ] Operator UI walkthrough uses `docs/ops/operator-ui-walkthrough-template.md` and the filled evidence is attached as `artifacts/manual/operator-ui-walkthrough.md`.

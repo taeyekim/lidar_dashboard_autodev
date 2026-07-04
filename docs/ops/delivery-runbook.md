@@ -121,6 +121,7 @@ The manifest includes a `Field Acceptance Decision` summary with `-Reviewer`,
 readiness, child evidence references, and next actions for the handover package.
 The orchestrator also reads the latest preflight manifest and adds a
 review/skipped gate when the preflight status is not `PASS`.
+It also copies the latest preflight REVIEW/SKIPPED checks into `Preflight Open Items`, including next actions and close criteria, so acceptance reviewers can close preflight blockers from the acceptance package.
 It also records an `operator UI browser walkthrough` gate. Pass
 `-OperatorUiWalkthroughEvidence <path>` after capturing the delivery display
 resolution walkthrough for login, dashboard status, DRY_RUN/LIVE_TCP state,
