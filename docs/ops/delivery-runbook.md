@@ -68,6 +68,9 @@ npm.cmd run final:execution-plan -- --base-url=http://localhost:8080 --generated
 
 Use `npm.cmd` and `curl.exe` on Windows when the local PowerShell execution
 policy blocks `npm.ps1` or aliases `curl`.
+The read-only `ci:status` report includes a `CI Closeout Checklist` for source
+branch, pushed HEAD, workflow state, manual dispatch configuration, push
+trigger, Actions permissions, matching HEAD run, and successful completion.
 
 Before sharing the final status report, confirm the delivery source is on
 `dev`, tracks `origin/dev`, has a clean working tree, and the final commit has

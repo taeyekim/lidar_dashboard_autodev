@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { buildCiStatusEvidence, buildMarkdown } = require("./generate-ci-status-evidence");
+const { buildCiStatusEvidence, buildMarkdown, buildCiCloseoutChecklist } = require("./generate-ci-status-evidence");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -44,6 +44,11 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "GitHub Actions enabled", "CI status generator"],
   [generator, "workflowState", "CI status generator"],
   [generator, "ciTriggerDiagnosis", "CI status generator"],
+  [generator, "ciCloseoutChecklist", "CI status generator"],
+  [generator, "CI Closeout Checklist", "CI status generator"],
+  [generator, "buildCiCloseoutChecklist", "CI status generator"],
+  [generator, "Matching HEAD run", "CI status generator"],
+  [generator, "Run completed successfully", "CI status generator"],
   [generator, "workflowReadyForRun", "CI status generator"],
   [generator, "noRunForPushedHead", "CI status generator"],
   [generator, "workflow is active and Actions are enabled, but no run is visible", "CI status generator"],
@@ -54,7 +59,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "artifacts/ci-status", "CI status generator"],
   [generator, "Git pushed to origin/dev", "CI status generator"],
   [runbook, "npm.cmd run ci:status", "delivery runbook"],
+  [runbook, "CI Closeout Checklist", "delivery runbook"],
   [checklist, "npm run ci:status", "acceptance checklist"],
+  [checklist, "CI Closeout Checklist", "acceptance checklist"],
   [matrix, "npm run ci:status", "delivery evidence matrix"],
   [matrix, "artifacts/ci-status/<timestamp>/manifest.json", "delivery evidence matrix"],
 ].forEach(([content, token, label]) => assertIncludes(content, token, label));
@@ -108,6 +115,7 @@ assert(passManifest.actionsPermissions.enabled === true, "PASS CI evidence shoul
 assert(passManifest.actionsPermissions.allowedActions === "all", "PASS CI evidence should expose allowed actions policy");
 assert(passManifest.ciTriggerDiagnosis.workflowReadyForRun === true, "PASS CI evidence should mark workflow ready for run");
 assert(passManifest.ciTriggerDiagnosis.noRunForPushedHead === false, "PASS CI evidence should not mark missing pushed-head run");
+assert(passManifest.ciCloseoutChecklist.every((item) => item.status === "PASS"), "PASS CI evidence should have a fully passing CI closeout checklist");
 assert(passManifest.closeoutCommands.readOnlyStatus === "npm.cmd run ci:status -- --generated-by=reviewer-a", "CI evidence should expose the read-only refresh command");
 assert(passManifest.closeoutCommands.intentionalDispatch === "npm.cmd run ci:closeout -- --dispatch --generated-by=reviewer-a", "CI evidence should expose the approved dispatch closeout command");
 assert(passManifest.closeoutCommands.manualWorkflowDispatch === "gh workflow run CI --ref dev", "CI evidence should expose the underlying workflow dispatch command");
@@ -142,6 +150,10 @@ assert(missingRunManifest.ciTriggerDiagnosis.workflowReadyForRun === true, "miss
 assert(missingRunManifest.ciTriggerDiagnosis.runListEmpty === true, "missing CI run should record an empty run list");
 assert(missingRunManifest.ciTriggerDiagnosis.noRunForPushedHead === true, "missing CI run should diagnose absent pushed-head run");
 assert(missingRunManifest.ciTriggerDiagnosis.diagnosis.includes("no run is visible"), "missing CI run diagnosis should explain absent visible run");
+assert(
+  missingRunManifest.ciCloseoutChecklist.some((item) => item.item === "Matching HEAD run" && item.status === "REVIEW"),
+  "missing CI run should expose matching-head checklist review item",
+);
 
 const inactiveWorkflowManifest = buildCiStatusEvidence({
   generatedAt: "2026-01-01T00:00:00.000Z",
@@ -184,9 +196,24 @@ assert(failedToolManifest.reviewReasons.some((item) => item.includes("push trigg
 assert(failedToolManifest.nextAction.includes("npm.cmd run ci:status is read-only"), "missing CI evidence should make ci:status read-only behavior explicit");
 assert(failedToolManifest.nextAction.includes("ci:closeout -- --dispatch"), "missing CI evidence should point to intentional CI closeout dispatch");
 assert(failedToolManifest.nextAction.includes("approved CI closeout window"), "missing CI evidence should require an approved CI closeout window");
+assert(
+  buildCiCloseoutChecklist({
+    git,
+    workflow: "CI",
+    branch: "dev",
+    workflowInfo: null,
+    dispatchConfigured: false,
+    pushConfigured: false,
+    actionsPermissions: { available: false, enabled: null },
+    runMatchesHead: false,
+    runCompleted: false,
+    runSucceeded: false,
+  }).filter((item) => item.status === "REVIEW").length >= 4,
+  "CI closeout checklist helper should surface review items for missing workflow/permissions/run evidence",
+);
 
 const markdown = buildMarkdown(passManifest);
-["CI Status Evidence", "GitHub Actions Run", "Can use for final close", "Workflow dispatch configured", "Workflow push trigger", "GitHub Actions enabled", "workflow ready for run", "no run for pushed head", "trigger diagnosis", "Git pushed to origin/dev", "Closeout Commands"].forEach((token) =>
+["CI Status Evidence", "GitHub Actions Run", "Can use for final close", "Workflow dispatch configured", "Workflow push trigger", "GitHub Actions enabled", "workflow ready for run", "no run for pushed head", "trigger diagnosis", "Git pushed to origin/dev", "CI Closeout Checklist", "Run completed successfully", "Closeout Commands"].forEach((token) =>
   assert(markdown.includes(token), `CI status markdown should include ${token}`),
 );
 

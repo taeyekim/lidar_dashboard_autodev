@@ -137,6 +137,59 @@ function buildActionsPermissions(input = {}) {
   };
 }
 
+function buildCiCloseoutChecklist({ git, workflow, branch, workflowInfo, dispatchConfigured, pushConfigured, actionsPermissions, runMatchesHead, runCompleted, runSucceeded }) {
+  return [
+    {
+      item: "Source branch",
+      status: git.branch === branch ? "PASS" : "REVIEW",
+      detail: `Current branch is ${git.branch || "missing"}; expected ${branch}.`,
+      closeWhen: `Checkout ${branch} before CI closeout.`,
+    },
+    {
+      item: "Source pushed",
+      status: git.pushed ? "PASS" : "REVIEW",
+      detail: `HEAD ${git.commit || "missing"} pushed to origin/${branch}: ${git.pushed ? "yes" : "no"}.`,
+      closeWhen: `Push HEAD to origin/${branch} before CI closeout.`,
+    },
+    {
+      item: "Workflow active",
+      status: workflowInfo && workflowInfo.state === "active" ? "PASS" : "REVIEW",
+      detail: `${workflow} workflow state is ${workflowInfo?.state || "missing"}.`,
+      closeWhen: "Enable the CI workflow in GitHub Actions.",
+    },
+    {
+      item: "Manual dispatch configured",
+      status: dispatchConfigured ? "PASS" : "REVIEW",
+      detail: `${workflow} workflow_dispatch configured: ${dispatchConfigured ? "yes" : "no"}.`,
+      closeWhen: "Add workflow_dispatch to .github/workflows/ci.yml or rely on an automatic pushed-head run.",
+    },
+    {
+      item: "Push trigger configured",
+      status: pushConfigured ? "PASS" : "REVIEW",
+      detail: `${workflow} push trigger for ${branch}: ${pushConfigured ? "yes" : "no"}.`,
+      closeWhen: `Configure push trigger for ${branch} or intentionally dispatch during the approved closeout window.`,
+    },
+    {
+      item: "Actions enabled",
+      status: actionsPermissions.available && actionsPermissions.enabled === true ? "PASS" : "REVIEW",
+      detail: `GitHub Actions enabled: ${actionsPermissions.enabled === null ? "unknown" : actionsPermissions.enabled ? "yes" : "no"}.`,
+      closeWhen: "Enable GitHub Actions repository permissions or attach admin review evidence.",
+    },
+    {
+      item: "Matching HEAD run",
+      status: runMatchesHead ? "PASS" : "REVIEW",
+      detail: `Visible CI run matches HEAD ${git.commit || "missing"}: ${runMatchesHead ? "yes" : "no"}.`,
+      closeWhen: "Wait for the pushed-head run or use approved ci:closeout dispatch.",
+    },
+    {
+      item: "Run completed successfully",
+      status: runMatchesHead && runCompleted && runSucceeded ? "PASS" : "REVIEW",
+      detail: `Matching run completed=${runCompleted ? "yes" : "no"}, success=${runSucceeded ? "yes" : "no"}.`,
+      closeWhen: "Wait for completion and resolve CI failures until conclusion=success.",
+    },
+  ];
+}
+
 function buildCiStatusEvidence(input = {}) {
   const git = input.git || buildGitState();
   const workflow = input.workflow || "CI";
@@ -216,6 +269,18 @@ function buildCiStatusEvidence(input = {}) {
     git.pushed ? "" : `Current commit is not proven pushed to origin/${branch}.`,
   ].filter(Boolean);
   const status = ciRunOk && reviewReasons.length === 0 ? "PASS" : "REVIEW";
+  const ciCloseoutChecklist = buildCiCloseoutChecklist({
+    git,
+    workflow,
+    branch,
+    workflowInfo,
+    dispatchConfigured,
+    pushConfigured,
+    actionsPermissions,
+    runMatchesHead,
+    runCompleted,
+    runSucceeded,
+  });
 
   return {
     generatedAt: input.generatedAt || new Date().toISOString(),
@@ -261,6 +326,7 @@ function buildCiStatusEvidence(input = {}) {
     runCompleted,
     runSucceeded,
     ciTriggerDiagnosis,
+    ciCloseoutChecklist,
     reviewReasons,
     closeoutCommands: {
       readOnlyStatus: `npm.cmd run ci:status -- --generated-by=${generatedBy}`,
@@ -331,6 +397,17 @@ function buildMarkdown(manifest) {
     "",
     ...(manifest.reviewReasons.length > 0 ? manifest.reviewReasons.map((item) => `- ${item}`) : ["- none"]),
     "",
+    "## CI Closeout Checklist",
+    "",
+    "| Item | Status | Detail | Close When |",
+    "| --- | --- | --- | --- |",
+    ...(manifest.ciCloseoutChecklist.length > 0
+      ? manifest.ciCloseoutChecklist.map(
+          (item) =>
+            `| ${markdownCell(item.item)} | ${markdownCell(item.status)} | ${markdownCell(item.detail)} | ${markdownCell(item.closeWhen)} |`,
+        )
+      : ["| none | PASS | No CI closeout checklist items. | - |"]),
+    "",
     "## Next Action",
     "",
     `- ${manifest.nextAction}`,
@@ -368,4 +445,5 @@ if (require.main === module) {
 module.exports = {
   buildCiStatusEvidence,
   buildMarkdown,
+  buildCiCloseoutChecklist,
 };
