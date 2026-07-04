@@ -6,6 +6,7 @@ const {
   buildCommandGateCoverage,
   buildGateCommandHints,
   buildOrderedCommands,
+  buildRootCauseGroups,
   commandCatalog,
 } = require("./generate-final-execution-plan");
 
@@ -40,6 +41,13 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "gatesByActionType", "final execution plan generator"],
   [generator, "orderedCommands", "final execution plan generator"],
   [generator, "commandGateCoverage", "final execution plan generator"],
+  [generator, "rootCauseGroups", "final execution plan generator"],
+  [generator, "buildRootCauseGroups", "final execution plan generator"],
+  [generator, "Root Cause Groups", "final execution plan generator"],
+  [generator, "Field Runtime And Hardware Rehearsal", "final execution plan generator"],
+  [generator, "Delivery Environment Preflight", "final execution plan generator"],
+  [generator, "Manual Field Evidence", "final execution plan generator"],
+  [generator, "Source Revision Closeout", "final execution plan generator"],
   [generator, "commandHints", "final execution plan generator"],
   [generator, "buildGateCommandHints", "final execution plan generator"],
   [generator, "dockerFallbackCommand", "final execution plan generator"],
@@ -150,6 +158,10 @@ assert(
   "field execution commands must not emit copy-paste placeholder reviewer/site values",
 );
 assert(openPlan.remainingGateCount === 4, "execution plan should preserve remaining gate count");
+assert(openPlan.rootCauseGroups.some((group) => group.id === "manual-field-evidence" && group.gateCount === 1), "manual evidence root cause should count manual gate");
+assert(openPlan.rootCauseGroups.some((group) => group.id === "field-runtime-rehearsal" && group.gateCount === 1), "field runtime root cause should count control-board gate");
+assert(openPlan.rootCauseGroups.some((group) => group.id === "security-scanner-evidence" && group.gateCount === 1), "security root cause should count scanner gate");
+assert(openPlan.rootCauseGroups.some((group) => group.id === "source-revision-closeout" && group.gateCount === 1), "source revision root cause should count source gate");
 assert(openPlan.git.upstream === "origin/dev", "execution plan should expose git upstream");
 assert(openPlan.git.pushed === true, "execution plan should expose pushed source state");
 assert(openPlan.commandGateCoverage.some((item) => item.id === "security-evidence" && item.gateCount === 1), "security command coverage should count matching security gates");
@@ -212,6 +224,7 @@ const openMarkdown = buildMarkdown(openPlan);
 assert(openMarkdown.includes("Final Execution Plan"), "markdown should include title");
 assert(openMarkdown.includes("This execution plan does not prove field completion"), "markdown should include guardrail");
 assert(openMarkdown.includes("Ordered Commands"), "markdown should include ordered command table");
+assert(openMarkdown.includes("Root Cause Groups"), "markdown should include root cause group table");
 assert(openMarkdown.includes("Command Gate Coverage"), "markdown should include command gate coverage table");
 assert(openMarkdown.includes("Git upstream: origin/dev"), "markdown should include git upstream");
 assert(openMarkdown.includes("Git pushed to origin/dev: yes"), "markdown should include git pushed state");
@@ -236,6 +249,7 @@ assert(readyPlan.status === "READY_TO_CLOSE", "ready final status should produce
 assert(readyPlan.canMarkGoalComplete === true, "ready execution plan should allow close");
 assert(readyPlan.orderedCommands.length === 0, "ready execution plan should not invent commands");
 assert(readyPlan.commandGateCoverage.length === 0, "ready execution plan should not invent command coverage");
+assert(readyPlan.rootCauseGroups.length === 0, "ready execution plan should not invent root causes");
 const placeholderMetadataPlan = buildFinalExecutionPlan({
   generatedAt: "2026-01-01T00:00:00.000Z",
   generatedBy: "field-reviewer",
@@ -332,6 +346,14 @@ const directCoverage = buildCommandGateCoverage(
     { actionType: "FIELD_ACTION_REQUIRED", category: "Control Board TCP", status: "LIVE_TCP_REVIEW", evidence: "artifacts/field-readiness/latest/manifest.json" },
   ],
 );
+const rootCauseGroups = buildRootCauseGroups([
+  { actionType: "FIELD_ACTION_REQUIRED", category: "Field Evidence", status: "REVIEW", message: "Field Preflight: JWT secret placeholder", evidence: "artifacts/field-preflight/latest/manifest.json" },
+  { actionType: "MANUAL_EVIDENCE_REQUIRED", category: "Manual Evidence", status: "INVALID", message: "Operator UI Walkthrough evidence is INVALID", evidence: "artifacts/manual/operator-ui-walkthrough.md" },
+  { actionType: "REVIEW_REQUIRED", category: "CI Status", status: "REVIEW", message: "No CI workflow run was found for branch dev.", evidence: "artifacts/ci-status/latest/manifest.json" },
+]);
+assert(rootCauseGroups.some((group) => group.id === "delivery-env-preflight" && group.closeoutCommandIds.includes("field-preflight")), "root cause groups should expose preflight closeout commands");
+assert(rootCauseGroups.some((group) => group.id === "manual-field-evidence" && group.owner === "Field Operations"), "root cause groups should expose manual evidence owner");
+assert(rootCauseGroups.some((group) => group.id === "external-ci-evidence" && group.closeWhen.includes("GitHub Actions CI")), "root cause groups should expose external CI close condition");
 assert(directCoverage[0].gateCount === 1, "direct command coverage should only count matching action types");
 assert(directCoverage[0].categories.includes("Security Scanner Closeout"), "direct command coverage should retain matched categories");
 assert(directCoverage[0].evidence.includes("artifacts/security/latest/manifest.json"), "direct command coverage should retain evidence paths");

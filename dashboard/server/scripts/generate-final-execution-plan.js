@@ -329,6 +329,153 @@ function groupGatesByActionType(gates) {
   }, {});
 }
 
+function rootCauseForGate(gate) {
+  const text = `${gate.actionType || ""} ${gate.category || ""} ${gate.status || ""} ${gate.message || ""}`.toLowerCase();
+  if (text.includes("ci status") || text.includes("github actions") || text.includes("ci workflow")) {
+    return {
+      id: "external-ci-evidence",
+      label: "External CI Evidence",
+      owner: "Release/PM",
+      closeoutCommandIds: ["ci-status", "ci-closeout", "final-status"],
+      closeWhen: "GitHub Actions CI has a PASS run for the final pushed dev commit and ci:status records it.",
+    };
+  }
+  if (text.includes("source code state") || text.includes("source revision") || text.includes("unpushed") || text.includes("dirty")) {
+    return {
+      id: "source-revision-closeout",
+      label: "Source Revision Closeout",
+      owner: "Release",
+      closeoutCommandIds: ["source-revision-closeout", "docs-text-quality", "final-status"],
+      closeWhen: "Working tree is clean, branch is dev, and HEAD is pushed to origin/dev before final evidence refresh.",
+    };
+  }
+  if (text.includes("handover") || text.includes("completion audit") || text.includes("strict gate") || text.includes("canmarkgoalcomplete")) {
+    return {
+      id: "handover-final-review",
+      label: "Handover And Final Review",
+      owner: "PM + Release",
+      closeoutCommandIds: ["completion-audit", "handover-index", "field-closure-plan", "handover-package", "final-status", "final-execution-plan"],
+      closeWhen: "Completion audit, handover package, and final status converge to READY_TO_CLOSE after all upstream evidence is accepted.",
+    };
+  }
+  if (text.includes("operator ui walkthrough") || text.includes("field risk acceptance") || text.includes("manual evidence")) {
+    return {
+      id: "manual-field-evidence",
+      label: "Manual Field Evidence",
+      owner: "Field Operations",
+      closeoutCommandIds: ["manual-evidence-drafts", "manual-evidence-readiness", "field-acceptance", "final-status"],
+      closeWhen: "Required operator walkthrough and risk acceptance evidence files are filled with non-placeholder values and accepted.",
+    };
+  }
+  if (text.includes("scanner") || text.includes("trivy") || text.includes("gitleaks") || text.includes("zap") || text.includes("security evidence")) {
+    return {
+      id: "security-scanner-evidence",
+      label: "Security Scanner Evidence",
+      owner: "Auth/Security",
+      closeoutCommandIds: ["security-evidence", "field-readiness", "field-acceptance", "final-status"],
+      closeWhen: "Required scanners run successfully, Docker scanner fallback is available, or signed risk acceptance evidence is attached.",
+    };
+  }
+  if (
+    text.includes("jwt") ||
+    text.includes("seed admin") ||
+    text.includes("cors") ||
+    text.includes("cookie") ||
+    text.includes("swagger") ||
+    text.includes("nginx wrong-way") ||
+    text.includes("content security policy") ||
+    text.includes("device ingest key") ||
+    text.includes("field preflight")
+  ) {
+    return {
+      id: "delivery-env-preflight",
+      label: "Delivery Environment Preflight",
+      owner: "Auth/Security + Nginx Delivery",
+      closeoutCommandIds: ["field-preflight", "field-readiness", "field-acceptance", "final-status"],
+      closeWhen: "Delivery .env values, auth cookie posture, CORS, Swagger allowlist, Nginx limits/CSP, and device ingest policy pass strict preflight.",
+    };
+  }
+  if (
+    text.includes("control-board") ||
+    text.includes("control board") ||
+    text.includes("live_tcp") ||
+    text.includes("db and prisma") ||
+    text.includes("lidar ingest") ||
+    text.includes("field rehearsal") ||
+    text.includes("rehearsal follow-up") ||
+    text.includes("delivery runtime") ||
+    text.includes("hardware")
+  ) {
+    return {
+      id: "field-runtime-rehearsal",
+      label: "Field Runtime And Hardware Rehearsal",
+      owner: "Backend + Hardware + Field Operations",
+      closeoutCommandIds: ["runtime-evidence", "db-field-rehearsal", "lidar-field-rehearsal", "control-board-field-rehearsal", "field-acceptance", "final-status"],
+      closeWhen: "DB, LiDAR representative payload, runtime, and control-board TCP rehearsals pass against the approved delivery runtime/hardware.",
+    };
+  }
+  if (text.includes("known limitation") || text.includes("level-2") || text.includes("kpi wording")) {
+    return {
+      id: "field-policy-acceptance",
+      label: "Field Policy And Known Limitation Acceptance",
+      owner: "PM + Field Operations",
+      closeoutCommandIds: ["field-risk-register", "manual-evidence-drafts", "manual-evidence-readiness", "final-status"],
+      closeWhen: "Field owner accepts or resolves policy-dependent limits such as level-2 escalation thresholds and KPI wording.",
+    };
+  }
+  if (text.includes("field risk register") || text.includes("field action board") || text.includes("field gate closure map") || text.includes("field owner briefs")) {
+    return {
+      id: "field-action-artifacts",
+      label: "Field Action Artifact Refresh",
+      owner: "PM + Field Operations",
+      closeoutCommandIds: ["field-risk-register", "field-action-board", "field-gate-closure-map", "field-owner-briefs", "handover-package", "final-status"],
+      closeWhen: "Field action artifacts are regenerated after the underlying field/security/manual gates are closed.",
+    };
+  }
+  return {
+    id: "general-review",
+    label: "General Review",
+    owner: "PM",
+    closeoutCommandIds: ["final-status"],
+    closeWhen: "Referenced gate is resolved and final status is regenerated.",
+  };
+}
+
+function buildRootCauseGroups(gates) {
+  const groups = new Map();
+  gates.forEach((gate) => {
+    const rootCause = rootCauseForGate(gate);
+    if (!groups.has(rootCause.id)) {
+      groups.set(rootCause.id, {
+        ...rootCause,
+        gateCount: 0,
+        actionTypes: new Set(),
+        categories: new Set(),
+        statuses: new Set(),
+        evidence: new Set(),
+        sampleMessages: [],
+      });
+    }
+    const group = groups.get(rootCause.id);
+    group.gateCount += 1;
+    if (gate.actionType) group.actionTypes.add(gate.actionType);
+    if (gate.category) group.categories.add(gate.category);
+    if (gate.status) group.statuses.add(gate.status);
+    if (gate.evidence) group.evidence.add(gate.evidence);
+    if (group.sampleMessages.length < 3 && gate.message) group.sampleMessages.push(gate.message);
+  });
+
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      actionTypes: [...group.actionTypes],
+      categories: [...group.categories],
+      statuses: [...group.statuses],
+      evidence: [...group.evidence],
+    }))
+    .sort((a, b) => b.gateCount - a.gateCount || a.label.localeCompare(b.label));
+}
+
 function buildManualEvidenceTargets(manualEvidence = manualEvidenceRefs()) {
   return manualEvidence.map((item) => ({
     type: item.type,
@@ -380,6 +527,7 @@ function buildFinalExecutionPlan(input = {}) {
   const orderedCommands = planningGates.length > 0 ? buildOrderedCommands(planningGates, baseUrl) : [];
   const commandGateCoverage = buildCommandGateCoverage(orderedCommands, planningGates);
   const gatesByActionType = groupGatesByActionType(planningGates);
+  const rootCauseGroups = buildRootCauseGroups(planningGates);
   const status = !finalStatus
     ? "FINAL_STATUS_MISSING"
     : finalStatus.data?.status === "READY_TO_CLOSE" && remainingGates.length === 0 && metadataReview.length === 0
@@ -402,6 +550,7 @@ function buildFinalExecutionPlan(input = {}) {
     remainingGateCount: planningGates.length,
     metadataReview,
     gatesByActionType,
+    rootCauseGroups,
     manualEvidenceTargets: buildManualEvidenceTargets(input.manualEvidence),
     orderedCommands,
     commandGateCoverage,
@@ -453,6 +602,17 @@ function buildMarkdown(manifest) {
     ...(actionTypeRows.length > 0
       ? actionTypeRows.map(([type, gates]) => `| ${markdownCell(type)} | ${gates.length} |`)
       : ["| none | 0 |"]),
+    "",
+    "## Root Cause Groups",
+    "",
+    "| Root Cause | Owner | Gates | Action Types | Categories | Closeout Commands | Close When | Sample Messages |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    ...(manifest.rootCauseGroups.length > 0
+      ? manifest.rootCauseGroups.map(
+          (group) =>
+            `| ${markdownCell(group.label)} | ${markdownCell(group.owner)} | ${group.gateCount} | ${markdownCell(group.actionTypes.join(", ") || "none")} | ${markdownCell(group.categories.join(", ") || "none")} | ${markdownCell(group.closeoutCommandIds.join(", ") || "none")} | ${markdownCell(group.closeWhen)} | ${markdownCell(group.sampleMessages.join("; "))} |`,
+        )
+      : ["| none | none | 0 | none | none | none | No remaining root causes. | - |"]),
     "",
     "## Ordered Commands",
     "",
@@ -545,5 +705,6 @@ module.exports = {
   buildOrderedCommands,
   buildCommandGateCoverage,
   buildGateCommandHints,
+  buildRootCauseGroups,
   commandCatalog,
 };
