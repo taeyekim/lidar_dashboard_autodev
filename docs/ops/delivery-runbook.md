@@ -329,6 +329,25 @@ can push the final `dev` revision, confirm handover Markdown has no mojibake,
 record the GitHub Actions result for that commit, refresh the evidence index,
 generate `Field Action Artifact Actions`, and then rebuild the package from the
 same delivery revision.
+The `Closure Bundles` table compresses the open root causes into field-execution
+packages. Work through the bundles in this order unless the field lead assigns a
+different owner sequence:
+
+1. `Field Input And Risk Acceptance`: fill `.env` field values, operator
+   walkthrough evidence, risk acceptance evidence, and policy-dependent
+   decisions.
+2. `Runtime And Hardware Proof`: refresh runtime, DB/Prisma, LiDAR ingest, and
+   control-board rehearsal evidence against the delivery Nginx entrypoint and
+   approved field hardware.
+3. `Security And CI Proof`: attach scanner evidence or accepted scanner risk
+   rows, then record CI status for the final pushed `dev` commit.
+4. `Final Handover Refresh`: regenerate field action artifacts, completion
+   audit, handover package, final status, and final execution plan after the
+   upstream bundles close.
+
+Each closure bundle lists the related root causes, gate count, owners, evidence
+targets, command IDs, intended outcome, and close condition. The bundle count is
+a planning shortcut only; the final decision still comes from `final:status`.
 The manual evidence section intentionally runs `field:risk-register` before
 `manual:evidence-drafts` so newly created risk-acceptance drafts can include
 the latest reviewer-copyable register rows before `manual:evidence-readiness`
