@@ -5,6 +5,7 @@ const {
   buildCommandGroups,
   buildManifest,
   buildMarkdown,
+  formatPrerequisites,
 } = require("./generate-field-gate-closure-map");
 
 function assert(condition, message) {
@@ -33,6 +34,7 @@ const checklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "Command Summary",
   "Closure Map",
   "Execution Queue Linkage",
+  "Prerequisites",
   "sourceFieldActionBoard",
   "commandGroups",
   "executionOrder",
@@ -70,6 +72,12 @@ const actionBoard = {
         priority: "P0",
         gateCount: 2,
         command: "npm.cmd run security:evidence -- --require-scanners",
+        prerequisites: {
+          env: ["FIELD_REVIEWER"],
+          evidence: ["artifacts/manual/field-risk-acceptance.md"],
+          runtime: ["gitleaks, Trivy, and OWASP ZAP are installed"],
+          closeout: ["Attach scanner reports or accepted field-risk evidence"],
+        },
       },
       {
         order: 2,
@@ -77,6 +85,12 @@ const actionBoard = {
         priority: "P0",
         gateCount: 1,
         command: "powershell.exe -File scripts/control-board-field-rehearsal.ps1",
+        prerequisites: {
+          env: ["CONTROL_BOARD_HOST", "CONTROL_BOARD_PORT", "CONTROL_BOARD_LIVE_APPROVED"],
+          evidence: [],
+          runtime: ["Approved integrated control board reachable on the field network"],
+          closeout: [],
+        },
       },
     ],
     actionItems: [
@@ -91,6 +105,12 @@ const actionBoard = {
         evidence: "artifacts/security/example/manifest.json",
         closeWhen: "Fix reported security findings and rerun strict security evidence.",
         command: "npm.cmd run security:evidence -- --require-scanners",
+        prerequisites: {
+          env: ["FIELD_REVIEWER"],
+          evidence: [],
+          runtime: ["gitleaks, Trivy, and OWASP ZAP are installed"],
+          closeout: [],
+        },
       },
       {
         id: "GATE-002",
@@ -103,6 +123,12 @@ const actionBoard = {
         evidence: "artifacts/security/example/manifest.json",
         closeWhen: "Run scanners or attach accepted risk evidence.",
         command: "npm.cmd run security:evidence -- --require-scanners",
+        prerequisites: {
+          env: ["FIELD_SITE_NAME"],
+          evidence: ["artifacts/manual/field-risk-acceptance.md"],
+          runtime: [],
+          closeout: ["Attach scanner reports or accepted field-risk evidence"],
+        },
       },
       {
         id: "GATE-003",
@@ -115,6 +141,12 @@ const actionBoard = {
         evidence: "artifacts/field-control-board-rehearsal/example/manifest.json",
         closeWhen: "Record live TCP or approved dry-run rehearsal evidence.",
         command: "powershell.exe -File scripts/control-board-field-rehearsal.ps1",
+        prerequisites: {
+          env: ["CONTROL_BOARD_HOST", "CONTROL_BOARD_PORT"],
+          evidence: [],
+          runtime: ["Approved integrated control board reachable on the field network"],
+          closeout: [],
+        },
       },
     ],
   },
@@ -134,6 +166,11 @@ assert(groups[0].categoryCounts["Security Evidence"] === 2, "group should count 
 assert(groups[0].statusCounts.DELIVERY_FIX_REQUIRED === 1, "group should preserve delivery-fix status count");
 assert(groups[0].evidencePaths.length === 1, "group should de-duplicate evidence paths");
 assert(groups[0].closeCriteria.length === 2, "group should preserve distinct close criteria");
+assert(groups[0].prerequisites.env.includes("FIELD_REVIEWER") && groups[0].prerequisites.env.includes("FIELD_SITE_NAME"), "group should aggregate env prerequisites");
+assert(groups[0].prerequisites.evidence.includes("artifacts/manual/field-risk-acceptance.md"), "group should aggregate evidence prerequisites");
+assert(groups[0].prerequisites.runtime.some((item) => item.includes("OWASP ZAP")), "group should aggregate runtime prerequisites");
+assert(groups[0].prerequisites.closeout.some((item) => item.includes("scanner reports")), "group should aggregate closeout prerequisites");
+assert(formatPrerequisites(groups[0].prerequisites).includes("FIELD_REVIEWER"), "formatPrerequisites should render env prerequisites");
 assert(
   groups[0].closeCriteria.some((item) => item.includes("Fix reported security findings")),
   "group should preserve delivery-fix close criteria",
@@ -157,6 +194,9 @@ assert(markdown.includes("Field Gate Closure Map"), "markdown should include tit
 assert(markdown.includes("Command Summary"), "markdown should include command summary");
 assert(markdown.includes("Execution Queue Linkage"), "markdown should include execution queue linkage");
 assert(markdown.includes("Closure Map"), "markdown should include closure map");
+assert(markdown.includes("Prerequisites"), "markdown should include prerequisites");
+assert(markdown.includes("FIELD_REVIEWER"), "markdown should include env prerequisites");
+assert(markdown.includes("OWASP ZAP"), "markdown should include runtime prerequisites");
 assert(markdown.includes("DELIVERY_FIX_REQUIRED"), "markdown should include delivery-fix status");
 assert(markdown.includes("GATE-001, GATE-002"), "markdown should include grouped gate ids");
 

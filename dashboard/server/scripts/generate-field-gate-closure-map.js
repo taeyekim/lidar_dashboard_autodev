@@ -71,6 +71,7 @@ function buildCommandGroups(actionBoard) {
         executionOrder: item.order,
         executionPriority: item.priority,
         executionGateCount: item.gateCount,
+        prerequisites: item.prerequisites || null,
       },
     ]),
   );
@@ -96,6 +97,12 @@ function buildCommandGroups(actionBoard) {
           statusCounts: {},
           evidencePaths: [],
           closeCriteria: [],
+          prerequisites: {
+            env: [],
+            evidence: [],
+            runtime: [],
+            closeout: [],
+          },
         };
       }
       const group = acc[groupKey];
@@ -109,6 +116,13 @@ function buildCommandGroups(actionBoard) {
       group.statusCounts = incrementCount(group.statusCounts, item.status);
       group.evidencePaths = unique([...group.evidencePaths, item.evidence]);
       group.closeCriteria = unique([...group.closeCriteria, item.closeWhen]);
+      ["env", "evidence", "runtime", "closeout"].forEach((key) => {
+        group.prerequisites[key] = unique([
+          ...group.prerequisites[key],
+          ...(item.prerequisites?.[key] || []),
+          ...(executionQueueOrder.get(groupKey)?.prerequisites?.[key] || []),
+        ]);
+      });
       return acc;
     }, {}),
   )
@@ -153,6 +167,12 @@ function buildMetadataCommandGroups(generatedBy, siteName, baseUrl) {
     statusCounts: gates.reduce((counts, item) => incrementCount(counts, item.status), {}),
     evidencePaths: [],
     closeCriteria: gates.map((item) => item.closeCriteria),
+    prerequisites: {
+      env: ["FIELD_REVIEWER", "FIELD_SITE_NAME"],
+      evidence: [],
+      runtime: [],
+      closeout: ["Regenerate field-gate-closure-map with concrete reviewer/site metadata"],
+    },
   }];
 }
 
@@ -191,6 +211,16 @@ function markdownCell(value) {
   return String(value ?? "").replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
 }
 
+function formatPrerequisites(prerequisites) {
+  if (!prerequisites) return "-";
+  return [
+    prerequisites.env?.length ? `env=${prerequisites.env.join(", ")}` : "",
+    prerequisites.evidence?.length ? `evidence=${prerequisites.evidence.join(", ")}` : "",
+    prerequisites.runtime?.length ? `runtime=${prerequisites.runtime.join(", ")}` : "",
+    prerequisites.closeout?.length ? `closeout=${prerequisites.closeout.join(", ")}` : "",
+  ].filter(Boolean).join(" / ") || "-";
+}
+
 function buildMarkdown(manifest) {
   return [
     "# Field Gate Closure Map",
@@ -214,14 +244,14 @@ function buildMarkdown(manifest) {
     "",
     "## Command Summary",
     "",
-    "| Command ID | Gates | Owners | Phases | Priority Counts | Action Type Counts | Category Counts | Status Counts |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Command ID | Gates | Owners | Phases | Prerequisites | Priority Counts | Action Type Counts | Category Counts | Status Counts |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(manifest.commandGroups.length > 0
       ? manifest.commandGroups.map(
           (group) =>
-            `| ${group.commandId} | ${group.gateCount} | ${markdownCell(group.owners.join(", "))} | ${markdownCell(group.phases.join(", "))} | ${markdownCell(JSON.stringify(group.priorityCounts))} | ${markdownCell(JSON.stringify(group.actionTypeCounts))} | ${markdownCell(JSON.stringify(group.categoryCounts))} | ${markdownCell(JSON.stringify(group.statusCounts))} |`,
+            `| ${group.commandId} | ${group.gateCount} | ${markdownCell(group.owners.join(", "))} | ${markdownCell(group.phases.join(", "))} | ${markdownCell(formatPrerequisites(group.prerequisites))} | ${markdownCell(JSON.stringify(group.priorityCounts))} | ${markdownCell(JSON.stringify(group.actionTypeCounts))} | ${markdownCell(JSON.stringify(group.categoryCounts))} | ${markdownCell(JSON.stringify(group.statusCounts))} |`,
         )
-      : ["| none | 0 | - | - | {} | {} | {} | {} |"]),
+      : ["| none | 0 | - | - | - | {} | {} | {} | {} |"]),
     "",
     "## Execution Queue Linkage",
     "",
@@ -236,14 +266,14 @@ function buildMarkdown(manifest) {
     "",
     "## Closure Map",
     "",
-    "| Command ID | Command | Gate IDs | Evidence Paths | Close Criteria |",
-    "| --- | --- | --- | --- | --- |",
+    "| Command ID | Command | Gate IDs | Evidence Paths | Prerequisites | Close Criteria |",
+    "| --- | --- | --- | --- | --- | --- |",
     ...(manifest.commandGroups.length > 0
       ? manifest.commandGroups.map(
           (group) =>
-            `| ${group.commandId} | \`${markdownCell(group.command)}\` | ${markdownCell(group.gateIds.join(", "))} | ${markdownCell(group.evidencePaths.join(", ")) || "missing"} | ${markdownCell(group.closeCriteria.join(" / "))} |`,
+            `| ${group.commandId} | \`${markdownCell(group.command)}\` | ${markdownCell(group.gateIds.join(", "))} | ${markdownCell(group.evidencePaths.join(", ")) || "missing"} | ${markdownCell(formatPrerequisites(group.prerequisites))} | ${markdownCell(group.closeCriteria.join(" / "))} |`,
         )
-      : ["| none | No commands required. | - | - | - |"]),
+      : ["| none | No commands required. | - | - | - | - |"]),
     "",
   ].join("\n");
 }
@@ -274,4 +304,5 @@ module.exports = {
   buildMetadataCommandGroups,
   buildManifest,
   buildMarkdown,
+  formatPrerequisites,
 };
