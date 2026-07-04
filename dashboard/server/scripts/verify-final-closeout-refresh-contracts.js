@@ -56,6 +56,8 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "--use-existing-stack", "final closeout refresh generator"],
   [generator, "field:preflight", "final closeout refresh generator"],
   [generator, "field:readiness", "final closeout refresh generator"],
+  [generator, "field:env-closeout", "final closeout refresh generator"],
+  [generator, "redacted owner closeout board", "final closeout refresh generator"],
   [generator, "field:rehearsal-unavailable", "final closeout refresh generator"],
   [generator, "temporary local refresh evidence", "final closeout refresh generator"],
   [generator, "completion:audit", "final closeout refresh generator"],
@@ -93,6 +95,7 @@ const ids = steps.map((step) => step.id);
   "runtime-evidence",
   "field-preflight",
   "field-readiness",
+  "field-env-closeout",
   "field-rehearsal-unavailable",
   "field-acceptance",
   "completion-audit-pass-1",
@@ -127,9 +130,10 @@ assert(
   "refresh should converge final status, action artifacts, handover package, final status, execution plan, bundle handoff, gate classification, final handover package index, final status, then final gate classification",
 );
 assert(
-  ids.indexOf("field-readiness") < ids.indexOf("field-rehearsal-unavailable") &&
+  ids.indexOf("field-readiness") < ids.indexOf("field-env-closeout") &&
+    ids.indexOf("field-env-closeout") < ids.indexOf("field-rehearsal-unavailable") &&
     ids.indexOf("field-rehearsal-unavailable") < ids.indexOf("completion-audit-pass-1"),
-  "refresh should record unavailable field rehearsal evidence before completion audit",
+  "refresh should turn readiness env gaps into a closeout board, then record unavailable field rehearsal evidence before completion audit",
 );
 assert(
   ids.indexOf("security-evidence") < ids.indexOf("runtime-evidence") &&

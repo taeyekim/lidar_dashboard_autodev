@@ -155,6 +155,14 @@ function buildSteps(options) {
       doneWhen: "Field readiness is PASS or lists exact owner actions.",
     },
     {
+      id: "field-env-closeout",
+      phase: "Pre Evidence",
+      command: npm,
+      args: ["run", "field:env-closeout", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Convert latest field readiness .env gaps into a redacted owner closeout board.",
+      doneWhen: "Field environment closeout is READY_TO_CLOSE or lists exact owner/key actions without secret values.",
+    },
+    {
       id: "field-rehearsal-unavailable",
       phase: "Pre Evidence",
       command: npm,
