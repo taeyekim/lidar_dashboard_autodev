@@ -187,6 +187,46 @@ function Get-GitState {
   }
 }
 
+function New-LiveTcpApprovalChecklist {
+  param(
+    [object]$Status,
+    [bool]$AllowLiveTcp,
+    [string]$LiveApproved,
+    [hashtable]$EnvValues
+  )
+
+  $hostConfigured = $EnvValues.ContainsKey("CONTROL_BOARD_HOST") -and ![string]::IsNullOrWhiteSpace($EnvValues["CONTROL_BOARD_HOST"])
+  $portConfigured = $EnvValues.ContainsKey("CONTROL_BOARD_PORT") -and ![string]::IsNullOrWhiteSpace($EnvValues["CONTROL_BOARD_PORT"])
+  $approved = $LiveApproved.ToLowerInvariant() -eq "true"
+  return @(
+    [pscustomobject]@{
+      item = "AllowLiveTcp switch"
+      status = if ($AllowLiveTcp) { "PASS" } else { "REVIEW" }
+      evidence = if ($AllowLiveTcp) { "-AllowLiveTcp supplied" } else { "Re-run with -AllowLiveTcp only after hardware approval" }
+    },
+    [pscustomobject]@{
+      item = "CONTROL_BOARD_LIVE_APPROVED"
+      status = if ($approved) { "PASS" } else { "REVIEW" }
+      evidence = if ($approved) { "CONTROL_BOARD_LIVE_APPROVED=true" } else { "CONTROL_BOARD_LIVE_APPROVED is not true" }
+    },
+    [pscustomobject]@{
+      item = "CONTROL_BOARD_HOST"
+      status = if ($hostConfigured) { "PASS" } else { "REVIEW" }
+      evidence = if ($hostConfigured) { "configured in .env or process env" } else { "missing or blank" }
+    },
+    [pscustomobject]@{
+      item = "CONTROL_BOARD_PORT"
+      status = if ($portConfigured) { "PASS" } else { "REVIEW" }
+      evidence = if ($portConfigured) { "configured in .env or process env" } else { "missing or blank" }
+    },
+    [pscustomobject]@{
+      item = "Safety status"
+      status = if ($Status.safetyStatus -eq "LIVE_TCP_READY") { "PASS" } else { "REVIEW" }
+      evidence = "safetyStatus=$($Status.safetyStatus); liveTcpReady=$($Status.liveTcpReady); mode=$($Status.mode)"
+    }
+  )
+}
+
 $envValues = Read-DotEnv ".env"
 $liveApproved = ""
 if ($env:CONTROL_BOARD_LIVE_APPROVED) { $liveApproved = $env:CONTROL_BOARD_LIVE_APPROVED }
@@ -273,6 +313,8 @@ try {
       reason = "SiteName is missing or placeholder; rerun with a concrete -SiteName value."
     }
   }
+  $liveTcpApprovalChecklist = New-LiveTcpApprovalChecklist -Status $finalStatus -AllowLiveTcp ([bool]$AllowLiveTcp) -LiveApproved $liveApproved -EnvValues $envValues
+  $liveTcpApprovalStatus = if (@($liveTcpApprovalChecklist | Where-Object { $_.status -ne "PASS" }).Count -eq 0) { "READY" } else { "REVIEW" }
 
   $manifest = [pscustomobject]@{
     generatedAt = (Get-Date).ToUniversalTime().ToString("o")
@@ -288,6 +330,8 @@ try {
     finalMode = $finalStatus.mode
     safetyStatus = $finalStatus.safetyStatus
     liveTcpReady = $finalStatus.liveTcpReady
+    liveTcpApprovalStatus = $liveTcpApprovalStatus
+    liveTcpApprovalChecklist = $liveTcpApprovalChecklist
     results = $results
   }
 
@@ -311,12 +355,19 @@ try {
     "- Final mode: $($manifest.finalMode)",
     "- Safety status: $($manifest.safetyStatus)",
     "- Live TCP ready: $($manifest.liveTcpReady)",
+    "- Live TCP approval status: $($manifest.liveTcpApprovalStatus)",
     "",
     "## Results",
     "",
     "| Status | Check |",
     "| --- | --- |"
   ) + ($results | ForEach-Object { "| $($_.status) | $($_.name) |" }) + @(
+    "",
+    "## LIVE TCP Approval Checklist",
+    "",
+    "| Status | Item | Evidence |",
+    "| --- | --- | --- |"
+  ) + ($liveTcpApprovalChecklist | ForEach-Object { "| $($_.status) | $($_.item) | $($_.evidence) |" }) + @(
     "",
     "## Safety",
     "",
