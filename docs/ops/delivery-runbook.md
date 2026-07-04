@@ -553,6 +553,8 @@ Before real TCP:
 ```bash
 npm run verify:control-board-protocol
 npm run verify:control-board-tcp-simulator
+npm run verify:control-board-simulator-rehearsal
+npm run control-board:simulator-rehearsal
 ```
 
 To rehearse the raw TCP ACK path before the real board is connected, run the
@@ -575,8 +577,12 @@ $env:CONTROL_BOARD_RESPONSE_TIMEOUT_MS="1000"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -AllowLiveTcp
 ```
 
-This simulator evidence proves the dashboard TCP send/ACK parser path; it does
-not replace the final integrated control-board LIVE TCP ACK evidence.
+The focused `control-board:simulator-rehearsal` command writes
+`artifacts/control-board-simulator-rehearsal/<timestamp>/manifest.json` plus
+`manifest.md` without needing a separately managed terminal. This simulator
+evidence proves the local TCP frame send, ACK parser validation, and response
+timing capture path; it does not replace the final integrated control-board
+LIVE TCP ACK evidence.
 
 Focused command lifecycle rehearsal:
 
@@ -692,6 +698,7 @@ Evidence package:
 - `artifacts/field-db-rehearsal/<timestamp>/manifest.json` and `manifest.md` from `scripts/db-field-rehearsal.ps1`
 - `artifacts/field-lidar-rehearsal/<timestamp>/manifest.json` and `manifest.md` from `scripts/lidar-ingest-rehearsal.ps1`
 - `artifacts/field-control-board-rehearsal/<timestamp>/manifest.json` and `manifest.md` from `scripts/control-board-field-rehearsal.ps1`
+- `artifacts/control-board-simulator-rehearsal/<timestamp>/manifest.json` and `manifest.md` from `npm run control-board:simulator-rehearsal`
 - `FIELD_REHEARSAL_UNAVAILABLE` REVIEW manifests from `npm run field:rehearsal-unavailable` when the Docker/runtime/hardware environment is unavailable
 - raw `npm audit --workspaces` result
 - `artifacts/security/**` security scan evidence, with skipped checks explained
