@@ -64,9 +64,15 @@ function markdownCell(value) {
   return String(value ?? "").replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
 }
 
-function buildOwnerBrief(ownerGroup, actionBoardPath) {
+function ownerExecutionQueue(ownerGroup, executionQueue = []) {
+  const commands = new Set(ownerGroup.commands || []);
+  return (executionQueue || []).filter((item) => commands.has(item.command));
+}
+
+function buildOwnerBrief(ownerGroup, actionBoardPath, executionQueue = []) {
   const items = ownerGroup.items || [];
   const uniqueCommands = ownerGroup.commands || [];
+  const queueItems = ownerExecutionQueue(ownerGroup, executionQueue);
   return [
     `# Field Owner Brief - ${ownerGroup.owner}`,
     "",
@@ -90,6 +96,17 @@ function buildOwnerBrief(ownerGroup, actionBoardPath) {
     ...(uniqueCommands.length > 0
       ? uniqueCommands.map((command) => `| \`${markdownCell(command)}\` |`)
       : ["| No commands required. |"]),
+    "",
+    "## Execution Queue",
+    "",
+    "| Order | Phase | Priority | Gate Count | Command |",
+    "| --- | --- | --- | --- | --- |",
+    ...(queueItems.length > 0
+      ? queueItems.map(
+          (item) =>
+            `| ${item.order} | ${markdownCell(item.phase)} | ${markdownCell(item.priority)} | ${item.gateCount} | \`${markdownCell(item.command)}\` |`,
+        )
+      : ["| - | - | - | 0 | No queued commands for this owner. |"]),
     "",
     "## Items",
     "",
@@ -165,6 +182,7 @@ function buildManifest(input = {}) {
     phaseCounts: group.byPhase || {},
     actionTypeCounts: group.byActionType || {},
     commandCount: (group.commands || []).length,
+    executionQueueCount: ownerExecutionQueue(group, actionBoard?.data?.executionQueue || []).length,
   }));
 
   return {
@@ -210,23 +228,23 @@ function buildMarkdown(manifest) {
     "",
     "## Brief Files",
     "",
-    "| Owner | File | Open Items | Commands | Priority Counts | Phase Counts | Action Type Counts |",
-    "| --- | --- | --- | --- | --- | --- | --- |",
+    "| Owner | File | Open Items | Commands | Queue Items | Priority Counts | Phase Counts | Action Type Counts |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(manifest.briefs.length > 0
       ? manifest.briefs.map(
           (item) =>
-            `| ${markdownCell(item.owner)} | \`${markdownCell(item.fileName)}\` | ${item.openItemCount} | ${item.commandCount} | ${markdownCell(JSON.stringify(item.priorityCounts))} | ${markdownCell(JSON.stringify(item.phaseCounts))} | ${markdownCell(JSON.stringify(item.actionTypeCounts))} |`,
+            `| ${markdownCell(item.owner)} | \`${markdownCell(item.fileName)}\` | ${item.openItemCount} | ${item.commandCount} | ${item.executionQueueCount} | ${markdownCell(JSON.stringify(item.priorityCounts))} | ${markdownCell(JSON.stringify(item.phaseCounts))} | ${markdownCell(JSON.stringify(item.actionTypeCounts))} |`,
         )
-      : ["| none | - | 0 | 0 | {} | {} | {} |"]),
+      : ["| none | - | 0 | 0 | 0 | {} | {} | {} |"]),
     "",
   ].join("\n");
 }
 
-function writeOwnerBriefs(outputDir, ownerGroups, actionBoardPath) {
+function writeOwnerBriefs(outputDir, ownerGroups, actionBoardPath, executionQueue = []) {
   const groups = ownerGroups || [];
   return groups.map((group) => {
     const fileName = `${slug(group.owner)}.md`;
-    fs.writeFileSync(path.join(outputDir, fileName), buildOwnerBrief(group, actionBoardPath || null));
+    fs.writeFileSync(path.join(outputDir, fileName), buildOwnerBrief(group, actionBoardPath || null, executionQueue));
     return fileName;
   });
 }
@@ -252,7 +270,7 @@ function main() {
     ...(actionBoard?.data?.ownerGroups || []),
     ...(metadataOwnerGroup ? [metadataOwnerGroup] : []),
   ];
-  writeOwnerBriefs(outputDir, ownerGroups, actionBoard?.path || null);
+  writeOwnerBriefs(outputDir, ownerGroups, actionBoard?.path || null, actionBoard?.data?.executionQueue || []);
   fs.writeFileSync(path.join(outputDir, "manifest.json"), JSON.stringify(manifest, null, 2));
   fs.writeFileSync(path.join(outputDir, "manifest.md"), buildMarkdown(manifest));
   console.log(`field owner briefs written to ${path.relative(root, outputDir)}`);
@@ -269,5 +287,6 @@ module.exports = {
   buildManifest,
   buildMarkdown,
   buildOwnerBrief,
+  ownerExecutionQueue,
   slug,
 };

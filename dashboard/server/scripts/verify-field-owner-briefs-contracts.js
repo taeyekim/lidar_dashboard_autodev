@@ -5,6 +5,7 @@ const {
   buildManifest,
   buildMarkdown,
   buildOwnerBrief,
+  ownerExecutionQueue,
   slug,
 } = require("./generate-field-owner-briefs");
 
@@ -37,6 +38,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "Owner briefs split the latest field action board",
   "do not replace manual evidence",
   "Phase counts",
+  "Execution Queue",
+  "executionQueueCount",
+  "ownerExecutionQueue",
   "phaseCounts",
   "buildOwnerBrief",
   "writeOwnerBriefs",
@@ -57,8 +61,10 @@ assertIncludes(finalExecutionPlan, "field-owner-briefs", "final execution plan g
 assertIncludes(finalExecutionPlan, "npm.cmd run field:owner-briefs", "final execution plan generator");
 assertIncludes(runbook, "npm.cmd run field:owner-briefs", "delivery runbook");
 assertIncludes(runbook, "artifacts/field-owner-briefs/<timestamp>/manifest.json", "delivery runbook");
+assertIncludes(runbook, "owner-specific `Execution Queue` rows", "delivery runbook");
 assertIncludes(checklist, "npm run field:owner-briefs", "acceptance checklist");
 assertIncludes(checklist, "artifacts/field-owner-briefs/<timestamp>/manifest.json", "acceptance checklist");
+assertIncludes(checklist, "owner-specific `Execution Queue` rows", "acceptance checklist");
 assertIncludes(matrix, "field:owner-briefs", "delivery evidence matrix");
 assertIncludes(matrix, "artifacts/field-owner-briefs/<timestamp>/manifest.json", "delivery evidence matrix");
 
@@ -69,6 +75,22 @@ const actionBoard = {
   data: {
     siteName: "delivery-site-a",
     baseUrl: "http://field.local:8080",
+    executionQueue: [
+      {
+        order: 1,
+        phase: "Security Evidence",
+        priority: "P0",
+        gateCount: 1,
+        command: "npm.cmd run security:evidence -- --require-scanners",
+      },
+      {
+        order: 2,
+        phase: "Field Rehearsal",
+        priority: "P0",
+        gateCount: 1,
+        command: "powershell.exe -File scripts/control-board-field-rehearsal.ps1",
+      },
+    ],
     ownerGroups: [
       {
         owner: "Auth/Security",
@@ -108,15 +130,20 @@ assert(manifest.ownerCount === 1, "manifest should preserve owner count");
 assert(manifest.openItemCount === 2, "manifest should sum open item counts");
 assert(manifest.briefs[0].fileName === "auth-security.md", "manifest should expose owner brief file names");
 assert(manifest.briefs[0].phaseCounts["Security Evidence"] === 1, "manifest should expose phase counts");
+assert(manifest.briefs[0].executionQueueCount === 1, "manifest should expose owner execution queue count");
 assert(manifest.sourceFieldActionBoard === actionBoard.path, "manifest should reference source action board");
+assert(ownerExecutionQueue(actionBoard.data.ownerGroups[0], actionBoard.data.executionQueue).length === 1, "owner execution queue should filter by owner commands");
 
 const indexMarkdown = buildMarkdown(manifest);
 assert(indexMarkdown.includes("Field Owner Briefs"), "index markdown should include title");
 assert(indexMarkdown.includes("auth-security.md"), "index markdown should include brief file");
+assert(indexMarkdown.includes("Queue Items"), "index markdown should include queue item counts");
 assert(indexMarkdown.includes("Phase Counts"), "index markdown should include phase counts");
 
-const ownerMarkdown = buildOwnerBrief(actionBoard.data.ownerGroups[0], actionBoard.path);
+const ownerMarkdown = buildOwnerBrief(actionBoard.data.ownerGroups[0], actionBoard.path, actionBoard.data.executionQueue);
 assert(ownerMarkdown.includes("Field Owner Brief - Auth/Security"), "owner markdown should include owner title");
+assert(ownerMarkdown.includes("Execution Queue"), "owner markdown should include owner execution queue");
+assert(ownerMarkdown.includes("| 1 | Security Evidence | P0 | 1 |"), "owner markdown should include queued command order");
 assert(ownerMarkdown.includes("GATE-001"), "owner markdown should include action items");
 assert(ownerMarkdown.includes("Security Evidence"), "owner markdown should include item phase");
 assert(ownerMarkdown.includes("DELIVERY_FIX_REQUIRED"), "owner markdown should include delivery-fix status");
