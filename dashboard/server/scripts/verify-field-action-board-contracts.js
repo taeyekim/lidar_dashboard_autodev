@@ -70,6 +70,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "CONTROL_BOARD_HOST",
   "CONTROL_BOARD_LIVE_APPROVED",
   "DEVICE_INGEST_API_KEY",
+  "AUTH_COOKIE_SECURE",
+  "AUTH_COOKIE_SAMESITE",
+  "NGINX_SWAGGER_ALLOW",
 ].forEach((token) => assertIncludes(generator, token, "field action board generator"));
 
 [
@@ -161,6 +164,7 @@ assert(phaseForGate(gates[2]) === "Field Rehearsal", "control-board gate should 
 assert(commandForGate(gates[2], "http://field.local:8080").includes("FIELD_REVIEWER"), "field command should use reviewer environment variable");
 assert(commandForGate(gates[2], "http://field.local:8080").includes("FIELD_SITE_NAME"), "field command should use site environment variable");
 assert(!commandForGate(gates[2], "http://field.local:8080").includes("field-reviewer-name"), "field command should not emit reviewer placeholder");
+assert(commandForGate(gates[2], "http://field.local:8080").includes("-AllowLiveTcp"), "live TCP closeout command should include explicit -AllowLiveTcp approval switch");
 assert(phaseForGate(gates[3]) === "Manual Evidence", "manual gate should map to Manual Evidence phase");
 assert(phaseForGate(gates[4]) === "Field Preflight", "CORS/CSP gate should map to Field Preflight phase");
 assert(commandForGate(gates[2], "http://field.local:8080").includes("control-board-field-rehearsal.ps1"), "control-board gate should map to control-board rehearsal command");
@@ -185,6 +189,13 @@ assert(
   prerequisiteHintsForGate(gates[4]).env.includes("CORS_ORIGINS"),
   "CORS gate should expose CORS env prerequisite",
 );
+const cookieGate = { category: "Field Evidence", message: "Field Preflight: auth cookie delivery settings", closeWhen: "Set HTTPS cookie posture." };
+assert(prerequisiteHintsForGate(cookieGate).env.includes("AUTH_COOKIE_SECURE"), "cookie gate should expose AUTH_COOKIE_SECURE env prerequisite");
+assert(prerequisiteHintsForGate(cookieGate).env.includes("AUTH_COOKIE_SAMESITE"), "cookie gate should expose AUTH_COOKIE_SAMESITE env prerequisite");
+assert(!prerequisiteHintsForGate(cookieGate).env.includes("COOKIE_SECURE"), "cookie gate should not expose non-existent COOKIE_SECURE env name");
+const swaggerGate = { category: "Field Evidence", message: "Field Preflight: Swagger allowlist", closeWhen: "Restrict Swagger exposure." };
+assert(prerequisiteHintsForGate(swaggerGate).env.includes("NGINX_SWAGGER_ALLOW"), "Swagger gate should expose NGINX_SWAGGER_ALLOW env prerequisite");
+assert(!prerequisiteHintsForGate(swaggerGate).env.includes("SWAGGER_ALLOWED_CIDRS"), "Swagger gate should not expose non-existent SWAGGER_ALLOWED_CIDRS env name");
 assert(
   commandForGate(gates[3], "http://field.local:8080").includes("manual:evidence-readiness -- --generated-by="),
   "manual evidence gate should pass reviewer/site metadata args to readiness",

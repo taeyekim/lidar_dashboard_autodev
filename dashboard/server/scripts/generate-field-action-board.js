@@ -107,7 +107,8 @@ function commandForGate(gate, baseUrl) {
     return `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg}`;
   }
   if (text.includes("control-board") || text.includes("tcp") || text.includes("hardware")) {
-    return `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg}`;
+    const liveSwitch = text.includes("live_tcp") || text.includes("live tcp") || text.includes("ack") ? " -AllowLiveTcp" : "";
+    return `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg}${liveSwitch}`;
   }
   if (text.includes("field readiness") || text.includes("readiness")) {
     return `npm.cmd run field:readiness -- --base-url=${baseUrl} --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg}`;
@@ -146,8 +147,8 @@ function prerequisiteHintsForGate(gate) {
   if (text.includes("password")) hints.env.push("SEED_ADMIN_PASSWORD");
   if (text.includes("cors")) hints.env.push("CORS_ORIGINS");
   if (text.includes("device ingest key") || text.includes("device key")) hints.env.push("DEVICE_INGEST_API_KEY");
-  if (text.includes("cookie") || text.includes("https")) hints.env.push("COOKIE_SECURE", "COOKIE_SAME_SITE");
-  if (text.includes("swagger")) hints.env.push("SWAGGER_ALLOWED_CIDRS");
+  if (text.includes("cookie") || text.includes("https")) hints.env.push("AUTH_COOKIE_SECURE", "AUTH_COOKIE_SAMESITE");
+  if (text.includes("swagger")) hints.env.push("NGINX_SWAGGER_ALLOW");
   if (text.includes("control-board") || text.includes("live_tcp") || text.includes("tcp") || text.includes("hardware")) {
     hints.env.push("CONTROL_BOARD_HOST", "CONTROL_BOARD_PORT", "CONTROL_BOARD_LIVE_APPROVED");
     hints.runtime.push("Approved integrated control board reachable on the field network");
