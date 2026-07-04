@@ -46,6 +46,7 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "--include-container-images", "final closeout refresh generator"],
   [generator, "--include-zap", "final closeout refresh generator"],
   [generator, "--require-scanners", "final closeout refresh generator"],
+  [generator, "--use-docker-scanners", "final closeout refresh generator"],
   [generator, "preserving scanner blockers as review evidence", "final closeout refresh generator"],
   [generator, "field:preflight", "final closeout refresh generator"],
   [generator, "field:readiness", "final closeout refresh generator"],
@@ -131,6 +132,10 @@ assert(
 assert(
   steps.find((step) => step.id === "security-evidence").args.includes("--require-scanners"),
   "security refresh should require scanners",
+);
+assert(
+  steps.find((step) => step.id === "security-evidence").args.includes("--use-docker-scanners"),
+  "security refresh should use Docker scanner fallback when available",
 );
 assert(
   !buildSteps({

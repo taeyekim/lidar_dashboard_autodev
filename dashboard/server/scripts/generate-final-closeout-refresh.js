@@ -93,7 +93,7 @@ function buildSteps(options) {
       id: "security-evidence",
       phase: "Pre Evidence",
       command: npm,
-      args: ["run", "security:evidence", "--", "--include-container-images", "--include-zap", "--require-scanners", `--target-url=${baseUrl}`],
+      args: ["run", "security:evidence", "--", "--include-container-images", "--include-zap", "--require-scanners", "--use-docker-scanners", `--target-url=${baseUrl}`],
       acceptReviewExitCodes: [1],
       purpose: "Refresh strict security evidence, preserving scanner blockers as review evidence instead of stopping closeout refresh.",
       doneWhen: "Required scanner evidence is PASS, or the latest security manifest lists exact blocking scanners and closeout commands.",
