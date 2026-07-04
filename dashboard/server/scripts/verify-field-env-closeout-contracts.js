@@ -1,6 +1,12 @@
 const fs = require("fs");
 const path = require("path");
-const { buildManifest, buildMarkdown, actionCommandForItem } = require("./generate-field-env-closeout");
+const {
+  buildManifest,
+  buildMarkdown,
+  actionCommandForItem,
+  buildEnvTemplateLines,
+  envPlaceholderForItem,
+} = require("./generate-field-env-closeout");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -25,6 +31,10 @@ const runbook = readProjectFile("docs/ops/delivery-runbook.md");
   [generator, "requiredFieldValueCount", "field env closeout generator"],
   [generator, "blockingCount", "field env closeout generator"],
   [generator, "closeoutItems", "field env closeout generator"],
+  [generator, "ownerEnvTemplates", "field env closeout generator"],
+  [generator, "Redacted Env Skeleton", "field env closeout generator"],
+  [generator, "<field-secret-redacted>", "field env closeout generator"],
+  [generator, "Do not paste real secret values into evidence", "field env closeout generator"],
   [generator, "strictPreflightCommand", "field env closeout generator"],
   [generator, "DEVICE_INGEST_API_KEY", "field env closeout generator"],
   [generator, "NGINX_CONTENT_SECURITY_POLICY", "field env closeout generator"],
@@ -97,12 +107,24 @@ assert(manifest.reviewCount === 1, "manifest should count review field values");
 assert(manifest.closeoutItemCount === 2, "manifest should expose blocking plus review items");
 assert(manifest.closeoutItems.some((item) => item.name === "JWT_SECRET" && item.redacted === true), "manifest should preserve redaction metadata");
 assert(manifest.closeoutItems.some((item) => item.owner === "Nginx Delivery"), "manifest should map env items to owner groups");
+assert(manifest.envTemplateLines.includes("JWT_SECRET=<field-secret-redacted>"), "manifest should include redacted secret env skeleton line");
+assert(manifest.envTemplateLines.includes("NGINX_SWAGGER_ALLOW=<field-value>"), "manifest should include non-secret env skeleton line");
+assert(
+  manifest.ownerEnvTemplates.some((group) => group.owner === "Auth/Security" && group.envTemplateLines.includes("JWT_SECRET=<field-secret-redacted>")),
+  "manifest should split env skeleton lines by owner",
+);
 assert(manifest.strictPreflightCommand.includes("-RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -Strict"), "manifest should expose strict preflight command");
 assert(actionCommandForItem({ name: "JWT_SECRET" }, "https://delivery.example.local").includes("Do not paste the value into evidence"), "JWT action should protect secret values");
+assert(envPlaceholderForItem({ name: "CONTROL_BOARD_PORT", redacted: false }) === "<number>", "numeric env values should use number placeholder");
+assert(envPlaceholderForItem({ name: "CONTROL_BOARD_DRY_RUN", redacted: false }) === "<true-or-false>", "boolean env values should use boolean placeholder");
+assert(buildEnvTemplateLines([{ name: "DEVICE_INGEST_API_KEY", redacted: true }]).includes("DEVICE_INGEST_API_KEY=<field-secret-redacted>"), "template helper should redact secrets");
 
 const markdown = buildMarkdown(manifest);
 assert(markdown.includes("Field Environment Closeout"), "markdown should include title");
 assert(markdown.includes("Strict Preflight Command"), "markdown should include strict command section");
+assert(markdown.includes("Redacted Env Skeleton"), "markdown should include redacted env skeleton section");
+assert(markdown.includes("JWT_SECRET=<field-secret-redacted>"), "markdown should include redacted secret placeholder");
+assert(!markdown.includes("JWT_SECRET=fixture-secret"), "markdown should not include concrete secret values");
 assert(markdown.includes("NGINX_SWAGGER_ALLOW"), "markdown should include open env key");
 assert(markdown.includes("Auth/Security"), "markdown should include owner grouping");
 

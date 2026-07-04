@@ -61,6 +61,21 @@ function actionCommandForItem(item, baseUrl) {
   return `${commands[item.name] || item.nextAction || "Fill the field value and rerun strict field preflight."} Close with: ${strictPreflight}`;
 }
 
+function envPlaceholderForItem(item) {
+  if (item.redacted !== false) return "<field-secret-redacted>";
+  if (item.name === "CONTROL_BOARD_LIVE_APPROVED" || item.name === "CONTROL_BOARD_DRY_RUN" || item.name === "AUTH_COOKIE_SECURE") {
+    return "<true-or-false>";
+  }
+  if (String(item.name || "").endsWith("_MS") || item.name === "CONTROL_BOARD_PORT" || item.name === "CONTROL_BOARD_RETRY_COUNT") {
+    return "<number>";
+  }
+  return "<field-value>";
+}
+
+function buildEnvTemplateLines(items) {
+  return (items || []).map((item) => `${item.name}=${envPlaceholderForItem(item)}`);
+}
+
 function buildManifest(options = {}) {
   const readiness = Object.prototype.hasOwnProperty.call(options, "readiness")
     ? options.readiness
@@ -96,6 +111,15 @@ function buildManifest(options = {}) {
     acc[item.owner].items.push(item.name);
     return acc;
   }, {});
+  const ownerEnvTemplates = Object.values(ownerGroups).map((group) => {
+    const groupItems = closeoutItems.filter((item) => item.owner === group.owner);
+    return {
+      owner: group.owner,
+      envTemplateLines: buildEnvTemplateLines(groupItems),
+      blockingCount: group.blockingCount,
+      reviewCount: group.reviewCount,
+    };
+  });
 
   return {
     generatedAt: options.generatedAt || new Date().toISOString(),
@@ -113,6 +137,8 @@ function buildManifest(options = {}) {
     reviewCount: reviewItems.length,
     closeoutItemCount: closeoutItems.length,
     ownerGroups: Object.values(ownerGroups),
+    ownerEnvTemplates,
+    envTemplateLines: buildEnvTemplateLines(closeoutItems),
     closeoutItems,
     strictPreflightCommand: `npm.cmd run field:preflight -- -BaseUrl ${baseUrl} -Reviewer "$env:FIELD_REVIEWER" -SiteName "$env:FIELD_SITE_NAME" -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -Strict`,
   };
@@ -155,6 +181,29 @@ function buildMarkdown(manifest) {
       ? manifest.ownerGroups.map((group) => `| ${markdownCell(group.owner)} | ${group.blockingCount} | ${group.reviewCount} | ${markdownCell(group.items.join(", "))} |`)
       : ["| none | 0 | 0 | none |"]),
     "",
+    "## Redacted Env Skeleton",
+    "",
+    "Copy these keys into the field `.env`, replacing placeholders on the delivery PC only. Do not paste real secret values into evidence.",
+    "",
+    "```dotenv",
+    ...(manifest.envTemplateLines.length > 0 ? manifest.envTemplateLines : ["# no open env keys"]),
+    "```",
+    "",
+    "## Owner Env Skeletons",
+    "",
+    ...(manifest.ownerEnvTemplates.length > 0
+      ? manifest.ownerEnvTemplates.flatMap((group) => [
+          `### ${group.owner}`,
+          "",
+          `- Blocking: ${group.blockingCount}`,
+          `- Review: ${group.reviewCount}`,
+          "",
+          "```dotenv",
+          ...group.envTemplateLines,
+          "```",
+          "",
+        ])
+      : ["No owner-specific env skeletons remain.", ""]),
     "## Closeout Items",
     "",
     "| Priority | Owner | Env Key | State | Redacted | Completion Gate | Next Action | Closeout Command |",
@@ -192,4 +241,6 @@ module.exports = {
   buildManifest,
   buildMarkdown,
   actionCommandForItem,
+  buildEnvTemplateLines,
+  envPlaceholderForItem,
 };
