@@ -123,6 +123,7 @@ function latestEvidenceRefs() {
     fieldActionBoard: readLatestJsonManifest("artifacts/field-action-board")?.path || null,
     fieldGateClosureMap: readLatestJsonManifest("artifacts/field-gate-closure-map")?.path || null,
     fieldOwnerBriefs: readLatestJsonManifest("artifacts/field-owner-briefs")?.path || null,
+    finalBundleHandoff: readLatestJsonManifest("artifacts/final-bundle-handoff")?.path || null,
     ciStatus: readLatestJsonManifest("artifacts/ci-status")?.path || null,
   };
 }
@@ -410,6 +411,7 @@ function buildMarkdown(manifest) {
     `- Field action board: ${manifest.evidenceRefs.fieldActionBoard || "missing"}`,
     `- Field gate closure map: ${manifest.evidenceRefs.fieldGateClosureMap || "missing"}`,
     `- Field owner briefs: ${manifest.evidenceRefs.fieldOwnerBriefs || "missing"}`,
+    `- Final bundle handoff: ${manifest.evidenceRefs.finalBundleHandoff || "missing"}`,
     `- CI status: ${manifest.evidenceRefs.ciStatus || "missing"}`,
     "",
     "## Manual Evidence References",
@@ -489,6 +491,7 @@ function buildMarkdown(manifest) {
     "",
     "- This command refreshes the final evidence chain in order: delivery evidence, field readiness, field risk register, manual evidence drafts, manual evidence readiness, field action board, field gate closure map, field owner briefs, CI status, completion audit, field closure plan, then handover index.",
     "- Attach this manifest together with the referenced evidence folders.",
+    "- Attach the latest final bundle handoff when available so field reviewers can open bundle-specific closeout files.",
     "- `canMarkGoalComplete=false` means field/runtime/hardware evidence is still open.",
     "- Strict security acceptance should attach `npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners --target-url=<delivery-url>` output so skipped scanners become blocking evidence.",
     "- Use `--strict` when the command should fail unless the refreshed package is READY and `canMarkGoalComplete=true`.",

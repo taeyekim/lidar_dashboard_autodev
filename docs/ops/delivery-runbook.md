@@ -269,7 +269,7 @@ runs `delivery:evidence`, `field:readiness`, `field:risk-register`, `manual:evid
 into the refreshed manual draft report, readiness report, risk register, action board, gate closure map, and owner briefs and indexing the refreshed closure plan, then writes
 `artifacts/handover-package/<timestamp>/manifest.json` plus `manifest.md` with
 the refreshed evidence references, command logs, base URL, strict gate reasons,
-manual evidence draft/readiness/risk-register/action-board/gate-closure-map/owner-brief references, and latest control-board safety status. The completion audit, handover index,
+manual evidence draft/readiness/risk-register/action-board/gate-closure-map/owner-brief/final-bundle-handoff references, and latest control-board safety status. Attach the latest final bundle handoff when available so reviewers can open bundle-specific closeout files beside the handover package. The completion audit, handover index,
 closure plan, and handover package all surface this status so `DRY_RUN_SAFE` or
 `LIVE_TCP_REVIEW` cannot be mistaken for field-ready TCP operation. Use
 `npm.cmd run handover:package -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME" --strict`
