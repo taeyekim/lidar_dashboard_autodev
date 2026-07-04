@@ -101,6 +101,9 @@ The orchestrator runs `scripts/field-preflight.ps1`, `scripts/delivery-verify.ps
 `scripts/control-board-field-rehearsal.ps1`, `npm.cmd run security:evidence`,
 and `npm.cmd run delivery:evidence` in order, then records
 `artifacts/field-acceptance/<timestamp>/manifest.json` plus `manifest.md`.
+Use `-SkipDeliveryEvidence` only when `npm.cmd run delivery:evidence` is being
+run separately; the field acceptance manifest records that package step as
+SKIPPED and final handover remains REVIEW until delivery evidence is attached.
 The manifest includes a `Field Acceptance Decision` summary with `-Reviewer`,
 `-SiteName`, optional `-DecisionNote`, PASS/REVIEW/SKIPPED counts, handover
 readiness, child evidence references, and next actions for the handover package.

@@ -48,7 +48,9 @@ const operatorUiTemplate = readProjectFile("docs/ops/operator-ui-walkthrough-tem
   "SkipControlBoard",
   "SkipSecurity",
   "SkipOperatorUiWalkthrough",
+  "SkipDeliveryEvidence",
   "SkipOperatorUiWalkthrough |",
+  "SkipDeliveryEvidence |",
   "OperatorUiWalkthroughEvidence |",
   "RunDbDeploy",
   "RunDbSeed",
@@ -65,6 +67,7 @@ const operatorUiTemplate = readProjectFile("docs/ops/operator-ui-walkthrough-tem
   "scripts/control-board-field-rehearsal.ps1",
   "security:evidence",
   "delivery:evidence",
+  "run npm.cmd run delivery:evidence separately before final handover",
   "artifacts/field-acceptance",
   "manifest.json",
   "manifest.md",
@@ -150,6 +153,7 @@ assert(
   "-Reviewer",
   "-SiteName",
   "-OperatorUiWalkthroughEvidence",
+  "-SkipDeliveryEvidence",
   "artifacts/field-acceptance",
   "Handover readiness is true",
   "child evidence references",
@@ -178,6 +182,7 @@ assert(
   "child evidence references",
   "latest preflight status is `PASS`",
   "artifacts/field-acceptance",
+  "-SkipDeliveryEvidence",
 ].forEach((token) => assertIncludes(acceptance, token, "acceptance checklist"));
 
 [

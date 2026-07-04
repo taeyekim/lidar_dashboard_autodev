@@ -11,6 +11,7 @@ param(
   [switch]$SkipControlBoard,
   [switch]$SkipSecurity,
   [switch]$SkipOperatorUiWalkthrough,
+  [switch]$SkipDeliveryEvidence,
   [switch]$RunDbDeploy,
   [switch]$RunDbSeed,
   [switch]$AllowLiveTcp,
@@ -436,6 +437,7 @@ function New-AcceptanceManifest {
       startCompose = [bool]$StartCompose
       stopCompose = [bool]$StopCompose
       skipOperatorUiWalkthrough = [bool]$SkipOperatorUiWalkthrough
+      skipDeliveryEvidence = [bool]$SkipDeliveryEvidence
       operatorUiWalkthroughEvidence = $OperatorUiWalkthroughEvidence
     }
     evidenceRefs = @{
@@ -519,6 +521,7 @@ function Write-AcceptanceManifest {
     "| StartCompose | $([bool]$StartCompose) |",
     "| StopCompose | $([bool]$StopCompose) |",
     "| SkipOperatorUiWalkthrough | $([bool]$SkipOperatorUiWalkthrough) |",
+    "| SkipDeliveryEvidence | $([bool]$SkipDeliveryEvidence) |",
     "| OperatorUiWalkthroughEvidence | $OperatorUiWalkthroughEvidence |",
     "",
     "## Evidence References",
@@ -648,10 +651,14 @@ if ($SkipSecurity) {
 
 $steps += Add-OperatorUiWalkthroughGate
 
-Write-AcceptanceManifest -Status "IN_PROGRESS" -Steps $steps | Out-Null
+if ($SkipDeliveryEvidence) {
+  $steps += Add-SkippedStep -Name "delivery evidence package" -Reason "SkipDeliveryEvidence switch was provided; run npm.cmd run delivery:evidence separately before final handover."
+} else {
+  Write-AcceptanceManifest -Status "IN_PROGRESS" -Steps $steps | Out-Null
 
-$steps += Invoke-AcceptanceStep -Name "delivery evidence package" -Command "npm.cmd run delivery:evidence" -LogFile (Join-Path $outputDir "07-delivery-evidence.log") -Script {
-  npm.cmd run delivery:evidence
+  $steps += Invoke-AcceptanceStep -Name "delivery evidence package" -Command "npm.cmd run delivery:evidence" -LogFile (Join-Path $outputDir "07-delivery-evidence.log") -Script {
+    npm.cmd run delivery:evidence
+  }
 }
 
 $reviewSteps = @(Get-StepsByStatus -Steps $steps -Status "REVIEW")
