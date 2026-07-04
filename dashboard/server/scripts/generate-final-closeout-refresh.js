@@ -268,6 +268,14 @@ function buildSteps(options) {
       purpose: "Split final execution plan closure bundles into reviewer-facing handoff files.",
       doneWhen: "Bundle handoff files exist for every open closure bundle and point to the latest final execution plan.",
     },
+    {
+      id: "final-gate-classification",
+      phase: "Final Decision",
+      command: npm,
+      args: ["run", "final:gate-classification", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Classify remaining final-status gates into local, conditional, field, hardware, security, CI, and reviewer buckets.",
+      doneWhen: "Gate classification points to the latest final status and identifies what Codex may continue without fabricating field evidence.",
+    },
   );
 
   return steps.map((step, index) => ({ order: index + 1, ...step }));
@@ -295,6 +303,9 @@ function buildMarkdown(manifest) {
     `- Latest final execution plan remaining gates: ${manifest.latestFinalExecutionPlan.remainingGateCount ?? "unknown"}`,
     `- Latest final bundle handoff: ${manifest.latestFinalBundleHandoff.status} (${manifest.latestFinalBundleHandoff.path || "missing"})`,
     `- Latest final bundle handoff bundle count: ${manifest.latestFinalBundleHandoff.bundleCount ?? "unknown"}`,
+    `- Latest final gate classification: ${manifest.latestFinalGateClassification.status} (${manifest.latestFinalGateClassification.path || "missing"})`,
+    `- Field-required gate count: ${manifest.latestFinalGateClassification.fieldRequiredCount ?? "unknown"}`,
+    `- Refresh-only gate count: ${manifest.latestFinalGateClassification.refreshOnlyCount ?? "unknown"}`,
     "",
     "## Guardrails",
     "",
@@ -319,6 +330,7 @@ function buildManifest(options, stepResults) {
   const latestHandoverPackage = readLatestJsonManifest("artifacts/handover-package");
   const latestFinalExecutionPlan = readLatestJsonManifest("artifacts/final-execution-plan");
   const latestFinalBundleHandoff = readLatestJsonManifest("artifacts/final-bundle-handoff");
+  const latestFinalGateClassification = readLatestJsonManifest("artifacts/final-gate-classification");
   const canMarkGoalComplete =
     latestFinalStatus?.data?.status === "READY_TO_CLOSE" &&
     latestFinalStatus?.data?.canMarkGoalComplete === true &&
@@ -358,6 +370,15 @@ function buildManifest(options, stepResults) {
       bundleCount: latestFinalBundleHandoff?.data?.bundleCount ?? null,
       totalBundleGateCount: latestFinalBundleHandoff?.data?.totalBundleGateCount ?? null,
     },
+    latestFinalGateClassification: {
+      path: latestFinalGateClassification?.path || null,
+      status: latestFinalGateClassification?.data?.status || "MISSING",
+      remainingGateCount: latestFinalGateClassification?.data?.summary?.remainingGateCount ?? null,
+      fieldRequiredCount: latestFinalGateClassification?.data?.summary?.fieldRequiredCount ?? null,
+      conditionalLocalCount: latestFinalGateClassification?.data?.summary?.conditionalLocalCount ?? null,
+      localOnlyClosableCount: latestFinalGateClassification?.data?.summary?.localOnlyClosableCount ?? null,
+      refreshOnlyCount: latestFinalGateClassification?.data?.summary?.refreshOnlyCount ?? null,
+    },
     includeFieldAcceptance: options.includeFieldAcceptance,
     externalCiDispatch: false,
     guardrails: [
@@ -365,6 +386,7 @@ function buildManifest(options, stepResults) {
       "OPEN_GATES means the refresh commands completed, but final field/security/manual gates remain open.",
       "REVIEW_RECORDED means an individual command wrote evidence but still needs field/security/manual closeout.",
       "The final closeout refresh manifest is the authoritative latest final-bundle-handoff pointer after the refresh sequence completes.",
+      "The latest final gate classification is routing evidence for auto-mode triage and does not close field evidence gates.",
       "Do not mark the Codex goal complete until final:status reports READY_TO_CLOSE and canMarkGoalComplete=true.",
     ],
     steps: stepResults,
