@@ -12,6 +12,7 @@ const {
   ownerForGate,
   phaseForGate,
   priorityForGate,
+  prerequisiteHintsForGate,
 } = require("./generate-field-action-board");
 
 function assert(condition, message) {
@@ -63,6 +64,12 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "runtimeNoteForGate",
   "Runtime Note",
   "Risk Acceptance Evidence",
+  "prerequisiteHintsForGate",
+  "prerequisites",
+  "Prerequisites",
+  "CONTROL_BOARD_HOST",
+  "CONTROL_BOARD_LIVE_APPROVED",
+  "DEVICE_INGEST_API_KEY",
 ].forEach((token) => assertIncludes(generator, token, "field action board generator"));
 
 [
@@ -160,6 +167,23 @@ assert(commandForGate(gates[2], "http://field.local:8080").includes("control-boa
 assert(commandForGate(gates[0], "http://field.local:8080").includes("security:evidence"), "delivery-fix security gate should map to security evidence command");
 assert(commandForGate(gates[4], "http://field.local:8080").includes("field:preflight"), "CORS/CSP gate should map to field preflight command");
 assert(
+  prerequisiteHintsForGate(gates[1]).runtime.some((item) => item.includes("gitleaks")),
+  "scanner gate should expose scanner runtime prerequisite",
+);
+assert(
+  prerequisiteHintsForGate(gates[1]).evidence.includes("artifacts/manual/field-risk-acceptance.md"),
+  "scanner gate should expose risk acceptance evidence prerequisite",
+);
+assert(
+  prerequisiteHintsForGate(gates[2]).env.includes("CONTROL_BOARD_HOST") &&
+    prerequisiteHintsForGate(gates[2]).env.includes("CONTROL_BOARD_LIVE_APPROVED"),
+  "control-board gate should expose live TCP env prerequisites",
+);
+assert(
+  prerequisiteHintsForGate(gates[4]).env.includes("CORS_ORIGINS"),
+  "CORS gate should expose CORS env prerequisite",
+);
+assert(
   commandForGate(gates[3], "http://field.local:8080").includes("manual:evidence-readiness -- --generated-by="),
   "manual evidence gate should pass reviewer/site metadata args to readiness",
 );
@@ -172,6 +196,7 @@ const actionItems = buildActionItems({ data: { remainingGates: gates } }, "http:
 assert(actionItems.length === 5, "action items should preserve gate count");
 assert(actionItems.every((item) => item.id.startsWith("GATE-")), "action item ids should be stable gate ids");
 assert(actionItems.every((item) => item.phase), "action items should expose execution phase");
+assert(actionItems.every((item) => item.prerequisites?.env?.includes("FIELD_REVIEWER")), "action items should expose common field metadata prerequisites");
 assert(actionItems.some((item) => item.scanner === "gitleaks" && item.closeoutCommands?.riskAcceptanceEvidence), "action items should preserve scanner closeout details");
 assert(actionItems.some((item) => item.scanner === "gitleaks" && item.runtimeNote.includes("Docker daemon")), "action items should preserve scanner runtime notes");
 assert(groupByOwner(actionItems).some((group) => group.owner === "Auth/Security" && group.total === 3), "owner grouping should count security/CORS owner");
@@ -183,6 +208,8 @@ assert(executionQueue.length === 5, "execution queue should dedupe commands by p
 assert(executionQueue[0].phase === "Manual Evidence", "execution queue should start with manual evidence phase");
 assert(executionQueue.some((item) => item.phase === "Security Evidence" && item.command.includes("--use-docker-scanners")), "execution queue should expose scanner closeout command");
 assert(executionQueue.some((item) => (item.runtimeNotes || []).some((note) => note.includes("Docker daemon"))), "execution queue should expose scanner runtime notes");
+assert(executionQueue.some((item) => item.prerequisites?.runtime?.some((entry) => entry.includes("OWASP ZAP"))), "execution queue should aggregate runtime prerequisites");
+assert(executionQueue.some((item) => item.prerequisites?.env?.includes("CONTROL_BOARD_PORT")), "execution queue should aggregate control-board env prerequisites");
 assert(executionQueue.every((item, index) => item.order === index + 1), "execution queue order should be stable and one-based");
 
 const manifest = buildManifest({
@@ -216,6 +243,8 @@ assert(markdown.includes("control-board-field-rehearsal.ps1"), "markdown should 
 assert(markdown.includes("field:preflight"), "markdown should include mapped preflight command");
 assert(markdown.includes("Risk Acceptance Evidence"), "markdown should include scanner risk acceptance column");
 assert(markdown.includes("Runtime Note"), "markdown should include runtime note column");
+assert(markdown.includes("Prerequisites"), "markdown should include prerequisites column");
+assert(markdown.includes("CONTROL_BOARD_HOST"), "markdown should include control-board prerequisites");
 assert(markdown.includes("field-risk-acceptance.md"), "markdown should include scanner risk acceptance evidence path");
 assert(markdown.includes("Docker daemon is not reachable."), "markdown should include scanner runtime note");
 

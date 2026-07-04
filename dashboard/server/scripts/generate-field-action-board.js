@@ -127,6 +127,52 @@ function runtimeNoteForGate(gate) {
   return "";
 }
 
+function prerequisiteHintsForGate(gate) {
+  const text = `${gate.category || ""} ${gate.status || ""} ${gate.actionType || ""} ${gate.message || ""} ${gate.closeWhen || ""}`.toLowerCase();
+  const hints = {
+    env: ["FIELD_REVIEWER", "FIELD_SITE_NAME"],
+    evidence: [],
+    runtime: [],
+    closeout: [],
+  };
+
+  if (text.includes("manual evidence") || text.includes("operator ui walkthrough")) {
+    hints.evidence.push("artifacts/manual/operator-ui-walkthrough.md");
+  }
+  if (text.includes("manual evidence") || text.includes("field risk acceptance") || text.includes("risk acceptance")) {
+    hints.evidence.push("artifacts/manual/field-risk-acceptance.md");
+  }
+  if (text.includes("jwt")) hints.env.push("JWT_SECRET");
+  if (text.includes("password")) hints.env.push("SEED_ADMIN_PASSWORD");
+  if (text.includes("cors")) hints.env.push("CORS_ORIGINS");
+  if (text.includes("device ingest key") || text.includes("device key")) hints.env.push("DEVICE_INGEST_API_KEY");
+  if (text.includes("cookie") || text.includes("https")) hints.env.push("COOKIE_SECURE", "COOKIE_SAME_SITE");
+  if (text.includes("swagger")) hints.env.push("SWAGGER_ALLOWED_CIDRS");
+  if (text.includes("control-board") || text.includes("live_tcp") || text.includes("tcp") || text.includes("hardware")) {
+    hints.env.push("CONTROL_BOARD_HOST", "CONTROL_BOARD_PORT", "CONTROL_BOARD_LIVE_APPROVED");
+    hints.runtime.push("Approved integrated control board reachable on the field network");
+  }
+  if (text.includes("lidar") || text.includes("ingest")) {
+    hints.runtime.push("Representative LiDAR PC payload source or approved replay fixture");
+  }
+  if (text.includes("db") || text.includes("prisma") || text.includes("runtime smoke") || text.includes("readiness") || text.includes("acceptance")) {
+    hints.runtime.push("Delivery Nginx/API entrypoint is running at the configured base URL");
+  }
+  if (text.includes("security") || text.includes("scanner") || text.includes("zap") || text.includes("trivy") || text.includes("gitleaks")) {
+    hints.runtime.push("gitleaks, Trivy, and OWASP ZAP are installed or Docker scanner runtime is reachable");
+    hints.closeout.push("Attach scanner reports or accepted field-risk evidence");
+  }
+  if (gate.closeoutCommands?.riskAcceptanceEvidence) hints.evidence.push(gate.closeoutCommands.riskAcceptanceEvidence);
+  if (gate.evidence) hints.closeout.push(`Refresh ${gate.evidence}`);
+
+  return {
+    env: [...new Set(hints.env)],
+    evidence: [...new Set(hints.evidence)],
+    runtime: [...new Set(hints.runtime)],
+    closeout: [...new Set(hints.closeout)],
+  };
+}
+
 function buildActionItems(finalStatus, baseUrl) {
   const gates = finalStatus?.data?.remainingGates || [];
   return gates.map((gate, index) => ({
@@ -144,6 +190,7 @@ function buildActionItems(finalStatus, baseUrl) {
     closeoutCommands: gate.closeoutCommands || null,
     dockerScannerRuntime: gate.dockerScannerRuntime || null,
     runtimeNote: runtimeNoteForGate(gate),
+    prerequisites: prerequisiteHintsForGate(gate),
     command: commandForGate(gate, baseUrl),
   }));
 }
@@ -164,6 +211,12 @@ function buildMetadataActionItems(generatedBy, siteName, baseUrl) {
       closeWhen: "Set FIELD_REVIEWER to a concrete field reviewer and rerun field:action-board.",
         evidence: null,
         runtimeNote: "",
+        prerequisites: {
+          env: ["FIELD_REVIEWER", "FIELD_SITE_NAME"],
+          evidence: [],
+          runtime: [],
+          closeout: ["Regenerate field-action-board with concrete reviewer metadata"],
+        },
         command: rerunCommand,
       });
   }
@@ -180,6 +233,12 @@ function buildMetadataActionItems(generatedBy, siteName, baseUrl) {
       closeWhen: "Set FIELD_SITE_NAME to a concrete delivery site and rerun field:action-board.",
       evidence: null,
       runtimeNote: "",
+      prerequisites: {
+        env: ["FIELD_REVIEWER", "FIELD_SITE_NAME"],
+        evidence: [],
+        runtime: [],
+        closeout: ["Regenerate field-action-board with concrete site metadata"],
+      },
       command: rerunCommand,
     });
   }
@@ -270,6 +329,12 @@ function buildExecutionQueue(items) {
         gateCount: 0,
         categories: [],
         evidence: [],
+        prerequisites: {
+          env: [],
+          evidence: [],
+          runtime: [],
+          closeout: [],
+        },
       };
       seen.set(key, entry);
       queued.push(entry);
@@ -285,6 +350,11 @@ function buildExecutionQueue(items) {
         entry.runtimeNotes = entry.runtimeNotes || [];
         if (!entry.runtimeNotes.includes(item.runtimeNote)) entry.runtimeNotes.push(item.runtimeNote);
       }
+      ["env", "evidence", "runtime", "closeout"].forEach((key) => {
+        (item.prerequisites?.[key] || []).forEach((value) => {
+          if (!entry.prerequisites[key].includes(value)) entry.prerequisites[key].push(value);
+        });
+      });
   });
 
   return queued
@@ -383,27 +453,38 @@ function buildMarkdown(manifest) {
     "",
     "## Execution Queue",
     "",
-    "| Order | Phase | Priority | Gate Count | Owners | Categories | Evidence | Runtime Notes | Command |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Order | Phase | Priority | Gate Count | Owners | Categories | Evidence | Runtime Notes | Prerequisites | Command |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(manifest.executionQueue.length > 0
       ? manifest.executionQueue.map(
           (item) =>
-            `| ${item.order} | ${markdownCell(item.phase)} | ${markdownCell(item.priority)} | ${item.gateCount} | ${markdownCell(item.owner)} | ${markdownCell(item.categories.join(", "))} | ${markdownCell(item.evidence.join(", ") || "missing")} | ${markdownCell((item.runtimeNotes || []).join("; ") || "-")} | \`${markdownCell(item.command)}\` |`,
+            `| ${item.order} | ${markdownCell(item.phase)} | ${markdownCell(item.priority)} | ${item.gateCount} | ${markdownCell(item.owner)} | ${markdownCell(item.categories.join(", "))} | ${markdownCell(item.evidence.join(", ") || "missing")} | ${markdownCell((item.runtimeNotes || []).join("; ") || "-")} | ${markdownCell(formatPrerequisites(item.prerequisites))} | \`${markdownCell(item.command)}\` |`,
         )
-      : ["| 0 | none | - | 0 | - | - | - | - | No commands required. |"]),
+      : ["| 0 | none | - | 0 | - | - | - | - | - | No commands required. |"]),
     "",
     "## Action Items",
     "",
-    "| ID | Priority | Phase | Owner | Action Type | Category | Status | Message | Close When | Evidence | Scanner | Risk Acceptance Evidence | Runtime Note | Command |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| ID | Priority | Phase | Owner | Action Type | Category | Status | Message | Close When | Evidence | Scanner | Risk Acceptance Evidence | Runtime Note | Prerequisites | Command |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(manifest.actionItems.length > 0
       ? manifest.actionItems.map(
           (item) =>
-            `| ${item.id} | ${item.priority} | ${markdownCell(item.phase)} | ${markdownCell(item.owner)} | ${markdownCell(item.actionType)} | ${markdownCell(item.category)} | ${markdownCell(item.status)} | ${markdownCell(item.message)} | ${markdownCell(item.closeWhen)} | ${item.evidence ? `\`${markdownCell(item.evidence)}\`` : "missing"} | ${markdownCell(item.scanner || "-")} | ${item.closeoutCommands?.riskAcceptanceEvidence ? `\`${markdownCell(item.closeoutCommands.riskAcceptanceEvidence)}\`` : "-"} | ${markdownCell(item.runtimeNote || "-")} | \`${markdownCell(item.command)}\` |`,
+            `| ${item.id} | ${item.priority} | ${markdownCell(item.phase)} | ${markdownCell(item.owner)} | ${markdownCell(item.actionType)} | ${markdownCell(item.category)} | ${markdownCell(item.status)} | ${markdownCell(item.message)} | ${markdownCell(item.closeWhen)} | ${item.evidence ? `\`${markdownCell(item.evidence)}\`` : "missing"} | ${markdownCell(item.scanner || "-")} | ${item.closeoutCommands?.riskAcceptanceEvidence ? `\`${markdownCell(item.closeoutCommands.riskAcceptanceEvidence)}\`` : "-"} | ${markdownCell(item.runtimeNote || "-")} | ${markdownCell(formatPrerequisites(item.prerequisites))} | \`${markdownCell(item.command)}\` |`,
         )
-      : ["| none | - | - | - | - | - | PASS | No open final-status gates. | - | - | - | - | - | - |"]),
+      : ["| none | - | - | - | - | - | PASS | No open final-status gates. | - | - | - | - | - | - | - |"]),
     "",
   ].join("\n");
+}
+
+function formatPrerequisites(prerequisites) {
+  if (!prerequisites) return "-";
+  const parts = [
+    prerequisites.env?.length ? `env=${prerequisites.env.join(", ")}` : "",
+    prerequisites.evidence?.length ? `evidence=${prerequisites.evidence.join(", ")}` : "",
+    prerequisites.runtime?.length ? `runtime=${prerequisites.runtime.join(", ")}` : "",
+    prerequisites.closeout?.length ? `closeout=${prerequisites.closeout.join(", ")}` : "",
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join("; ") : "-";
 }
 
 function main() {
@@ -437,7 +518,9 @@ module.exports = {
   groupByPhase,
   ownerForGate,
   priorityForGate,
+  prerequisiteHintsForGate,
   runtimeNoteForGate,
   phaseForGate,
   commandForGate,
+  formatPrerequisites,
 };

@@ -69,6 +69,17 @@ function ownerExecutionQueue(ownerGroup, executionQueue = []) {
   return (executionQueue || []).filter((item) => commands.has(item.command));
 }
 
+function formatPrerequisites(prerequisites) {
+  if (!prerequisites) return "-";
+  const parts = [
+    prerequisites.env?.length ? `env=${prerequisites.env.join(", ")}` : "",
+    prerequisites.evidence?.length ? `evidence=${prerequisites.evidence.join(", ")}` : "",
+    prerequisites.runtime?.length ? `runtime=${prerequisites.runtime.join(", ")}` : "",
+    prerequisites.closeout?.length ? `closeout=${prerequisites.closeout.join(", ")}` : "",
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join("; ") : "-";
+}
+
 function buildOwnerBrief(ownerGroup, actionBoardPath, executionQueue = []) {
   const items = ownerGroup.items || [];
   const uniqueCommands = ownerGroup.commands || [];
@@ -99,25 +110,25 @@ function buildOwnerBrief(ownerGroup, actionBoardPath, executionQueue = []) {
     "",
     "## Execution Queue",
     "",
-    "| Order | Phase | Priority | Gate Count | Command |",
-    "| --- | --- | --- | --- | --- |",
+    "| Order | Phase | Priority | Gate Count | Prerequisites | Command |",
+    "| --- | --- | --- | --- | --- | --- |",
     ...(queueItems.length > 0
       ? queueItems.map(
           (item) =>
-            `| ${item.order} | ${markdownCell(item.phase)} | ${markdownCell(item.priority)} | ${item.gateCount} | \`${markdownCell(item.command)}\` |`,
+            `| ${item.order} | ${markdownCell(item.phase)} | ${markdownCell(item.priority)} | ${item.gateCount} | ${markdownCell(formatPrerequisites(item.prerequisites))} | \`${markdownCell(item.command)}\` |`,
         )
-      : ["| - | - | - | 0 | No queued commands for this owner. |"]),
+      : ["| - | - | - | 0 | - | No queued commands for this owner. |"]),
     "",
     "## Items",
     "",
-    "| ID | Priority | Phase | Action Type | Category | Status | Message | Close When | Evidence | Scanner | Risk Acceptance Evidence | Runtime Note | Command |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| ID | Priority | Phase | Action Type | Category | Status | Message | Close When | Evidence | Scanner | Risk Acceptance Evidence | Runtime Note | Prerequisites | Command |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(items.length > 0
       ? items.map(
           (item) =>
-            `| ${item.id} | ${item.priority} | ${markdownCell(item.phase)} | ${markdownCell(item.actionType)} | ${markdownCell(item.category)} | ${markdownCell(item.status)} | ${markdownCell(item.message)} | ${markdownCell(item.closeWhen)} | ${item.evidence ? `\`${markdownCell(item.evidence)}\`` : "missing"} | ${markdownCell(item.scanner || "-")} | ${item.closeoutCommands?.riskAcceptanceEvidence ? `\`${markdownCell(item.closeoutCommands.riskAcceptanceEvidence)}\`` : "-"} | ${markdownCell(item.runtimeNote || "-")} | ${item.command ? `\`${markdownCell(item.command)}\`` : "-"} |`,
+            `| ${item.id} | ${item.priority} | ${markdownCell(item.phase)} | ${markdownCell(item.actionType)} | ${markdownCell(item.category)} | ${markdownCell(item.status)} | ${markdownCell(item.message)} | ${markdownCell(item.closeWhen)} | ${item.evidence ? `\`${markdownCell(item.evidence)}\`` : "missing"} | ${markdownCell(item.scanner || "-")} | ${item.closeoutCommands?.riskAcceptanceEvidence ? `\`${markdownCell(item.closeoutCommands.riskAcceptanceEvidence)}\`` : "-"} | ${markdownCell(item.runtimeNote || "-")} | ${markdownCell(formatPrerequisites(item.prerequisites))} | ${item.command ? `\`${markdownCell(item.command)}\`` : "-"} |`,
         )
-      : ["| none | - | - | - | - | PASS | No open items. | - | - | - | - | - | - |"]),
+      : ["| none | - | - | - | - | PASS | No open items. | - | - | - | - | - | - | - |"]),
     "",
   ].join("\n");
 }
@@ -287,6 +298,7 @@ module.exports = {
   buildManifest,
   buildMarkdown,
   buildOwnerBrief,
+  formatPrerequisites,
   ownerExecutionQueue,
   slug,
 };

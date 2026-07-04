@@ -5,6 +5,7 @@ const {
   buildManifest,
   buildMarkdown,
   buildOwnerBrief,
+  formatPrerequisites,
   ownerExecutionQueue,
   slug,
 } = require("./generate-field-owner-briefs");
@@ -46,6 +47,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "writeOwnerBriefs",
   "Runtime Note",
   "Risk Acceptance Evidence",
+  "Prerequisites",
+  "formatPrerequisites",
 ].forEach((token) => assertIncludes(generator, token, "field owner briefs generator"));
 
 [
@@ -71,6 +74,10 @@ assertIncludes(matrix, "field:owner-briefs", "delivery evidence matrix");
 assertIncludes(matrix, "artifacts/field-owner-briefs/<timestamp>/manifest.json", "delivery evidence matrix");
 
 assert(slug("Control-board TCP") === "control-board-tcp", "slug should normalize owner names");
+assert(
+  formatPrerequisites({ env: ["FIELD_REVIEWER"], evidence: ["artifacts/manual/operator-ui-walkthrough.md"], runtime: [], closeout: [] }).includes("FIELD_REVIEWER"),
+  "formatPrerequisites should expose env prerequisites",
+);
 
 const actionBoard = {
   path: "artifacts/field-action-board/20260101-000000/manifest.json",
@@ -84,6 +91,12 @@ const actionBoard = {
         priority: "P0",
         gateCount: 1,
         command: "npm.cmd run security:evidence -- --require-scanners",
+        prerequisites: {
+          env: ["FIELD_REVIEWER", "FIELD_SITE_NAME"],
+          evidence: ["artifacts/manual/field-risk-acceptance.md"],
+          runtime: ["gitleaks, Trivy, and OWASP ZAP are installed or Docker scanner runtime is reachable"],
+          closeout: ["Attach scanner reports or accepted field-risk evidence"],
+        },
       },
       {
         order: 2,
@@ -117,6 +130,12 @@ const actionBoard = {
             riskAcceptanceEvidence: "artifacts/manual/field-risk-acceptance.md",
           },
           runtimeNote: "Docker daemon is not reachable.",
+          prerequisites: {
+            env: ["FIELD_REVIEWER", "FIELD_SITE_NAME"],
+            evidence: ["artifacts/manual/field-risk-acceptance.md"],
+            runtime: ["gitleaks, Trivy, and OWASP ZAP are installed or Docker scanner runtime is reachable"],
+            closeout: ["Attach scanner reports or accepted field-risk evidence"],
+          },
           command: "npm.cmd run security:evidence -- --require-scanners --use-docker-scanners",
         },
       ],
@@ -159,6 +178,9 @@ assert(ownerMarkdown.includes("Security delivery fix is required."), "owner mark
 assert(ownerMarkdown.includes("Risk Acceptance Evidence"), "owner markdown should include risk acceptance evidence column");
 assert(ownerMarkdown.includes("field-risk-acceptance.md"), "owner markdown should include risk acceptance evidence path");
 assert(ownerMarkdown.includes("Runtime Note"), "owner markdown should include runtime note column");
+assert(ownerMarkdown.includes("Prerequisites"), "owner markdown should include prerequisites column");
+assert(ownerMarkdown.includes("FIELD_REVIEWER"), "owner markdown should include field metadata prerequisites");
+assert(ownerMarkdown.includes("OWASP ZAP"), "owner markdown should include scanner runtime prerequisites");
 assert(ownerMarkdown.includes("Docker daemon is not reachable."), "owner markdown should include scanner runtime note");
 assert(ownerMarkdown.includes("--use-docker-scanners"), "owner markdown should include scanner fallback command");
 assert(ownerMarkdown.includes("This owner brief is an execution aid"), "owner markdown should include guardrail");
