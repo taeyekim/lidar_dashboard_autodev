@@ -193,10 +193,13 @@ function buildSecuritySummary(security) {
   const openScannerCloseout = scannerCloseout.filter(
     (item) => !["EVIDENCE_READY", "RISK_ACCEPTED"].includes(item.closeoutStatus),
   );
+  const dockerScannerRuntime = data.dockerScannerRuntime || null;
   return {
     path: evidencePath(security),
     exists: Boolean(security),
     requireScanners: data.options?.requireScanners === true,
+    useDockerScanners: data.options?.useDockerScanners === true,
+    dockerScannerRuntime,
     strictAcceptanceBlocked: data.strictAcceptanceBlocked === true,
     dispositionSummary: data.dispositionSummary || null,
     scannerCloseout,
@@ -626,15 +629,20 @@ function buildFinalStatusReport(input = {}) {
     securitySummary.scannerCloseout
       .filter((item) => !["EVIDENCE_READY", "RISK_ACCEPTED"].includes(item.closeoutStatus))
       .forEach((item) => {
+        const dockerRuntimeDetail =
+          securitySummary.useDockerScanners && securitySummary.dockerScannerRuntime?.ready !== true
+            ? ` Docker scanner runtime is not ready: ${securitySummary.dockerScannerRuntime?.error || "Docker daemon readiness is not proven"}.`
+            : "";
         addGate(
           gates,
           "Security Scanner Closeout",
           item.closeoutStatus || "REVIEW",
-          `${item.scanner} scanner closeout is ${item.closeoutStatus || "REVIEW"}; related checks=${(item.relatedChecks || []).join(", ") || "none"}.`,
+          `${item.scanner} scanner closeout is ${item.closeoutStatus || "REVIEW"}; related checks=${(item.relatedChecks || []).join(", ") || "none"}.${dockerRuntimeDetail}`,
           item.closeoutWhenSkipped || "Run the scanner, attach evidence, or document reviewer risk acceptance.",
           evidencePath(security),
           {
             scanner: item.scanner,
+            dockerScannerRuntime: securitySummary.dockerScannerRuntime,
             closeoutCommands: {
               nativeCommand: item.nativeCommand || null,
               dockerFallbackCommand: item.dockerFallbackCommand || null,
@@ -908,6 +916,7 @@ function buildMarkdown(manifest) {
     `- Control-board field rehearsal: ${manifest.controlBoardFieldRehearsal.safetyStatus} (${manifest.controlBoardFieldRehearsal.path || "missing"})`,
     `- Security evidence: ${manifest.securityEvidence.exists ? "present" : "missing"} (${manifest.securityEvidence.path || "missing"})`,
     `- Security scanner closeout open: ${manifest.securityEvidence.scannerCloseoutSummary.open}/${manifest.securityEvidence.scannerCloseoutSummary.total}`,
+    `- Docker scanner runtime ready: ${manifest.securityEvidence.dockerScannerRuntime?.ready ? "yes" : "no"}`,
     `- Manual evidence readiness: ${manifest.manualEvidenceReadiness.status} (${manifest.manualEvidenceReadiness.path || "missing"})`,
     `- Handover package: ${manifest.handoverPackage.status} (${manifest.handoverPackage.path || "missing"})`,
     `- CI status: ${manifest.ciStatus.status} (${manifest.ciStatus.path || "missing"})`,
@@ -944,6 +953,12 @@ function buildMarkdown(manifest) {
             `| ${markdownCell(item.scanner)} | ${markdownCell(item.closeoutStatus)} | \`${markdownCell(item.requiredSwitch || "")}\` | ${markdownCell((item.relatedChecks || []).join(", ") || "none")} | ${markdownCell((item.evidenceFiles || []).join(", ") || "none")} | \`${markdownCell(item.nativeCommand || "missing")}\` | \`${markdownCell(item.dockerFallbackCommand || "missing")}\` | \`${markdownCell(item.riskAcceptanceEvidence || "artifacts/manual/field-risk-acceptance.md")}\` | ${markdownCell(item.closeoutWhenSkipped || "Run scanner or attach accepted risk evidence.")} |`,
         )
       : ["| missing | MISSING | - | - | - | - | - | - | Rerun security:evidence with Scanner Closeout Matrix support. |"]),
+    "",
+    "## Docker Scanner Runtime",
+    "",
+    "| Requested | CLI Available | Daemon Reachable | Ready | Command | Version Or Reason |",
+    "| --- | --- | --- | --- | --- | --- |",
+    `| ${manifest.securityEvidence.dockerScannerRuntime?.requested ? "yes" : "no"} | ${manifest.securityEvidence.dockerScannerRuntime?.cliAvailable ? "yes" : "no"} | ${manifest.securityEvidence.dockerScannerRuntime?.daemonReachable ? "yes" : "no"} | ${manifest.securityEvidence.dockerScannerRuntime?.ready ? "yes" : "no"} | \`${markdownCell(manifest.securityEvidence.dockerScannerRuntime?.command || "docker info --format {{.ServerVersion}}")}\` | ${markdownCell(manifest.securityEvidence.dockerScannerRuntime?.version || manifest.securityEvidence.dockerScannerRuntime?.error || "not requested")} |`,
     "",
     "## Field Acceptance",
     "",

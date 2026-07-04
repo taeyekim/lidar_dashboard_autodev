@@ -57,6 +57,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "scannerCloseout", "final status report generator"],
   [generator, "scannerCloseoutSummary", "final status report generator"],
   [generator, "Security Scanner Closeout", "final status report generator"],
+  [generator, "dockerScannerRuntime", "final status report generator"],
+  [generator, "Docker Scanner Runtime", "final status report generator"],
+  [generator, "Docker scanner runtime is not ready", "final status report generator"],
   [generator, "EVIDENCE_READY", "final status report generator"],
   [generator, "RISK_ACCEPTED", "final status report generator"],
   [generator, "closeoutWhenSkipped", "final status report generator"],
@@ -673,6 +676,16 @@ const openScannerCloseout = buildFinalStatusReport({
       path: readyEvidence.securityEvidence.path,
       data: {
         ...readyEvidence.securityEvidence.data,
+        options: { requireScanners: true, useDockerScanners: true },
+        dockerScannerRuntime: {
+          requested: true,
+          cliAvailable: true,
+          daemonReachable: false,
+          ready: false,
+          command: "docker info --format {{.ServerVersion}}",
+          version: null,
+          error: "Cannot connect to Docker daemon",
+        },
         scannerCloseout: [
           {
             scanner: "gitleaks",
@@ -707,18 +720,34 @@ assert(
     (item) =>
       item.category === "Security Scanner Closeout" &&
       item.scanner === "gitleaks" &&
+      item.dockerScannerRuntime?.ready === false &&
       item.closeoutCommands?.dockerFallbackCommand?.includes("--use-docker-scanners") &&
       item.closeoutCommands?.riskAcceptanceEvidence === "artifacts/manual/field-risk-acceptance.md",
   ),
   "open scanner closeout gate should carry executable scanner closeout commands",
 );
 assert(
+  openScannerCloseout.remainingGates.some(
+    (item) => item.category === "Security Scanner Closeout" && item.message.includes("Docker scanner runtime is not ready"),
+  ),
+  "open scanner closeout gate should surface Docker daemon readiness when Docker fallback is requested",
+);
+assert(
   openScannerCloseout.securityEvidence.scannerCloseoutSummary.open === 1,
   "open scanner closeout fixture should count open scanner rows",
 );
 assert(
+  openScannerCloseout.securityEvidence.dockerScannerRuntime.ready === false,
+  "open scanner closeout fixture should expose Docker scanner runtime readiness",
+);
+assert(
   buildMarkdown(openScannerCloseout).includes("Security Scanner Closeout"),
   "markdown should include Security Scanner Closeout",
+);
+assert(
+  buildMarkdown(openScannerCloseout).includes("Docker Scanner Runtime") &&
+    buildMarkdown(openScannerCloseout).includes("Cannot connect to Docker daemon"),
+  "markdown should include Docker scanner runtime readiness",
 );
 assert(
   buildMarkdown(openScannerCloseout).includes("Docker Fallback") &&
