@@ -56,6 +56,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "Final Handover Refresh", "final execution plan generator"],
   [generator, "Field Runtime And Hardware Rehearsal", "final execution plan generator"],
   [generator, "Delivery Environment Preflight", "final execution plan generator"],
+  [generator, "field:env-closeout", "final execution plan generator"],
+  [generator, "artifacts/field-env-closeout/<timestamp>/manifest.json", "final execution plan generator"],
+  [generator, "Field environment closeout is READY_TO_CLOSE", "final execution plan generator"],
   [generator, "Manual Field Evidence", "final execution plan generator"],
   [generator, "Source Revision Closeout", "final execution plan generator"],
   [generator, "Field Readiness And Acceptance Summary", "final execution plan generator"],
@@ -233,6 +236,14 @@ assert(
   openPlan.orderedCommands.some((item) => item.id === "control-board-field-rehearsal" && item.command.includes("-AllowLiveTcp")),
   "final live TCP closeout command should include explicit -AllowLiveTcp approval switch",
 );
+assert(openPlan.orderedCommands.some((item) => item.id === "field-env-closeout"), "field gates should include env closeout command");
+assert(
+  openPlan.orderedCommands.findIndex((item) => item.id === "field-readiness") <
+    openPlan.orderedCommands.findIndex((item) => item.id === "field-env-closeout") &&
+    openPlan.orderedCommands.findIndex((item) => item.id === "field-env-closeout") <
+    openPlan.orderedCommands.findIndex((item) => item.id === "field-preflight"),
+  "open plan should run readiness, env closeout, then strict preflight for .env gates",
+);
 assert(openPlan.orderedCommands.some((item) => item.id === "security-evidence"), "security gate should include strict security evidence command");
 assert(openPlan.gatesByActionType.SECURITY_REVIEW_REQUIRED.some((gate) => gate.status === "DELIVERY_FIX_REQUIRED"), "security delivery-fix status should be preserved in gate groups");
 assert(openPlan.orderedCommands.some((item) => item.id === "field-gate-closure-map"), "open plan should include field gate closure map refresh command");
@@ -394,6 +405,7 @@ const directCoverage = buildCommandGateCoverage(
 );
 const rootCauseGroups = buildRootCauseGroups([
   { actionType: "FIELD_ACTION_REQUIRED", category: "Field Evidence", status: "REVIEW", message: "Field Preflight: JWT secret placeholder", evidence: "artifacts/field-preflight/latest/manifest.json" },
+  { actionType: "FIELD_ACTION_REQUIRED", category: "Field Env Closeout", status: "OPEN", message: "Field environment closeout has 3 open .env item(s).", evidence: "artifacts/field-env-closeout/latest/manifest.json" },
   { actionType: "MANUAL_EVIDENCE_REQUIRED", category: "Manual Evidence", status: "INVALID", message: "Operator UI Walkthrough evidence is INVALID", evidence: "artifacts/manual/operator-ui-walkthrough.md" },
   { actionType: "REVIEW_REQUIRED", category: "CI Status", status: "REVIEW", message: "No CI workflow run was found for branch dev.", evidence: "artifacts/ci-status/latest/manifest.json" },
   { actionType: "FIELD_ACTION_REQUIRED", category: "Field Acceptance", status: "REVIEW", message: "Field acceptance status is REVIEW.", evidence: "artifacts/field-acceptance/latest/manifest.json" },
@@ -409,6 +421,8 @@ assert(
   "closure bundles should include final reviewer completion checklist wording",
 );
 assert(rootCauseGroups.some((group) => group.id === "delivery-env-preflight" && group.closeoutCommandIds.includes("field-preflight")), "root cause groups should expose preflight closeout commands");
+assert(rootCauseGroups.some((group) => group.id === "delivery-env-preflight" && group.closeoutCommandIds.includes("field-env-closeout")), "root cause groups should expose env closeout commands");
+assert(rootCauseGroups.some((group) => group.id === "delivery-env-preflight" && group.evidenceTargets.includes("artifacts/field-env-closeout/<timestamp>/manifest.json")), "root cause groups should expose env closeout evidence targets");
 assert(rootCauseGroups.some((group) => group.id === "manual-field-evidence" && group.owner === "Field Operations"), "root cause groups should expose manual evidence owner");
 assert(rootCauseGroups.some((group) => group.id === "external-ci-evidence" && group.closeWhen.includes("GitHub Actions CI")), "root cause groups should expose external CI close condition");
 assert(rootCauseGroups.some((group) => group.id === "field-readiness-acceptance" && group.evidenceTargets.includes("artifacts/field-acceptance/<timestamp>/manifest.json")), "root cause groups should expose field acceptance evidence target");

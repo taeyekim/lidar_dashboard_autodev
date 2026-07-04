@@ -107,14 +107,6 @@ function commandCatalog(baseUrl) {
       doneWhen: "Each owner has a brief file with commands, evidence paths, and close criteria for their gates.",
     },
     {
-      id: "field-preflight",
-      phase: "Field Runtime",
-      actionTypes: ["FIELD_ACTION_REQUIRED"],
-      command: `npm.cmd run field:preflight -- -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg}`,
-      purpose: "Capture .env, cookie, Swagger, device-key, and control-board TCP preflight evidence.",
-      doneWhen: "Field preflight status is PASS with no unaccepted REVIEW/SKIPPED checks.",
-    },
-    {
       id: "runtime-evidence",
       phase: "Field Runtime",
       actionTypes: ["FIELD_ACTION_REQUIRED", "AUTOMATED_REFRESH_AVAILABLE"],
@@ -169,6 +161,22 @@ function commandCatalog(baseUrl) {
       command: `npm.cmd run field:readiness -- --base-url=${baseUrl} --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg}`,
       purpose: "Summarize delivery runtime, required env values, scanner availability, and control-board safety status.",
       doneWhen: "Field readiness is PASS and control-board safety is LIVE_TCP_READY for final close.",
+    },
+    {
+      id: "field-env-closeout",
+      phase: "Readiness",
+      actionTypes: ["FIELD_ACTION_REQUIRED", "SECURITY_REVIEW_REQUIRED"],
+      command: `npm.cmd run field:env-closeout -- --base-url=${baseUrl} --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg}`,
+      purpose: "Turn latest field readiness .env gaps into redacted owner/key closeout rows before strict preflight reruns.",
+      doneWhen: "Field environment closeout is READY_TO_CLOSE with zero blocking/review .env items.",
+    },
+    {
+      id: "field-preflight",
+      phase: "Readiness",
+      actionTypes: ["FIELD_ACTION_REQUIRED"],
+      command: `npm.cmd run field:preflight -- -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg}`,
+      purpose: "Capture .env, cookie, Swagger, device-key, and control-board TCP preflight evidence after env closeout rows are resolved.",
+      doneWhen: "Field preflight status is PASS with no unaccepted REVIEW/SKIPPED checks.",
     },
     {
       id: "field-acceptance",
@@ -426,15 +434,23 @@ function rootCauseForGate(gate) {
     text.includes("nginx wrong-way") ||
     text.includes("content security policy") ||
     text.includes("device ingest key") ||
+    text.includes("field env closeout") ||
+    text.includes("field environment closeout") ||
+    text.includes(".env item") ||
     text.includes("field preflight")
   ) {
     return {
       id: "delivery-env-preflight",
       label: "Delivery Environment Preflight",
       owner: "Auth/Security + Nginx Delivery",
-      closeoutCommandIds: ["field-preflight", "field-readiness", "field-acceptance", "final-status"],
-      evidenceTargets: ["artifacts/field-preflight/<timestamp>/manifest.json", ".env configured with field-only non-placeholder values"],
-      closeWhen: "Delivery .env values, auth cookie posture, CORS, Swagger allowlist, Nginx limits/CSP, and device ingest policy pass strict preflight.",
+      closeoutCommandIds: ["field-readiness", "field-env-closeout", "field-preflight", "field-acceptance", "final-status"],
+      evidenceTargets: [
+        "artifacts/field-readiness/<timestamp>/manifest.json",
+        "artifacts/field-env-closeout/<timestamp>/manifest.json",
+        "artifacts/field-preflight/<timestamp>/manifest.json",
+        ".env configured with field-only non-placeholder values",
+      ],
+      closeWhen: "Field readiness identifies required keys, field-env-closeout has zero open .env items, and strict preflight passes delivery auth, CORS, Swagger, Nginx, and device ingest checks.",
     };
   }
   if (text.includes("field readiness") || text.includes("field acceptance")) {
