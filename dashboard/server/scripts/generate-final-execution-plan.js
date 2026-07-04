@@ -536,24 +536,44 @@ const closureBundleDefinitions = [
     label: "Field Input And Risk Acceptance",
     rootCauseIds: ["manual-field-evidence", "delivery-env-preflight", "field-policy-acceptance"],
     outcome: "Field reviewer fills required manual evidence, delivery env values, and accepted operational risk rows.",
+    reviewerChecklist: [
+      ".env field values are concrete and non-placeholder without exposing secrets in evidence.",
+      "Operator UI walkthrough and field risk acceptance files are filled and attached.",
+      "Manual evidence readiness is READY or lists only reviewer-accepted follow-up rows.",
+    ],
   },
   {
     id: "runtime-and-hardware-proof",
     label: "Runtime And Hardware Proof",
     rootCauseIds: ["field-runtime-rehearsal", "field-readiness-acceptance"],
     outcome: "Delivery runtime, DB/Prisma, LiDAR ingest, and control-board rehearsal evidence are refreshed and accepted.",
+    reviewerChecklist: [
+      "Delivery Nginx/API runtime evidence was generated for the final base URL.",
+      "DB, LiDAR, and control-board rehearsal manifests are PASS or have accepted unavailable replacement evidence.",
+      "Control-board LIVE_TCP evidence includes hardware approval, host/port, and ACK/response proof when live mode is required.",
+    ],
   },
   {
     id: "security-and-ci-proof",
     label: "Security And CI Proof",
     rootCauseIds: ["security-scanner-evidence", "external-ci-evidence", "source-revision-closeout"],
     outcome: "Scanner evidence, CI status, and final source revision evidence are closed for the pushed dev commit.",
+    reviewerChecklist: [
+      "gitleaks, Trivy, and ZAP evidence exists or each scanner gap is accepted in field risk evidence.",
+      "CI status is PASS for the final pushed dev commit.",
+      "Git evidence shows clean dev branch with HEAD matching origin/dev.",
+    ],
   },
   {
     id: "final-handover-refresh",
     label: "Final Handover Refresh",
     rootCauseIds: ["field-action-artifacts", "handover-final-review", "general-review"],
     outcome: "Action artifacts, completion audit, handover package, final status, and execution plan converge after upstream evidence closes.",
+    reviewerChecklist: [
+      "Field risk/action/gate/owner artifacts show zero open items after upstream evidence refresh.",
+      "Completion audit and strict handover package are READY/COMPLETE.",
+      "Final status is READY_TO_CLOSE with canMarkGoalComplete=true and no residual field gates.",
+    ],
   },
 ];
 
@@ -588,6 +608,7 @@ function buildClosureBundles(rootCauseGroups, orderedCommands) {
             doneWhen: command.doneWhen,
           })),
         outcome: definition.outcome,
+        reviewerChecklist: definition.reviewerChecklist,
         closeWhen: groups.length > 0
           ? uniqueValues(groups.map((group) => group.closeWhen)).join(" Then ")
           : "No open gates in this bundle.",
@@ -726,14 +747,14 @@ function buildMarkdown(manifest) {
     "",
     "## Closure Bundles",
     "",
-    "| Order | Bundle | Status | Gates | Root Causes | Owners | Evidence Targets | Commands | Outcome | Close When |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Order | Bundle | Status | Gates | Root Causes | Owners | Evidence Targets | Commands | Outcome | Reviewer Checklist | Close When |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(manifest.closureBundles.length > 0
       ? manifest.closureBundles.map(
           (bundle) =>
-            `| ${bundle.order} | ${markdownCell(bundle.label)} | ${markdownCell(bundle.status)} | ${bundle.gateCount} | ${markdownCell(bundle.rootCauseIds.join(", ") || "none")} | ${markdownCell(bundle.owners.join(", ") || "none")} | ${markdownCell(bundle.evidenceTargets.join(", ") || "none")} | ${markdownCell(bundle.commandIds.join(", ") || "none")} | ${markdownCell(bundle.outcome)} | ${markdownCell(bundle.closeWhen)} |`,
+            `| ${bundle.order} | ${markdownCell(bundle.label)} | ${markdownCell(bundle.status)} | ${bundle.gateCount} | ${markdownCell(bundle.rootCauseIds.join(", ") || "none")} | ${markdownCell(bundle.owners.join(", ") || "none")} | ${markdownCell(bundle.evidenceTargets.join(", ") || "none")} | ${markdownCell(bundle.commandIds.join(", ") || "none")} | ${markdownCell(bundle.outcome)} | ${markdownCell((bundle.reviewerChecklist || []).join("; ") || "none")} | ${markdownCell(bundle.closeWhen)} |`,
         )
-      : ["| none | none | READY | 0 | none | none | none | none | No closure bundles required. | No open final gates. |"]),
+      : ["| none | none | READY | 0 | none | none | none | none | No closure bundles required. | none | No open final gates. |"]),
     "",
     "## Ordered Commands",
     "",
