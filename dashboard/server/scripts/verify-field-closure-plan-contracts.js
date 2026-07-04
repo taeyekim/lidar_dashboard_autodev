@@ -31,6 +31,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "artifacts/field-closure-plan",
   "sourceHandoverIndex",
   "sourceCompletionAudit",
+  "sourceFinalExecutionPlan",
   "completionBlockers",
   "requiredFieldValues",
   "Required Field Values",
@@ -51,6 +52,12 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "field:action-board",
   "field:gate-closure-map",
   "field:owner-briefs",
+  "closureCommandQueue",
+  "closureCommandQueueCount",
+  "buildClosureCommandQueue",
+  "orderedCommands",
+  "Closure Command Queue",
+  "| Order | Phase | ID | Action Types | Command | Purpose | Done When |",
   "fieldRehearsalFollowUpActions",
   "fieldRehearsalFollowUpCount",
   "buildFieldRehearsalFollowUpActions",
@@ -124,8 +131,11 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
 assertIncludes(serverPackageJson, "verify-field-closure-plan-contracts.js", "server verify chain");
 assertIncludes(runbook, "npm.cmd run field:closure-plan", "delivery runbook");
 assertIncludes(runbook, "artifacts/field-closure-plan/<timestamp>/manifest.json", "delivery runbook");
+assertIncludes(runbook, "Closure Command Queue", "delivery runbook");
 assertIncludes(checklist, "npm run field:closure-plan", "acceptance checklist");
+assertIncludes(checklist, "Closure Command Queue", "acceptance checklist");
 assertIncludes(matrix, "npm run field:closure-plan", "delivery evidence matrix");
+assertIncludes(matrix, "Closure Command Queue", "delivery evidence matrix");
 
 assert(
   closurePlanStatusFromCounts({
