@@ -283,6 +283,12 @@ closure plan, and handover package all surface this status so `DRY_RUN_SAFE` or
 `npm.cmd run handover:package -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME" --strict`
 when the command should fail unless the package status is `READY` and
 `canMarkGoalComplete=true`.
+`final:refresh` may call `handover:package --reuse-existing-evidence` only after
+the same refresh run has already regenerated delivery, readiness, manual,
+field action, completion audit, closure plan, and handover index evidence. That
+mode packages the latest evidence refs without rerunning the expensive refresh
+commands; it is an orchestrator optimization, not a standalone final-close
+proof.
 The handover index marks completion audit evidence as `STALE` if it does not
 reference the latest delivery evidence or the latest field readiness report.
 Before sharing the package, review the handover package `Residual Field Gates`
