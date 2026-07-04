@@ -134,12 +134,43 @@ function buildFieldChecklist(item) {
   return fields.map((field) => ({ field, status: fieldCheckStatus(content, field) }));
 }
 
+function summarizeFieldChecklist(fieldChecklist) {
+  const checks = fieldChecklist || [];
+  const counts = {
+    total: checks.length,
+    present: 0,
+    empty: 0,
+    placeholder: 0,
+    missingFile: 0,
+    open: 0,
+    openFields: [],
+  };
+
+  checks.forEach((check) => {
+    if (check.status === "PRESENT") {
+      counts.present += 1;
+      return;
+    }
+
+    counts.open += 1;
+    counts.openFields.push({ field: check.field, status: check.status });
+
+    if (check.status === "EMPTY") counts.empty += 1;
+    if (check.status === "PLACEHOLDER") counts.placeholder += 1;
+    if (check.status === "MISSING_FILE") counts.missingFile += 1;
+  });
+
+  return counts;
+}
+
 function buildManualEvidenceReadiness(input = {}) {
   const refs = input.manualEvidence || manualEvidenceRefs();
   const generatedBy = input.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
   const siteName = input.siteName || "unspecified";
   const items = refs.map((item) => {
     const templateSignals = readTemplateSignals(item.template);
+    const fieldChecklist = buildFieldChecklist(item);
+    const fieldChecklistSummary = summarizeFieldChecklist(fieldChecklist);
     return {
       type: item.type,
       status: item.status,
@@ -151,7 +182,8 @@ function buildManualEvidenceReadiness(input = {}) {
       templateTodoCount: templateSignals.todoCount,
       templateHeaderCount: templateSignals.requiredHeaderCount,
       validationReason: item.validationReason || "",
-      fieldChecklist: buildFieldChecklist(item),
+      fieldChecklist,
+      fieldChecklistSummary,
       nextAction: item.nextAction,
       doneWhen: item.doneWhen,
     };
@@ -159,6 +191,17 @@ function buildManualEvidenceReadiness(input = {}) {
   const metadataReview = metadataReviewItems(generatedBy, siteName);
   const evidenceStatus = statusForRefs(items);
   const status = metadataReview.length > 0 ? "REVIEW" : evidenceStatus;
+  const openFieldSummary = items
+    .filter((item) => item.fieldChecklistSummary.open > 0)
+    .map((item) => ({
+      type: item.type,
+      targetPath: item.targetPath,
+      open: item.fieldChecklistSummary.open,
+      empty: item.fieldChecklistSummary.empty,
+      placeholder: item.fieldChecklistSummary.placeholder,
+      missingFile: item.fieldChecklistSummary.missingFile,
+      openFields: item.fieldChecklistSummary.openFields,
+    }));
 
   return {
     generatedAt: input.generatedAt || new Date().toISOString(),
@@ -171,6 +214,8 @@ function buildManualEvidenceReadiness(input = {}) {
     missingCount: items.filter((item) => item.status === "MISSING").length,
     invalidCount: items.filter((item) => item.status === "INVALID").length,
     presentCount: items.filter((item) => item.status === "PRESENT").length,
+    openFieldCount: openFieldSummary.reduce((sum, item) => sum + item.open, 0),
+    openFieldSummary,
     metadataReview,
     items,
   };
@@ -196,6 +241,7 @@ function buildMarkdown(manifest) {
     `- Present: ${manifest.presentCount}`,
     `- Missing: ${manifest.missingCount}`,
     `- Invalid: ${manifest.invalidCount}`,
+    `- Open field count: ${manifest.openFieldCount || 0}`,
     `- Metadata review items: ${manifest.metadataReview?.length || 0}`,
     "",
     "## Evidence Items",
@@ -207,9 +253,22 @@ function buildMarkdown(manifest) {
         `| ${markdownCell(item.type)} | ${markdownCell(item.status)} | \`${markdownCell(item.targetPath)}\` | \`${markdownCell(item.templatePath)}\` | ${markdownCell(item.templateTodoCount)} | ${markdownCell(item.validationReason || "ok")} | ${markdownCell(item.nextAction)} | ${markdownCell(item.doneWhen)} |`,
     ),
     "",
+    "## Field Checklist Summary",
+    "",
+    "Values are not printed here to avoid leaking operator names, hostnames, or other field-only data.",
+    "",
+    "| Type | Target | Open | Empty | Placeholder | Missing File | Open Fields |",
+    "| --- | --- | ---: | ---: | ---: | ---: | --- |",
+    ...(manifest.openFieldSummary?.length
+      ? manifest.openFieldSummary.map(
+          (item) =>
+            `| ${markdownCell(item.type)} | \`${markdownCell(item.targetPath)}\` | ${markdownCell(item.open)} | ${markdownCell(item.empty)} | ${markdownCell(item.placeholder)} | ${markdownCell(item.missingFile)} | ${markdownCell(item.openFields.map((field) => `${field.field}:${field.status}`).join(", "))} |`,
+        )
+      : ["| none | none | 0 | 0 | 0 | 0 | none |"]),
+    "",
     "## Field Checklist",
     "",
-    "Values are not printed here to avoid leaking operator names, hostnames, or other field-only data. Use this table to find empty or placeholder cells in the referenced evidence files.",
+    "Use this table to find empty or placeholder cells in the referenced evidence files.",
     "",
     "| Type | Field | Status |",
     "| --- | --- | --- |",
@@ -256,4 +315,5 @@ module.exports = {
   buildManualEvidenceReadiness,
   buildMarkdown,
   metadataReviewItems,
+  summarizeFieldChecklist,
 };

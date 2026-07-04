@@ -1,6 +1,10 @@
 const fs = require("fs");
 const path = require("path");
-const { buildManualEvidenceReadiness, buildMarkdown } = require("./generate-manual-evidence-readiness");
+const {
+  buildManualEvidenceReadiness,
+  buildMarkdown,
+  summarizeFieldChecklist,
+} = require("./generate-manual-evidence-readiness");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -30,6 +34,13 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "artifacts/manual-evidence-readiness", "manual evidence readiness generator"],
   [generator, "readyForFinalClose", "manual evidence readiness generator"],
   [generator, "fieldChecklist", "manual evidence readiness generator"],
+  [generator, "summarizeFieldChecklist", "manual evidence readiness generator"],
+  [generator, "fieldChecklistSummary", "manual evidence readiness generator"],
+  [generator, "openFieldCount", "manual evidence readiness generator"],
+  [generator, "openFieldSummary", "manual evidence readiness generator"],
+  [generator, "Field Checklist Summary", "manual evidence readiness generator"],
+  [generator, "Open field count", "manual evidence readiness generator"],
+  [generator, "Open Fields", "manual evidence readiness generator"],
   [generator, "Field Checklist", "manual evidence readiness generator"],
   [generator, "PLACEHOLDER", "manual evidence readiness generator"],
   [generator, "This report never substitutes for reviewer evidence", "manual evidence readiness generator"],
@@ -42,6 +53,21 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [matrix, "manual:evidence-readiness", "delivery evidence matrix"],
   [matrix, "artifacts/manual-evidence-readiness", "delivery evidence matrix"],
 ].forEach(([content, token, label]) => assertIncludes(content, token, label));
+
+const summary = summarizeFieldChecklist([
+  { field: "Reviewer", status: "PRESENT" },
+  { field: "Operator account", status: "EMPTY" },
+  { field: "Base URL", status: "PLACEHOLDER" },
+  { field: "Delivery host", status: "MISSING_FILE" },
+]);
+
+assert(summary.total === 4, "field checklist summary should count all fields");
+assert(summary.present === 1, "field checklist summary should count present fields");
+assert(summary.empty === 1, "field checklist summary should count empty fields");
+assert(summary.placeholder === 1, "field checklist summary should count placeholder fields");
+assert(summary.missingFile === 1, "field checklist summary should count missing-file fields");
+assert(summary.open === 3, "field checklist summary should count open fields");
+assert(summary.openFields.length === 3, "field checklist summary should list open fields");
 
 const missing = buildManualEvidenceReadiness({
   manualEvidence: [
@@ -69,9 +95,17 @@ assert(
   missing.items[0].fieldChecklist.some((item) => item.field === "Operator account" && item.status === "MISSING_FILE"),
   "missing readiness should expose missing-file checklist statuses",
 );
+assert(missing.openFieldCount > 0, "missing readiness should count open checklist fields");
+assert(
+  missing.openFieldSummary.some((item) => item.type === "Operator UI Walkthrough" && item.missingFile > 0),
+  "missing readiness should summarize open missing-file fields",
+);
 const missingMarkdown = buildMarkdown(missing);
 assert(missingMarkdown.includes("This report never substitutes for reviewer evidence"), "markdown should include reviewer guardrail");
 assert(missingMarkdown.includes("nonexistent-operator-ui-walkthrough.md"), "markdown should include operator UI target path");
+assert(missingMarkdown.includes("Field Checklist Summary"), "markdown should include field checklist summary");
+assert(missingMarkdown.includes("Open field count"), "markdown should include open field count");
+assert(missingMarkdown.includes("Open Fields"), "markdown should include open field labels");
 assert(missingMarkdown.includes("Field Checklist"), "markdown should include field checklist");
 
 const invalid = buildManualEvidenceReadiness({
@@ -127,6 +161,7 @@ const ready = buildManualEvidenceReadiness({
 assert(ready.status === "READY", "present manual evidence should produce READY readiness");
 assert(ready.readyForFinalClose === true, "present manual evidence should be ready for final close");
 assert(ready.presentCount === 2, "ready manual evidence should count present items");
+assert(Number.isInteger(ready.openFieldCount), "ready manual evidence should expose an open field count");
 
 const placeholderMetadata = buildManualEvidenceReadiness({
   manualEvidence: [
