@@ -57,6 +57,21 @@ const riskAcceptanceTemplate = readProjectFile("docs/ops/field-risk-acceptance-t
   "manifest.md",
   "PASS_WITH_SKIPS",
   "field preflight status",
+  "Get-PreflightNextAction",
+  "Get-PreflightEvidenceCommand",
+  "Get-PreflightDoneWhen",
+  "New-CloseoutChecklist",
+  "closeoutChecklist",
+  "nextAction",
+  "evidenceCommand",
+  "doneWhen",
+  "## Closeout Checklist",
+  "| Status | Severity | Check | Message | Next Action | Evidence Command | Done When |",
+  "Set JWT_SECRET to a unique long random field-only secret",
+  "Set CORS_ORIGINS to explicit operator UI origins only",
+  "approved live TCP rehearsal",
+  "artifacts/manual/field-risk-acceptance.md",
+  "-RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -Strict",
 ].forEach((token) => assertIncludes(script, token, "field preflight script"));
 
 [

@@ -50,7 +50,10 @@ function Add-Check {
     [string]$Name,
     [string]$Status,
     [string]$Message,
-    [string]$Severity = "info"
+    [string]$Severity = "info",
+    [string]$NextAction = "",
+    [string]$EvidenceCommand = "",
+    [string]$DoneWhen = ""
   )
 
   return $Checks + [pscustomobject]@{
@@ -58,7 +61,86 @@ function Add-Check {
     status = $Status
     severity = $Severity
     message = $Message
+    nextAction = if ($NextAction) { $NextAction } else { Get-PreflightNextAction -Name $Name }
+    evidenceCommand = if ($EvidenceCommand) { $EvidenceCommand } else { Get-PreflightEvidenceCommand -Name $Name }
+    doneWhen = if ($DoneWhen) { $DoneWhen } else { Get-PreflightDoneWhen -Name $Name }
   }
+}
+
+function Get-PreflightNextAction {
+  param([string]$Name)
+
+  $actions = @{
+    ".env presence" = "Copy .env.example to .env on the delivery host and fill field-only values."
+    "JWT secret placeholder" = "Set JWT_SECRET to a unique long random field-only secret; do not paste the value into evidence."
+    "seed admin password" = "Set SEED_ADMIN_PASSWORD to a non-example value before seeding the intended field DB."
+    "device ingest key" = "Set DEVICE_INGEST_API_KEY and configure the LiDAR sender header, or attach a signed trusted-LAN exception."
+    "live TCP readiness" = "Set CONTROL_BOARD_DRY_RUN=false, CONTROL_BOARD_LIVE_APPROVED=true, CONTROL_BOARD_HOST, and CONTROL_BOARD_PORT only for approved live TCP rehearsal."
+    "dry-run safety" = "Keep CONTROL_BOARD_DRY_RUN unset/true for safe review, or rerun with -AllowLiveTcp after hardware owner approval."
+    "auth cookie delivery settings" = "Set AUTH_COOKIE_SECURE=true and AUTH_COOKIE_SAMESITE to lax, strict, or none for the final HTTPS topology."
+    "CORS trusted origins" = "Set CORS_ORIGINS to explicit operator UI origins only; do not use wildcard/all."
+    "Swagger allowlist" = "Set NGINX_SWAGGER_ALLOW to the approved operator/internal CIDR, or attach accepted internal-only exposure evidence."
+    "Nginx wrong-way rate limit" = "Set NGINX_WRONGWAY_RATE_LIMIT and NGINX_WRONGWAY_BURST after confirming the LiDAR sender event rate."
+    "Nginx content security policy" = "Set NGINX_CONTENT_SECURITY_POLICY after reviewing final camera, LiDAR, Swagger, and operator UI hosts."
+  }
+  if ($actions.ContainsKey($Name)) { return $actions[$Name] }
+  return "Resolve the check, rerun field preflight, and attach the updated manifest."
+}
+
+function Get-PreflightEvidenceCommand {
+  param([string]$Name)
+
+  $strictCommand = "npm.cmd run field:preflight -- -BaseUrl <delivery-url> -Reviewer <field-reviewer> -SiteName <site-name> -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -Strict"
+  $commands = @{
+    ".env presence" = "Inspect .env key presence on the delivery host without printing values; rerun $strictCommand"
+    "JWT secret placeholder" = "Record JWT_SECRET as configured/non-placeholder only; rerun $strictCommand"
+    "seed admin password" = "Record SEED_ADMIN_PASSWORD as configured/non-example only; rerun $strictCommand"
+    "device ingest key" = "Record DEVICE_INGEST_API_KEY configured status or attach artifacts/manual/field-risk-acceptance.md; rerun $strictCommand"
+    "live TCP readiness" = "Run approved live TCP rehearsal after hardware approval, then rerun npm.cmd run field:preflight -- -BaseUrl <delivery-url> -Reviewer <field-reviewer> -SiteName <site-name> -AllowLiveTcp -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -Strict"
+    "dry-run safety" = "Rerun npm.cmd run field:preflight -- -BaseUrl <delivery-url> -Reviewer <field-reviewer> -SiteName <site-name> or use -AllowLiveTcp only with approval."
+    "auth cookie delivery settings" = "Record cookie posture without secret values; rerun $strictCommand"
+    "CORS trusted origins" = "Record the approved origin list; rerun $strictCommand"
+    "Swagger allowlist" = "Record the approved internal CIDR; rerun $strictCommand"
+    "Nginx wrong-way rate limit" = "Record expected LiDAR sender rate/burst decision; rerun $strictCommand"
+    "Nginx content security policy" = "Record CSP review decision; rerun $strictCommand"
+  }
+  if ($commands.ContainsKey($Name)) { return $commands[$Name] }
+  return $strictCommand
+}
+
+function Get-PreflightDoneWhen {
+  param([string]$Name)
+
+  $doneWhen = @{
+    ".env presence" = ".env exists and the strict preflight no longer reports .env presence as REVIEW."
+    "JWT secret placeholder" = "JWT_SECRET is present, non-placeholder, and strict preflight reports PASS."
+    "seed admin password" = "SEED_ADMIN_PASSWORD is present, non-example, and strict preflight reports PASS."
+    "device ingest key" = "DEVICE_INGEST_API_KEY is configured, or the trusted-LAN exception is signed and referenced."
+    "live TCP readiness" = "Live TCP host, port, dry-run=false, live approval=true, and approved rehearsal evidence are present."
+    "dry-run safety" = "Dry-run is safe for review, or live TCP is explicitly approved and checked with -AllowLiveTcp."
+    "auth cookie delivery settings" = "AUTH_COOKIE_SECURE and AUTH_COOKIE_SAMESITE match the final HTTPS route."
+    "CORS trusted origins" = "CORS_ORIGINS contains approved operator UI origins only."
+    "Swagger allowlist" = "NGINX_SWAGGER_ALLOW is restricted or the accepted internal-only exposure is attached."
+    "Nginx wrong-way rate limit" = "Wrong-way rate limit and burst values are configured for the expected LiDAR sender profile."
+    "Nginx content security policy" = "CSP is configured for the final delivery topology and accepted by the reviewer."
+  }
+  if ($doneWhen.ContainsKey($Name)) { return $doneWhen[$Name] }
+  return "The check reports PASS in the latest strict field preflight manifest."
+}
+
+function New-CloseoutChecklist {
+  param([object[]]$Checks)
+
+  return @($Checks | Where-Object { $_.status -in @("REVIEW", "SKIPPED") } | ForEach-Object {
+    [pscustomobject]@{
+      name = $_.name
+      status = $_.status
+      severity = $_.severity
+      nextAction = $_.nextAction
+      evidenceCommand = $_.evidenceCommand
+      doneWhen = $_.doneWhen
+    }
+  })
 }
 
 function Split-ListValue {
@@ -150,6 +232,7 @@ $checks = Add-Check -Checks $checks -Name "Nginx content security policy" -Statu
 $reviewCount = @($checks | Where-Object { $_.status -eq "REVIEW" }).Count
 $skippedCount = @($checks | Where-Object { $_.status -eq "SKIPPED" }).Count
 $overallStatus = if ($reviewCount -gt 0) { "REVIEW" } elseif ($skippedCount -gt 0) { "PASS_WITH_SKIPS" } else { "PASS" }
+$closeoutChecklist = New-CloseoutChecklist -Checks $checks
 
 $manifest = [pscustomobject]@{
   generatedAt = (Get-Date).ToUniversalTime().ToString("o")
@@ -165,6 +248,7 @@ $manifest = [pscustomobject]@{
   requireSwaggerAllowlist = [bool]$RequireSwaggerAllowlist
   reviewCount = $reviewCount
   skippedCount = $skippedCount
+  closeoutChecklist = $closeoutChecklist
   checks = $checks
 }
 
@@ -188,9 +272,15 @@ $markdownLines = @(
   "",
   "## Checks",
   "",
-  "| Status | Severity | Check | Message |",
-  "| --- | --- | --- | --- |"
-) + ($checks | ForEach-Object { "| $($_.status) | $($_.severity) | $($_.name) | $($_.message) |" }) + @("")
+  "| Status | Severity | Check | Message | Next Action | Evidence Command | Done When |",
+  "| --- | --- | --- | --- | --- | --- | --- |"
+) + ($checks | ForEach-Object { "| $($_.status) | $($_.severity) | $($_.name) | $($_.message) | $($_.nextAction) | $($_.evidenceCommand) | $($_.doneWhen) |" }) + @(
+  "",
+  "## Closeout Checklist",
+  "",
+  "| Status | Severity | Check | Next Action | Evidence Command | Done When |",
+  "| --- | --- | --- | --- | --- | --- |"
+) + ($closeoutChecklist | ForEach-Object { "| $($_.status) | $($_.severity) | $($_.name) | $($_.nextAction) | $($_.evidenceCommand) | $($_.doneWhen) |" }) + @("")
 
 $markdownLines | Out-File -LiteralPath (Join-Path $outputDir "manifest.md") -Encoding utf8
 
