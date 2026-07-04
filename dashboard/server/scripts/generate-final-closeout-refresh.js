@@ -190,6 +190,14 @@ function buildSteps(options) {
       purpose: "Record field acceptance REVIEW/SKIPPED state without requiring unavailable field hardware.",
       doneWhen: "Field acceptance is PASS after strict field evidence exists, or current REVIEW manifest is available.",
     });
+    steps.push({
+      id: "field-acceptance-carry-forward",
+      phase: "Pre Evidence",
+      command: npm,
+      args: ["run", "field:acceptance-carry-forward", "--", `--base-url=${baseUrl}`],
+      purpose: "Record current-commit carry-forward evidence for an earlier PASS field acceptance when runtime sources did not change.",
+      doneWhen: "Carry-forward PASS evidence exists for the current clean dev commit, or the command fails because runtime sources changed and full field acceptance must be rerun.",
+    });
   }
 
   steps.push(
