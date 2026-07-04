@@ -8,6 +8,8 @@ const {
   skipped,
   summarizeDispositions,
 } = require("./generate-security-evidence");
+const fs = require("fs");
+const path = require("path");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -19,6 +21,23 @@ function withDisposition(item, requireScanners = false) {
     disposition: securityDisposition(item, requireScanners),
   };
 }
+
+function readProjectFile(relativePath) {
+  return fs.readFileSync(path.join(__dirname, "..", "..", "..", relativePath), "utf8");
+}
+
+const packageJson = readProjectFile("package.json");
+const generator = readProjectFile("dashboard/server/scripts/generate-security-evidence.js");
+const prepareTools = readProjectFile("scripts/prepare-security-tools.ps1");
+
+assert(packageJson.includes("security:tools:prepare"), "root package scripts should expose portable security tool preparation");
+assert(generator.includes("securityToolDirs"), "security evidence should search local security tool dirs");
+assert(generator.includes(".local-tools"), "security evidence should search .local-tools");
+assert(generator.includes("SECURITY_TOOL_DIRS"), "security evidence should allow SECURITY_TOOL_DIRS override");
+assert(generator.includes("Security tool dirs"), "security evidence markdown should show security tool dirs");
+assert(prepareTools.includes("gitleaks_"), "prepare script should download gitleaks release zip");
+assert(prepareTools.includes("trivy_"), "prepare script should download Trivy release zip");
+assert(prepareTools.includes(".local-tools/security"), "prepare script should install into ignored local tools path");
 
 assert(scannerCloseoutDefinitions.length === 4, "scanner closeout should cover gitleaks, Trivy fs, Trivy images, and ZAP");
 assert(scannerCloseoutDefinitions.every((item) => item.requiredSwitch && item.closeoutWhenSkipped), "scanner closeout rows need switch and closeout guidance");
@@ -124,6 +143,7 @@ const markdown = buildMarkdown({
   hostname: "delivery-host",
   platform: "win32 x64",
   targetUrl: "http://field.local:8080",
+  securityToolDirs: [".local-tools/security/gitleaks", ".local-tools/security/trivy"],
   git: {
     branch: "dev",
     commit: "fixture",
@@ -161,6 +181,8 @@ const markdown = buildMarkdown({
   "Working tree clean",
   "Use Docker scanner fallback",
   "Docker Scanner Runtime",
+  "Security tool dirs",
+  ".local-tools/security/gitleaks",
   "Docker scanner runtime ready",
   "Cannot connect to Docker daemon",
   "--use-docker-scanners",

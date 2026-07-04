@@ -5,6 +5,29 @@ const { spawnSync } = require("child_process");
 
 const root = path.join(__dirname, "..", "..", "..");
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+const pathDelimiter = process.platform === "win32" ? ";" : ":";
+
+function securityToolDirs() {
+  const configured = String(process.env.SECURITY_TOOL_DIRS || "")
+    .split(pathDelimiter)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const defaults = [
+    path.join(root, ".local-tools", "security", "gitleaks"),
+    path.join(root, ".local-tools", "security", "trivy"),
+    path.join(root, ".local-tools", "security", "zap"),
+  ];
+  return [...configured, ...defaults].filter((dir) => fs.existsSync(dir));
+}
+
+function commandEnv() {
+  const existingPath = process.env.PATH || process.env.Path || "";
+  const localPath = securityToolDirs().join(pathDelimiter);
+  return {
+    ...process.env,
+    PATH: localPath ? `${localPath}${pathDelimiter}${existingPath}` : existingPath,
+  };
+}
 
 function timestampForPath(date = new Date()) {
   return date.toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-");
@@ -21,6 +44,7 @@ function commandExists(command) {
     cwd: root,
     encoding: "utf8",
     shell: process.platform !== "win32",
+    env: commandEnv(),
   });
   return result.status === 0;
 }
@@ -50,6 +74,7 @@ function commandVersion(command, args) {
     cwd: root,
     encoding: "utf8",
     shell: process.platform === "win32",
+    env: commandEnv(),
   });
 
   return {
@@ -209,6 +234,7 @@ function runCommand(label, command, args, options = {}) {
     cwd: root,
     encoding: "utf8",
     shell: process.platform === "win32",
+    env: commandEnv(),
     ...options,
   });
 
@@ -392,6 +418,7 @@ function buildMarkdown(manifest) {
     `- Hostname: ${manifest.hostname}`,
     `- Platform: ${manifest.platform}`,
     `- Target URL: ${manifest.targetUrl}`,
+    `- Security tool dirs: ${manifest.securityToolDirs?.join(", ") || "none"}`,
     `- Git commit: ${manifest.git.commit}`,
     `- Git branch: ${manifest.git.branch}`,
     `- Git upstream: ${manifest.git.upstream || "missing"}`,
@@ -726,6 +753,7 @@ function main() {
     hostname: os.hostname(),
     platform: `${process.platform} ${process.arch}`,
     targetUrl,
+    securityToolDirs: securityToolDirs().map((dir) => path.relative(root, dir).replace(/\\/g, "/")),
     git: buildGitState(),
     options: {
       includeContainerImages,

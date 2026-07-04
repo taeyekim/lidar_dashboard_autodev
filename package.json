@@ -76,6 +76,7 @@
     "field:rehearsal-unavailable": "node dashboard/server/scripts/generate-field-rehearsal-unavailable-evidence.js",
     "manual:evidence-drafts": "node dashboard/server/scripts/generate-manual-evidence-drafts.js",
     "manual:evidence-readiness": "node dashboard/server/scripts/generate-manual-evidence-readiness.js",
+    "security:tools:prepare": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/prepare-security-tools.ps1",
     "security:evidence": "node dashboard/server/scripts/generate-security-evidence.js",
     "runtime:evidence": "node dashboard/server/scripts/generate-runtime-evidence.js",
     "delivery:evidence": "node dashboard/server/scripts/generate-delivery-evidence.js",
