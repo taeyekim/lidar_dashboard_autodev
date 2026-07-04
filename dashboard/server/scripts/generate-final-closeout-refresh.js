@@ -313,6 +313,14 @@ function buildSteps(options) {
       purpose: "Classify remaining final-status gates into local, conditional, field, hardware, security, CI, and reviewer buckets.",
       doneWhen: "Gate classification points to the latest final status and identifies what Codex may continue without fabricating field evidence.",
     },
+    {
+      id: "handover-package-final-index",
+      phase: "Final Decision",
+      command: npm,
+      args: ["run", "handover:package", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Repackage the handover bundle after final bundle handoff is generated so the delivery package indexes the latest reviewer-facing closeout files.",
+      doneWhen: "Handover package evidenceRefs.finalBundleHandoff points to the latest final-bundle-handoff manifest.",
+    },
   );
 
   return steps.map((step, index) => ({ order: index + 1, ...step }));

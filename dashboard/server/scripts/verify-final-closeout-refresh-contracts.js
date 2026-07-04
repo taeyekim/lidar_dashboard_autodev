@@ -67,6 +67,8 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "final:execution-plan", "final closeout refresh generator"],
   [generator, "final:bundle-handoff", "final closeout refresh generator"],
   [generator, "final:gate-classification", "final closeout refresh generator"],
+  [generator, "handover-package-final-index", "final closeout refresh generator"],
+  [generator, "evidenceRefs.finalBundleHandoff points to the latest final-bundle-handoff manifest", "final closeout refresh generator"],
   [generator, "routing evidence for auto-mode triage", "final closeout refresh generator"],
 ].forEach(([content, token, label]) => assertIncludes(content, token, label));
 
@@ -101,6 +103,7 @@ const ids = steps.map((step) => step.id);
   "final-execution-plan",
   "final-bundle-handoff",
   "final-gate-classification",
+  "handover-package-final-index",
 ].forEach((id) => assert(ids.includes(id), `steps should include ${id}`));
 
 assert(
@@ -109,8 +112,9 @@ assert(
     ids.indexOf("handover-package-pass-2") < ids.indexOf("final-status-pass-2") &&
     ids.indexOf("final-status-pass-2") < ids.indexOf("final-execution-plan") &&
     ids.indexOf("final-execution-plan") < ids.indexOf("final-bundle-handoff") &&
-    ids.indexOf("final-bundle-handoff") < ids.indexOf("final-gate-classification"),
-  "refresh should converge final status, action artifacts, handover package, final status, execution plan, bundle handoff, then gate classification",
+    ids.indexOf("final-bundle-handoff") < ids.indexOf("final-gate-classification") &&
+    ids.indexOf("final-gate-classification") < ids.indexOf("handover-package-final-index"),
+  "refresh should converge final status, action artifacts, handover package, final status, execution plan, bundle handoff, gate classification, then final handover package index",
 );
 assert(
   ids.indexOf("field-readiness") < ids.indexOf("field-rehearsal-unavailable") &&
