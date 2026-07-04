@@ -2,6 +2,8 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
+const { buildGitState } = require("./generate-final-status-report");
+
 const root = path.join(__dirname, "..", "..", "..");
 
 function timestampForPath(date = new Date()) {
@@ -66,6 +68,7 @@ function writeManifest(config, runId, options) {
     reviewer: options.reviewer,
     siteName: options.siteName,
     hostName: os.hostname(),
+    git: buildGitState(),
     unavailableAcceptance: {
       reason: options.reason,
       replacementOwner: options.replacementOwner,
@@ -86,6 +89,11 @@ function writeManifest(config, runId, options) {
       `- Reviewer: ${options.reviewer}`,
       `- Site name: ${options.siteName}`,
       `- Host name: ${manifest.hostName}`,
+      `- Git commit: ${manifest.git.commit}`,
+      `- Git branch: ${manifest.git.branch}`,
+      `- Git upstream: ${manifest.git.upstream || "missing"}`,
+      `- Git pushed to origin/dev: ${manifest.git.pushed ? "yes" : "no"}`,
+      `- Working tree clean: ${manifest.git.clean ? "yes" : "no"}`,
       `- Replacement owner: ${options.replacementOwner}`,
       `- Target recheck date: ${options.targetRecheckDate}`,
       `- Approval note: ${options.approvalNote || "none"}`,

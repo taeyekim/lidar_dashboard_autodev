@@ -113,6 +113,24 @@ function buildSteps(options) {
       purpose: "Refresh delivery readiness, runtime, env, scanner, and control-board safety summary.",
       doneWhen: "Field readiness is PASS or lists exact owner actions.",
     },
+    {
+      id: "field-rehearsal-unavailable",
+      phase: "Pre Evidence",
+      command: npm,
+      args: [
+        "run",
+        "field:rehearsal-unavailable",
+        "--",
+        "--reason=Delivery runtime or field hardware is unavailable in this local closeout refresh.",
+        `--reviewer=${reviewer}`,
+        `--site-name=${siteName}`,
+        "--replacement-owner=field-owner",
+        "--target-recheck-date=2026-08-01",
+        "--approval-note=temporary local refresh evidence",
+      ],
+      purpose: "Refresh unavailable DB, LiDAR, and control-board rehearsal REVIEW evidence for the current source revision.",
+      doneWhen: "Unavailable rehearsal manifests are current, or PASS rehearsal manifests replace them.",
+    },
   ];
 
   if (options.includeFieldAcceptance) {

@@ -42,6 +42,8 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "--use-docker-scanners", "final closeout refresh generator"],
   [generator, "field:preflight", "final closeout refresh generator"],
   [generator, "field:readiness", "final closeout refresh generator"],
+  [generator, "field:rehearsal-unavailable", "final closeout refresh generator"],
+  [generator, "temporary local refresh evidence", "final closeout refresh generator"],
   [generator, "completion:audit", "final closeout refresh generator"],
   [generator, "handover:index", "final closeout refresh generator"],
   [generator, "field:closure-plan", "final closeout refresh generator"],
@@ -68,6 +70,7 @@ const ids = steps.map((step) => step.id);
   "security-evidence",
   "field-preflight",
   "field-readiness",
+  "field-rehearsal-unavailable",
   "field-acceptance",
   "completion-audit-pass-1",
   "handover-index-pass-1",
@@ -89,6 +92,11 @@ assert(
     ids.indexOf("handover-package-pass-2") < ids.indexOf("final-status-pass-2") &&
     ids.indexOf("final-status-pass-2") < ids.indexOf("final-execution-plan"),
   "refresh should converge final status, action artifacts, handover package, final status, then execution plan",
+);
+assert(
+  ids.indexOf("field-readiness") < ids.indexOf("field-rehearsal-unavailable") &&
+    ids.indexOf("field-rehearsal-unavailable") < ids.indexOf("completion-audit-pass-1"),
+  "refresh should record unavailable field rehearsal evidence before completion audit",
 );
 assert(
   steps.find((step) => step.id === "ci-status").command.includes("npm"),
