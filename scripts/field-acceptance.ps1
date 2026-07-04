@@ -488,6 +488,29 @@ function Get-StepsByStatus {
   })
 }
 
+function ConvertTo-AcceptanceOpenItems {
+  param([object[]]$Steps)
+
+  $stepList = ConvertTo-StepList -Steps $Steps
+  return @($stepList | Where-Object {
+    $_.status -eq "REVIEW" -or $_.status -eq "SKIPPED"
+  } | ForEach-Object {
+    [pscustomobject]@{
+      status = $_.status
+      step = $_.name
+      reason = $_.reason
+      command = $_.command
+      logPath = $_.logPath
+      exitCode = $_.exitCode
+      closeWhen = if ($_.status -eq "REVIEW") {
+        "Resolve the reason and rerun field:acceptance until this step is PASS."
+      } else {
+        "Attach reviewer acceptance for the skipped evidence or rerun without the skip switch."
+      }
+    }
+  })
+}
+
 function New-AcceptanceManifest {
   param(
     [string]$Status,
@@ -497,6 +520,7 @@ function New-AcceptanceManifest {
   $stepList = ConvertTo-StepList -Steps $Steps
   $reviewSteps = @(Get-StepsByStatus -Steps $stepList -Status "REVIEW")
   $skippedSteps = @(Get-StepsByStatus -Steps $stepList -Status "SKIPPED")
+  $openAcceptanceItems = @(ConvertTo-AcceptanceOpenItems -Steps $stepList)
   $hasReviewer = ![string]::IsNullOrWhiteSpace($Reviewer) -and !(Test-PlaceholderFieldText -Value $Reviewer)
   $hasSiteName = ![string]::IsNullOrWhiteSpace($SiteName) -and !(Test-PlaceholderFieldText -Value $SiteName)
   $latestPreflightManifest = Get-LatestManifest -Root "artifacts/field-preflight"
@@ -574,6 +598,7 @@ function New-AcceptanceManifest {
       security = Get-LatestManifestPath -Root "artifacts/security"
       delivery = Get-LatestManifestPath -Root "artifacts/delivery"
     }
+    openAcceptanceItems = $openAcceptanceItems
     steps = $stepList
   }
 }
@@ -661,6 +686,16 @@ function Write-AcceptanceManifest {
     "| Control-board TCP | $($manifest.evidenceRefs.controlBoard) |",
     "| Security | $($manifest.evidenceRefs.security) |",
     "| Delivery | $($manifest.evidenceRefs.delivery) |",
+    "",
+    "## Open Acceptance Items",
+    "",
+    "| Status | Step | Reason | Command | Log | Close When |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ($(if ($manifest.openAcceptanceItems.Count -gt 0) {
+      $manifest.openAcceptanceItems | ForEach-Object { "| $($_.status) | $($_.step) | $($_.reason) | ``$($_.command)`` | $($_.logPath) | $($_.closeWhen) |" }
+    } else {
+      "| PASS | none | No open acceptance items. | - | - | Attach this manifest to the handover package. |"
+    })),
     "",
     "## Steps",
     "",
