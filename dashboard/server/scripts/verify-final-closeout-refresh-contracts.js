@@ -29,7 +29,7 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [serverPackageJson, "verify-final-closeout-refresh-contracts.js", "server verify chain"],
   [generator, "artifacts/final-closeout-refresh", "final closeout refresh generator"],
   [generator, "externalCiDispatch: false", "final closeout refresh generator"],
-  [generator, "include-field-acceptance", "final closeout refresh generator"],
+  [generator, "skip-field-acceptance", "final closeout refresh generator"],
   [generator, "REVIEW_RECORDED", "final closeout refresh generator"],
   [generator, "OPEN_GATES", "final closeout refresh generator"],
   [generator, "latestFinalStatus", "final closeout refresh generator"],
@@ -101,6 +101,17 @@ assert(
 assert(
   steps.find((step) => step.id === "field-acceptance").acceptReviewExitCodes.includes(1),
   "field acceptance REVIEW exit should be recorded without failing refresh",
+);
+assert(
+  !buildSteps({
+    baseUrl: "http://field.local:8080",
+    generatedBy: "reviewer-a",
+    siteName: "delivery-site",
+    includeFieldAcceptance: false,
+  })
+    .map((step) => step.id)
+    .includes("field-acceptance"),
+  "field acceptance should be explicitly skippable for quick refresh runs",
 );
 assert(
   steps.find((step) => step.id === "field-preflight").args.includes("http://field.local:8080"),

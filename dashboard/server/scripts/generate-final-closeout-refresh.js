@@ -336,7 +336,7 @@ function main() {
     baseUrl: argValue("base-url", "http://localhost:8080"),
     generatedBy: argValue("generated-by", process.env.USERNAME || process.env.USER || "Codex"),
     siteName: argValue("site-name", "unspecified"),
-    includeFieldAcceptance: hasFlag("include-field-acceptance"),
+    includeFieldAcceptance: !hasFlag("skip-field-acceptance"),
   };
   const stepResults = [];
   for (const step of buildSteps(options)) {
