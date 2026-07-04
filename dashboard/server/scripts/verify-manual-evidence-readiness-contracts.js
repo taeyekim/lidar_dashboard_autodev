@@ -29,6 +29,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [serverPackageJson, "verify-manual-evidence-readiness-contracts.js", "server verify chain"],
   [generator, "artifacts/manual-evidence-readiness", "manual evidence readiness generator"],
   [generator, "readyForFinalClose", "manual evidence readiness generator"],
+  [generator, "fieldChecklist", "manual evidence readiness generator"],
+  [generator, "Field Checklist", "manual evidence readiness generator"],
+  [generator, "PLACEHOLDER", "manual evidence readiness generator"],
   [generator, "This report never substitutes for reviewer evidence", "manual evidence readiness generator"],
   [finalStatusGenerator, "manualEvidenceReadiness", "final status generator"],
   [finalStatusGenerator, "artifacts/manual-evidence-readiness", "final status generator"],
@@ -44,7 +47,7 @@ const missing = buildManualEvidenceReadiness({
   manualEvidence: [
     {
       type: "Operator UI Walkthrough",
-      path: "artifacts/manual/operator-ui-walkthrough.md",
+      path: "artifacts/manual/nonexistent-operator-ui-walkthrough.md",
       template: "docs/ops/operator-ui-walkthrough-template.md",
       status: "MISSING",
       required: true,
@@ -62,9 +65,14 @@ const missing = buildManualEvidenceReadiness({
 assert(missing.status === "MISSING", "missing manual evidence should produce MISSING readiness");
 assert(missing.readyForFinalClose === false, "missing manual evidence must not be ready for close");
 assert(missing.missingCount === 1, "missing readiness should count missing items");
+assert(
+  missing.items[0].fieldChecklist.some((item) => item.field === "Operator account" && item.status === "MISSING_FILE"),
+  "missing readiness should expose missing-file checklist statuses",
+);
 const missingMarkdown = buildMarkdown(missing);
 assert(missingMarkdown.includes("This report never substitutes for reviewer evidence"), "markdown should include reviewer guardrail");
-assert(missingMarkdown.includes("operator-ui-walkthrough.md"), "markdown should include operator UI target path");
+assert(missingMarkdown.includes("nonexistent-operator-ui-walkthrough.md"), "markdown should include operator UI target path");
+assert(missingMarkdown.includes("Field Checklist"), "markdown should include field checklist");
 
 const invalid = buildManualEvidenceReadiness({
   manualEvidence: [

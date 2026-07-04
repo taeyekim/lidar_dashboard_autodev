@@ -5,7 +5,7 @@ const { spawnSync } = require("child_process");
 
 const { timestampForPath } = require("./generate-delivery-evidence");
 const { isPlaceholderFieldText } = require("./generate-final-status-report");
-const { manualEvidenceRefs } = require("./manual-evidence");
+const { isPlaceholderMarkdownCell, markdownTableValue, manualEvidenceRefs } = require("./manual-evidence");
 
 const root = path.join(__dirname, "..", "..", "..");
 
@@ -88,6 +88,52 @@ function metadataReviewItems(generatedBy, siteName) {
   ].filter(Boolean);
 }
 
+const manualEvidenceFieldChecks = {
+  "Operator UI Walkthrough": [
+    "Site name",
+    "Reviewer",
+    "Operator account",
+    "Browser and version",
+    "Delivery display resolution",
+    "Entry URL",
+    "Base API URL",
+    "Captured at",
+    "Walkthrough result",
+    "Reviewer signature/name",
+    "Decision timestamp",
+  ],
+  "Field Risk Acceptance": [
+    "Site name",
+    "Reviewer",
+    "Operator",
+    "Delivery host",
+    "Base URL",
+    "Acceptance date",
+    "Decision",
+    "Required follow-up",
+    "Follow-up owner",
+    "Target recheck date",
+    "Reviewer signature/name",
+  ],
+};
+
+function fieldCheckStatus(content, field) {
+  const value = markdownTableValue(content, field);
+  if (!value) return "EMPTY";
+  if (isPlaceholderMarkdownCell(value)) return "PLACEHOLDER";
+  return "PRESENT";
+}
+
+function buildFieldChecklist(item) {
+  const fields = manualEvidenceFieldChecks[item.type] || [];
+  if (fields.length === 0) return [];
+  if (!fileExists(item.path)) {
+    return fields.map((field) => ({ field, status: "MISSING_FILE" }));
+  }
+  const content = fs.readFileSync(path.join(root, item.path), "utf8");
+  return fields.map((field) => ({ field, status: fieldCheckStatus(content, field) }));
+}
+
 function buildManualEvidenceReadiness(input = {}) {
   const refs = input.manualEvidence || manualEvidenceRefs();
   const generatedBy = input.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
@@ -105,6 +151,7 @@ function buildManualEvidenceReadiness(input = {}) {
       templateTodoCount: templateSignals.todoCount,
       templateHeaderCount: templateSignals.requiredHeaderCount,
       validationReason: item.validationReason || "",
+      fieldChecklist: buildFieldChecklist(item),
       nextAction: item.nextAction,
       doneWhen: item.doneWhen,
     };
@@ -158,6 +205,18 @@ function buildMarkdown(manifest) {
     ...manifest.items.map(
       (item) =>
         `| ${markdownCell(item.type)} | ${markdownCell(item.status)} | \`${markdownCell(item.targetPath)}\` | \`${markdownCell(item.templatePath)}\` | ${markdownCell(item.templateTodoCount)} | ${markdownCell(item.validationReason || "ok")} | ${markdownCell(item.nextAction)} | ${markdownCell(item.doneWhen)} |`,
+    ),
+    "",
+    "## Field Checklist",
+    "",
+    "Values are not printed here to avoid leaking operator names, hostnames, or other field-only data. Use this table to find empty or placeholder cells in the referenced evidence files.",
+    "",
+    "| Type | Field | Status |",
+    "| --- | --- | --- |",
+    ...manifest.items.flatMap((item) =>
+      (item.fieldChecklist || []).map(
+        (check) => `| ${markdownCell(item.type)} | ${markdownCell(check.field)} | ${markdownCell(check.status)} |`,
+      ),
     ),
     "",
     "## Final Close Guardrail",
