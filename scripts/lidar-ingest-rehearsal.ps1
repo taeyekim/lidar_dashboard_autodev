@@ -44,15 +44,24 @@ function Invoke-CurlJson {
   if ($CookieJar) {
     $curlArgs += @("-b", $CookieJar, "-c", $CookieJar)
   }
+  $bodyFile = ""
   if ($null -ne $Body) {
     $json = $Body | ConvertTo-Json -Depth 12 -Compress
-    $curlArgs += @("-H", "Content-Type: application/json", "-d", $json)
+    $bodyFile = Join-Path $env:TEMP "lidar-ingest-rehearsal-body-$([guid]::NewGuid().ToString('N')).json"
+    Set-Content -LiteralPath $bodyFile -Value $json -Encoding UTF8
+    $curlArgs += @("-H", "Content-Type: application/json", "--data-binary", "@$bodyFile")
   }
   $curlArgs += $Url
 
-  $output = & curl.exe @curlArgs
-  if ($LASTEXITCODE -ne 0) {
-    throw "HTTP $Method $Url failed with exit code $LASTEXITCODE"
+  try {
+    $output = & curl.exe @curlArgs
+    if ($LASTEXITCODE -ne 0) {
+      throw "HTTP $Method $Url failed with exit code $LASTEXITCODE"
+    }
+  } finally {
+    if ($bodyFile -and (Test-Path $bodyFile)) {
+      Remove-Item -LiteralPath $bodyFile -Force
+    }
   }
   if (!$output) { return $null }
   return ($output | ConvertFrom-Json)
@@ -191,7 +200,7 @@ try {
     userId = $UserId
     password = $Password
   }
-  if ($login.token) { throw "Login response exposed token; expected HttpOnly cookie auth." }
+  if ($null -ne $login.PSObject.Properties["token"]) { throw "Login response exposed token; expected HttpOnly cookie auth." }
   $results = Add-Result -Results $results -Name "operator cookie auth login" -Status "PASS" -Response @{
     ok = $login.ok
     authMode = $login.authMode
@@ -362,7 +371,7 @@ $markdownLines = @(
 )
 $markdownLines | Out-File -LiteralPath (Join-Path $outputDir "manifest.md") -Encoding utf8
 
-if (($results | Where-Object { $_.status -ne "PASS" }).Count -gt 0) {
+if (@($results | Where-Object { $_.status -ne "PASS" }).Count -gt 0) {
   throw "LiDAR ingest field rehearsal completed with REVIEW items."
 }
 

@@ -38,7 +38,9 @@ function Invoke-RecordedCommand {
   $startedAt = (Get-Date).ToUniversalTime().ToString("o")
   $output = ""
   $exitCode = 0
+  $previousErrorActionPreference = $ErrorActionPreference
   try {
+    $ErrorActionPreference = "Continue"
     $output = (& $Command 2>&1 | Out-String)
     if ($LASTEXITCODE -ne $null -and $LASTEXITCODE -ne 0) {
       $exitCode = $LASTEXITCODE
@@ -46,6 +48,8 @@ function Invoke-RecordedCommand {
   } catch {
     $output = $_ | Out-String
     $exitCode = 1
+  } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
   }
 
   return [pscustomobject]@{
@@ -71,15 +75,24 @@ function Invoke-CurlJson {
   if ($CookieJar) {
     $curlArgs += @("-b", $CookieJar, "-c", $CookieJar)
   }
+  $bodyFile = ""
   if ($null -ne $Body) {
     $json = $Body | ConvertTo-Json -Depth 12 -Compress
-    $curlArgs += @("-H", "Content-Type: application/json", "-d", $json)
+    $bodyFile = Join-Path $env:TEMP "lidar-db-rehearsal-body-$([guid]::NewGuid().ToString('N')).json"
+    Set-Content -LiteralPath $bodyFile -Value $json -Encoding UTF8
+    $curlArgs += @("-H", "Content-Type: application/json", "--data-binary", "@$bodyFile")
   }
   $curlArgs += $Url
 
-  $output = & curl.exe @curlArgs
-  if ($LASTEXITCODE -ne 0) {
-    throw "HTTP $Method $Url failed with exit code $LASTEXITCODE"
+  try {
+    $output = & curl.exe @curlArgs
+    if ($LASTEXITCODE -ne 0) {
+      throw "HTTP $Method $Url failed with exit code $LASTEXITCODE"
+    }
+  } finally {
+    if ($bodyFile -and (Test-Path $bodyFile)) {
+      Remove-Item -LiteralPath $bodyFile -Force
+    }
   }
   if (!$output) { return $null }
   return ($output | ConvertFrom-Json)
@@ -135,6 +148,12 @@ function Get-GitState {
   }
 }
 
+function Test-ComposeBackendRunning {
+  $services = & docker compose ps --services --filter "status=running" 2>$null
+  if ($LASTEXITCODE -ne 0 -or $null -eq $services) { return $false }
+  return @($services) -contains "backend"
+}
+
 $runId = (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmss")
 $outputDir = Join-Path $OutputRoot $runId
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
@@ -161,13 +180,19 @@ try {
   if ($RunSeed) {
     $results += Invoke-RecordedCommand -Name "npm run db:seed" -Command { npm.cmd run db:seed }
   }
-  $results += Invoke-RecordedCommand -Name "npm run db:status" -Command { npm.cmd run db:status }
+  if (Test-ComposeBackendRunning) {
+    $results += Invoke-RecordedCommand -Name "docker compose backend prisma migrate status" -Command {
+      docker compose exec -T backend npx prisma migrate status
+    }
+  } else {
+    $results += Invoke-RecordedCommand -Name "npm run db:status" -Command { npm.cmd run db:status }
+  }
 
   $login = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/auth/login" -CookieJar $cookieJar -Body @{
     userId = $UserId
     password = $Password
   }
-  if ($login.token) { throw "Login response exposed token; expected HttpOnly cookie auth." }
+  if ($null -ne $login.PSObject.Properties["token"]) { throw "Login response exposed token; expected HttpOnly cookie auth." }
 
   $databaseHealth = Invoke-CurlJson -Url "$BaseUrl/api/database/health" -CookieJar $cookieJar
   if (!$databaseHealth.ok -or $databaseHealth.database -ne "postgresql" -or !$databaseHealth.tables) {
@@ -282,7 +307,7 @@ try {
   )
   $markdownLines | Out-File -LiteralPath (Join-Path $outputDir "manifest.md") -Encoding utf8
 
-  if (($results | Where-Object { $_.status -ne "PASS" }).Count -gt 0) {
+  if (@($results | Where-Object { $_.status -ne "PASS" }).Count -gt 0) {
     throw "DB Prisma field rehearsal completed with REVIEW items."
   }
 

@@ -115,6 +115,58 @@ function writeManifest(config, runId, options) {
   return path.relative(root, path.join(outputDir, "manifest.json")).replace(/\\/g, "/");
 }
 
+function isPassRehearsalManifest(manifest) {
+  if (!manifest?.data || manifest.data.evidenceType !== "FIELD_REHEARSAL_PASS") return false;
+  const results = Array.isArray(manifest.data.results) ? manifest.data.results : [];
+  return results.length > 0 && results.every((result) => result.status === "PASS");
+}
+
+function readLatestPassRehearsalManifest(outputRoot) {
+  const absoluteRoot = path.join(root, outputRoot);
+  if (!fs.existsSync(absoluteRoot)) return null;
+
+  const candidates = fs
+    .readdirSync(absoluteRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort()
+    .reverse();
+
+  for (const candidate of candidates) {
+    const manifestPath = path.join(absoluteRoot, candidate, "manifest.json");
+    if (!fs.existsSync(manifestPath)) continue;
+    try {
+      const data = JSON.parse(fs.readFileSync(manifestPath, "utf8").replace(/^\uFEFF/, ""));
+      const manifest = {
+        path: path.relative(root, manifestPath).replace(/\\/g, "/"),
+        data,
+      };
+      if (isPassRehearsalManifest(manifest)) return manifest;
+    } catch {
+      // Ignore malformed historical evidence and continue looking for a valid PASS manifest.
+    }
+  }
+
+  return null;
+}
+
+function writeUnavailableUnlessPassExists(config, runId, options) {
+  const passManifest = readLatestPassRehearsalManifest(config.outputRoot);
+  if (passManifest) {
+    return {
+      path: passManifest.path,
+      reused: true,
+      evidenceType: passManifest.data.evidenceType,
+    };
+  }
+
+  return {
+    path: writeManifest(config, runId, options),
+    reused: false,
+    evidenceType: "FIELD_REHEARSAL_UNAVAILABLE",
+  };
+}
+
 function main() {
   const runId = timestampForPath();
   const reason = argValue(
@@ -161,7 +213,7 @@ function main() {
   ];
 
   const manifests = configs.map((config) =>
-    writeManifest(config, runId, {
+    writeUnavailableUnlessPassExists(config, runId, {
       reason,
       reviewer,
       siteName,
@@ -171,7 +223,10 @@ function main() {
     }),
   );
   console.log("field rehearsal unavailable evidence written:");
-  manifests.forEach((manifest) => console.log(`- ${manifest}`));
+  manifests.forEach((manifest) => {
+    const label = manifest.reused ? "reused PASS" : "written REVIEW";
+    console.log(`- ${manifest.path} (${label}, ${manifest.evidenceType})`);
+  });
 }
 
 if (require.main === module) {

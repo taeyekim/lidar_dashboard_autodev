@@ -44,15 +44,24 @@ function Invoke-CurlJson {
   if ($CsrfToken) {
     $curlArgs += @("-H", "X-CSRF-Token: $CsrfToken")
   }
+  $bodyFile = ""
   if ($null -ne $Body) {
     $json = $Body | ConvertTo-Json -Depth 12 -Compress
-    $curlArgs += @("-H", "Content-Type: application/json", "-d", $json)
+    $bodyFile = Join-Path $env:TEMP "lidar-control-board-rehearsal-body-$([guid]::NewGuid().ToString('N')).json"
+    Set-Content -LiteralPath $bodyFile -Value $json -Encoding UTF8
+    $curlArgs += @("-H", "Content-Type: application/json", "--data-binary", "@$bodyFile")
   }
   $curlArgs += $Url
 
-  $output = & curl.exe @curlArgs
-  if ($LASTEXITCODE -ne 0) {
-    throw "HTTP $Method $Url failed with exit code $LASTEXITCODE"
+  try {
+    $output = & curl.exe @curlArgs
+    if ($LASTEXITCODE -ne 0) {
+      throw "HTTP $Method $Url failed with exit code $LASTEXITCODE"
+    }
+  } finally {
+    if ($bodyFile -and (Test-Path $bodyFile)) {
+      Remove-Item -LiteralPath $bodyFile -Force
+    }
   }
   if (!$output) { return $null }
   return ($output | ConvertFrom-Json)
@@ -129,7 +138,8 @@ function Assert-CommandEvidence {
   if ($Command.commandType -ne $CommandType) {
     throw "$CommandType rehearsal returned commandType $($Command.commandType)."
   }
-  if (!$Command.packetHex -or $Command.packetHex.Length -ne 20) {
+  $normalizedPacketHex = ([string]$Command.packetHex) -replace "\s+", ""
+  if (!$normalizedPacketHex -or $normalizedPacketHex.Length -ne 20 -or $normalizedPacketHex -notmatch "^[0-9A-Fa-f]{20}$") {
     throw "$CommandType rehearsal packetHex must be a 10-byte binary frame encoded as 20 hex characters."
   }
   if ($Mode -ne "LIVE_TCP") {
@@ -209,7 +219,7 @@ try {
     userId = $UserId
     password = $Password
   }
-  if ($login.token) { throw "Login response exposed token; expected HttpOnly cookie auth." }
+  if ($null -ne $login.PSObject.Properties["token"]) { throw "Login response exposed token; expected HttpOnly cookie auth." }
   $csrfToken = Get-CookieJarValue -CookieJar $cookieJar -Name $csrfCookieName
   if (!$csrfToken) { throw "Login did not set CSRF cookie $csrfCookieName." }
   $results = Add-Result -Results $results -Name "operator cookie auth login" -Status "PASS" -Response @{
@@ -316,7 +326,7 @@ try {
   )
   $markdownLines | Out-File -LiteralPath (Join-Path $outputDir "manifest.md") -Encoding utf8
 
-  if (($results | Where-Object { $_.status -ne "PASS" }).Count -gt 0) {
+  if (@($results | Where-Object { $_.status -ne "PASS" }).Count -gt 0) {
     throw "Control-board field rehearsal completed with REVIEW items."
   }
 

@@ -135,9 +135,25 @@ function readLatestJsonManifest(outputRoot) {
     .reverse();
 
   if (manifests.length === 0) return null;
-  const manifestContent = fs.readFileSync(manifests[0], "utf8").replace(/^\uFEFF/, "");
+  const fieldRehearsalRoots = new Set([
+    "artifacts/field-db-rehearsal",
+    "artifacts/field-lidar-rehearsal",
+    "artifacts/field-control-board-rehearsal",
+  ]);
+  const selectedManifest = fieldRehearsalRoots.has(outputRoot)
+    ? manifests.find((manifestPath) => {
+        try {
+          const data = JSON.parse(fs.readFileSync(manifestPath, "utf8").replace(/^\uFEFF/, ""));
+          const results = Array.isArray(data.results) ? data.results : [];
+          return data.evidenceType === "FIELD_REHEARSAL_PASS" && results.length > 0 && results.every((result) => result.status === "PASS");
+        } catch {
+          return false;
+        }
+      }) || manifests[0]
+    : manifests[0];
+  const manifestContent = fs.readFileSync(selectedManifest, "utf8").replace(/^\uFEFF/, "");
   return {
-    path: path.relative(root, manifests[0]).replace(/\\/g, "/"),
+    path: path.relative(root, selectedManifest).replace(/\\/g, "/"),
     data: JSON.parse(manifestContent),
   };
 }
