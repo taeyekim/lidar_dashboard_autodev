@@ -552,7 +552,31 @@ Before real TCP:
 
 ```bash
 npm run verify:control-board-protocol
+npm run verify:control-board-tcp-simulator
 ```
+
+To rehearse the raw TCP ACK path before the real board is connected, run the
+local simulator in a separate terminal:
+
+```bash
+npm run control-board:simulator -- --host=127.0.0.1 --port=19085
+```
+
+Then point a temporary local rehearsal environment at that port only after the
+operator and hardware owner agree this is a simulator session:
+
+```powershell
+$env:CONTROL_BOARD_HOST="127.0.0.1"
+$env:CONTROL_BOARD_PORT="19085"
+$env:CONTROL_BOARD_DRY_RUN="false"
+$env:CONTROL_BOARD_LIVE_APPROVED="true"
+$env:CONTROL_BOARD_CONNECT_TIMEOUT_MS="1000"
+$env:CONTROL_BOARD_RESPONSE_TIMEOUT_MS="1000"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -AllowLiveTcp
+```
+
+This simulator evidence proves the dashboard TCP send/ACK parser path; it does
+not replace the final integrated control-board LIVE TCP ACK evidence.
 
 Focused command lifecycle rehearsal:
 

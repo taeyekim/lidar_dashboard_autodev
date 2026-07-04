@@ -29,9 +29,11 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
 const deliveryEvidenceMatrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
 const runtimeSmoke = readProjectFile("scripts/runtime-smoke.ps1");
 const packageJson = readProjectFile("package.json");
+const serverPackageJson = readProjectFile("dashboard/server/package.json");
 const evidenceScript = readProjectFile("dashboard/server/scripts/generate-delivery-evidence.js");
 const securityEvidenceScript = readProjectFile("dashboard/server/scripts/generate-security-evidence.js");
 const runtimeEvidenceScript = readProjectFile("dashboard/server/scripts/generate-runtime-evidence.js");
+const controlBoardSimulator = readProjectFile("dashboard/server/scripts/control-board-tcp-simulator.js");
 const securityScanScript = readProjectFile("scripts/security-scan.ps1");
 const fieldPreflightScript = readProjectFile("scripts/field-preflight.ps1");
 const fieldAcceptanceScript = readProjectFile("scripts/field-acceptance.ps1");
@@ -312,6 +314,12 @@ assert(
   [runtimeSmoke, "missing X-Device-Key control-board ingest smoke", "runtime smoke script"],
   [runtimeSmoke, "/api/ingest/lidar", "runtime smoke script"],
   [runtimeSmoke, "/api/ingest/control-board", "runtime smoke script"],
+  [controlBoardSimulator, "createSimulator", "control-board TCP simulator"],
+  [controlBoardSimulator, "calculateCrc8Smbus", "control-board TCP simulator"],
+  [controlBoardSimulator, "TYPE_RESPONSE_LOG", "control-board TCP simulator"],
+  [controlBoardSimulator, "10-byte command frame", "control-board TCP simulator"],
+  [packageJson, "verify:control-board-tcp-simulator", "root package scripts"],
+  [serverPackageJson, "verify-control-board-tcp-simulator.js", "server verify chain"],
 ].forEach(([content, token, label]) => {
   assert(content.includes(token), `${label} is missing ${token}`);
 });

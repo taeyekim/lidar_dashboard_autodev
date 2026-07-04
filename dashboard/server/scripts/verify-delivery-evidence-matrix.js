@@ -45,6 +45,7 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "npm run verify:wrongway-contracts",
   "npm run verify:control-board-protocol",
   "npm run verify:control-board-tcp",
+  "npm run verify:control-board-tcp-simulator",
   "npm run verify:control-board-latency",
   "npm run verify:frontend-ui-contracts",
   "npm run verify:realtime-contracts",
