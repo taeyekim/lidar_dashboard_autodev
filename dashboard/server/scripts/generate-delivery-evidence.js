@@ -9,6 +9,16 @@ const {
 const root = path.join(__dirname, "..", "..", "..");
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 
+function argValue(name, fallback) {
+  const prefix = `--${name}=`;
+  const match = process.argv.find((arg) => arg.startsWith(prefix));
+  return match ? match.slice(prefix.length) : fallback;
+}
+
+function hasFlag(name) {
+  return process.argv.includes(`--${name}`);
+}
+
 function timestampForPath(date = new Date()) {
   return date.toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-");
 }
@@ -923,6 +933,14 @@ function buildMarkdown(manifest) {
 function main() {
   const outputRootArg = process.argv.find((arg) => arg.startsWith("--output-root="));
   const outputRoot = outputRootArg ? outputRootArg.slice("--output-root=".length) : "artifacts/delivery";
+  const baseUrl = argValue("base-url", "http://localhost:8080");
+  const targetUrl = argValue("target-url", baseUrl);
+  const runSmoke = hasFlag("run-smoke");
+  const useExistingStack = hasFlag("use-existing-stack");
+  const includeContainerImages = hasFlag("include-container-images");
+  const includeZap = hasFlag("include-zap");
+  const requireScanners = hasFlag("require-scanners");
+  const useDockerScanners = hasFlag("use-docker-scanners");
   const outputDir = path.join(root, outputRoot, timestampForPath());
   ensureDir(outputDir);
   const companionEvidence = {
@@ -945,6 +963,17 @@ function main() {
     outputRoot: "artifacts/field-preflight",
   };
 
+  const runtimeEvidenceArgs = ["run", "runtime:evidence", "--", `--output-root=${companionEvidence.runtime.outputRoot}`];
+  if (runSmoke) runtimeEvidenceArgs.push("--run-smoke");
+  if (useExistingStack) runtimeEvidenceArgs.push("--use-existing-stack");
+  runtimeEvidenceArgs.push(`--base-url=${baseUrl}`);
+
+  const securityEvidenceArgs = ["run", "security:evidence", "--", `--output-root=${companionEvidence.security.outputRoot}`, `--target-url=${targetUrl}`];
+  if (includeContainerImages) securityEvidenceArgs.push("--include-container-images");
+  if (includeZap) securityEvidenceArgs.push("--include-zap");
+  if (requireScanners) securityEvidenceArgs.push("--require-scanners");
+  if (useDockerScanners) securityEvidenceArgs.push("--use-docker-scanners");
+
   const commands = [
     ["smoke", npmCommand, ["run", "smoke"]],
     ["server test", npmCommand, ["run", "server:test"]],
@@ -952,8 +981,8 @@ function main() {
     ["ci", npmCommand, ["run", "ci"]],
     ["audit policy", npmCommand, ["run", "verify:audit-policy"]],
     ["docker compose config", "docker", ["compose", "config", "--quiet"]],
-    ["runtime evidence", npmCommand, ["run", "runtime:evidence", "--", `--output-root=${companionEvidence.runtime.outputRoot}`]],
-    ["security evidence", npmCommand, ["run", "security:evidence", "--", `--output-root=${companionEvidence.security.outputRoot}`]],
+    ["runtime evidence", npmCommand, runtimeEvidenceArgs],
+    ["security evidence", npmCommand, securityEvidenceArgs],
   ].map(([label, command, args]) => runCommand(label, command, args));
 
   companionEvidence.summaries = [
@@ -991,6 +1020,16 @@ function main() {
   const manifest = {
     generatedAt: new Date().toISOString(),
     git: buildGitState(),
+    options: {
+      baseUrl,
+      targetUrl,
+      runSmoke,
+      useExistingStack,
+      includeContainerImages,
+      includeZap,
+      requireScanners,
+      useDockerScanners,
+    },
     commands: commands.map((item) => ({
       label: item.label,
       command: item.command,

@@ -509,7 +509,22 @@ function main() {
   ensureDir(outputDir);
 
   const commands = [
-    ["delivery evidence", ["run", "delivery:evidence"]],
+    [
+      "delivery evidence",
+      [
+        "run",
+        "delivery:evidence",
+        "--",
+        "--run-smoke",
+        "--use-existing-stack",
+        "--include-container-images",
+        "--include-zap",
+        "--require-scanners",
+        "--use-docker-scanners",
+        `--base-url=${baseUrl}`,
+        `--target-url=${baseUrl}`,
+      ],
+    ],
     ["field readiness", ["run", "field:readiness", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["field risk register", ["run", "field:risk-register", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["manual evidence drafts", ["run", "manual:evidence-drafts", "--", `--base-url=${baseUrl}`, `--site-name=${siteName}`, `--reviewer=${generatedBy}`]],
