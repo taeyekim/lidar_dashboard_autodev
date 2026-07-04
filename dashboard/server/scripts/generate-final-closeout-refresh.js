@@ -333,6 +333,22 @@ function buildSteps(options) {
       purpose: "Repackage the handover bundle after final bundle handoff is generated so the delivery package indexes the latest reviewer-facing closeout files.",
       doneWhen: "Handover package evidenceRefs.finalBundleHandoff points to the latest final-bundle-handoff manifest.",
     },
+    {
+      id: "final-status-final-index",
+      phase: "Final Decision",
+      command: npm,
+      args: ["run", "final:status", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Refresh final status after the final handover package index so remaining gates point at the latest handover manifest.",
+      doneWhen: "Final status evidenceRefs.handoverPackage points to the latest handover-package manifest.",
+    },
+    {
+      id: "final-gate-classification-final-index",
+      phase: "Final Decision",
+      command: npm,
+      args: ["run", "final:gate-classification", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Reclassify remaining gates after final status has indexed the latest handover package.",
+      doneWhen: "Final gate classification sourceFinalStatus points to the latest final-status manifest.",
+    },
   );
 
   return steps.map((step, index) => ({ order: index + 1, ...step }));
