@@ -268,8 +268,9 @@ After the action board exists, run
 It writes `artifacts/field-owner-briefs/<timestamp>/manifest.json`,
 `manifest.md`, and one markdown file per owner. These briefs split the latest
 action board into owner-specific commands, evidence paths, and close criteria
-for field handoff, including owner-specific `Execution Queue` rows; they do
-not replace reviewer-filled evidence.
+for field handoff, including `ownerBriefs`, `briefFileIndex`, and
+owner-specific `Execution Queue` rows; they do not replace reviewer-filled
+evidence.
 
 For the final attachment refresh, run
 `npm.cmd run handover:package -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`. Replace

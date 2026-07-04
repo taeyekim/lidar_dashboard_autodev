@@ -195,6 +195,13 @@ function buildManifest(input = {}) {
     commandCount: (group.commands || []).length,
     executionQueueCount: ownerExecutionQueue(group, actionBoard?.data?.executionQueue || []).length,
   }));
+  const briefFileIndex = briefs.map((brief) => ({
+    owner: brief.owner,
+    fileName: brief.fileName,
+    openItemCount: brief.openItemCount,
+    commandCount: brief.commandCount,
+    executionQueueCount: brief.executionQueueCount,
+  }));
 
   return {
     generatedAt: input.generatedAt || new Date().toISOString(),
@@ -207,6 +214,8 @@ function buildManifest(input = {}) {
     ownerCount: briefs.length,
     openItemCount: briefs.reduce((sum, item) => sum + item.openItemCount, 0),
     briefs,
+    ownerBriefs: briefs,
+    briefFileIndex,
     git: buildGitState(input.git),
     guardrails: [
       "Owner briefs split the latest field action board for field execution.",
@@ -247,6 +256,17 @@ function buildMarkdown(manifest) {
             `| ${markdownCell(item.owner)} | \`${markdownCell(item.fileName)}\` | ${item.openItemCount} | ${item.commandCount} | ${item.executionQueueCount} | ${markdownCell(JSON.stringify(item.priorityCounts))} | ${markdownCell(JSON.stringify(item.phaseCounts))} | ${markdownCell(JSON.stringify(item.actionTypeCounts))} |`,
         )
       : ["| none | - | 0 | 0 | 0 | {} | {} | {} |"]),
+    "",
+    "## Brief File Index",
+    "",
+    "| Owner | File | Open Items | Commands | Queue Items |",
+    "| --- | --- | --- | --- | --- |",
+    ...(manifest.briefFileIndex.length > 0
+      ? manifest.briefFileIndex.map(
+          (item) =>
+            `| ${markdownCell(item.owner)} | \`${markdownCell(item.fileName)}\` | ${item.openItemCount} | ${item.commandCount} | ${item.executionQueueCount} |`,
+        )
+      : ["| none | - | 0 | 0 | 0 |"]),
     "",
   ].join("\n");
 }

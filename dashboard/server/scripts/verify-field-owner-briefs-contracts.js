@@ -36,6 +36,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "artifacts/field-owner-briefs",
   "Field Owner Briefs",
   "sourceFieldActionBoard",
+  "ownerBriefs",
+  "briefFileIndex",
+  "Brief File Index",
   "Owner briefs split the latest field action board",
   "do not replace manual evidence",
   "Phase counts",
@@ -66,9 +69,12 @@ assertIncludes(finalExecutionPlan, "field-owner-briefs", "final execution plan g
 assertIncludes(finalExecutionPlan, "npm.cmd run field:owner-briefs", "final execution plan generator");
 assertIncludes(runbook, "npm.cmd run field:owner-briefs", "delivery runbook");
 assertIncludes(runbook, "artifacts/field-owner-briefs/<timestamp>/manifest.json", "delivery runbook");
+assertIncludes(runbook, "briefFileIndex", "delivery runbook");
 assertIncludes(runbook, "owner-specific `Execution Queue` rows", "delivery runbook");
 assertIncludes(checklist, "npm run field:owner-briefs", "acceptance checklist");
 assertIncludes(checklist, "artifacts/field-owner-briefs/<timestamp>/manifest.json", "acceptance checklist");
+assertIncludes(checklist, "ownerBriefs", "acceptance checklist");
+assertIncludes(checklist, "briefFileIndex", "acceptance checklist");
 assertIncludes(checklist, "owner-specific `Execution Queue` rows", "acceptance checklist");
 assertIncludes(matrix, "field:owner-briefs", "delivery evidence matrix");
 assertIncludes(matrix, "artifacts/field-owner-briefs/<timestamp>/manifest.json", "delivery evidence matrix");
@@ -156,6 +162,8 @@ assert(manifest.status === "OPEN", "fixture with owner groups should be OPEN");
 assert(manifest.ownerCount === 1, "manifest should preserve owner count");
 assert(manifest.openItemCount === 2, "manifest should sum open item counts");
 assert(manifest.briefs[0].fileName === "auth-security.md", "manifest should expose owner brief file names");
+assert(manifest.ownerBriefs[0].fileName === "auth-security.md", "manifest should expose ownerBriefs alias for owner brief file names");
+assert(manifest.briefFileIndex[0].owner === "Auth/Security", "manifest should expose a compact brief file index");
 assert(manifest.briefs[0].phaseCounts["Security Evidence"] === 1, "manifest should expose phase counts");
 assert(manifest.briefs[0].executionQueueCount === 1, "manifest should expose owner execution queue count");
 assert(manifest.sourceFieldActionBoard === actionBoard.path, "manifest should reference source action board");
@@ -166,6 +174,7 @@ assert(indexMarkdown.includes("Field Owner Briefs"), "index markdown should incl
 assert(indexMarkdown.includes("auth-security.md"), "index markdown should include brief file");
 assert(indexMarkdown.includes("Queue Items"), "index markdown should include queue item counts");
 assert(indexMarkdown.includes("Phase Counts"), "index markdown should include phase counts");
+assert(indexMarkdown.includes("Brief File Index"), "index markdown should include compact brief file index");
 
 const ownerMarkdown = buildOwnerBrief(actionBoard.data.ownerGroups[0], actionBoard.path, actionBoard.data.executionQueue);
 assert(ownerMarkdown.includes("Field Owner Brief - Auth/Security"), "owner markdown should include owner title");
