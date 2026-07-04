@@ -413,6 +413,100 @@ function buildResidualFieldGates({
   ];
 }
 
+function buildStrictFailureItems(strictFailureReasons) {
+  return strictFailureReasons.map((reason) => {
+    const text = String(reason || "");
+    if (/package command\(s\) failed/i.test(text)) {
+      return {
+        category: "Automation Command",
+        owner: "Codex",
+        actionType: "AUTOMATED_REFRESH_AVAILABLE",
+        reason: text,
+        command: "npm.cmd run handover:package -- --base-url=<delivery-url> --generated-by=<field-reviewer> --site-name=<delivery-site>",
+        closeWhen: "Review the handover package command logs, fix the failing command, and rerun handover:package.",
+      };
+    }
+    if (/metadata is missing|placeholder/i.test(text)) {
+      return {
+        category: "Reviewer Metadata",
+        owner: "PM + Field Operations",
+        actionType: "FIELD_ACTION_REQUIRED",
+        reason: text,
+        command: "npm.cmd run handover:package -- --generated-by=$env:FIELD_REVIEWER --site-name=$env:FIELD_SITE_NAME",
+        closeWhen: "Use concrete reviewer and delivery-site values instead of placeholders.",
+      };
+    }
+    if (/working tree|git branch|git upstream|not proven pushed/i.test(text)) {
+      return {
+        category: "Source Revision",
+        owner: "Codex",
+        actionType: "AUTOMATED_REFRESH_AVAILABLE",
+        reason: text,
+        command: "git status --short --branch; git push origin dev",
+        closeWhen: "The working tree is clean, branch is dev, upstream is origin/dev, and HEAD is pushed.",
+      };
+    }
+    if (/CI status evidence|CI status evidence manifest/i.test(text)) {
+      return {
+        category: "External CI",
+        owner: "Release/PM",
+        actionType: "REVIEW_REQUIRED",
+        reason: text,
+        command: "npm.cmd run ci:status",
+        closeWhen: "A PASS CI status manifest exists for the final dev commit, or approved ci:closeout dispatch evidence is attached.",
+      };
+    }
+    if (/manual evidence item\(s\)/i.test(text)) {
+      return {
+        category: "Manual Evidence",
+        owner: "Field Operations + PM",
+        actionType: "FIELD_ACTION_REQUIRED",
+        reason: text,
+        command: "npm.cmd run manual:evidence-drafts; npm.cmd run manual:evidence-readiness",
+        closeWhen: "Required manual evidence files are reviewer-filled, valid, and PRESENT.",
+      };
+    }
+    if (/field evidence has/i.test(text)) {
+      return {
+        category: "Field Evidence",
+        owner: "Field Operations",
+        actionType: "FIELD_ACTION_REQUIRED",
+        reason: text,
+        command: "npm.cmd run field:preflight; npm.cmd run field:acceptance",
+        closeWhen: "The referenced field evidence has zero REVIEW/SKIPPED items.",
+      };
+    }
+    if (/field risk register|field action board|field gate closure map|field owner briefs/i.test(text)) {
+      return {
+        category: "Field Action Artifacts",
+        owner: "Field Operations + PM",
+        actionType: "FIELD_ACTION_REQUIRED",
+        reason: text,
+        command: "npm.cmd run field:risk-register; npm.cmd run field:action-board; npm.cmd run field:gate-closure-map; npm.cmd run field:owner-briefs",
+        closeWhen: "Field risk/action/gate/owner artifacts report READY_TO_CLOSE or no open items.",
+      };
+    }
+    if (/handover package status|canMarkGoalComplete/i.test(text)) {
+      return {
+        category: "Final Handover",
+        owner: "PM + Codex",
+        actionType: "REVIEW_REQUIRED",
+        reason: text,
+        command: "npm.cmd run completion:audit; npm.cmd run handover:package -- --strict",
+        closeWhen: "Completion audit allows final close and strict handover package status is READY.",
+      };
+    }
+    return {
+      category: "Strict Gate",
+      owner: "PM",
+      actionType: "REVIEW_REQUIRED",
+      reason: text,
+      command: "npm.cmd run handover:package -- --strict",
+      closeWhen: "Resolve the strict gate reason and rerun handover:package.",
+    };
+  });
+}
+
 function markdownCell(value) {
   return String(value ?? "").replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
 }
@@ -529,6 +623,17 @@ function buildMarkdown(manifest) {
           (item) => `| ${markdownCell(item.type)} | ${markdownCell(item.command)} | ${markdownCell(item.doneWhen)} |`,
         )
       : ["| none | No field evidence commands required. | - |"]),
+    "",
+    "## Strict Failure Items",
+    "",
+    "| Category | Owner | Action Type | Reason | Command | Close When |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ...(manifest.strictFailureItems.length > 0
+      ? manifest.strictFailureItems.map(
+          (item) =>
+            `| ${markdownCell(item.category)} | ${markdownCell(item.owner)} | ${markdownCell(item.actionType)} | ${markdownCell(item.reason)} | \`${markdownCell(item.command)}\` | ${markdownCell(item.closeWhen)} |`,
+        )
+      : ["| none | - | PASS | No strict failure items. | - | - |"]),
     "",
     "## Commands",
     "",
@@ -673,6 +778,7 @@ function main() {
     fieldEvidenceFollowUps,
     knownLimitations,
   });
+  const strictFailureItems = buildStrictFailureItems(strictFailureReasons);
   const manifest = {
     generatedAt: new Date().toISOString(),
     generatedBy,
@@ -706,6 +812,7 @@ function main() {
     fieldEvidenceCommandRunbook,
     failedCommandCount: failedCommands.length,
     metadataReview,
+    strictFailureItems,
     strictFailureReasons,
   };
 
