@@ -260,6 +260,14 @@ function buildSteps(options) {
       purpose: "Create final execution plan from the latest final status.",
       doneWhen: "Final execution plan sourceFinalStatus points to final-status-pass-2.",
     },
+    {
+      id: "final-bundle-handoff",
+      phase: "Final Decision",
+      command: npm,
+      args: ["run", "final:bundle-handoff", "--", `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Split final execution plan closure bundles into reviewer-facing handoff files.",
+      doneWhen: "Bundle handoff files exist for every open closure bundle and point to the latest final execution plan.",
+    },
   );
 
   return steps.map((step, index) => ({ order: index + 1, ...step }));
@@ -284,6 +292,8 @@ function buildMarkdown(manifest) {
     `- Latest final status remaining gates: ${manifest.latestFinalStatus.remainingGateCount ?? "unknown"}`,
     `- Latest final execution plan: ${manifest.latestFinalExecutionPlan.status} (${manifest.latestFinalExecutionPlan.path || "missing"})`,
     `- Latest final execution plan remaining gates: ${manifest.latestFinalExecutionPlan.remainingGateCount ?? "unknown"}`,
+    `- Latest final bundle handoff: ${manifest.latestFinalBundleHandoff.status} (${manifest.latestFinalBundleHandoff.path || "missing"})`,
+    `- Latest final bundle handoff bundle count: ${manifest.latestFinalBundleHandoff.bundleCount ?? "unknown"}`,
     "",
     "## Guardrails",
     "",
@@ -306,6 +316,7 @@ function buildManifest(options, stepResults) {
   const reviewSteps = stepResults.filter((step) => step.status === "REVIEW_RECORDED");
   const latestFinalStatus = readLatestJsonManifest("artifacts/final-status");
   const latestFinalExecutionPlan = readLatestJsonManifest("artifacts/final-execution-plan");
+  const latestFinalBundleHandoff = readLatestJsonManifest("artifacts/final-bundle-handoff");
   const canMarkGoalComplete =
     latestFinalStatus?.data?.status === "READY_TO_CLOSE" &&
     latestFinalStatus?.data?.canMarkGoalComplete === true &&
@@ -333,6 +344,12 @@ function buildManifest(options, stepResults) {
       status: latestFinalExecutionPlan?.data?.status || "MISSING",
       canMarkGoalComplete: latestFinalExecutionPlan?.data?.canMarkGoalComplete === true,
       remainingGateCount: latestFinalExecutionPlan?.data?.remainingGateCount ?? null,
+    },
+    latestFinalBundleHandoff: {
+      path: latestFinalBundleHandoff?.path || null,
+      status: latestFinalBundleHandoff?.data?.status || "MISSING",
+      bundleCount: latestFinalBundleHandoff?.data?.bundleCount ?? null,
+      totalBundleGateCount: latestFinalBundleHandoff?.data?.totalBundleGateCount ?? null,
     },
     includeFieldAcceptance: options.includeFieldAcceptance,
     externalCiDispatch: false,

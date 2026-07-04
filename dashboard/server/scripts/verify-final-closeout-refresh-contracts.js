@@ -34,6 +34,7 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "OPEN_GATES", "final closeout refresh generator"],
   [generator, "latestFinalStatus", "final closeout refresh generator"],
   [generator, "latestFinalExecutionPlan", "final closeout refresh generator"],
+  [generator, "latestFinalBundleHandoff", "final closeout refresh generator"],
   [generator, "Can mark goal complete", "final closeout refresh generator"],
   [generator, "acceptReviewExitCodes", "final closeout refresh generator"],
   [generator, "manual:evidence-readiness", "final closeout refresh generator"],
@@ -54,6 +55,7 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "field:gate-closure-map", "final closeout refresh generator"],
   [generator, "field:owner-briefs", "final closeout refresh generator"],
   [generator, "final:execution-plan", "final closeout refresh generator"],
+  [generator, "final:bundle-handoff", "final closeout refresh generator"],
 ].forEach(([content, token, label]) => assertIncludes(content, token, label));
 
 const steps = buildSteps({
@@ -84,14 +86,16 @@ const ids = steps.map((step) => step.id);
   "handover-package-pass-2",
   "final-status-pass-2",
   "final-execution-plan",
+  "final-bundle-handoff",
 ].forEach((id) => assert(ids.includes(id), `steps should include ${id}`));
 
 assert(
   ids.indexOf("final-status-pass-1") < ids.indexOf("field-action-board") &&
     ids.indexOf("field-action-board") < ids.indexOf("handover-package-pass-2") &&
     ids.indexOf("handover-package-pass-2") < ids.indexOf("final-status-pass-2") &&
-    ids.indexOf("final-status-pass-2") < ids.indexOf("final-execution-plan"),
-  "refresh should converge final status, action artifacts, handover package, final status, then execution plan",
+    ids.indexOf("final-status-pass-2") < ids.indexOf("final-execution-plan") &&
+    ids.indexOf("final-execution-plan") < ids.indexOf("final-bundle-handoff"),
+  "refresh should converge final status, action artifacts, handover package, final status, execution plan, then bundle handoff",
 );
 assert(
   ids.indexOf("field-readiness") < ids.indexOf("field-rehearsal-unavailable") &&
@@ -155,6 +159,7 @@ assert(manifest.reviewRecordedStepCount === 1, "manifest should count review-rec
 assert(manifest.externalCiDispatch === false, "manifest should record that external CI dispatch did not occur");
 assert(manifest.latestFinalStatus, "manifest should include latest final status summary");
 assert(manifest.latestFinalExecutionPlan, "manifest should include latest final execution plan summary");
+assert(manifest.latestFinalBundleHandoff, "manifest should include latest final bundle handoff summary");
 
 const failedManifest = buildManifest(
   {
@@ -186,5 +191,6 @@ assert(markdown.includes("Final Closeout Refresh"), "markdown should include tit
 assert(markdown.includes("This refresh does not dispatch external GitHub Actions"), "markdown should include external CI guardrail");
 assert(markdown.includes("OPEN_GATES"), "markdown should include open gate status");
 assert(markdown.includes("Latest final status"), "markdown should include latest final status summary");
+assert(markdown.includes("Latest final bundle handoff"), "markdown should include latest final bundle handoff summary");
 
 console.log("final closeout refresh contracts ok");
