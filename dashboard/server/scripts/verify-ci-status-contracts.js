@@ -43,6 +43,10 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "actions/permissions", "CI status generator"],
   [generator, "GitHub Actions enabled", "CI status generator"],
   [generator, "workflowState", "CI status generator"],
+  [generator, "ciTriggerDiagnosis", "CI status generator"],
+  [generator, "workflowReadyForRun", "CI status generator"],
+  [generator, "noRunForPushedHead", "CI status generator"],
+  [generator, "workflow is active and Actions are enabled, but no run is visible", "CI status generator"],
   [generator, "closeoutCommands", "CI status generator"],
   [generator, "Read-only status refresh", "CI status generator"],
   [generator, "Approved CI closeout dispatch", "CI status generator"],
@@ -102,6 +106,8 @@ assert(passManifest.workflowState.dispatchConfigured === true, "PASS CI evidence
 assert(passManifest.workflowState.pushConfigured === true, "PASS CI evidence should expose push trigger support");
 assert(passManifest.actionsPermissions.enabled === true, "PASS CI evidence should expose enabled repository Actions permissions");
 assert(passManifest.actionsPermissions.allowedActions === "all", "PASS CI evidence should expose allowed actions policy");
+assert(passManifest.ciTriggerDiagnosis.workflowReadyForRun === true, "PASS CI evidence should mark workflow ready for run");
+assert(passManifest.ciTriggerDiagnosis.noRunForPushedHead === false, "PASS CI evidence should not mark missing pushed-head run");
 assert(passManifest.closeoutCommands.readOnlyStatus === "npm.cmd run ci:status -- --generated-by=reviewer-a", "CI evidence should expose the read-only refresh command");
 assert(passManifest.closeoutCommands.intentionalDispatch === "npm.cmd run ci:closeout -- --dispatch --generated-by=reviewer-a", "CI evidence should expose the approved dispatch closeout command");
 assert(passManifest.closeoutCommands.manualWorkflowDispatch === "gh workflow run CI --ref dev", "CI evidence should expose the underlying workflow dispatch command");
@@ -119,6 +125,23 @@ const staleManifest = buildCiStatusEvidence({
 });
 assert(staleManifest.status === "REVIEW", "stale CI run should require review");
 assert(staleManifest.reviewReasons.some((item) => item.includes("does not match")), "stale CI run should explain headSha mismatch");
+assert(staleManifest.ciTriggerDiagnosis.noRunForPushedHead === true, "stale CI run should diagnose no matching run for pushed head");
+
+const missingRunManifest = buildCiStatusEvidence({
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  git,
+  workflowListResult: { command: "gh workflow list --all", exitCode: 0, stdout: "CI\tactive\t123\n", stderr: "", error: null },
+  workflowDispatchConfigured: true,
+  workflowPushConfiguredForBranch: true,
+  actionsPermissions: passManifest.actionsPermissions,
+  ghResult: { command: "gh run list", exitCode: 0, stdout: "[]", stderr: "", error: null },
+  runs: [],
+});
+assert(missingRunManifest.status === "REVIEW", "missing CI run should require review");
+assert(missingRunManifest.ciTriggerDiagnosis.workflowReadyForRun === true, "missing CI run should record workflow readiness");
+assert(missingRunManifest.ciTriggerDiagnosis.runListEmpty === true, "missing CI run should record an empty run list");
+assert(missingRunManifest.ciTriggerDiagnosis.noRunForPushedHead === true, "missing CI run should diagnose absent pushed-head run");
+assert(missingRunManifest.ciTriggerDiagnosis.diagnosis.includes("no run is visible"), "missing CI run diagnosis should explain absent visible run");
 
 const inactiveWorkflowManifest = buildCiStatusEvidence({
   generatedAt: "2026-01-01T00:00:00.000Z",
@@ -163,7 +186,7 @@ assert(failedToolManifest.nextAction.includes("ci:closeout -- --dispatch"), "mis
 assert(failedToolManifest.nextAction.includes("approved CI closeout window"), "missing CI evidence should require an approved CI closeout window");
 
 const markdown = buildMarkdown(passManifest);
-["CI Status Evidence", "GitHub Actions Run", "Can use for final close", "Workflow dispatch configured", "Workflow push trigger", "GitHub Actions enabled", "Git pushed to origin/dev", "Closeout Commands"].forEach((token) =>
+["CI Status Evidence", "GitHub Actions Run", "Can use for final close", "Workflow dispatch configured", "Workflow push trigger", "GitHub Actions enabled", "workflow ready for run", "no run for pushed head", "trigger diagnosis", "Git pushed to origin/dev", "Closeout Commands"].forEach((token) =>
   assert(markdown.includes(token), `CI status markdown should include ${token}`),
 );
 

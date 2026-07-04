@@ -171,6 +171,34 @@ function buildCiStatusEvidence(input = {}) {
   const runCompleted = latestRun?.status === "completed";
   const runSucceeded = latestRun?.conclusion === "success";
   const ciRunOk = toolAvailable && runMatchesHead && runCompleted && runSucceeded;
+  const workflowReadyForRun =
+    Boolean(workflowInfo) &&
+    workflowInfo.state === "active" &&
+    actionsPermissions.available === true &&
+    actionsPermissions.enabled === true &&
+    dispatchConfigured === true &&
+    pushConfigured === true;
+  const runListEmpty = toolAvailable && runs.length === 0;
+  const noRunForPushedHead = workflowReadyForRun && git.pushed === true && !runMatchesHead;
+  const ciTriggerDiagnosis = {
+    workflowReadyForRun,
+    runListEmpty,
+    noRunForPushedHead,
+    diagnosis:
+      noRunForPushedHead && runListEmpty
+        ? `${workflow} workflow is active and Actions are enabled, but no run is visible for pushed ${branch} commit ${git.commit}.`
+        : noRunForPushedHead
+          ? `${workflow} workflow is active and Actions are enabled, but the visible run does not match pushed ${branch} commit ${git.commit}.`
+          : ciRunOk
+            ? `${workflow} workflow completed successfully for pushed ${branch} commit ${git.commit}.`
+            : `${workflow} workflow run evidence is not ready for final close.`,
+    recommendedAction:
+      noRunForPushedHead
+        ? "Check repository Actions trigger history and branch workflow settings. If no run appears, use the approved external CI closeout window before dispatching CI."
+        : ciRunOk
+          ? "Attach this CI evidence to the final handover package."
+          : "Resolve CI workflow, permission, run status, or branch freshness review reasons.",
+  };
   const reviewReasons = [
     workflowInfo ? "" : `${workflow} workflow is not listed by gh workflow list --all.`,
     workflowInfo && workflowInfo.state !== "active" ? `${workflow} workflow state is ${workflowInfo.state || "missing"} instead of active.` : "",
@@ -232,6 +260,7 @@ function buildCiStatusEvidence(input = {}) {
     runMatchesHead,
     runCompleted,
     runSucceeded,
+    ciTriggerDiagnosis,
     reviewReasons,
     closeoutCommands: {
       readOnlyStatus: `npm.cmd run ci:status -- --generated-by=${generatedBy}`,
@@ -287,6 +316,11 @@ function buildMarkdown(manifest) {
     `| actions permissions command | \`${markdownCell(manifest.actionsPermissions.command || "missing")}\` |`,
     `| actions enabled | ${manifest.actionsPermissions.enabled === null ? "unknown" : manifest.actionsPermissions.enabled ? "yes" : "no"} |`,
     `| allowed actions | ${markdownCell(manifest.actionsPermissions.allowedActions || "missing")} |`,
+    `| workflow ready for run | ${manifest.ciTriggerDiagnosis.workflowReadyForRun ? "yes" : "no"} |`,
+    `| run list empty | ${manifest.ciTriggerDiagnosis.runListEmpty ? "yes" : "no"} |`,
+    `| no run for pushed head | ${manifest.ciTriggerDiagnosis.noRunForPushedHead ? "yes" : "no"} |`,
+    `| trigger diagnosis | ${markdownCell(manifest.ciTriggerDiagnosis.diagnosis)} |`,
+    `| trigger recommended action | ${markdownCell(manifest.ciTriggerDiagnosis.recommendedAction)} |`,
     `| run id | ${markdownCell(manifest.latestRun?.databaseId || "missing")} |`,
     `| head sha | ${markdownCell(manifest.latestRun?.headSha || "missing")} |`,
     `| status | ${markdownCell(manifest.latestRun?.status || "missing")} |`,
