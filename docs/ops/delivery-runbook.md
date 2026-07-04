@@ -95,8 +95,9 @@ and `NGINX_CONTENT_SECURITY_POLICY` under
 After `field:readiness`, run `npm.cmd run field:env-closeout -- --base-url=<delivery-url> --generated-by=<field-reviewer> --site-name=<delivery-site>` to generate
 `artifacts/field-env-closeout/<timestamp>/manifest.json` and `manifest.md`.
 That closeout board groups the redacted field `.env` gaps by owner, lists the
-strict preflight command, and gives key-specific actions without printing secret
-values.
+strict preflight command, gives key-specific actions without printing secret
+values, and adds owner closeout checklists with reviewer/session metadata,
+redacted key placeholders, and the strict preflight rerun command.
 Use `-RequireDeviceKey`, `-RequireHttpsCookies`, `-RequireSwaggerAllowlist`,
 and `-Strict` with `scripts/field-preflight.ps1` or `npm.cmd run field:preflight`
 when those checks should fail instead of being recorded as review/skipped items.

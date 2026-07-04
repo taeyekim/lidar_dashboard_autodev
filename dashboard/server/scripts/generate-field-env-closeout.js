@@ -76,6 +76,39 @@ function buildEnvTemplateLines(items) {
   return (items || []).map((item) => `${item.name}=${envPlaceholderForItem(item)}`);
 }
 
+function buildOwnerCloseoutChecklists(items, strictPreflightCommand) {
+  const ownerMap = (items || []).reduce((acc, item) => {
+    if (!acc[item.owner]) acc[item.owner] = [];
+    acc[item.owner].push(item);
+    return acc;
+  }, {});
+
+  return Object.entries(ownerMap).map(([owner, ownerItems]) => ({
+    owner,
+    stepCount: ownerItems.length + 2,
+    steps: [
+      {
+        order: 1,
+        title: "Set reviewer/session metadata",
+        command: '$env:FIELD_REVIEWER="<field-reviewer>"; $env:FIELD_SITE_NAME="<delivery-site>"',
+        doneWhen: "FIELD_REVIEWER and FIELD_SITE_NAME are concrete delivery-session values.",
+      },
+      ...ownerItems.map((item, index) => ({
+        order: index + 2,
+        title: `Set ${item.name}`,
+        command: `${item.name}=${envPlaceholderForItem(item)}`,
+        doneWhen: item.closeoutCommand,
+      })),
+      {
+        order: ownerItems.length + 2,
+        title: "Rerun strict field preflight",
+        command: strictPreflightCommand,
+        doneWhen: "The latest field preflight manifest has no REVIEW/SKIPPED item for this owner's keys.",
+      },
+    ],
+  }));
+}
+
 function buildManifest(options = {}) {
   const readiness = Object.prototype.hasOwnProperty.call(options, "readiness")
     ? options.readiness
@@ -121,6 +154,8 @@ function buildManifest(options = {}) {
     };
   });
 
+  const strictPreflightCommand = `npm.cmd run field:preflight -- -BaseUrl ${baseUrl} -Reviewer "$env:FIELD_REVIEWER" -SiteName "$env:FIELD_SITE_NAME" -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -Strict`;
+
   return {
     generatedAt: options.generatedAt || new Date().toISOString(),
     generatedBy: options.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
@@ -138,9 +173,10 @@ function buildManifest(options = {}) {
     closeoutItemCount: closeoutItems.length,
     ownerGroups: Object.values(ownerGroups),
     ownerEnvTemplates,
+    ownerCloseoutChecklists: buildOwnerCloseoutChecklists(closeoutItems, strictPreflightCommand),
     envTemplateLines: buildEnvTemplateLines(closeoutItems),
     closeoutItems,
-    strictPreflightCommand: `npm.cmd run field:preflight -- -BaseUrl ${baseUrl} -Reviewer "$env:FIELD_REVIEWER" -SiteName "$env:FIELD_SITE_NAME" -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -Strict`,
+    strictPreflightCommand,
   };
 }
 
@@ -204,6 +240,23 @@ function buildMarkdown(manifest) {
           "",
         ])
       : ["No owner-specific env skeletons remain.", ""]),
+    "## Owner Closeout Checklists",
+    "",
+    ...(manifest.ownerCloseoutChecklists.length > 0
+      ? manifest.ownerCloseoutChecklists.flatMap((group) => [
+          `### ${group.owner}`,
+          "",
+          `- Step count: ${group.stepCount}`,
+          "",
+          "| Order | Step | Command / Placeholder | Done When |",
+          "| --- | --- | --- | --- |",
+          ...group.steps.map(
+            (step) =>
+              `| ${step.order} | ${markdownCell(step.title)} | \`${markdownCell(step.command)}\` | ${markdownCell(step.doneWhen)} |`,
+          ),
+          "",
+        ])
+      : ["No owner closeout checklists remain.", ""]),
     "## Closeout Items",
     "",
     "| Priority | Owner | Env Key | State | Redacted | Completion Gate | Next Action | Closeout Command |",
@@ -241,6 +294,7 @@ module.exports = {
   buildManifest,
   buildMarkdown,
   actionCommandForItem,
+  buildOwnerCloseoutChecklists,
   buildEnvTemplateLines,
   envPlaceholderForItem,
 };
