@@ -1,6 +1,7 @@
 const {
   buildMarkdown,
   buildScannerCloseout,
+  dockerScannerSkipped,
   requiredScannerFailure,
   scannerCloseoutDefinitions,
   securityDisposition,
@@ -29,6 +30,17 @@ assert(requiredScannerFailure(skippedGitleaks, false) === false, "skipped scanne
 assert(requiredScannerFailure(skippedGitleaks, true) === true, "skipped scanner should block when scanners are required");
 assert(requiredScannerFailure(skipped("trivy backend image scan", "backend image missing"), true) === true, "skipped backend image scan should block when scanners are required");
 assert(requiredScannerFailure(skipped("trivy frontend image scan", "frontend image missing"), true) === true, "skipped frontend image scan should block when scanners are required");
+
+const skippedBecauseDockerDaemon = dockerScannerSkipped("gitleaks secret scan", "gitleaks", {
+  requested: true,
+  cliAvailable: true,
+  daemonReachable: false,
+  error: "Cannot connect to Docker daemon",
+});
+assert(
+  skippedBecauseDockerDaemon.reason.includes("Docker CLI is installed but Docker daemon is not reachable"),
+  "Docker fallback skip should distinguish missing daemon from missing scanner command",
+);
 
 const unverifiedGitleaks = withDisposition(skippedGitleaks, false);
 assert(unverifiedGitleaks.disposition.code === "UNVERIFIED", "optional skipped scanner should be UNVERIFIED");
@@ -121,6 +133,15 @@ const markdown = buildMarkdown({
     pushed: true,
   },
   options: { includeContainerImages: true, includeZap: true, requireScanners: true, useDockerScanners: true },
+  dockerScannerRuntime: {
+    requested: true,
+    cliAvailable: true,
+    daemonReachable: false,
+    ready: false,
+    command: "docker info --format {{.ServerVersion}}",
+    version: null,
+    error: "Cannot connect to Docker daemon",
+  },
   strictAcceptanceBlocked: true,
   dispositionSummary: summary,
   toolInventory: [],
@@ -139,6 +160,9 @@ const markdown = buildMarkdown({
   "Git pushed to origin/dev",
   "Working tree clean",
   "Use Docker scanner fallback",
+  "Docker Scanner Runtime",
+  "Docker scanner runtime ready",
+  "Cannot connect to Docker daemon",
   "--use-docker-scanners",
   "BLOCKING",
   "RISK_ACCEPTED",

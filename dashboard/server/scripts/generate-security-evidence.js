@@ -74,6 +74,48 @@ function buildToolInventory(useDockerScanners = false) {
   return inventory;
 }
 
+function buildDockerScannerRuntime(useDockerScanners = false) {
+  if (!useDockerScanners) {
+    return {
+      requested: false,
+      cliAvailable: commandExists("docker"),
+      daemonReachable: false,
+      ready: false,
+      command: "docker info --format {{.ServerVersion}}",
+      version: null,
+      exitCode: null,
+      error: "--use-docker-scanners was not provided",
+    };
+  }
+
+  if (!commandExists("docker")) {
+    return {
+      requested: true,
+      cliAvailable: false,
+      daemonReachable: false,
+      ready: false,
+      command: "docker info --format {{.ServerVersion}}",
+      version: null,
+      exitCode: null,
+      error: "docker command is not installed",
+    };
+  }
+
+  const result = runCommand("docker daemon readiness", "docker", ["info", "--format", "{{.ServerVersion}}"]);
+  const version = firstMeaningfulLine(result.stdout);
+  const error = firstMeaningfulLine(result.stderr) || result.error || null;
+  return {
+    requested: true,
+    cliAvailable: true,
+    daemonReachable: result.exitCode === 0,
+    ready: result.exitCode === 0,
+    command: result.command,
+    version: result.exitCode === 0 ? version || "Docker daemon reachable" : null,
+    exitCode: result.exitCode,
+    error: result.exitCode === 0 ? null : error || "Docker daemon is not reachable",
+  };
+}
+
 const scannerCloseoutDefinitions = [
   {
     scanner: "gitleaks",
@@ -191,8 +233,12 @@ function dockerTargetUrl(targetUrl) {
   return String(targetUrl || "").replace(/^http:\/\/(localhost|127\.0\.0\.1)(?=[:/]|$)/i, "http://host.docker.internal");
 }
 
-function dockerScannerSkipped(label, scannerName) {
-  return skipped(label, `${scannerName} command is not installed and --use-docker-scanners was not provided or Docker is unavailable`);
+function dockerScannerSkipped(label, scannerName, dockerScannerRuntime = null) {
+  const dockerReason =
+    dockerScannerRuntime?.requested && dockerScannerRuntime?.cliAvailable && !dockerScannerRuntime?.daemonReachable
+      ? `Docker CLI is installed but Docker daemon is not reachable: ${dockerScannerRuntime.error || "daemon probe failed"}`
+      : `${scannerName} command is not installed and --use-docker-scanners was not provided or Docker is unavailable`;
+  return skipped(label, dockerReason);
 }
 
 function addDockerTrivyImageScan(checks, outputDir, imageName, label, outputFile) {
@@ -356,6 +402,7 @@ function buildMarkdown(manifest) {
     `- Include ZAP baseline: ${manifest.options.includeZap ? "yes" : "no"}`,
     `- Require scanners: ${manifest.options.requireScanners ? "yes" : "no"}`,
     `- Use Docker scanner fallback: ${manifest.options.useDockerScanners ? "yes" : "no"}`,
+    `- Docker scanner runtime ready: ${manifest.dockerScannerRuntime?.ready ? "yes" : "no"}`,
     `- Strict acceptance blocked: ${manifest.strictAcceptanceBlocked ? "yes" : "no"}`,
     "",
     "## Security Disposition Summary",
@@ -377,6 +424,15 @@ function buildMarkdown(manifest) {
       `| ${tableValue(item.command)} | ${item.available ? "yes" : "no"} | \`${tableValue(item.versionCommand)}\` | ${tableValue(item.available ? item.version : item.error)} |`,
     );
   });
+
+  lines.push(
+    "",
+    "## Docker Scanner Runtime",
+    "",
+    "| Requested | CLI Available | Daemon Reachable | Ready | Command | Version Or Reason |",
+    "| --- | --- | --- | --- | --- | --- |",
+    `| ${manifest.dockerScannerRuntime?.requested ? "yes" : "no"} | ${manifest.dockerScannerRuntime?.cliAvailable ? "yes" : "no"} | ${manifest.dockerScannerRuntime?.daemonReachable ? "yes" : "no"} | ${manifest.dockerScannerRuntime?.ready ? "yes" : "no"} | \`${tableValue(manifest.dockerScannerRuntime?.command || "docker info --format {{.ServerVersion}}")}\` | ${tableValue(manifest.dockerScannerRuntime?.version || manifest.dockerScannerRuntime?.error || "not requested")} |`,
+  );
 
   lines.push(
     "",
@@ -442,6 +498,7 @@ function buildMarkdown(manifest) {
     "- `npm audit policy gate` is the required automated pass/fail gate for dependency audit findings.",
     "- Optional tools are recorded as `SKIPPED` when not installed or when image/ZAP switches are not provided.",
     "- `--use-docker-scanners` runs gitleaks, Trivy, and OWASP ZAP through Docker images when native commands are unavailable.",
+    "- Docker scanner fallback requires both Docker CLI and a reachable Docker daemon; daemon readiness is recorded separately from scanner results.",
     "- Acceptance classification maps results to PASS, BLOCKING, DELIVERY_FIX, RISK_ACCEPTED, or UNVERIFIED for delivery review.",
     "- Scanner closeout rows list the required switch, expected evidence files, install hint, executable closeout commands, and risk-acceptance path.",
     "- `--require-scanners` treats skipped gitleaks, Trivy, and OWASP ZAP checks as required BLOCKING failures for field acceptance.",
@@ -489,7 +546,8 @@ function main() {
   const outputRoot = outputRootArg ? outputRootArg.slice("--output-root=".length) : "artifacts/security";
   const outputDir = path.join(root, outputRoot, timestampForPath());
   ensureDir(outputDir);
-  const dockerReady = useDockerScanners && commandExists("docker");
+  const dockerScannerRuntime = buildDockerScannerRuntime(useDockerScanners);
+  const dockerReady = dockerScannerRuntime.ready;
   const toolInventory = buildToolInventory(useDockerScanners);
 
   const auditRaw = runCommand("npm audit raw json", npmCommand, ["audit", "--workspaces", "--json"]);
@@ -536,7 +594,7 @@ function main() {
       ]),
     );
   } else {
-    checks.push(dockerScannerSkipped("gitleaks secret scan", "gitleaks"));
+    checks.push(dockerScannerSkipped("gitleaks secret scan", "gitleaks", dockerScannerRuntime));
   }
 
   if (commandExists("trivy")) {
@@ -605,8 +663,8 @@ function main() {
       checks.push(skipped("trivy image scan", "Run with --include-container-images after Docker images are built"));
     }
   } else {
-    checks.push(dockerScannerSkipped("trivy filesystem scan", "trivy"));
-    checks.push(dockerScannerSkipped("trivy image scan", "trivy"));
+    checks.push(dockerScannerSkipped("trivy filesystem scan", "trivy", dockerScannerRuntime));
+    checks.push(dockerScannerSkipped("trivy image scan", "trivy", dockerScannerRuntime));
   }
 
   if (includeZap) {
@@ -635,7 +693,7 @@ function main() {
         ]),
       );
     } else {
-      checks.push(dockerScannerSkipped("OWASP ZAP baseline", "zap-baseline.py"));
+      checks.push(dockerScannerSkipped("OWASP ZAP baseline", "zap-baseline.py", dockerScannerRuntime));
     }
   } else {
     checks.push(skipped("OWASP ZAP baseline", "Run with --include-zap against the delivery Nginx entrypoint"));
@@ -675,6 +733,7 @@ function main() {
       requireScanners,
       useDockerScanners,
     },
+    dockerScannerRuntime,
     toolInventory,
     scannerCloseout,
     dispositionSummary,
@@ -705,7 +764,9 @@ if (require.main === module) {
 
 module.exports = {
   buildMarkdown,
+  buildDockerScannerRuntime,
   buildScannerCloseout,
+  dockerScannerSkipped,
   requiredScannerFailure,
   scannerCloseoutDefinitions,
   securityDisposition,
