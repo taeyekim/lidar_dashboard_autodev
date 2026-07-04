@@ -61,6 +61,9 @@ const requiredEnvKeys = [
   "MUTATION_RATE_LIMIT_WINDOW_MS",
   "MUTATION_RATE_LIMIT_MAX",
   "DEVICE_INGEST_API_KEY",
+  "WRONGWAY_LEVEL2_ESCALATION_ENABLED",
+  "WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT",
+  "WRONGWAY_LEVEL2_MIN_CONFIDENCE",
   "COMPOSE_BACKEND_HOST",
   "COMPOSE_DETECTOR_HOST",
   "POSTGRES_DB",
@@ -110,6 +113,9 @@ composeVariables.forEach((key) => {
 });
 
 assert(env.get("CONTROL_BOARD_TRANSPORT") === "tcp", "CONTROL_BOARD_TRANSPORT must default to tcp");
+assert(env.get("WRONGWAY_LEVEL2_ESCALATION_ENABLED") === "false", "WRONGWAY_LEVEL2_ESCALATION_ENABLED must default to false");
+assert(env.get("WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT") === "", "WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT must stay blank in .env.example");
+assert(env.get("WRONGWAY_LEVEL2_MIN_CONFIDENCE") === "", "WRONGWAY_LEVEL2_MIN_CONFIDENCE must stay blank in .env.example");
 assert(env.get("CONTROL_BOARD_DRY_RUN") === "true", "CONTROL_BOARD_DRY_RUN must default to true");
 assert(env.get("CONTROL_BOARD_LIVE_APPROVED") === "false", "CONTROL_BOARD_LIVE_APPROVED must default to false");
 assert(env.get("CONTROL_BOARD_HOST") === "", "CONTROL_BOARD_HOST must stay blank in .env.example");

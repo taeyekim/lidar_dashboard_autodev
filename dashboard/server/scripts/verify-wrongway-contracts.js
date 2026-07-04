@@ -57,6 +57,11 @@ const runbook = readProjectFile("docs/ops/delivery-runbook.md");
   "normal-driving update",
   "status: { notIn: CLOSED_EVENT_STATUSES }",
   "rawPayload: data.rawPayload",
+  "level2EscalationConfig",
+  "WRONGWAY_LEVEL2_ESCALATION_ENABLED",
+  "WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT",
+  "WRONGWAY_LEVEL2_MIN_CONFIDENCE",
+  "dashboardEscalation",
   "vehicleTrackCreated",
   'broadcastRealtime(result.eventCreated ? "traffic-event.created" : "traffic-event.updated"',
   'broadcastRealtime("vehicle-track.updated"',
@@ -105,6 +110,10 @@ assertIncludes(
   "level-1 wrong-way payloads must create or reuse only stage-1 control commands",
   "level-1 wrong-way payloads must not auto-escalate to stage-2 control commands",
   "stage-2 control command must be created only after an explicit level-2 payload",
+  "configured dashboard-side level-2 escalation must be explicit in the response",
+  "configured escalation must store a level-2 traffic event",
+  "configured level-2 escalation must create a stage-2 control command",
+  "configured escalation must preserve passed threshold checks in rawPayload evidence",
   "situation-ended must resolve both active stage-1 and stage-2 events for the track",
   "situation-ended must mark active wrong-way events RESOLVED",
   "situation-ended must create a return command for the control board",
@@ -216,7 +225,18 @@ assert(wrongwayResponse, "WrongwayIngestResponse schema is missing");
   "stableObjectId",
   "primary DB de-duplication key",
   "does not automatically escalate",
+  "WRONGWAY_LEVEL2_ESCALATION_ENABLED",
+  "dashboardEscalation",
   "field rehearsal evidence",
 ].forEach((token) => assertIncludes(payloadSpec, token, "lidar payload spec level-2 escalation boundary"));
+
+assert(
+  swaggerSpec.paths?.["/api/wrongway"]?.post?.["x-level2EscalationPolicy"]?.includes("WRONGWAY_LEVEL2_ESCALATION_ENABLED=true"),
+  "POST /api/wrongway must document disabled-by-default dashboard-side level-2 escalation policy",
+);
+assert(
+  wrongwayRequest.properties?.type?.["x-level2EscalationPolicy"]?.includes("default dashboard behavior does not auto-escalate"),
+  "WrongwayRequest.type must document default no-auto-escalation policy",
+);
 
 console.log("wrongway contracts ok");

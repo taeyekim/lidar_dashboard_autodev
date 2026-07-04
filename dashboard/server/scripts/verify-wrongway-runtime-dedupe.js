@@ -148,6 +148,9 @@ async function main() {
   const dashboardEffects = { vehiclesPassed: 0, logs: [] };
   const realtimeMessages = [];
   const commandCalls = [];
+  const originalLevel2Enabled = process.env.WRONGWAY_LEVEL2_ESCALATION_ENABLED;
+  const originalLevel2MinConsecutive = process.env.WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT;
+  const originalLevel2MinConfidence = process.env.WRONGWAY_LEVEL2_MIN_CONFIDENCE;
 
   installMock(path.join(serverRoot, "src/prisma/client.js"), { prisma });
   installMock(path.join(serverRoot, "src/utils/logger.js"), {
@@ -267,6 +270,26 @@ async function main() {
   assert(explicitLevel2.eventCreated, "explicit wrong-way level 2 payload must create the stage-2 traffic event");
   assertEqual(commandCalls.filter((call) => call.commandType === "STAGE_2_ON").length, 1, "stage-2 control command must be created only after an explicit level-2 payload");
 
+  process.env.WRONGWAY_LEVEL2_ESCALATION_ENABLED = "true";
+  process.env.WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT = "3";
+  process.env.WRONGWAY_LEVEL2_MIN_CONFIDENCE = "0.9";
+  const dashboardEscalatedLevel2 = await ingestWrongwayPayload({
+    type: "wrong-way-level-1",
+    zone_id: "Z-DEDUPE",
+    track_id: "stable-track-escalated-003",
+    timestamp: "2026-07-03T00:00:04.250Z",
+    confidence: 0.95,
+    consecutive_count: 3,
+  }, { receivedAt: "2026-07-03T00:00:04.250Z" });
+
+  assert(dashboardEscalatedLevel2.dashboardEscalated, "configured dashboard-side level-2 escalation must be explicit in the response");
+  assertEqual(dashboardEscalatedLevel2.event.eventType, "wrong-way-level-2", "configured escalation must store a level-2 traffic event");
+  assertEqual(commandCalls.filter((call) => call.commandType === "STAGE_2_ON").length, 2, "configured level-2 escalation must create a stage-2 control command");
+  assert(
+    dashboardEscalatedLevel2.event.rawPayload.dashboardEscalation.checks.every((check) => check.passed),
+    "configured escalation must preserve passed threshold checks in rawPayload evidence",
+  );
+
   const situationEnded = await ingestWrongwayPayload({
     type: "situation-ended",
     zone_id: "Z-DEDUPE",
@@ -307,15 +330,22 @@ async function main() {
   }, { receivedAt: "2026-07-03T00:00:05.000Z" });
 
   assert(stableObjectLevel1.eventCreated, "stableObjectId wrong-way payload must create a traffic event");
-  assertEqual(prisma.__state.vehicleTracks.size, 2, "stableObjectId payload must create a second unique vehicle track");
+  assertEqual(prisma.__state.vehicleTracks.size, 3, "stableObjectId payload must create a third unique vehicle track after configured escalation fixture");
   assertEqual(stableObjectLevel1.event.trackId, "field-stable-object-002", "stableObjectId must normalize to event trackId");
 
   const vehicleTrackRealtime = realtimeMessages.filter((message) => message.type === "vehicle-track.updated");
-  assertEqual(vehicleTrackRealtime.length, 8, "every ingest must publish vehicle-track.updated for operators");
+  assertEqual(vehicleTrackRealtime.length, 9, "every ingest must publish vehicle-track.updated for operators");
   assert(
     realtimeMessages.filter((message) => message.type === "traffic-event.updated").length >= 3,
     "situation-ended must publish updates for the closing event and resolved active events",
   );
+
+  if (originalLevel2Enabled === undefined) delete process.env.WRONGWAY_LEVEL2_ESCALATION_ENABLED;
+  else process.env.WRONGWAY_LEVEL2_ESCALATION_ENABLED = originalLevel2Enabled;
+  if (originalLevel2MinConsecutive === undefined) delete process.env.WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT;
+  else process.env.WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT = originalLevel2MinConsecutive;
+  if (originalLevel2MinConfidence === undefined) delete process.env.WRONGWAY_LEVEL2_MIN_CONFIDENCE;
+  else process.env.WRONGWAY_LEVEL2_MIN_CONFIDENCE = originalLevel2MinConfidence;
 
   console.log("wrongway runtime dedupe ok");
 }

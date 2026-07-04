@@ -445,6 +445,7 @@ const swaggerSpec = {
         summary: "역주행 감지 이벤트 수신",
         description:
           "라이다 PC 공식 수신 endpoint입니다. DEVICE_INGEST_API_KEY가 설정된 환경에서는 X-Device-Key header가 필요합니다. 현재 대시보드는 수신 type을 기준으로 저장/명령을 생성하며, wrong-way-level-1을 현장 측량 기준 없이 자동으로 wrong-way-level-2로 승격하지 않습니다. 대시보드 측 자동 2차 승격은 현장 측량 기준 확정 후 별도 구현/검증 대상입니다. situation-ended creates a closing event, resolves active wrong-way events for the same track to RESOLVED, and creates or reuses the STAGE_2_RETURN control-board command.",
+        "x-level2EscalationPolicy": "Disabled by default. Dashboard-side escalation from wrong-way-level-1 to wrong-way-level-2 only runs when WRONGWAY_LEVEL2_ESCALATION_ENABLED=true and approved threshold env values such as WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT or WRONGWAY_LEVEL2_MIN_CONFIDENCE are configured.",
         security: [{ deviceKeyAuth: [] }, {}],
         requestBody: {
           required: false,
@@ -1465,6 +1466,7 @@ const swaggerSpec = {
             enum: ["normal-driving", "wrong-way-level-1", "wrong-way-level-2", "situation-ended"],
             description:
               "라이다 PC가 판단해 보낸 이벤트 유형입니다. 대시보드는 현재 wrong-way-level-1을 자체 기준으로 자동 승격하지 않으며, wrong-way-level-2는 명시 수신 또는 추후 확정될 현장 측량 기준 구현 후에만 사용합니다.",
+            "x-level2EscalationPolicy": "wrong-way-level-2 is explicit by payload or configured dashboard-side escalation; default dashboard behavior does not auto-escalate level-1.",
             example: "wrong-way-level-1",
           },
           timestamp: { type: "string", format: "date-time" },

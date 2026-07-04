@@ -31,8 +31,12 @@ normalized by `warning_level`, `warningLevel`, or `stage`: level `2` becomes
 
 The dashboard does not automatically escalate `wrong-way-level-1` to
 `wrong-way-level-2` before field measurement criteria are approved. Dashboard
-side level-2 escalation requires a separate requirement, API/DB impact review,
-safety validation, and field rehearsal evidence.
+side level-2 escalation is disabled by default and can only run when
+`WRONGWAY_LEVEL2_ESCALATION_ENABLED=true` and approved threshold values such as
+`WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT` or `WRONGWAY_LEVEL2_MIN_CONFIDENCE` are
+configured. Escalated events preserve `dashboardEscalation` threshold evidence
+in `rawPayload`, and field rehearsal evidence must prove the configured policy
+before final acceptance.
 
 ## Representative Payload
 
@@ -65,7 +69,7 @@ safety validation, and field rehearsal evidence.
 | `timestamp` | `occurred_at`, `occurredAt` | Event occurrence time. ISO-8601 with timezone is expected. |
 | `zone_id` | `zoneId` | External zone/lanelet code from the LiDAR system. |
 | `track_id` | `trackId`, `object_id`, `objectId`, `uuid`, `object_uuid`, `objectUuid`, `stable_object_id`, `stableObjectId` | Stable object/track identifier. This is the primary DB de-duplication key. |
-| `confidence` | - | LiDAR confidence score. Stored for display/audit; not used by the dashboard as an escalation threshold yet. |
+| `confidence` | - | LiDAR confidence score. Stored for display/audit; used for dashboard-side level-2 escalation only when the approved env threshold is enabled. |
 | `message` | `summary` | Operator-readable event summary. |
 | `speed_ms` | `speedMs` | Optional speed in m/s. |
 | `speed_kmh` | `speedKmh` | Optional speed in km/h. |
@@ -96,7 +100,7 @@ safety validation, and field rehearsal evidence.
 
 - Final dashboard PC URL and LiDAR PC source IP on the field LAN
 - Final `zone_id` to site/zone mapping
-- Level-2 escalation threshold if dashboard-side escalation is later approved
+- Level-2 escalation threshold values if dashboard-side escalation is approved
 - Field acceptance of display labels and operational KPI wording
 
 ## Out Of Scope For This Payload

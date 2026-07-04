@@ -170,9 +170,9 @@ function knownFieldLimitations(manualEvidence = []) {
     },
     {
       area: "Level-2 Escalation",
-      limitation: "Dashboard-side wrong-way-level-2 escalation threshold remains field-measurement dependent.",
+      limitation: "Dashboard-side wrong-way-level-2 escalation threshold remains field-measurement dependent and disabled until approved env thresholds are configured.",
       source: "docs/ai/field-system-requirements.md",
-      closeWhen: "Field measurement criteria are approved and automated escalation logic plus rehearsal evidence are added.",
+      closeWhen: "Field measurement criteria are approved, WRONGWAY_LEVEL2_ESCALATION_ENABLED=true and threshold env values are configured, then rehearsal evidence proves dashboard-side escalation.",
     },
     {
       area: "Traffic KPI Wording",

@@ -103,6 +103,72 @@ function warningLevelFor(type, payload) {
   return null;
 }
 
+function level2EscalationConfig() {
+  return {
+    enabled: toBoolean(process.env.WRONGWAY_LEVEL2_ESCALATION_ENABLED) === true,
+    minConsecutiveCount: toInteger(process.env.WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT),
+    minConfidence: toNumber(process.env.WRONGWAY_LEVEL2_MIN_CONFIDENCE),
+  };
+}
+
+function evaluateLevel2Escalation(data, config = level2EscalationConfig()) {
+  if (data.type !== PAYLOAD_TYPES.WRONG_WAY_LEVEL_1 || !config.enabled) {
+    return { shouldEscalate: false, reason: config.enabled ? "not-level-1" : "disabled" };
+  }
+
+  const checks = [];
+  if (config.minConsecutiveCount !== null) {
+    checks.push({
+      name: "minConsecutiveCount",
+      actual: data.consecutiveCount,
+      threshold: config.minConsecutiveCount,
+      passed: data.consecutiveCount !== null && data.consecutiveCount >= config.minConsecutiveCount,
+    });
+  }
+  if (config.minConfidence !== null) {
+    checks.push({
+      name: "minConfidence",
+      actual: data.confidence,
+      threshold: config.minConfidence,
+      passed: data.confidence !== null && data.confidence >= config.minConfidence,
+    });
+  }
+
+  if (checks.length === 0) {
+    return { shouldEscalate: false, reason: "enabled-without-thresholds", checks };
+  }
+
+  const shouldEscalate = checks.every((check) => check.passed);
+  return {
+    shouldEscalate,
+    reason: shouldEscalate ? "criteria-met" : "criteria-not-met",
+    checks,
+  };
+}
+
+function applyLevel2EscalationPolicy(data) {
+  const decision = evaluateLevel2Escalation(data);
+  if (!decision.shouldEscalate) return { data, decision };
+
+  return {
+    data: {
+      ...data,
+      type: PAYLOAD_TYPES.WRONG_WAY_LEVEL_2,
+      warningLevel: 2,
+      rawPayload: {
+        ...data.rawPayload,
+        dashboardEscalation: {
+          from: PAYLOAD_TYPES.WRONG_WAY_LEVEL_1,
+          to: PAYLOAD_TYPES.WRONG_WAY_LEVEL_2,
+          reason: decision.reason,
+          checks: decision.checks,
+        },
+      },
+    },
+    decision,
+  };
+}
+
 function normalizePayload(payload, receivedAt) {
   if (!isObjectPayload(payload)) {
     throw createBadRequest("Request body must be a JSON object.");
@@ -422,11 +488,14 @@ function applyDashboardEffects(data, event, vehicleTrack, options = {}) {
 
 async function ingestWrongwayPayload(payload, options = {}) {
   const receivedAt = options.receivedAt ? new Date(options.receivedAt) : new Date();
-  const data = normalizePayload(payload, receivedAt);
+  const normalizedData = normalizePayload(payload, receivedAt);
+  const { data, decision: level2Escalation } = applyLevel2EscalationPolicy(normalizedData);
   const source = options.source || "WRONGWAY_API";
 
   logger.info("wrongway payload received", {
     type: data.type,
+    originalType: normalizedData.type,
+    dashboardEscalated: Boolean(level2Escalation.shouldEscalate),
     source,
     zoneId: data.externalZoneId,
     trackId: data.trackId,
@@ -459,6 +528,14 @@ async function ingestWrongwayPayload(payload, options = {}) {
       metadata: {
         resolvedEventIds: result.resolvedEvents.map((event) => event.id),
         resolvedEventCount: result.resolvedEvents.length,
+        dashboardEscalation: level2Escalation.shouldEscalate
+          ? {
+            from: normalizedData.type,
+            to: data.type,
+            reason: level2Escalation.reason,
+            checks: level2Escalation.checks,
+          }
+          : null,
       },
     });
   } catch (error) {
@@ -494,6 +571,8 @@ async function ingestWrongwayPayload(payload, options = {}) {
     eventCreated: result.eventCreated,
     eventReused: result.eventReused,
     resolvedEventIds: resolvedEvents.map((resolvedEvent) => resolvedEvent.id),
+    dashboardEscalated: Boolean(level2Escalation.shouldEscalate),
+    dashboardEscalation: level2Escalation,
     controlCommand,
     event:
       event || {
@@ -508,5 +587,8 @@ async function ingestWrongwayPayload(payload, options = {}) {
 
 module.exports = {
   PAYLOAD_TYPES,
+  applyLevel2EscalationPolicy,
+  evaluateLevel2Escalation,
+  level2EscalationConfig,
   ingestWrongwayPayload,
 };
