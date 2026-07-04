@@ -132,9 +132,10 @@ function toOutputRootArg(dir) {
   return path.relative(root, dir).replace(/\\/g, "/");
 }
 
-function readLatestJsonManifest(outputRoot) {
+function readLatestJsonManifest(outputRoot, options = {}) {
   const absoluteRoot = path.join(root, outputRoot);
   if (!fs.existsSync(absoluteRoot)) return null;
+  const preferPassingFieldAcceptance = options.preferPassingFieldAcceptance !== false;
 
   const manifests = fs
     .readdirSync(absoluteRoot, { withFileTypes: true })
@@ -160,7 +161,7 @@ function readLatestJsonManifest(outputRoot) {
           return false;
         }
       }) || manifests[0]
-    : outputRoot === "artifacts/field-acceptance" || outputRoot.includes("field-acceptance")
+    : preferPassingFieldAcceptance && (outputRoot === "artifacts/field-acceptance" || outputRoot.includes("field-acceptance"))
       ? manifests.find((manifestPath) => {
           try {
             const data = JSON.parse(fs.readFileSync(manifestPath, "utf8").replace(/^\uFEFF/, ""));
@@ -320,8 +321,8 @@ function summarizeFieldRehearsal(type, outputRoot) {
   };
 }
 
-function summarizeFieldAcceptance(type, outputRoot) {
-  const manifest = readLatestJsonManifest(outputRoot);
+function summarizeFieldAcceptance(type, outputRoot, options = {}) {
+  const manifest = readLatestJsonManifest(outputRoot, options);
   if (!manifest) {
     return {
       type,

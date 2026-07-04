@@ -111,7 +111,7 @@ function latestEvidenceRefs() {
     fieldClosurePlan: readLatestJsonManifest("artifacts/field-closure-plan")?.path || null,
     fieldReadiness: readLatestJsonManifest("artifacts/field-readiness")?.path || null,
     fieldPreflight: readLatestJsonManifest("artifacts/field-preflight")?.path || null,
-    fieldAcceptance: readLatestJsonManifest("artifacts/field-acceptance")?.path || null,
+    fieldAcceptance: readLatestJsonManifest("artifacts/field-acceptance", { preferPassingFieldAcceptance: false })?.path || null,
     dbFieldRehearsal: readLatestJsonManifest("artifacts/field-db-rehearsal")?.path || null,
     lidarFieldRehearsal: readLatestJsonManifest("artifacts/field-lidar-rehearsal")?.path || null,
     controlBoardFieldRehearsal: readLatestJsonManifest("artifacts/field-control-board-rehearsal")?.path || null,
@@ -218,7 +218,7 @@ function latestControlBoardSafetyStatus() {
 function buildFieldEvidenceSummary() {
   return [
     summarizeFieldPreflight("Field Preflight", "artifacts/field-preflight"),
-    summarizeFieldAcceptance("Field Acceptance", "artifacts/field-acceptance"),
+    summarizeFieldAcceptance("Field Acceptance", "artifacts/field-acceptance", { preferPassingFieldAcceptance: false }),
     summarizeFieldRehearsal("DB And Prisma", "artifacts/field-db-rehearsal"),
     summarizeFieldRehearsal("Lidar Ingest", "artifacts/field-lidar-rehearsal"),
     summarizeFieldRehearsal("Control Board TCP", "artifacts/field-control-board-rehearsal"),

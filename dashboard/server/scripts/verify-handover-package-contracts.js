@@ -69,6 +69,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "fieldEvidenceCommandRunbook",
   "fieldPreflight",
   "fieldAcceptance",
+  "preferPassingFieldAcceptance: false",
   "dbFieldRehearsal",
   "lidarFieldRehearsal",
   "controlBoardFieldRehearsal",

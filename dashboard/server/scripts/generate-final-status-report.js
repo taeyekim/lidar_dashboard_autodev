@@ -76,7 +76,7 @@ function latestEvidenceRefs() {
     handoverIndex: readLatestJsonManifest("artifacts/handover-index"),
     fieldClosurePlan: readLatestJsonManifest("artifacts/field-closure-plan"),
     fieldPreflight: readLatestJsonManifest("artifacts/field-preflight"),
-    fieldAcceptance: readLatestJsonManifest("artifacts/field-acceptance"),
+    fieldAcceptance: readLatestJsonManifest("artifacts/field-acceptance", { preferPassingFieldAcceptance: false }),
     dbFieldRehearsal: readLatestJsonManifest("artifacts/field-db-rehearsal"),
     lidarFieldRehearsal: readLatestJsonManifest("artifacts/field-lidar-rehearsal"),
     controlBoardFieldRehearsal: readLatestJsonManifest("artifacts/field-control-board-rehearsal"),

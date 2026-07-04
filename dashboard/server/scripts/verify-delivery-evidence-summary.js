@@ -273,6 +273,9 @@ fs.writeFileSync(
   }),
 );
 const passFieldAcceptance = readLatestJsonManifest("artifacts/delivery-summary-vector-field-acceptance");
+const latestFieldAcceptance = readLatestJsonManifest("artifacts/delivery-summary-vector-field-acceptance", {
+  preferPassingFieldAcceptance: false,
+});
 const policyAcceptedRoot = path.join(__dirname, "..", "..", "..", "artifacts", "delivery-summary-policy-accepted");
 const policyAcceptedDir = path.join(policyAcceptedRoot, "20260703-000000");
 fs.mkdirSync(policyAcceptedDir, { recursive: true });
@@ -680,6 +683,10 @@ assert(bomManifest.data.checks.length === 0, "latest manifest reader should tole
 assert(
   passFieldAcceptance.path.endsWith("20260101-000000/manifest.json"),
   "field acceptance manifest selection should prefer PASS handover evidence over newer REVIEW refresh evidence",
+);
+assert(
+  latestFieldAcceptance.path.endsWith("20260101-000001/manifest.json"),
+  "field acceptance manifest selection should allow final closeout callers to prefer the latest source-revision evidence",
 );
 
 console.log("delivery evidence summary vectors ok");

@@ -82,6 +82,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "UNPUSHED", "final status report generator"],
   [generator, "MISSING_GIT_METADATA", "final status report generator"],
   [generator, "final source revision", "final status report generator"],
+  [generator, "preferPassingFieldAcceptance: false", "final status report generator"],
   [generator, "fieldRiskRegister", "final status report generator"],
   [generator, "fieldActionBoard", "final status report generator"],
   [generator, "fieldGateClosureMap", "final status report generator"],
