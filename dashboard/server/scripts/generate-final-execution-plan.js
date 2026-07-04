@@ -280,6 +280,7 @@ function buildCommandGateCoverage(orderedCommands, gates) {
     const categories = [...new Set(matchedGates.map((gate) => gate.category).filter(Boolean))];
     const statuses = [...new Set(matchedGates.map((gate) => gate.status).filter(Boolean))];
     const evidence = [...new Set(matchedGates.map((gate) => gate.evidence).filter(Boolean))];
+    const commandHints = buildGateCommandHints(matchedGates);
     return {
       order: command.order,
       id: command.id,
@@ -290,8 +291,32 @@ function buildCommandGateCoverage(orderedCommands, gates) {
       categories,
       statuses,
       evidence,
+      commandHints,
       doneWhen: command.doneWhen,
     };
+  });
+}
+
+function buildGateCommandHints(gates) {
+  const hints = [];
+  gates.forEach((gate) => {
+    if (gate.scanner && gate.closeoutCommands) {
+      hints.push({
+        source: `${gate.category}:${gate.scanner}`,
+        nativeCommand: gate.closeoutCommands.nativeCommand || null,
+        dockerFallbackCommand: gate.closeoutCommands.dockerFallbackCommand || null,
+        riskAcceptanceEvidence: gate.closeoutCommands.riskAcceptanceEvidence || null,
+        runtimeNote: gate.dockerScannerRuntime?.ready === false ? gate.dockerScannerRuntime.error || "Docker scanner runtime is not ready." : null,
+      });
+    }
+  });
+
+  const seen = new Set();
+  return hints.filter((hint) => {
+    const key = JSON.stringify(hint);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
 }
 
@@ -442,14 +467,14 @@ function buildMarkdown(manifest) {
     "",
     "## Command Gate Coverage",
     "",
-    "| Order | Command ID | Gate Count | Action Types | Categories | Statuses | Evidence | Done When |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Order | Command ID | Gate Count | Action Types | Categories | Statuses | Evidence | Command Hints | Done When |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(manifest.commandGateCoverage.length > 0
       ? manifest.commandGateCoverage.map(
           (item) =>
-            `| ${item.order} | ${markdownCell(item.id)} | ${item.gateCount} | ${markdownCell(item.actionTypes.join(", "))} | ${markdownCell(item.categories.join(", ") || "none")} | ${markdownCell(item.statuses.join(", ") || "none")} | ${markdownCell(item.evidence.join(", ") || "missing")} | ${markdownCell(item.doneWhen)} |`,
+            `| ${item.order} | ${markdownCell(item.id)} | ${item.gateCount} | ${markdownCell(item.actionTypes.join(", "))} | ${markdownCell(item.categories.join(", ") || "none")} | ${markdownCell(item.statuses.join(", ") || "none")} | ${markdownCell(item.evidence.join(", ") || "missing")} | ${markdownCell(formatCommandHints(item.commandHints))} | ${markdownCell(item.doneWhen)} |`,
         )
-      : ["| none | none | 0 | none | none | none | missing | No commands are required by the latest final status. |"]),
+      : ["| none | none | 0 | none | none | none | missing | none | No commands are required by the latest final status. |"]),
     "",
     "## Manual Evidence Targets",
     "",
@@ -472,6 +497,23 @@ function buildMarkdown(manifest) {
       : ["| none | none | PASS | No remaining final gates. | - | - |"]),
     "",
   ].join("\n");
+}
+
+function formatCommandHints(hints = []) {
+  if (!Array.isArray(hints) || hints.length === 0) return "none";
+  return hints
+    .map((hint) =>
+      [
+        hint.source,
+        hint.nativeCommand ? `native: ${hint.nativeCommand}` : "",
+        hint.dockerFallbackCommand ? `docker: ${hint.dockerFallbackCommand}` : "",
+        hint.riskAcceptanceEvidence ? `risk: ${hint.riskAcceptanceEvidence}` : "",
+        hint.runtimeNote ? `runtime: ${hint.runtimeNote}` : "",
+      ]
+        .filter(Boolean)
+        .join(" / "),
+    )
+    .join("; ");
 }
 
 function main() {
@@ -502,5 +544,6 @@ module.exports = {
   buildMarkdown,
   buildOrderedCommands,
   buildCommandGateCoverage,
+  buildGateCommandHints,
   commandCatalog,
 };

@@ -4,6 +4,7 @@ const {
   buildFinalExecutionPlan,
   buildMarkdown,
   buildCommandGateCoverage,
+  buildGateCommandHints,
   buildOrderedCommands,
   commandCatalog,
 } = require("./generate-final-execution-plan");
@@ -39,6 +40,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "gatesByActionType", "final execution plan generator"],
   [generator, "orderedCommands", "final execution plan generator"],
   [generator, "commandGateCoverage", "final execution plan generator"],
+  [generator, "commandHints", "final execution plan generator"],
+  [generator, "buildGateCommandHints", "final execution plan generator"],
+  [generator, "dockerFallbackCommand", "final execution plan generator"],
   [generator, "Command Gate Coverage", "final execution plan generator"],
   [generator, "gateCount", "final execution plan generator"],
   [generator, "source-revision-closeout", "final execution plan generator"],
@@ -309,12 +313,54 @@ assert(commandCatalog("http://localhost:8080").some((item) => item.id === "ci-cl
 const directCoverage = buildCommandGateCoverage(
   [{ order: 1, id: "security-evidence", phase: "Security", command: "npm.cmd run security:evidence", actionTypes: ["SECURITY_REVIEW_REQUIRED"], doneWhen: "done" }],
   [
-    { actionType: "SECURITY_REVIEW_REQUIRED", category: "Security Scanner Closeout", status: "BLOCKING", evidence: "artifacts/security/latest/manifest.json" },
+    {
+      actionType: "SECURITY_REVIEW_REQUIRED",
+      category: "Security Scanner Closeout",
+      status: "BLOCKING",
+      evidence: "artifacts/security/latest/manifest.json",
+      scanner: "gitleaks",
+      closeoutCommands: {
+        nativeCommand: "gitleaks detect --source . --redact",
+        dockerFallbackCommand: "npm.cmd run security:evidence -- --require-scanners --use-docker-scanners",
+        riskAcceptanceEvidence: "artifacts/manual/field-risk-acceptance.md",
+      },
+      dockerScannerRuntime: {
+        ready: false,
+        error: "Docker daemon is not reachable.",
+      },
+    },
     { actionType: "FIELD_ACTION_REQUIRED", category: "Control Board TCP", status: "LIVE_TCP_REVIEW", evidence: "artifacts/field-readiness/latest/manifest.json" },
   ],
 );
 assert(directCoverage[0].gateCount === 1, "direct command coverage should only count matching action types");
 assert(directCoverage[0].categories.includes("Security Scanner Closeout"), "direct command coverage should retain matched categories");
 assert(directCoverage[0].evidence.includes("artifacts/security/latest/manifest.json"), "direct command coverage should retain evidence paths");
+assert(
+  directCoverage[0].commandHints.some(
+    (item) =>
+      item.source === "Security Scanner Closeout:gitleaks" &&
+      item.dockerFallbackCommand.includes("--use-docker-scanners") &&
+      item.riskAcceptanceEvidence === "artifacts/manual/field-risk-acceptance.md" &&
+      item.runtimeNote.includes("Docker daemon"),
+  ),
+  "direct command coverage should retain scanner closeout commands and Docker runtime notes",
+);
+assert(
+  buildGateCommandHints([
+    {
+      category: "Security Scanner Closeout",
+      scanner: "gitleaks",
+      closeoutCommands: { nativeCommand: "gitleaks detect", dockerFallbackCommand: "npm.cmd run security:evidence -- --use-docker-scanners" },
+    },
+  ]).length === 1,
+  "scanner closeout gate hints should be extractable",
+);
+assert(
+  buildMarkdown({
+    ...openPlan,
+    commandGateCoverage: directCoverage,
+  }).includes("--use-docker-scanners"),
+  "execution plan markdown should include scanner fallback command hints",
+);
 
 console.log("final execution plan contracts ok");
