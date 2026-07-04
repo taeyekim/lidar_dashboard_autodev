@@ -266,6 +266,14 @@ function commandCatalog(baseUrl) {
       purpose: "Write the final close/no-close decision after all evidence is refreshed.",
       doneWhen: "Final status is READY_TO_CLOSE and canMarkGoalComplete=true.",
     },
+    {
+      id: "final-execution-plan",
+      phase: "Final Decision",
+      actionTypes: ["AUTOMATED_REFRESH_AVAILABLE", "FIELD_ACTION_REQUIRED", "MANUAL_EVIDENCE_REQUIRED", "SECURITY_REVIEW_REQUIRED", "REVIEW_REQUIRED"],
+      command: `npm.cmd run final:execution-plan -- --base-url=${baseUrl} --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg}`,
+      purpose: "Regenerate the final execution plan from the latest final status and closeout action artifacts.",
+      doneWhen: "Final execution plan points to the latest final-status manifest and closure bundles include command details for every closeout command id.",
+    },
   ];
 }
 
@@ -597,8 +605,12 @@ function uniqueValues(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
-function buildClosureBundles(rootCauseGroups, orderedCommands) {
-  const commandById = new Map((orderedCommands || []).map((command) => [command.id, command]));
+function buildClosureBundles(rootCauseGroups, orderedCommands, baseUrl = "http://localhost:8080") {
+  const fallbackCommands = commandCatalog(baseUrl).map((command, index) => ({
+    order: (orderedCommands || []).length + index + 1,
+    ...command,
+  }));
+  const commandById = new Map([...fallbackCommands, ...(orderedCommands || [])].map((command) => [command.id, command]));
   return closureBundleDefinitions
     .map((definition, index) => {
       const groups = (rootCauseGroups || []).filter((group) => definition.rootCauseIds.includes(group.id));
@@ -673,7 +685,7 @@ function buildFinalExecutionPlan(input = {}) {
   const commandGateCoverage = buildCommandGateCoverage(orderedCommands, planningGates);
   const gatesByActionType = groupGatesByActionType(planningGates);
   const rootCauseGroups = buildRootCauseGroups(planningGates);
-  const closureBundles = buildClosureBundles(rootCauseGroups, orderedCommands);
+  const closureBundles = buildClosureBundles(rootCauseGroups, orderedCommands, baseUrl);
   const status = !finalStatus
     ? "FINAL_STATUS_MISSING"
     : finalStatus.data?.status === "READY_TO_CLOSE" && remainingGates.length === 0 && metadataReview.length === 0

@@ -200,6 +200,14 @@ assert(openPlan.closureBundles.some((bundle) => bundle.id === "field-input-and-r
 assert(openPlan.closureBundles.some((bundle) => bundle.id === "runtime-and-hardware-proof" && bundle.gateCount === 1), "closure bundles should include runtime and hardware bundle");
 assert(openPlan.closureBundles.some((bundle) => bundle.id === "security-and-ci-proof" && bundle.gateCount === 2), "closure bundles should include security and CI bundle");
 assert(openPlan.closureBundles.some((bundle) => bundle.commandIds.includes("manual-evidence-readiness")), "closure bundles should expose command ids");
+assert(
+  openPlan.closureBundles.every((bundle) => bundle.commandIds.every((id) => bundle.commands.some((command) => command.id === id))),
+  "closure bundles should include command detail rows for every closeout command id",
+);
+assert(
+  openPlan.closureBundles.some((bundle) => bundle.id === "field-input-and-risk-acceptance" && bundle.commands.some((command) => command.id === "manual-evidence-drafts")),
+  "field input bundle should include fallback manual evidence draft command details",
+);
 assert(openPlan.closureBundles.some((bundle) => bundle.commands.some((command) => command.id === "security-evidence")), "closure bundles should attach ordered command details");
 assert(openPlan.closureBundles.every((bundle) => bundle.reviewerChecklist?.length > 0), "closure bundles should expose reviewer checklist rows");
 assert(openPlan.git.upstream === "origin/dev", "execution plan should expose git upstream");
@@ -414,8 +422,16 @@ const rootCauseGroups = buildRootCauseGroups([
 const closureBundles = buildClosureBundles(rootCauseGroups, commandCatalog("http://localhost:8080").map((item, index) => ({ order: index + 1, ...item })));
 assert(closureBundles.some((bundle) => bundle.id === "field-input-and-risk-acceptance" && bundle.rootCauseIds.includes("manual-field-evidence")), "closure bundles should map manual root causes");
 assert(closureBundles.some((bundle) => bundle.id === "final-handover-refresh" && bundle.rootCauseIds.length > 0), "closure bundles should map final handover root causes");
+assert(
+  closureBundles.some((bundle) => bundle.id === "final-handover-refresh" && bundle.commands.some((command) => command.id === "final-execution-plan")),
+  "final handover refresh bundle should include final execution plan command details",
+);
 assert(closureBundles.every((bundle) => bundle.evidenceTargets.length > 0), "closure bundles should expose evidence targets");
 assert(closureBundles.every((bundle) => bundle.reviewerChecklist.length >= 3), "closure bundles should include reviewer handoff checklists");
+assert(
+  closureBundles.every((bundle) => bundle.commandIds.every((id) => bundle.commands.some((command) => command.id === id))),
+  "closure bundles should include command detail rows for every closeout command id",
+);
 assert(
   closureBundles.some((bundle) => bundle.reviewerChecklist.some((item) => item.includes("canMarkGoalComplete"))),
   "closure bundles should include final reviewer completion checklist wording",
@@ -426,6 +442,15 @@ assert(rootCauseGroups.some((group) => group.id === "delivery-env-preflight" && 
 assert(rootCauseGroups.some((group) => group.id === "manual-field-evidence" && group.owner === "Field Operations"), "root cause groups should expose manual evidence owner");
 assert(rootCauseGroups.some((group) => group.id === "external-ci-evidence" && group.closeWhen.includes("GitHub Actions CI")), "root cause groups should expose external CI close condition");
 assert(rootCauseGroups.some((group) => group.id === "field-readiness-acceptance" && group.evidenceTargets.includes("artifacts/field-acceptance/<timestamp>/manifest.json")), "root cause groups should expose field acceptance evidence target");
+const fallbackClosureBundles = buildClosureBundles(
+  rootCauseGroups,
+  [{ id: "final-status", order: 1, phase: "Final Decision", command: "npm.cmd run final:status", doneWhen: "ready", actionTypes: ["REVIEW_REQUIRED"] }],
+  "http://localhost:9090",
+);
+assert(
+  fallbackClosureBundles.some((bundle) => bundle.commandIds.includes("manual-evidence-drafts") && bundle.commands.some((command) => command.id === "manual-evidence-drafts" && command.command.includes("http://localhost:9090"))),
+  "closure bundles should fall back to command catalog details for command ids missing from ordered commands",
+);
 assert(directCoverage[0].gateCount === 1, "direct command coverage should only count matching action types");
 assert(directCoverage[0].categories.includes("Security Scanner Closeout"), "direct command coverage should retain matched categories");
 assert(directCoverage[0].evidence.includes("artifacts/security/latest/manifest.json"), "direct command coverage should retain evidence paths");
