@@ -148,6 +148,18 @@ function operatorUiWalkthroughAccepted(manualEvidence = []) {
   return manualEvidence.some((item) => item.type === "Operator UI Walkthrough" && item.status === "PRESENT");
 }
 
+function fieldRiskAccepted(manualEvidence = [], area) {
+  const riskEvidence = manualEvidence.find((item) => item.type === "Field Risk Acceptance" && item.status === "PRESENT");
+  if (!riskEvidence) return false;
+  try {
+    const content = fs.readFileSync(path.join(root, riskEvidence.path), "utf8");
+    const escapedArea = String(area).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`\\|\\s*ACCEPTED\\s*\\|\\s*${escapedArea}\\s*\\|`, "i").test(content);
+  } catch {
+    return false;
+  }
+}
+
 function knownFieldLimitations(manualEvidence = []) {
   const limitations = [
     {
@@ -187,6 +199,9 @@ function knownFieldLimitations(manualEvidence = []) {
   }
   if (operatorUiWalkthroughAccepted(manualEvidence)) {
     filtered = filtered.filter((item) => item.area !== "Traffic KPI Wording");
+  }
+  if (fieldRiskAccepted(manualEvidence, "DEVICE_INGEST_API_KEY")) {
+    filtered = filtered.filter((item) => item.area !== "Device Ingest Key");
   }
   return filtered;
 }
