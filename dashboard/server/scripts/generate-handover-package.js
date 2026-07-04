@@ -144,7 +144,11 @@ function strictSecurityEvidenceReady() {
   );
 }
 
-function knownFieldLimitations() {
+function operatorUiWalkthroughAccepted(manualEvidence = []) {
+  return manualEvidence.some((item) => item.type === "Operator UI Walkthrough" && item.status === "PRESENT");
+}
+
+function knownFieldLimitations(manualEvidence = []) {
   const limitations = [
     {
       area: "Control Board TCP",
@@ -177,9 +181,14 @@ function knownFieldLimitations() {
       closeWhen: "DEVICE_INGEST_API_KEY is configured end to end, or field-risk acceptance documents compensating controls.",
     },
   ];
-  return strictSecurityEvidenceReady()
-    ? limitations.filter((item) => item.area !== "Security Scanner Evidence")
-    : limitations;
+  let filtered = limitations;
+  if (strictSecurityEvidenceReady()) {
+    filtered = filtered.filter((item) => item.area !== "Security Scanner Evidence");
+  }
+  if (operatorUiWalkthroughAccepted(manualEvidence)) {
+    filtered = filtered.filter((item) => item.area !== "Traffic KPI Wording");
+  }
+  return filtered;
 }
 
 function latestControlBoardSafetyStatus() {
@@ -576,7 +585,7 @@ function main() {
   const fieldEvidenceFollowUps = buildFieldEvidenceFollowUps(fieldEvidenceSummary);
   const manualEvidence = manualEvidenceRefs();
   const openManualEvidence = manualEvidence.filter((item) => item.required && item.status !== "PRESENT");
-  const knownLimitations = knownFieldLimitations();
+  const knownLimitations = knownFieldLimitations(manualEvidence);
   const strictFailureReasons = [];
   const metadataReview = metadataReviewItems(generatedBy, siteName);
   if (failedCommands.length > 0) {

@@ -56,6 +56,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "manual evidence item(s) are not PRESENT",
   "status !== \"PRESENT\"",
   "knownFieldLimitations",
+  "operatorUiWalkthroughAccepted",
+  "item.type === \"Operator UI Walkthrough\" && item.status === \"PRESENT\"",
   "residualFieldGates",
   "fieldEvidenceSummary",
   "fieldEvidenceFollowUps",
