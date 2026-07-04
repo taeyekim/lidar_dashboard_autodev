@@ -18,6 +18,7 @@ param(
   [switch]$IncludeContainerImages,
   [switch]$IncludeZap,
   [switch]$RequireScanners,
+  [switch]$UseDockerScanners,
   [switch]$RequireDeviceKey,
   [switch]$RequireHttpsCookies,
   [switch]$RequireSwaggerAllowlist,
@@ -345,6 +346,87 @@ function Add-ReusedFieldRehearsalStep {
   return New-StepResult -Name $Name -Status "SKIPPED" -Command "" -LogPath "" -ExitCode 0 -StartedAt $now -FinishedAt $now -Reason $SkipReason
 }
 
+function Test-AcceptanceEvidenceManifest {
+  param(
+    [object]$Manifest,
+    [string]$Kind
+  )
+
+  if ($Kind -eq "runtime") {
+    $commands = @($Manifest.commands)
+    return $commands.Count -gt 0 -and @($commands | Where-Object { $_.exitCode -ne 0 }).Count -eq 0
+  }
+
+  if ($Kind -eq "security") {
+    $summary = $Manifest.dispositionSummary
+    $blocking = if ($summary -and $summary.PSObject.Properties["blocking"]) { [int]$summary.blocking } else { 0 }
+    $deliveryFix = if ($summary -and $summary.PSObject.Properties["deliveryFix"]) { [int]$summary.deliveryFix } else { 0 }
+    $unverified = if ($summary -and $summary.PSObject.Properties["unverified"]) { [int]$summary.unverified } else { 0 }
+    return $Manifest.strictAcceptanceBlocked -eq $false -and
+      $summary -and
+      $blocking -eq 0 -and
+      $deliveryFix -eq 0 -and
+      $unverified -eq 0
+  }
+
+  if ($Kind -eq "delivery") {
+    $commands = @($Manifest.commands)
+    $failedCommandCount = if ($Manifest.handoverSummary -and $Manifest.handoverSummary.PSObject.Properties["failedCommandCount"]) {
+      [int]$Manifest.handoverSummary.failedCommandCount
+    } else {
+      0
+    }
+    return $commands.Count -gt 0 -and
+      @($commands | Where-Object { $_.exitCode -ne 0 }).Count -eq 0 -and
+      $failedCommandCount -eq 0
+  }
+
+  return $false
+}
+
+function Get-LatestAcceptedEvidenceManifestPath {
+  param(
+    [string]$Root,
+    [string]$Kind
+  )
+
+  if (!(Test-Path -LiteralPath $Root)) { return $null }
+  $manifests = @(Get-ChildItem -LiteralPath $Root -Directory |
+    Sort-Object Name -Descending |
+    ForEach-Object { Join-Path $_.FullName "manifest.json" } |
+    Where-Object { Test-Path -LiteralPath $_ })
+
+  foreach ($manifestPath in $manifests) {
+    try {
+      $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+      if (Test-AcceptanceEvidenceManifest -Manifest $manifest -Kind $Kind) {
+        return $manifestPath
+      }
+    } catch {
+      continue
+    }
+  }
+
+  return $null
+}
+
+function Add-ReusedAcceptedEvidenceStep {
+  param(
+    [string]$Name,
+    [string]$Root,
+    [string]$Kind,
+    [string]$SkipReason
+  )
+
+  $now = (Get-Date).ToUniversalTime().ToString("o")
+  $manifestPath = Get-LatestAcceptedEvidenceManifestPath -Root $Root -Kind $Kind
+  if ($manifestPath) {
+    return New-StepResult -Name $Name -Status "PASS" -Command "reuse latest accepted $Kind evidence" -LogPath $manifestPath -ExitCode 0 -StartedAt $now -FinishedAt $now -Reason "Skip switch was provided; reused latest accepted $Kind evidence."
+  }
+
+  return New-StepResult -Name $Name -Status "SKIPPED" -Command "" -LogPath "" -ExitCode 0 -StartedAt $now -FinishedAt $now -Reason $SkipReason
+}
+
 function Add-PreflightManifestGate {
   param([object[]]$Steps)
 
@@ -354,7 +436,7 @@ function Add-PreflightManifestGate {
     return $Steps + (New-StepResult -Name "field preflight manifest gate" -Status "REVIEW" -Command "read artifacts/field-preflight/latest/manifest.json" -LogPath "" -ExitCode 1 -StartedAt $now -FinishedAt $now -Reason "Latest field preflight manifest was not found.")
   }
 
-  if ($manifest.status -eq "PASS") { return $Steps }
+  if ($manifest.status -eq "PASS") { return @($Steps) }
 
   $status = if ($manifest.status -eq "PASS_WITH_SKIPS") { "SKIPPED" } else { "REVIEW" }
   $exitCode = if ($status -eq "SKIPPED") { 0 } else { 1 }
@@ -472,6 +554,7 @@ function New-AcceptanceManifest {
       includeContainerImages = [bool]$IncludeContainerImages
       includeZap = [bool]$IncludeZap
       requireScanners = [bool]$RequireScanners
+      useDockerScanners = [bool]$UseDockerScanners
       requireDeviceKey = [bool]$RequireDeviceKey
       requireHttpsCookies = [bool]$RequireHttpsCookies
       requireSwaggerAllowlist = [bool]$RequireSwaggerAllowlist
@@ -556,6 +639,7 @@ function Write-AcceptanceManifest {
     "| IncludeContainerImages | $([bool]$IncludeContainerImages) |",
     "| IncludeZap | $([bool]$IncludeZap) |",
     "| RequireScanners | $([bool]$RequireScanners) |",
+    "| UseDockerScanners | $([bool]$UseDockerScanners) |",
     "| RequireDeviceKey | $([bool]$RequireDeviceKey) |",
     "| RequireHttpsCookies | $([bool]$RequireHttpsCookies) |",
     "| RequireSwaggerAllowlist | $([bool]$RequireSwaggerAllowlist) |",
@@ -620,14 +704,14 @@ $preflightCommandParts = Add-ArgumentIf -Arguments $preflightCommandParts -Condi
 $steps += Invoke-AcceptanceStep -Name "field preflight" -Command ($preflightCommandParts -join " ") -LogFile (Join-Path $outputDir "00-field-preflight.log") -Script {
   powershell.exe @preflightArgs
 }
-$steps = Add-PreflightManifestGate -Steps $steps
+$steps = @(Add-PreflightManifestGate -Steps $steps)
 
 $steps += Invoke-AcceptanceStep -Name "delivery verify gate" -Command "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/delivery-verify.ps1" -LogFile (Join-Path $outputDir "01-delivery-verify.log") -Script {
   powershell.exe -NoProfile -ExecutionPolicy Bypass -File "scripts/delivery-verify.ps1"
 }
 
 if ($SkipRuntime) {
-  $steps += Add-SkippedStep -Name "runtime smoke" -Reason "SkipRuntime switch was provided."
+  $steps += Add-ReusedAcceptedEvidenceStep -Name "runtime smoke" -Root "artifacts/runtime" -Kind "runtime" -SkipReason "SkipRuntime switch was provided."
 } else {
   $runtimeArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/runtime-smoke.ps1", "-BaseUrl", $BaseUrl)
   $runtimeCommandParts = @("powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/runtime-smoke.ps1", "-BaseUrl", $BaseUrl)
@@ -676,16 +760,18 @@ if ($SkipControlBoard) {
 }
 
 if ($SkipSecurity) {
-  $steps += Add-SkippedStep -Name "security evidence" -Reason "SkipSecurity switch was provided."
+  $steps += Add-ReusedAcceptedEvidenceStep -Name "security evidence" -Root "artifacts/security" -Kind "security" -SkipReason "SkipSecurity switch was provided."
 } else {
   $securityArgs = @("run", "security:evidence", "--", "--target-url=$BaseUrl")
   $securityCommandParts = @("npm.cmd", "run", "security:evidence", "--", "--target-url=$BaseUrl")
   $securityArgs = Add-ArgumentIf -Arguments $securityArgs -Condition ([bool]$IncludeContainerImages) -Argument "--include-container-images"
   $securityArgs = Add-ArgumentIf -Arguments $securityArgs -Condition ([bool]$IncludeZap) -Argument "--include-zap"
   $securityArgs = Add-ArgumentIf -Arguments $securityArgs -Condition ([bool]$RequireScanners) -Argument "--require-scanners"
+  $securityArgs = Add-ArgumentIf -Arguments $securityArgs -Condition ([bool]$UseDockerScanners) -Argument "--use-docker-scanners"
   $securityCommandParts = Add-ArgumentIf -Arguments $securityCommandParts -Condition ([bool]$IncludeContainerImages) -Argument "--include-container-images"
   $securityCommandParts = Add-ArgumentIf -Arguments $securityCommandParts -Condition ([bool]$IncludeZap) -Argument "--include-zap"
   $securityCommandParts = Add-ArgumentIf -Arguments $securityCommandParts -Condition ([bool]$RequireScanners) -Argument "--require-scanners"
+  $securityCommandParts = Add-ArgumentIf -Arguments $securityCommandParts -Condition ([bool]$UseDockerScanners) -Argument "--use-docker-scanners"
   $steps += Invoke-AcceptanceStep -Name "security evidence" -Command ($securityCommandParts -join " ") -LogFile (Join-Path $outputDir "06-security-evidence.log") -Script {
     npm.cmd @securityArgs
   }
@@ -694,7 +780,7 @@ if ($SkipSecurity) {
 $steps += Add-OperatorUiWalkthroughGate
 
 if ($SkipDeliveryEvidence) {
-  $steps += Add-SkippedStep -Name "delivery evidence package" -Reason "SkipDeliveryEvidence switch was provided; run npm.cmd run delivery:evidence separately before final handover."
+  $steps += Add-ReusedAcceptedEvidenceStep -Name "delivery evidence package" -Root "artifacts/delivery" -Kind "delivery" -SkipReason "SkipDeliveryEvidence switch was provided; run npm.cmd run delivery:evidence separately before final handover."
 } else {
   Write-AcceptanceManifest -Status "IN_PROGRESS" -Steps $steps | Out-Null
 

@@ -64,15 +64,24 @@ function Invoke-CurlJson {
   if ($CookieJar) {
     $curlArgs += @("-b", $CookieJar, "-c", $CookieJar)
   }
+  $bodyFile = ""
   if ($null -ne $Body) {
     $json = $Body | ConvertTo-Json -Depth 12 -Compress
-    $curlArgs += @("-H", "Content-Type: application/json", "-d", $json)
+    $bodyFile = Join-Path $env:TEMP "lidar-runtime-smoke-body-$([guid]::NewGuid().ToString('N')).json"
+    Set-Content -LiteralPath $bodyFile -Value $json -Encoding UTF8
+    $curlArgs += @("-H", "Content-Type: application/json", "--data-binary", "@$bodyFile")
   }
   $curlArgs += $Url
 
-  $output = & curl.exe @curlArgs
-  if ($LASTEXITCODE -ne 0) {
-    throw "HTTP $Method $Url failed with exit code $LASTEXITCODE"
+  try {
+    $output = & curl.exe @curlArgs
+    if ($LASTEXITCODE -ne 0) {
+      throw "HTTP $Method $Url failed with exit code $LASTEXITCODE"
+    }
+  } finally {
+    if ($bodyFile -and (Test-Path $bodyFile)) {
+      Remove-Item -LiteralPath $bodyFile -Force
+    }
   }
   if (!$output) { return $null }
   return ($output | ConvertFrom-Json)
@@ -108,12 +117,15 @@ function Invoke-CurlStatus {
   if ($ContentType) {
     $curlArgs += @("-H", "Content-Type: $ContentType")
   }
+  $bodyFile = ""
   if ($null -ne $Body) {
     if ($RawBody) {
       $curlArgs += @("--data-binary", [string]$Body)
     } else {
       $json = $Body | ConvertTo-Json -Depth 12 -Compress
-      $curlArgs += @("-H", "Content-Type: application/json", "-d", $json)
+      $bodyFile = Join-Path $env:TEMP "lidar-runtime-smoke-body-$([guid]::NewGuid().ToString('N')).json"
+      Set-Content -LiteralPath $bodyFile -Value $json -Encoding UTF8
+      $curlArgs += @("-H", "Content-Type: application/json", "--data-binary", "@$bodyFile")
     }
   }
   $curlArgs += $Url
@@ -143,6 +155,9 @@ function Invoke-CurlStatus {
   } finally {
     if (Test-Path $headersPath) {
       Remove-Item -LiteralPath $headersPath -Force
+    }
+    if ($bodyFile -and (Test-Path $bodyFile)) {
+      Remove-Item -LiteralPath $bodyFile -Force
     }
   }
 }
@@ -254,8 +269,10 @@ function Wait-HttpReady {
   $deadline = (Get-Date).AddSeconds($ReadyTimeoutSeconds)
   do {
     try {
-      Invoke-CurlJson -Url $Url | Out-Null
-      return
+      $ready = Invoke-CurlStatus -Url $Url
+      if ($ready.statusCode -ge 200 -and $ready.statusCode -lt 500) {
+        return
+      }
     } catch {
       Start-Sleep -Seconds 2
     }
@@ -271,10 +288,11 @@ if ($StartCompose) {
 try {
   Wait-HttpReady "$BaseUrl/healthz"
 
-  Invoke-CurlJson -Url "$BaseUrl/healthz" | Out-Null
+  $healthz = Invoke-CurlStatus -Url "$BaseUrl/healthz"
+  Assert-HttpStatus -Response $healthz -Expected 200 -Label "Nginx healthz smoke"
   Invoke-CurlJson -Url "$BaseUrl/api/health" | Out-Null
   Invoke-CurlJson -Url "$BaseUrl/api-docs.json" | Out-Null
-  $swaggerUi = Invoke-CurlStatus -Url "$BaseUrl/api-docs"
+  $swaggerUi = Invoke-CurlStatus -Url "$BaseUrl/api-docs/"
   Assert-HttpStatus -Response $swaggerUi -Expected 200 -Label "Swagger UI path smoke"
 
   $healthHeaders = Invoke-CurlStatus -Url "$BaseUrl/healthz"
@@ -378,7 +396,7 @@ try {
       userId = $adminUser
       password = $adminPassword
     } -CookieJar $cookieJar
-    if ($login.token) { throw "Login response must not expose token when HttpOnly cookie auth is enabled" }
+    if ($null -ne $login.PSObject.Properties["token"]) { throw "Login response must not expose token when HttpOnly cookie auth is enabled" }
     if ($login.authMode -ne "httpOnlyCookie") { throw "Login response did not report httpOnlyCookie auth mode" }
     $csrfToken = Get-CookieJarValue -CookieJar $cookieJar -Name $csrfCookieName
     if (!$csrfToken) { throw "Login did not set the CSRF cookie" }

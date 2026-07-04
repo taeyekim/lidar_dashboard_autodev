@@ -77,8 +77,12 @@ assert(
   "Runtime smoke must verify Swagger UI routing, SPA no-store, and immutable frontend asset cache headers",
 );
 assert(
-  frontendConfig.includes("`ws://${API_HOST}:${API_PORT}/ws`"),
-  "frontend default WS_BASE must use /ws",
+  frontendConfig.includes("sameOriginWsBase") &&
+    frontendConfig.includes('window.location.protocol === "https:" ? "wss" : "ws"') &&
+    frontendConfig.includes("window.location.host") &&
+    frontendConfig.includes('import.meta.env.VITE_API_BASE_URL || ""') &&
+    frontendConfig.includes("VITE_WS_BASE_URL || sameOriginWsBase()"),
+  "frontend defaults must use same-origin /api and /ws behind the Nginx delivery entrypoint",
 );
 assert(
   envExample.includes("VITE_WS_BASE_URL=ws://localhost:5000/ws"),

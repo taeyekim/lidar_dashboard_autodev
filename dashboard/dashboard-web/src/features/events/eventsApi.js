@@ -99,6 +99,21 @@ export function formatConfidencePercent(value) {
   return `${Number(percent.toFixed(1))}%`;
 }
 
+function normalizeLocation(raw = {}) {
+  const zone = raw.zone && typeof raw.zone === "object" ? raw.zone : null;
+  const candidates = [
+    raw.location,
+    zone?.name,
+    zone?.zoneCode,
+    raw.zoneId,
+    raw.zone_id,
+    raw.externalZoneId,
+    raw.area,
+  ];
+  const value = candidates.find((item) => item !== undefined && item !== null && item !== "");
+  return value === undefined ? "-" : String(value);
+}
+
 export function normalizeEvent(raw = {}) {
   const id = raw.id || raw.eventId || raw._id || raw.uuid || "";
   const type = raw.type || raw.eventType || raw.category || "event";
@@ -116,7 +131,7 @@ export function normalizeEvent(raw = {}) {
     category: raw.category || raw.eventType || raw.type || "event",
     status: raw.status || raw.state || "pending",
     message,
-    location: raw.location || raw.zone || raw.zoneId || raw.zone_id || raw.area || "-",
+    location: normalizeLocation(raw),
     confidence: raw.confidence ?? raw.score ?? raw.probability ?? null,
     timestamp,
     occurredAt: raw.occurredAt,
