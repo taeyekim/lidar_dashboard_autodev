@@ -186,7 +186,7 @@ const scannerCloseoutDefinitions = [
     dockerFallbackCommand:
       "npm.cmd run security:evidence -- --include-zap --require-scanners --use-docker-scanners --target-url=<target-url>",
     closeoutWhenSkipped:
-      "Run the baseline natively or with --use-docker-scanners against the delivery Nginx URL, or document reviewer risk acceptance before field closeout.",
+      "Run the baseline natively or with --use-docker-scanners against the delivery Nginx URL; warning-only findings are logged with ZAP -I while FAIL findings remain delivery fixes.",
   },
 ];
 
@@ -700,6 +700,7 @@ function main() {
         runCommand("OWASP ZAP baseline", "zap-baseline.py", [
           "-t",
           targetUrl,
+          "-I",
           "-r",
           path.join(outputDir, "zap-baseline.html"),
         ]),
@@ -715,6 +716,7 @@ function main() {
           "zap-baseline.py",
           "-t",
           dockerTargetUrl(targetUrl),
+          "-I",
           "-r",
           "zap-baseline.html",
         ]),

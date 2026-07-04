@@ -35,6 +35,8 @@ assert(generator.includes("securityToolDirs"), "security evidence should search 
 assert(generator.includes(".local-tools"), "security evidence should search .local-tools");
 assert(generator.includes("SECURITY_TOOL_DIRS"), "security evidence should allow SECURITY_TOOL_DIRS override");
 assert(generator.includes("Security tool dirs"), "security evidence markdown should show security tool dirs");
+assert(generator.includes("\"-I\""), "ZAP baseline should keep warning-only findings as logged evidence");
+assert(generator.includes("warning-only findings are logged"), "ZAP closeout guidance should explain warning-only baseline handling");
 assert(prepareTools.includes("gitleaks_"), "prepare script should download gitleaks release zip");
 assert(prepareTools.includes("trivy_"), "prepare script should download Trivy release zip");
 assert(prepareTools.includes(".local-tools/security"), "prepare script should install into ignored local tools path");
