@@ -530,6 +530,72 @@ function buildManualEvidenceTargets(manualEvidence = manualEvidenceRefs()) {
   }));
 }
 
+const closureBundleDefinitions = [
+  {
+    id: "field-input-and-risk-acceptance",
+    label: "Field Input And Risk Acceptance",
+    rootCauseIds: ["manual-field-evidence", "delivery-env-preflight", "field-policy-acceptance"],
+    outcome: "Field reviewer fills required manual evidence, delivery env values, and accepted operational risk rows.",
+  },
+  {
+    id: "runtime-and-hardware-proof",
+    label: "Runtime And Hardware Proof",
+    rootCauseIds: ["field-runtime-rehearsal", "field-readiness-acceptance"],
+    outcome: "Delivery runtime, DB/Prisma, LiDAR ingest, and control-board rehearsal evidence are refreshed and accepted.",
+  },
+  {
+    id: "security-and-ci-proof",
+    label: "Security And CI Proof",
+    rootCauseIds: ["security-scanner-evidence", "external-ci-evidence", "source-revision-closeout"],
+    outcome: "Scanner evidence, CI status, and final source revision evidence are closed for the pushed dev commit.",
+  },
+  {
+    id: "final-handover-refresh",
+    label: "Final Handover Refresh",
+    rootCauseIds: ["field-action-artifacts", "handover-final-review", "general-review"],
+    outcome: "Action artifacts, completion audit, handover package, final status, and execution plan converge after upstream evidence closes.",
+  },
+];
+
+function uniqueValues(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function buildClosureBundles(rootCauseGroups, orderedCommands) {
+  const commandById = new Map((orderedCommands || []).map((command) => [command.id, command]));
+  return closureBundleDefinitions
+    .map((definition, index) => {
+      const groups = (rootCauseGroups || []).filter((group) => definition.rootCauseIds.includes(group.id));
+      const commandIds = uniqueValues(groups.flatMap((group) => group.closeoutCommandIds || []));
+      return {
+        order: index + 1,
+        id: definition.id,
+        label: definition.label,
+        status: groups.length > 0 ? "OPEN" : "NO_OPEN_GATES",
+        gateCount: groups.reduce((sum, group) => sum + group.gateCount, 0),
+        rootCauseIds: groups.map((group) => group.id),
+        owners: uniqueValues(groups.map((group) => group.owner)),
+        evidenceTargets: uniqueValues(groups.flatMap((group) => group.evidenceTargets || [])),
+        commandIds,
+        commands: commandIds
+          .map((id) => commandById.get(id))
+          .filter(Boolean)
+          .map((command) => ({
+            id: command.id,
+            order: command.order,
+            phase: command.phase,
+            command: command.command,
+            doneWhen: command.doneWhen,
+          })),
+        outcome: definition.outcome,
+        closeWhen: groups.length > 0
+          ? uniqueValues(groups.map((group) => group.closeWhen)).join(" Then ")
+          : "No open gates in this bundle.",
+      };
+    })
+    .filter((bundle) => bundle.gateCount > 0);
+}
+
 function buildFinalExecutionPlan(input = {}) {
   const hasInput = (key) => Object.prototype.hasOwnProperty.call(input, key);
   const finalStatus = hasInput("finalStatus") ? input.finalStatus : readLatestJsonManifest("artifacts/final-status");
@@ -570,6 +636,7 @@ function buildFinalExecutionPlan(input = {}) {
   const commandGateCoverage = buildCommandGateCoverage(orderedCommands, planningGates);
   const gatesByActionType = groupGatesByActionType(planningGates);
   const rootCauseGroups = buildRootCauseGroups(planningGates);
+  const closureBundles = buildClosureBundles(rootCauseGroups, orderedCommands);
   const status = !finalStatus
     ? "FINAL_STATUS_MISSING"
     : finalStatus.data?.status === "READY_TO_CLOSE" && remainingGates.length === 0 && metadataReview.length === 0
@@ -593,6 +660,7 @@ function buildFinalExecutionPlan(input = {}) {
     metadataReview,
     gatesByActionType,
     rootCauseGroups,
+    closureBundles,
     manualEvidenceTargets: buildManualEvidenceTargets(input.manualEvidence),
     orderedCommands,
     commandGateCoverage,
@@ -655,6 +723,17 @@ function buildMarkdown(manifest) {
             `| ${markdownCell(group.label)} | ${markdownCell(group.owner)} | ${group.gateCount} | ${markdownCell(group.actionTypes.join(", ") || "none")} | ${markdownCell(group.categories.join(", ") || "none")} | ${markdownCell((group.evidenceTargets || []).join(", ") || "none")} | ${markdownCell(group.closeoutCommandIds.join(", ") || "none")} | ${markdownCell(group.closeWhen)} | ${markdownCell(group.sampleMessages.join("; "))} |`,
         )
       : ["| none | none | 0 | none | none | none | none | No remaining root causes. | - |"]),
+    "",
+    "## Closure Bundles",
+    "",
+    "| Order | Bundle | Status | Gates | Root Causes | Owners | Evidence Targets | Commands | Outcome | Close When |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    ...(manifest.closureBundles.length > 0
+      ? manifest.closureBundles.map(
+          (bundle) =>
+            `| ${bundle.order} | ${markdownCell(bundle.label)} | ${markdownCell(bundle.status)} | ${bundle.gateCount} | ${markdownCell(bundle.rootCauseIds.join(", ") || "none")} | ${markdownCell(bundle.owners.join(", ") || "none")} | ${markdownCell(bundle.evidenceTargets.join(", ") || "none")} | ${markdownCell(bundle.commandIds.join(", ") || "none")} | ${markdownCell(bundle.outcome)} | ${markdownCell(bundle.closeWhen)} |`,
+        )
+      : ["| none | none | READY | 0 | none | none | none | none | No closure bundles required. | No open final gates. |"]),
     "",
     "## Ordered Commands",
     "",
@@ -747,6 +826,7 @@ module.exports = {
   buildOrderedCommands,
   buildCommandGateCoverage,
   buildGateCommandHints,
+  buildClosureBundles,
   buildRootCauseGroups,
   commandCatalog,
 };

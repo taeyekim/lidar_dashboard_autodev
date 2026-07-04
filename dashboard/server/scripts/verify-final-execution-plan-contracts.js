@@ -5,6 +5,7 @@ const {
   buildMarkdown,
   buildCommandGateCoverage,
   buildGateCommandHints,
+  buildClosureBundles,
   buildOrderedCommands,
   buildRootCauseGroups,
   commandCatalog,
@@ -44,6 +45,13 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "rootCauseGroups", "final execution plan generator"],
   [generator, "buildRootCauseGroups", "final execution plan generator"],
   [generator, "Root Cause Groups", "final execution plan generator"],
+  [generator, "closureBundles", "final execution plan generator"],
+  [generator, "buildClosureBundles", "final execution plan generator"],
+  [generator, "Closure Bundles", "final execution plan generator"],
+  [generator, "Field Input And Risk Acceptance", "final execution plan generator"],
+  [generator, "Runtime And Hardware Proof", "final execution plan generator"],
+  [generator, "Security And CI Proof", "final execution plan generator"],
+  [generator, "Final Handover Refresh", "final execution plan generator"],
   [generator, "Field Runtime And Hardware Rehearsal", "final execution plan generator"],
   [generator, "Delivery Environment Preflight", "final execution plan generator"],
   [generator, "Manual Field Evidence", "final execution plan generator"],
@@ -168,6 +176,11 @@ assert(openPlan.rootCauseGroups.some((group) => group.id === "field-runtime-rehe
 assert(openPlan.rootCauseGroups.some((group) => group.id === "security-scanner-evidence" && group.gateCount === 1), "security root cause should count scanner gate");
 assert(openPlan.rootCauseGroups.some((group) => group.id === "source-revision-closeout" && group.gateCount === 1), "source revision root cause should count source gate");
 assert(openPlan.rootCauseGroups.some((group) => group.evidenceTargets?.length > 0), "root cause groups should expose evidence targets");
+assert(openPlan.closureBundles.some((bundle) => bundle.id === "field-input-and-risk-acceptance" && bundle.gateCount === 1), "closure bundles should include manual field input bundle");
+assert(openPlan.closureBundles.some((bundle) => bundle.id === "runtime-and-hardware-proof" && bundle.gateCount === 1), "closure bundles should include runtime and hardware bundle");
+assert(openPlan.closureBundles.some((bundle) => bundle.id === "security-and-ci-proof" && bundle.gateCount === 2), "closure bundles should include security and CI bundle");
+assert(openPlan.closureBundles.some((bundle) => bundle.commandIds.includes("manual-evidence-readiness")), "closure bundles should expose command ids");
+assert(openPlan.closureBundles.some((bundle) => bundle.commands.some((command) => command.id === "security-evidence")), "closure bundles should attach ordered command details");
 assert(openPlan.git.upstream === "origin/dev", "execution plan should expose git upstream");
 assert(openPlan.git.pushed === true, "execution plan should expose pushed source state");
 assert(openPlan.commandGateCoverage.some((item) => item.id === "security-evidence" && item.gateCount === 1), "security command coverage should count matching security gates");
@@ -231,6 +244,8 @@ assert(openMarkdown.includes("Final Execution Plan"), "markdown should include t
 assert(openMarkdown.includes("This execution plan does not prove field completion"), "markdown should include guardrail");
 assert(openMarkdown.includes("Ordered Commands"), "markdown should include ordered command table");
 assert(openMarkdown.includes("Root Cause Groups"), "markdown should include root cause group table");
+assert(openMarkdown.includes("Closure Bundles"), "markdown should include closure bundle table");
+assert(openMarkdown.includes("Field Input And Risk Acceptance"), "markdown should include field input closure bundle");
 assert(openMarkdown.includes("Evidence Targets"), "markdown should include evidence target column");
 assert(openMarkdown.includes("Command Gate Coverage"), "markdown should include command gate coverage table");
 assert(openMarkdown.includes("Git upstream: origin/dev"), "markdown should include git upstream");
@@ -257,6 +272,7 @@ assert(readyPlan.canMarkGoalComplete === true, "ready execution plan should allo
 assert(readyPlan.orderedCommands.length === 0, "ready execution plan should not invent commands");
 assert(readyPlan.commandGateCoverage.length === 0, "ready execution plan should not invent command coverage");
 assert(readyPlan.rootCauseGroups.length === 0, "ready execution plan should not invent root causes");
+assert(readyPlan.closureBundles.length === 0, "ready execution plan should not invent closure bundles");
 const placeholderMetadataPlan = buildFinalExecutionPlan({
   generatedAt: "2026-01-01T00:00:00.000Z",
   generatedBy: "field-reviewer",
@@ -358,7 +374,12 @@ const rootCauseGroups = buildRootCauseGroups([
   { actionType: "MANUAL_EVIDENCE_REQUIRED", category: "Manual Evidence", status: "INVALID", message: "Operator UI Walkthrough evidence is INVALID", evidence: "artifacts/manual/operator-ui-walkthrough.md" },
   { actionType: "REVIEW_REQUIRED", category: "CI Status", status: "REVIEW", message: "No CI workflow run was found for branch dev.", evidence: "artifacts/ci-status/latest/manifest.json" },
   { actionType: "FIELD_ACTION_REQUIRED", category: "Field Acceptance", status: "REVIEW", message: "Field acceptance status is REVIEW.", evidence: "artifacts/field-acceptance/latest/manifest.json" },
+  { actionType: "REVIEW_REQUIRED", category: "Handover Package", status: "REVIEW", message: "handover package status is REVIEW.", evidence: "artifacts/handover-package/latest/manifest.json" },
 ]);
+const closureBundles = buildClosureBundles(rootCauseGroups, commandCatalog("http://localhost:8080").map((item, index) => ({ order: index + 1, ...item })));
+assert(closureBundles.some((bundle) => bundle.id === "field-input-and-risk-acceptance" && bundle.rootCauseIds.includes("manual-field-evidence")), "closure bundles should map manual root causes");
+assert(closureBundles.some((bundle) => bundle.id === "final-handover-refresh" && bundle.rootCauseIds.length > 0), "closure bundles should map final handover root causes");
+assert(closureBundles.every((bundle) => bundle.evidenceTargets.length > 0), "closure bundles should expose evidence targets");
 assert(rootCauseGroups.some((group) => group.id === "delivery-env-preflight" && group.closeoutCommandIds.includes("field-preflight")), "root cause groups should expose preflight closeout commands");
 assert(rootCauseGroups.some((group) => group.id === "manual-field-evidence" && group.owner === "Field Operations"), "root cause groups should expose manual evidence owner");
 assert(rootCauseGroups.some((group) => group.id === "external-ci-evidence" && group.closeWhen.includes("GitHub Actions CI")), "root cause groups should expose external CI close condition");
