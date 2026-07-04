@@ -3,7 +3,7 @@ const os = require("os");
 const path = require("path");
 const { spawnSync } = require("child_process");
 
-const { timestampForPath } = require("./generate-delivery-evidence");
+const { readLatestJsonManifest, timestampForPath } = require("./generate-delivery-evidence");
 const { isPlaceholderFieldText } = require("./generate-final-status-report");
 
 const root = path.join(__dirname, "..", "..", "..");
@@ -490,10 +490,30 @@ function buildRuntimeChecks(baseUrl) {
   return checks;
 }
 
+function scannerEvidenceReady(tool) {
+  const security = readLatestJsonManifest("artifacts/security")?.data;
+  const scannerCloseout = Array.isArray(security?.scannerCloseout) ? security.scannerCloseout : [];
+  const normalized = tool.toLowerCase();
+  return scannerCloseout.some((item) => {
+    const scanner = String(item.scanner || "").toLowerCase();
+    if (normalized === "gitleaks") return scanner.includes("gitleaks") && item.closeoutStatus === "EVIDENCE_READY";
+    if (normalized === "trivy") return scanner.includes("trivy") && item.closeoutStatus === "EVIDENCE_READY";
+    if (normalized === "zap-baseline.py") return scanner.includes("zap") && item.closeoutStatus === "EVIDENCE_READY";
+    return false;
+  });
+}
+
 function buildToolChecks() {
   return ["gitleaks", "trivy", "zap-baseline.py"].map((tool) => {
     const available = commandExists(tool);
-    return buildCheck(`${tool} availability`, available ? "PASS" : "SKIPPED", "warning", available ? `${tool} is installed.` : `${tool} is not installed.`, `Install ${tool} or document skipped scanner evidence.`);
+    const evidenceReady = scannerEvidenceReady(tool);
+    const status = available || evidenceReady ? "PASS" : "SKIPPED";
+    const message = available
+      ? `${tool} is installed.`
+      : evidenceReady
+        ? `${tool} evidence is available from the latest strict security manifest.`
+        : `${tool} is not installed.`;
+    return buildCheck(`${tool} availability`, status, "warning", message, `Install ${tool}, rerun security:evidence with --use-docker-scanners, or document skipped scanner evidence.`);
   });
 }
 

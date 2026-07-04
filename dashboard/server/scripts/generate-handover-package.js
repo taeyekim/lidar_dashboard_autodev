@@ -128,8 +128,24 @@ function latestEvidenceRefs() {
   };
 }
 
+function strictSecurityEvidenceReady() {
+  const security = readLatestJsonManifest("artifacts/security")?.data;
+  if (!security) return false;
+  const summary = security.dispositionSummary || {};
+  const scannerCloseout = Array.isArray(security.scannerCloseout) ? security.scannerCloseout : [];
+  const openScannerRows = scannerCloseout.filter((item) => !["EVIDENCE_READY", "RISK_ACCEPTED"].includes(item.closeoutStatus));
+  return (
+    security.options?.requireScanners === true &&
+    security.strictAcceptanceBlocked !== true &&
+    Number(summary.blocking || 0) === 0 &&
+    Number(summary.deliveryFix || 0) === 0 &&
+    Number(summary.unverified || 0) === 0 &&
+    openScannerRows.length === 0
+  );
+}
+
 function knownFieldLimitations() {
-  return [
+  const limitations = [
     {
       area: "Control Board TCP",
       limitation: "Live integrated control-board TCP test requires field IP/port and hardware approval.",
@@ -161,6 +177,9 @@ function knownFieldLimitations() {
       closeWhen: "DEVICE_INGEST_API_KEY is configured end to end, or field-risk acceptance documents compensating controls.",
     },
   ];
+  return strictSecurityEvidenceReady()
+    ? limitations.filter((item) => item.area !== "Security Scanner Evidence")
+    : limitations;
 }
 
 function latestControlBoardSafetyStatus() {
