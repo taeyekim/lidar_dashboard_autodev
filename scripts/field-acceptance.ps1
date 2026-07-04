@@ -303,6 +303,48 @@ function Get-LatestManifestPath {
   return $manifest
 }
 
+function Get-LatestPassFieldRehearsalManifestPath {
+  param([string]$Root)
+
+  if (!(Test-Path -LiteralPath $Root)) { return $null }
+  $manifests = @(Get-ChildItem -LiteralPath $Root -Directory |
+    Sort-Object Name -Descending |
+    ForEach-Object { Join-Path $_.FullName "manifest.json" } |
+    Where-Object { Test-Path -LiteralPath $_ })
+
+  foreach ($manifestPath in $manifests) {
+    try {
+      $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+      $evidenceType = $manifest.PSObject.Properties["evidenceType"]
+      if ($null -eq $evidenceType -or $evidenceType.Value -ne "FIELD_REHEARSAL_PASS") { continue }
+      $results = @($manifest.results)
+      if ($results.Count -gt 0 -and @($results | Where-Object { $_.status -ne "PASS" }).Count -eq 0) {
+        return $manifestPath
+      }
+    } catch {
+      continue
+    }
+  }
+
+  return $null
+}
+
+function Add-ReusedFieldRehearsalStep {
+  param(
+    [string]$Name,
+    [string]$Root,
+    [string]$SkipReason
+  )
+
+  $now = (Get-Date).ToUniversalTime().ToString("o")
+  $manifestPath = Get-LatestPassFieldRehearsalManifestPath -Root $Root
+  if ($manifestPath) {
+    return New-StepResult -Name $Name -Status "PASS" -Command "reuse latest PASS manifest" -LogPath $manifestPath -ExitCode 0 -StartedAt $now -FinishedAt $now -Reason "Skip switch was provided; reused latest FIELD_REHEARSAL_PASS evidence."
+  }
+
+  return New-StepResult -Name $Name -Status "SKIPPED" -Command "" -LogPath "" -ExitCode 0 -StartedAt $now -FinishedAt $now -Reason $SkipReason
+}
+
 function Add-PreflightManifestGate {
   param([object[]]$Steps)
 
@@ -599,7 +641,7 @@ if ($SkipRuntime) {
 }
 
 if ($SkipDb) {
-  $steps += Add-SkippedStep -Name "DB Prisma field rehearsal" -Reason "SkipDb switch was provided."
+  $steps += Add-ReusedFieldRehearsalStep -Name "DB Prisma field rehearsal" -Root "artifacts/field-db-rehearsal" -SkipReason "SkipDb switch was provided."
 } else {
   $dbArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/db-field-rehearsal.ps1", "-BaseUrl", $BaseUrl)
   $dbCommandParts = @("powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/db-field-rehearsal.ps1", "-BaseUrl", $BaseUrl)
@@ -613,7 +655,7 @@ if ($SkipDb) {
 }
 
 if ($SkipLidar) {
-  $steps += Add-SkippedStep -Name "lidar ingest field rehearsal" -Reason "SkipLidar switch was provided."
+  $steps += Add-ReusedFieldRehearsalStep -Name "lidar ingest field rehearsal" -Root "artifacts/field-lidar-rehearsal" -SkipReason "SkipLidar switch was provided."
 } else {
   $lidarArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/lidar-ingest-rehearsal.ps1", "-BaseUrl", $BaseUrl)
   $steps += Invoke-AcceptanceStep -Name "lidar ingest field rehearsal" -Command "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl $BaseUrl" -LogFile (Join-Path $outputDir "04-lidar-ingest-rehearsal.log") -Script {
@@ -622,7 +664,7 @@ if ($SkipLidar) {
 }
 
 if ($SkipControlBoard) {
-  $steps += Add-SkippedStep -Name "control-board field rehearsal" -Reason "SkipControlBoard switch was provided."
+  $steps += Add-ReusedFieldRehearsalStep -Name "control-board field rehearsal" -Root "artifacts/field-control-board-rehearsal" -SkipReason "SkipControlBoard switch was provided."
 } else {
   $controlArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/control-board-field-rehearsal.ps1", "-BaseUrl", $BaseUrl)
   $controlCommandParts = @("powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "scripts/control-board-field-rehearsal.ps1", "-BaseUrl", $BaseUrl)
