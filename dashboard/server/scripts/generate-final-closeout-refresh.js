@@ -351,6 +351,22 @@ function buildSteps(options) {
       doneWhen: "Final status evidenceRefs.handoverPackage points to the latest handover-package manifest.",
     },
     {
+      id: "final-execution-plan-final-index",
+      phase: "Final Decision",
+      command: npm,
+      args: ["run", "final:execution-plan", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Rebuild the final execution plan from the final indexed final-status manifest.",
+      doneWhen: "Final execution plan sourceFinalStatus points to final-status-final-index.",
+    },
+    {
+      id: "final-bundle-handoff-final-index",
+      phase: "Final Decision",
+      command: npm,
+      args: ["run", "final:bundle-handoff", "--", `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Rebuild reviewer-facing bundle files from the final indexed execution plan.",
+      doneWhen: "Final bundle handoff sourceFinalExecutionPlan points to final-execution-plan-final-index.",
+    },
+    {
       id: "final-gate-classification-final-index",
       phase: "Final Decision",
       command: npm,

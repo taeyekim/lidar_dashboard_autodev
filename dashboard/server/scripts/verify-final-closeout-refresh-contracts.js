@@ -74,9 +74,13 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "final:gate-classification", "final closeout refresh generator"],
   [generator, "handover-package-final-index", "final closeout refresh generator"],
   [generator, "final-status-final-index", "final closeout refresh generator"],
+  [generator, "final-execution-plan-final-index", "final closeout refresh generator"],
+  [generator, "final-bundle-handoff-final-index", "final closeout refresh generator"],
   [generator, "final-gate-classification-final-index", "final closeout refresh generator"],
   [generator, "evidenceRefs.finalBundleHandoff points to the latest final-bundle-handoff manifest", "final closeout refresh generator"],
   [generator, "evidenceRefs.handoverPackage points to the latest handover-package manifest", "final closeout refresh generator"],
+  [generator, "sourceFinalStatus points to final-status-final-index", "final closeout refresh generator"],
+  [generator, "sourceFinalExecutionPlan points to final-execution-plan-final-index", "final closeout refresh generator"],
   [generator, "routing evidence for auto-mode triage", "final closeout refresh generator"],
 ].forEach(([content, token, label]) => assertIncludes(content, token, label));
 
@@ -114,6 +118,8 @@ const ids = steps.map((step) => step.id);
   "final-gate-classification",
   "handover-package-final-index",
   "final-status-final-index",
+  "final-execution-plan-final-index",
+  "final-bundle-handoff-final-index",
   "final-gate-classification-final-index",
 ].forEach((id) => assert(ids.includes(id), `steps should include ${id}`));
 
@@ -126,8 +132,11 @@ assert(
     ids.indexOf("final-bundle-handoff") < ids.indexOf("final-gate-classification") &&
     ids.indexOf("final-gate-classification") < ids.indexOf("handover-package-final-index") &&
     ids.indexOf("handover-package-final-index") < ids.indexOf("final-status-final-index") &&
+    ids.indexOf("final-status-final-index") < ids.indexOf("final-execution-plan-final-index") &&
+    ids.indexOf("final-execution-plan-final-index") < ids.indexOf("final-bundle-handoff-final-index") &&
+    ids.indexOf("final-bundle-handoff-final-index") < ids.indexOf("final-gate-classification-final-index") &&
     ids.indexOf("final-status-final-index") < ids.indexOf("final-gate-classification-final-index"),
-  "refresh should converge final status, action artifacts, handover package, final status, execution plan, bundle handoff, gate classification, final handover package index, final status, then final gate classification",
+  "refresh should converge final status, action artifacts, handover package, final status, execution plan, bundle handoff, gate classification, final handover package index, final status, final execution plan, final bundle handoff, then final gate classification",
 );
 assert(
   ids.indexOf("field-readiness") < ids.indexOf("field-env-closeout") &&
