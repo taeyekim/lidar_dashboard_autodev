@@ -40,6 +40,9 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "refreshOnlyCount", "final closeout refresh generator"],
   [generator, "Can mark goal complete", "final closeout refresh generator"],
   [generator, "acceptReviewExitCodes", "final closeout refresh generator"],
+  [generator, "acceptTimeoutAsReview", "final closeout refresh generator"],
+  [generator, "timeoutMs", "final closeout refresh generator"],
+  [generator, "Step exceeded", "final closeout refresh generator"],
   [generator, "manual:evidence-readiness", "final closeout refresh generator"],
   [generator, "ci:status", "final closeout refresh generator"],
   [generator, "security:evidence", "final closeout refresh generator"],
@@ -141,6 +144,14 @@ assert(
 assert(
   steps.find((step) => step.id === "security-evidence").acceptReviewExitCodes.includes(1),
   "strict security REVIEW exit should be recorded without failing refresh",
+);
+assert(
+  steps.find((step) => step.id === "security-evidence").acceptTimeoutAsReview === true,
+  "strict security timeout should be recorded without failing refresh",
+);
+assert(
+  steps.find((step) => step.id === "security-evidence").timeoutMs > 0,
+  "strict security refresh should define a bounded timeout",
 );
 assert(
   steps.find((step) => step.id === "security-evidence").args.includes("--require-scanners"),

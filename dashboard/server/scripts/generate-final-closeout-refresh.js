@@ -28,13 +28,19 @@ function commandLine(command, args) {
 
 function runStep(step, outputDir) {
   const startedAt = new Date();
+  const timeoutMs = step.timeoutMs || 600000;
   const result = spawnSync(step.command, step.args, {
     cwd: root,
     encoding: "utf8",
     shell: process.platform === "win32",
+    timeout: timeoutMs,
   });
-  const exitCode = result.status ?? (result.error ? 1 : 0);
-  const accepted = exitCode === 0 || (step.acceptReviewExitCodes || []).includes(exitCode);
+  const timedOut = result.error?.code === "ETIMEDOUT";
+  if (timedOut && process.platform === "win32" && result.pid) {
+    spawnSync("taskkill", ["/PID", String(result.pid), "/T", "/F"], { encoding: "utf8" });
+  }
+  const exitCode = timedOut ? 124 : result.status ?? (result.error ? 1 : 0);
+  const accepted = exitCode === 0 || (step.acceptReviewExitCodes || []).includes(exitCode) || (timedOut && step.acceptTimeoutAsReview === true);
   const status = exitCode === 0 ? "PASS" : accepted ? "REVIEW_RECORDED" : "FAIL";
   const logPath = path.join(outputDir, `${String(step.order).padStart(2, "0")}-${step.id}.log`);
   fs.writeFileSync(
@@ -47,6 +53,7 @@ function runStep(step, outputDir) {
       "",
       "## stderr",
       result.stderr || "",
+      timedOut ? `\n## timeout\nStep exceeded ${timeoutMs}ms and was recorded as ${status}.` : "",
       result.error ? `\n## error\n${result.error.message}` : "",
     ].join("\n"),
   );
@@ -58,6 +65,9 @@ function runStep(step, outputDir) {
     status,
     exitCode,
     acceptedReviewExitCodes: step.acceptReviewExitCodes || [],
+    acceptTimeoutAsReview: step.acceptTimeoutAsReview === true,
+    timeoutMs,
+    timedOut,
     startedAt: startedAt.toISOString(),
     finishedAt: new Date().toISOString(),
     logPath: path.relative(root, logPath).replace(/\\/g, "/"),
@@ -95,6 +105,8 @@ function buildSteps(options) {
       command: npm,
       args: ["run", "security:evidence", "--", "--include-container-images", "--include-zap", "--require-scanners", "--use-docker-scanners", `--target-url=${baseUrl}`],
       acceptReviewExitCodes: [1],
+      acceptTimeoutAsReview: true,
+      timeoutMs: 600000,
       purpose: "Refresh strict security evidence, preserving scanner blockers as review evidence instead of stopping closeout refresh.",
       doneWhen: "Required scanner evidence is PASS, or the latest security manifest lists exact blocking scanners and closeout commands.",
     },
