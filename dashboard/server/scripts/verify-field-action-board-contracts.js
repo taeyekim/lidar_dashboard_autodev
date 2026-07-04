@@ -59,6 +59,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "FIELD_REVIEWER",
   "FIELD_SITE_NAME",
   "closeoutCommands",
+  "dockerScannerRuntime",
+  "runtimeNoteForGate",
+  "Runtime Note",
   "Risk Acceptance Evidence",
 ].forEach((token) => assertIncludes(generator, token, "field action board generator"));
 
@@ -106,6 +109,10 @@ const gates = [
       nativeCommand: "gitleaks detect --source . --redact",
       dockerFallbackCommand: "npm.cmd run security:evidence -- --require-scanners --use-docker-scanners",
       riskAcceptanceEvidence: "artifacts/manual/field-risk-acceptance.md",
+    },
+    dockerScannerRuntime: {
+      ready: false,
+      error: "Docker daemon is not reachable.",
     },
   },
   {
@@ -166,6 +173,7 @@ assert(actionItems.length === 5, "action items should preserve gate count");
 assert(actionItems.every((item) => item.id.startsWith("GATE-")), "action item ids should be stable gate ids");
 assert(actionItems.every((item) => item.phase), "action items should expose execution phase");
 assert(actionItems.some((item) => item.scanner === "gitleaks" && item.closeoutCommands?.riskAcceptanceEvidence), "action items should preserve scanner closeout details");
+assert(actionItems.some((item) => item.scanner === "gitleaks" && item.runtimeNote.includes("Docker daemon")), "action items should preserve scanner runtime notes");
 assert(groupByOwner(actionItems).some((group) => group.owner === "Auth/Security" && group.total === 3), "owner grouping should count security/CORS owner");
 assert(groupByOwner(actionItems).some((group) => group.byPhase["Security Evidence"] === 2), "owner grouping should count phases");
 assert(groupByPhase(actionItems).some((group) => group.phase === "Security Evidence" && group.total === 2), "phase grouping should count security phase");
@@ -174,6 +182,7 @@ const executionQueue = buildExecutionQueue(actionItems);
 assert(executionQueue.length === 5, "execution queue should dedupe commands by phase");
 assert(executionQueue[0].phase === "Manual Evidence", "execution queue should start with manual evidence phase");
 assert(executionQueue.some((item) => item.phase === "Security Evidence" && item.command.includes("--use-docker-scanners")), "execution queue should expose scanner closeout command");
+assert(executionQueue.some((item) => (item.runtimeNotes || []).some((note) => note.includes("Docker daemon"))), "execution queue should expose scanner runtime notes");
 assert(executionQueue.every((item, index) => item.order === index + 1), "execution queue order should be stable and one-based");
 
 const manifest = buildManifest({
@@ -206,7 +215,9 @@ assert(markdown.includes("Phase Summary"), "markdown should include phase summar
 assert(markdown.includes("control-board-field-rehearsal.ps1"), "markdown should include mapped field command");
 assert(markdown.includes("field:preflight"), "markdown should include mapped preflight command");
 assert(markdown.includes("Risk Acceptance Evidence"), "markdown should include scanner risk acceptance column");
+assert(markdown.includes("Runtime Note"), "markdown should include runtime note column");
 assert(markdown.includes("field-risk-acceptance.md"), "markdown should include scanner risk acceptance evidence path");
+assert(markdown.includes("Docker daemon is not reachable."), "markdown should include scanner runtime note");
 
 const ready = buildManifest({
   generatedAt: "2026-01-01T00:00:00.000Z",

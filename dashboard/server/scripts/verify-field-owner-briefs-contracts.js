@@ -44,6 +44,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "phaseCounts",
   "buildOwnerBrief",
   "writeOwnerBriefs",
+  "Runtime Note",
+  "Risk Acceptance Evidence",
 ].forEach((token) => assertIncludes(generator, token, "field owner briefs generator"));
 
 [
@@ -107,11 +109,17 @@ const actionBoard = {
             actionType: "SECURITY_REVIEW_REQUIRED",
             category: "Security Evidence",
             status: "DELIVERY_FIX_REQUIRED",
-            message: "Security delivery fix is required.",
-            closeWhen: "Fix reported findings and rerun strict security evidence.",
-            evidence: "artifacts/security/example/manifest.json",
+          message: "Security delivery fix is required.",
+          closeWhen: "Fix reported findings and rerun strict security evidence.",
+          evidence: "artifacts/security/example/manifest.json",
+          scanner: "gitleaks",
+          closeoutCommands: {
+            riskAcceptanceEvidence: "artifacts/manual/field-risk-acceptance.md",
           },
-        ],
+          runtimeNote: "Docker daemon is not reachable.",
+          command: "npm.cmd run security:evidence -- --require-scanners --use-docker-scanners",
+        },
+      ],
       },
     ],
   },
@@ -148,6 +156,11 @@ assert(ownerMarkdown.includes("GATE-001"), "owner markdown should include action
 assert(ownerMarkdown.includes("Security Evidence"), "owner markdown should include item phase");
 assert(ownerMarkdown.includes("DELIVERY_FIX_REQUIRED"), "owner markdown should include delivery-fix status");
 assert(ownerMarkdown.includes("Security delivery fix is required."), "owner markdown should include message");
+assert(ownerMarkdown.includes("Risk Acceptance Evidence"), "owner markdown should include risk acceptance evidence column");
+assert(ownerMarkdown.includes("field-risk-acceptance.md"), "owner markdown should include risk acceptance evidence path");
+assert(ownerMarkdown.includes("Runtime Note"), "owner markdown should include runtime note column");
+assert(ownerMarkdown.includes("Docker daemon is not reachable."), "owner markdown should include scanner runtime note");
+assert(ownerMarkdown.includes("--use-docker-scanners"), "owner markdown should include scanner fallback command");
 assert(ownerMarkdown.includes("This owner brief is an execution aid"), "owner markdown should include guardrail");
 
 const placeholderMetadata = buildManifest({

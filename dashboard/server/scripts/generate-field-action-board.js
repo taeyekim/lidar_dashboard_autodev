@@ -120,6 +120,13 @@ function commandForGate(gate, baseUrl) {
   return `npm.cmd run final:execution-plan -- --base-url=${baseUrl}`;
 }
 
+function runtimeNoteForGate(gate) {
+  if (gate.dockerScannerRuntime?.ready === false) {
+    return gate.dockerScannerRuntime.error || "Docker scanner runtime is not ready.";
+  }
+  return "";
+}
+
 function buildActionItems(finalStatus, baseUrl) {
   const gates = finalStatus?.data?.remainingGates || [];
   return gates.map((gate, index) => ({
@@ -135,6 +142,8 @@ function buildActionItems(finalStatus, baseUrl) {
     evidence: gate.evidence || null,
     scanner: gate.scanner || null,
     closeoutCommands: gate.closeoutCommands || null,
+    dockerScannerRuntime: gate.dockerScannerRuntime || null,
+    runtimeNote: runtimeNoteForGate(gate),
     command: commandForGate(gate, baseUrl),
   }));
 }
@@ -153,9 +162,10 @@ function buildMetadataActionItems(generatedBy, siteName, baseUrl) {
       status: "PLACEHOLDER_METADATA",
       message: "Generated-by reviewer metadata is missing or placeholder.",
       closeWhen: "Set FIELD_REVIEWER to a concrete field reviewer and rerun field:action-board.",
-      evidence: null,
-      command: rerunCommand,
-    });
+        evidence: null,
+        runtimeNote: "",
+        command: rerunCommand,
+      });
   }
   if (isPlaceholderFieldText(siteName)) {
     items.push({
@@ -169,6 +179,7 @@ function buildMetadataActionItems(generatedBy, siteName, baseUrl) {
       message: "Site name metadata is missing or placeholder.",
       closeWhen: "Set FIELD_SITE_NAME to a concrete delivery site and rerun field:action-board.",
       evidence: null,
+      runtimeNote: "",
       command: rerunCommand,
     });
   }
@@ -268,8 +279,12 @@ function buildExecutionQueue(items) {
     entry.gateCount += 1;
     if (!entry.owners.includes(item.owner)) entry.owners.push(item.owner);
     if (priorityScore[item.priority] < priorityScore[entry.priority]) entry.priority = item.priority;
-    if (!entry.categories.includes(item.category)) entry.categories.push(item.category);
-    if (item.evidence && !entry.evidence.includes(item.evidence)) entry.evidence.push(item.evidence);
+      if (!entry.categories.includes(item.category)) entry.categories.push(item.category);
+      if (item.evidence && !entry.evidence.includes(item.evidence)) entry.evidence.push(item.evidence);
+      if (item.runtimeNote) {
+        entry.runtimeNotes = entry.runtimeNotes || [];
+        if (!entry.runtimeNotes.includes(item.runtimeNote)) entry.runtimeNotes.push(item.runtimeNote);
+      }
   });
 
   return queued
@@ -368,25 +383,25 @@ function buildMarkdown(manifest) {
     "",
     "## Execution Queue",
     "",
-    "| Order | Phase | Priority | Gate Count | Owners | Categories | Evidence | Command |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Order | Phase | Priority | Gate Count | Owners | Categories | Evidence | Runtime Notes | Command |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(manifest.executionQueue.length > 0
       ? manifest.executionQueue.map(
           (item) =>
-            `| ${item.order} | ${markdownCell(item.phase)} | ${markdownCell(item.priority)} | ${item.gateCount} | ${markdownCell(item.owner)} | ${markdownCell(item.categories.join(", "))} | ${markdownCell(item.evidence.join(", ") || "missing")} | \`${markdownCell(item.command)}\` |`,
+            `| ${item.order} | ${markdownCell(item.phase)} | ${markdownCell(item.priority)} | ${item.gateCount} | ${markdownCell(item.owner)} | ${markdownCell(item.categories.join(", "))} | ${markdownCell(item.evidence.join(", ") || "missing")} | ${markdownCell((item.runtimeNotes || []).join("; ") || "-")} | \`${markdownCell(item.command)}\` |`,
         )
-      : ["| 0 | none | - | 0 | - | - | - | No commands required. |"]),
+      : ["| 0 | none | - | 0 | - | - | - | - | No commands required. |"]),
     "",
     "## Action Items",
     "",
-    "| ID | Priority | Phase | Owner | Action Type | Category | Status | Message | Close When | Evidence | Scanner | Risk Acceptance Evidence | Command |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| ID | Priority | Phase | Owner | Action Type | Category | Status | Message | Close When | Evidence | Scanner | Risk Acceptance Evidence | Runtime Note | Command |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(manifest.actionItems.length > 0
       ? manifest.actionItems.map(
           (item) =>
-            `| ${item.id} | ${item.priority} | ${markdownCell(item.phase)} | ${markdownCell(item.owner)} | ${markdownCell(item.actionType)} | ${markdownCell(item.category)} | ${markdownCell(item.status)} | ${markdownCell(item.message)} | ${markdownCell(item.closeWhen)} | ${item.evidence ? `\`${markdownCell(item.evidence)}\`` : "missing"} | ${markdownCell(item.scanner || "-")} | ${item.closeoutCommands?.riskAcceptanceEvidence ? `\`${markdownCell(item.closeoutCommands.riskAcceptanceEvidence)}\`` : "-"} | \`${markdownCell(item.command)}\` |`,
+            `| ${item.id} | ${item.priority} | ${markdownCell(item.phase)} | ${markdownCell(item.owner)} | ${markdownCell(item.actionType)} | ${markdownCell(item.category)} | ${markdownCell(item.status)} | ${markdownCell(item.message)} | ${markdownCell(item.closeWhen)} | ${item.evidence ? `\`${markdownCell(item.evidence)}\`` : "missing"} | ${markdownCell(item.scanner || "-")} | ${item.closeoutCommands?.riskAcceptanceEvidence ? `\`${markdownCell(item.closeoutCommands.riskAcceptanceEvidence)}\`` : "-"} | ${markdownCell(item.runtimeNote || "-")} | \`${markdownCell(item.command)}\` |`,
         )
-      : ["| none | - | - | - | - | - | PASS | No open final-status gates. | - | - | - | - | - |"]),
+      : ["| none | - | - | - | - | - | PASS | No open final-status gates. | - | - | - | - | - | - |"]),
     "",
   ].join("\n");
 }
@@ -422,6 +437,7 @@ module.exports = {
   groupByPhase,
   ownerForGate,
   priorityForGate,
+  runtimeNoteForGate,
   phaseForGate,
   commandForGate,
 };
