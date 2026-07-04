@@ -70,6 +70,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "sourceRevisionFreshness", "final status report generator"],
   [generator, "Source Code State", "final status report generator"],
   [generator, "Evidence Source Revision", "final status report generator"],
+  [generator, "fieldEnvCloseout", "final status report generator"],
   [generator, "Delivery Entrypoint", "final status report generator"],
   [generator, "deliveryEntrypointConsistency", "final status report generator"],
   [generator, "endpointConsistency", "final status report generator"],
@@ -165,6 +166,10 @@ const readyEvidence = {
   fieldReadiness: {
     path: "artifacts/field-readiness/20260101-000000/manifest.json",
     data: { status: "PASS", baseUrl: "http://field.local:8080", git: readyEvidenceGit, env: { controlBoardSafetyStatus: "LIVE_TCP_READY" } },
+  },
+  fieldEnvCloseout: {
+    path: "artifacts/field-env-closeout/20260101-000000/manifest.json",
+    data: { status: "READY_TO_CLOSE", git: readyEvidenceGit, closeoutItemCount: 0 },
   },
   fieldAcceptance: {
     path: "artifacts/field-acceptance/20260101-000000/manifest.json",
@@ -332,6 +337,7 @@ readyEvidence.handoverPackage = {
       delivery: readyEvidence.delivery.path,
       completionAudit: readyEvidence.completionAudit.path,
       fieldReadiness: readyEvidence.fieldReadiness.path,
+      fieldEnvCloseout: readyEvidence.fieldEnvCloseout.path,
       fieldAcceptance: readyEvidence.fieldAcceptance.path,
       securityEvidence: readyEvidence.securityEvidence.path,
       manualEvidenceReadiness: readyEvidence.manualEvidenceReadiness.path,
@@ -368,6 +374,10 @@ assert(
 assert(
   ready.referenceFreshness.some((item) => item.key === "fieldAcceptance" && item.fresh === true),
   "complete fixture should verify fresh field acceptance reference",
+);
+assert(
+  ready.referenceFreshness.some((item) => item.key === "fieldEnvCloseout" && item.fresh === true),
+  "complete fixture should verify fresh field env closeout reference",
 );
 assert(ready.fieldAcceptance.readyForHandover === true, "complete fixture should expose field acceptance handover readiness");
 assert(ready.fieldAcceptance.reviewerReady === true, "complete fixture should expose concrete field acceptance reviewer");
@@ -407,6 +417,10 @@ assert(
 assert(
   ready.sourceRevisionFreshness.some((item) => item.key === "fieldRiskRegister" && item.fresh === true && item.pushed === true),
   "complete fixture should verify field risk register source revision freshness",
+);
+assert(
+  ready.sourceRevisionFreshness.some((item) => item.key === "fieldEnvCloseout" && item.fresh === true && item.pushed === true),
+  "complete fixture should verify field env closeout source revision freshness",
 );
 assert(
   ready.sourceRevisionFreshness.some((item) => item.key === "manualEvidenceReadiness" && item.fresh === true && item.pushed === true),

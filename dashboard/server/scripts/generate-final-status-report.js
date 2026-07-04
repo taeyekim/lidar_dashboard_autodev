@@ -10,6 +10,7 @@ const root = path.join(__dirname, "..", "..", "..");
 const REQUIRED_SOURCE_REVISION_EVIDENCE_KEYS = [
   "delivery",
   "fieldReadiness",
+  "fieldEnvCloseout",
   "fieldAcceptance",
   "securityEvidence",
   "manualEvidenceReadiness",
@@ -71,6 +72,7 @@ function latestEvidenceRefs() {
     delivery: readLatestJsonManifest("artifacts/delivery"),
     completionAudit: readLatestJsonManifest("artifacts/completion-audit"),
     fieldReadiness: readLatestJsonManifest("artifacts/field-readiness"),
+    fieldEnvCloseout: readLatestJsonManifest("artifacts/field-env-closeout"),
     securityEvidence: readLatestJsonManifest("artifacts/security"),
     handoverPackage: readLatestJsonManifest("artifacts/handover-package"),
     handoverIndex: readLatestJsonManifest("artifacts/handover-index"),
@@ -232,6 +234,7 @@ function refsAreFresh(handoverPackage, evidenceRefs) {
     delivery: evidencePath(evidenceRefs.delivery),
     completionAudit: evidencePath(evidenceRefs.completionAudit),
     fieldReadiness: evidencePath(evidenceRefs.fieldReadiness),
+    fieldEnvCloseout: evidencePath(evidenceRefs.fieldEnvCloseout),
     fieldAcceptance: evidencePath(evidenceRefs.fieldAcceptance),
     securityEvidence: evidencePath(evidenceRefs.securityEvidence),
     manualEvidenceReadiness: evidencePath(evidenceRefs.manualEvidenceReadiness),
