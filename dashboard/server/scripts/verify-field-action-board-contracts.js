@@ -215,6 +215,13 @@ assert(!prerequisiteHintsForGate(cookieGate).env.includes("COOKIE_SECURE"), "coo
 const swaggerGate = { category: "Field Evidence", message: "Field Preflight: Swagger allowlist", closeWhen: "Restrict Swagger exposure." };
 assert(prerequisiteHintsForGate(swaggerGate).env.includes("NGINX_SWAGGER_ALLOW"), "Swagger gate should expose NGINX_SWAGGER_ALLOW env prerequisite");
 assert(!prerequisiteHintsForGate(swaggerGate).env.includes("SWAGGER_ALLOWED_CIDRS"), "Swagger gate should not expose non-existent SWAGGER_ALLOWED_CIDRS env name");
+const rateLimitGate = { category: "Field Evidence", message: "Field Preflight: Nginx wrong-way rate limit", closeWhen: "Set Nginx rate limit and burst." };
+assert(ownerForGate(rateLimitGate) === "Nginx Delivery", "Nginx rate limit gate should map to Nginx Delivery");
+assert(prerequisiteHintsForGate(rateLimitGate).env.includes("NGINX_WRONGWAY_RATE_LIMIT"), "rate limit gate should expose NGINX_WRONGWAY_RATE_LIMIT");
+assert(prerequisiteHintsForGate(rateLimitGate).env.includes("NGINX_WRONGWAY_BURST"), "rate limit gate should expose NGINX_WRONGWAY_BURST");
+const cspGate = { category: "Field Evidence", message: "Field Preflight: Nginx content security policy", closeWhen: "Set content security policy." };
+assert(ownerForGate(cspGate) === "Nginx Delivery", "CSP gate should map to Nginx Delivery");
+assert(prerequisiteHintsForGate(cspGate).env.includes("NGINX_CONTENT_SECURITY_POLICY"), "CSP gate should expose NGINX_CONTENT_SECURITY_POLICY");
 assert(
   commandForGate(gates[3], "http://field.local:8080").includes("manual:evidence-readiness -- --generated-by="),
   "manual evidence gate should pass reviewer/site metadata args to readiness",
@@ -222,6 +229,10 @@ assert(
 assert(
   commandForGate({ category: "Handover Package", message: "handover package needs refresh" }, "http://field.local:8080").includes("--generated-by="),
   "handover gate should pass reviewer/site metadata args to package refresh",
+);
+assert(
+  commandForGate({ category: "Handover Package", message: "Field Preflight field evidence has 5 REVIEW item(s)." }, "http://field.local:8080").includes("handover:package"),
+  "handover package gate should not be rerouted to preflight by embedded reason text",
 );
 assert(
   commandForGate(
