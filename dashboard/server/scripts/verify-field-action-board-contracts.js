@@ -166,6 +166,8 @@ assert(phaseForGate(gates[4]) === "Field Preflight", "CORS/CSP gate should map t
 assert(commandForGate(gates[2], "http://field.local:8080").includes("control-board-field-rehearsal.ps1"), "control-board gate should map to control-board rehearsal command");
 assert(commandForGate(gates[0], "http://field.local:8080").includes("security:evidence"), "delivery-fix security gate should map to security evidence command");
 assert(commandForGate(gates[4], "http://field.local:8080").includes("field:preflight"), "CORS/CSP gate should map to field preflight command");
+assert(commandForGate(gates[4], "http://field.local:8080").includes("-Strict"), "field preflight command should use the field-preflight.ps1 -Strict flag");
+assert(!commandForGate(gates[4], "http://field.local:8080").includes("-StrictPreflight"), "field preflight command must not use the field-acceptance.ps1 -StrictPreflight flag");
 assert(
   prerequisiteHintsForGate(gates[1]).runtime.some((item) => item.includes("gitleaks")),
   "scanner gate should expose scanner runtime prerequisite",

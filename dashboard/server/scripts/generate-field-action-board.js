@@ -95,7 +95,7 @@ function commandForGate(gate, baseUrl) {
     return `npm.cmd run manual:evidence-readiness -- --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg}`;
   }
   if (text.includes("preflight") || text.includes("jwt") || text.includes("cookie") || text.includes("cors") || text.includes("swagger") || text.includes("rate limit") || text.includes("burst") || text.includes("content security") || text.includes("csp")) {
-    return `npm.cmd run field:preflight -- -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -StrictPreflight`;
+    return `npm.cmd run field:preflight -- -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -Strict`;
   }
   if (text.includes("security") || text.includes("scanner") || text.includes("zap") || text.includes("trivy") || text.includes("gitleaks")) {
     return `npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners --target-url=${baseUrl}`;

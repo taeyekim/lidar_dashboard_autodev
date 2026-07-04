@@ -93,8 +93,11 @@ The preflight records `.env` readiness, `JWT_SECRET`, seed admin password,
 and `NGINX_CONTENT_SECURITY_POLICY` under
 `artifacts/field-preflight/<timestamp>/manifest.json` plus `manifest.md`.
 Use `-RequireDeviceKey`, `-RequireHttpsCookies`, `-RequireSwaggerAllowlist`,
-and `-StrictPreflight` when those checks should fail instead of being recorded
-as review/skipped items.
+and `-Strict` with `scripts/field-preflight.ps1` or `npm.cmd run field:preflight`
+when those checks should fail instead of being recorded as review/skipped items.
+Use `-StrictPreflight` only with `scripts/field-acceptance.ps1` or
+`npm.cmd run field:acceptance`, where it is translated into the preflight
+`-Strict` flag by the orchestrator.
 
 The orchestrator runs `scripts/field-preflight.ps1`, `scripts/delivery-verify.ps1`, `scripts/runtime-smoke.ps1`,
 `scripts/db-field-rehearsal.ps1`, `scripts/lidar-ingest-rehearsal.ps1`,
