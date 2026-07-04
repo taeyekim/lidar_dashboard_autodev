@@ -62,6 +62,7 @@ function ownerForGate(gate) {
   if (text.includes("control-board") || text.includes("live_tcp") || text.includes("tcp") || text.includes("hardware")) return "Control-board TCP";
   if (text.includes("swagger") || text.includes("nginx") || text.includes("rate limit") || text.includes("burst") || text.includes("content security") || text.includes("csp")) return "Nginx Delivery";
   if (text.includes("operator") || text.includes("manual") || text.includes("walkthrough") || text.includes("risk acceptance")) return "PM/QA";
+  if (text.includes("field env closeout") || text.includes("field environment closeout") || text.includes(".env item")) return "Field Operations";
   if (text.includes("db") || text.includes("prisma") || text.includes("runtime")) return "Backend/Runtime";
   return "Field Operations";
 }
@@ -69,6 +70,7 @@ function ownerForGate(gate) {
 function priorityForGate(gate) {
   const text = `${gate.category || ""} ${gate.status || ""} ${gate.actionType || ""} ${gate.message || ""}`.toLowerCase();
   if (text.includes("blocked") || text.includes("strict") || text.includes("security") || text.includes("live_tcp") || text.includes("not live_tcp_ready")) return "P0";
+  if (text.includes("field env closeout") || text.includes("field environment closeout") || text.includes(".env item")) return "P1";
   if (text.includes("invalid") || text.includes("missing") || text.includes("skipped") || text.includes("field acceptance")) return "P1";
   if (text.includes("review") || text.includes("field_review") || text.includes("dry_run_safe")) return "P2";
   return "P3";
@@ -77,6 +79,7 @@ function priorityForGate(gate) {
 function phaseForGate(gate) {
   const text = `${gate.category || ""} ${gate.status || ""} ${gate.actionType || ""} ${gate.message || ""} ${gate.closeWhen || ""}`.toLowerCase();
   if (text.includes("manual evidence") || text.includes("operator ui walkthrough") || text.includes("field risk acceptance")) return "Manual Evidence";
+  if (text.includes("field env closeout") || text.includes("field environment closeout") || text.includes(".env item")) return "Field Env Closeout";
   if (text.includes("preflight") || text.includes("jwt") || text.includes("cookie") || text.includes("cors") || text.includes("swagger") || text.includes("rate limit") || text.includes("burst") || text.includes("content security") || text.includes("csp") || text.includes("device ingest key")) return "Field Preflight";
   if (text.includes("security") || text.includes("scanner") || text.includes("zap") || text.includes("trivy") || text.includes("gitleaks")) return "Security Evidence";
   if (text.includes("db") || text.includes("prisma") || text.includes("lidar") || text.includes("control-board") || text.includes("tcp") || text.includes("hardware")) return "Field Rehearsal";
@@ -93,6 +96,9 @@ function commandForGate(gate, baseUrl) {
   const text = `${gate.category || ""} ${gate.message || ""} ${gate.closeWhen || ""}`.toLowerCase();
   if (text.includes("manual evidence") || text.includes("operator ui walkthrough") || text.includes("field risk acceptance")) {
     return `npm.cmd run manual:evidence-readiness -- --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg}`;
+  }
+  if (text.includes("field env closeout") || text.includes("field environment closeout") || text.includes(".env item")) {
+    return `npm.cmd run field:env-closeout -- --base-url=${baseUrl} --generated-by=${fieldReviewerArg} --site-name=${fieldSiteArg}`;
   }
   if (text.includes("preflight") || text.includes("jwt") || text.includes("cookie") || text.includes("cors") || text.includes("swagger") || text.includes("rate limit") || text.includes("burst") || text.includes("content security") || text.includes("csp")) {
     return `npm.cmd run field:preflight -- -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -Strict`;
@@ -151,6 +157,21 @@ function prerequisiteHintsForGate(gate) {
   }
   if (text.includes("jwt")) hints.env.push("JWT_SECRET");
   if (text.includes("password")) hints.env.push("SEED_ADMIN_PASSWORD");
+  if (text.includes("field env closeout") || text.includes("field environment closeout") || text.includes(".env item")) {
+    hints.env.push(
+      "JWT_SECRET",
+      "SEED_ADMIN_PASSWORD",
+      "DEVICE_INGEST_API_KEY",
+      "AUTH_COOKIE_SECURE",
+      "AUTH_COOKIE_SAMESITE",
+      "CORS_ORIGINS",
+      "NGINX_SWAGGER_ALLOW",
+      "NGINX_WRONGWAY_RATE_LIMIT",
+      "NGINX_WRONGWAY_BURST",
+      "NGINX_CONTENT_SECURITY_POLICY",
+    );
+    hints.closeout.push("Refresh artifacts/field-env-closeout/<timestamp>/manifest.json");
+  }
   if (text.includes("cors")) hints.env.push("CORS_ORIGINS");
   if (text.includes("device ingest key") || text.includes("device key")) hints.env.push("DEVICE_INGEST_API_KEY");
   if (text.includes("cookie") || text.includes("https")) hints.env.push("AUTH_COOKIE_SECURE", "AUTH_COOKIE_SAMESITE");
@@ -255,6 +276,7 @@ function buildMetadataActionItems(generatedBy, siteName, baseUrl) {
 function groupByPhase(items) {
   const phaseOrder = [
     "Manual Evidence",
+    "Field Env Closeout",
     "Security Evidence",
     "Field Preflight",
     "Field Rehearsal",
@@ -311,6 +333,7 @@ function groupByOwner(items) {
 function buildExecutionQueue(items) {
   const phaseOrder = [
     "Manual Evidence",
+    "Field Env Closeout",
     "Security Evidence",
     "Field Preflight",
     "Field Rehearsal",

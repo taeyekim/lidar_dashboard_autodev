@@ -393,6 +393,7 @@ function buildFinalStatusReport(input = {}) {
   const gates = [];
   const completion = evidenceRefs.completionAudit;
   const readiness = evidenceRefs.fieldReadiness;
+  const fieldEnvCloseout = evidenceRefs.fieldEnvCloseout;
   const fieldAcceptance = evidenceRefs.fieldAcceptance;
   const security = evidenceRefs.securityEvidence;
   const handoverPackage = evidenceRefs.handoverPackage;
@@ -405,6 +406,7 @@ function buildFinalStatusReport(input = {}) {
   const ciStatus = evidenceRefs.ciStatus;
   const completionData = completion?.data || {};
   const readinessData = readiness?.data || {};
+  const fieldEnvCloseoutData = fieldEnvCloseout?.data || {};
   const packageData = handoverPackage?.data || {};
   const fieldRiskRegisterData = fieldRiskRegister?.data || {};
   const fieldActionBoardData = fieldActionBoard?.data || {};
@@ -498,6 +500,26 @@ function buildFinalStatusReport(input = {}) {
     if (readinessData.env?.controlBoardSafetyStatus !== "LIVE_TCP_READY") {
       addGate(gates, "Control Board TCP", readinessData.env?.controlBoardSafetyStatus || "UNKNOWN", "Control-board safety is not LIVE_TCP_READY.", "Configure field host/port, record CONTROL_BOARD_LIVE_APPROVED=true, and capture live TCP rehearsal evidence.", evidencePath(readiness));
     }
+  }
+
+  if (!fieldEnvCloseout) {
+    addGate(
+      gates,
+      "Field Env Closeout",
+      "MISSING",
+      "Latest field environment closeout manifest is missing.",
+      "Run npm.cmd run field:env-closeout after field:readiness to create the redacted owner/key closeout board.",
+      null,
+    );
+  } else if (fieldEnvCloseoutData.status !== "READY_TO_CLOSE" || Number(fieldEnvCloseoutData.closeoutItemCount || 0) > 0) {
+    addGate(
+      gates,
+      "Field Env Closeout",
+      fieldEnvCloseoutData.status || "OPEN",
+      `Field environment closeout has ${fieldEnvCloseoutData.closeoutItemCount ?? "unknown"} open .env item(s): blocking=${fieldEnvCloseoutData.blockingCount ?? "unknown"}, review=${fieldEnvCloseoutData.reviewCount ?? "unknown"}.`,
+      "Close the owner/key items in field:env-closeout, rerun strict field preflight, field readiness, field env closeout, and final:status.",
+      evidencePath(fieldEnvCloseout),
+    );
   }
 
   if (!controlBoardFieldRehearsal) {
@@ -850,6 +872,13 @@ function buildFinalStatusReport(input = {}) {
       status: readinessData.status || "MISSING",
       controlBoardSafetyStatus: readinessData.env?.controlBoardSafetyStatus || "UNKNOWN",
     },
+    fieldEnvCloseout: {
+      path: evidencePath(fieldEnvCloseout),
+      status: fieldEnvCloseoutData.status || "MISSING",
+      closeoutItemCount: fieldEnvCloseoutData.closeoutItemCount ?? null,
+      blockingCount: fieldEnvCloseoutData.blockingCount ?? null,
+      reviewCount: fieldEnvCloseoutData.reviewCount ?? null,
+    },
     fieldAcceptance: fieldAcceptanceSummary,
     lidarFieldRehearsal: lidarFieldRehearsalSummary,
     controlBoardFieldRehearsal: controlBoardFieldRehearsalSummary,
@@ -912,6 +941,8 @@ function buildMarkdown(manifest) {
     "",
     `- Completion audit: ${manifest.completionAudit.status} (${manifest.completionAudit.path || "missing"})`,
     `- Field readiness: ${manifest.fieldReadiness.status} (${manifest.fieldReadiness.path || "missing"})`,
+    `- Field environment closeout: ${manifest.fieldEnvCloseout.status} (${manifest.fieldEnvCloseout.path || "missing"})`,
+    `- Field environment closeout items: ${manifest.fieldEnvCloseout.closeoutItemCount ?? "missing"} (blocking=${manifest.fieldEnvCloseout.blockingCount ?? "missing"}, review=${manifest.fieldEnvCloseout.reviewCount ?? "missing"})`,
     `- Field acceptance: ${manifest.fieldAcceptance.status} (${manifest.fieldAcceptance.path || "missing"})`,
     `- Field acceptance ready for handover: ${manifest.fieldAcceptance.readyForHandover}`,
     `- LiDAR field rehearsal: ${manifest.lidarFieldRehearsal.evidenceType} (${manifest.lidarFieldRehearsal.path || "missing"})`,

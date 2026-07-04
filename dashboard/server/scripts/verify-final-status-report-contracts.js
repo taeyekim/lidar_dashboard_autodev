@@ -71,6 +71,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "Source Code State", "final status report generator"],
   [generator, "Evidence Source Revision", "final status report generator"],
   [generator, "fieldEnvCloseout", "final status report generator"],
+  [generator, "Field Env Closeout", "final status report generator"],
+  [generator, "Field environment closeout has", "final status report generator"],
   [generator, "Delivery Entrypoint", "final status report generator"],
   [generator, "deliveryEntrypointConsistency", "final status report generator"],
   [generator, "endpointConsistency", "final status report generator"],
@@ -380,6 +382,8 @@ assert(
   "complete fixture should verify fresh field env closeout reference",
 );
 assert(ready.fieldAcceptance.readyForHandover === true, "complete fixture should expose field acceptance handover readiness");
+assert(ready.fieldEnvCloseout.status === "READY_TO_CLOSE", "complete fixture should expose closed field env closeout");
+assert(ready.fieldEnvCloseout.closeoutItemCount === 0, "complete fixture should expose zero field env closeout items");
 assert(ready.fieldAcceptance.reviewerReady === true, "complete fixture should expose concrete field acceptance reviewer");
 assert(ready.fieldAcceptance.siteNameReady === true, "complete fixture should expose concrete field acceptance site name");
 assert(ready.lidarFieldRehearsal.missingRequiredResults.length === 0, "complete fixture should expose complete LiDAR rehearsal");
@@ -527,6 +531,44 @@ assert(
 assert(
   reviewCiStatus.remainingGates.some((item) => item.category === "CI Status" && item.closeWhen.includes("ci:closeout -- --dispatch")),
   "review CI status gate should point to ci:closeout dispatch",
+);
+
+const openFieldEnvCloseout = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    fieldEnvCloseout: {
+      ...readyEvidence.fieldEnvCloseout,
+      data: {
+        status: "OPEN",
+        git: readyEvidenceGit,
+        closeoutItemCount: 3,
+        blockingCount: 2,
+        reviewCount: 1,
+      },
+    },
+    handoverPackage: {
+      ...readyEvidence.handoverPackage,
+      data: {
+        ...readyEvidence.handoverPackage.data,
+        evidenceRefs: {
+          ...readyEvidence.handoverPackage.data.evidenceRefs,
+          fieldEnvCloseout: readyEvidence.fieldEnvCloseout.path,
+        },
+      },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  generatedBy: "reviewer-a",
+  siteName: "delivery-site",
+  baseUrl: "http://field.local:8080",
+  git: readyGit,
+});
+assert(
+  openFieldEnvCloseout.remainingGates.some(
+    (item) => item.category === "Field Env Closeout" && item.message.includes("3 open .env item"),
+  ),
+  "open field env closeout fixture should expose field env closeout gate",
 );
 
 const dirtySource = buildFinalStatusReport({

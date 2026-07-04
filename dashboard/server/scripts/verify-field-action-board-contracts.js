@@ -44,6 +44,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "Execution Queue",
   "Phase Summary",
   "This board organizes final-status gates for field execution",
+  "Field Env Closeout",
+  "field:env-closeout",
   "Auth/Security",
   "LiDAR Ingest",
   "Control-board TCP",
@@ -149,6 +151,14 @@ const gates = [
     closeWhen: "Set CORS_ORIGINS to explicit operator UI origins and refresh field preflight.",
     evidence: "artifacts/field-readiness/example/manifest.json",
   },
+  {
+    actionType: "FIELD_ACTION_REQUIRED",
+    category: "Field Env Closeout",
+    status: "OPEN",
+    message: "Field environment closeout has 18 open .env item(s): blocking=16, review=2.",
+    closeWhen: "Close the owner/key items in field:env-closeout, rerun strict field preflight, field readiness, field env closeout, and final:status.",
+    evidence: "artifacts/field-env-closeout/example/manifest.json",
+  },
 ];
 
 assert(ownerForGate(gates[0]) === "Auth/Security", "security gate should map to Auth/Security");
@@ -156,7 +166,9 @@ assert(ownerForGate(gates[1]) === "Auth/Security", "scanner closeout gate should
 assert(ownerForGate(gates[2]) === "Control-board TCP", "control-board gate should map to Control-board TCP");
 assert(ownerForGate(gates[3]) === "PM/QA", "manual operator gate should map to PM/QA");
 assert(ownerForGate(gates[4]) === "Auth/Security", "CORS gate should map to Auth/Security");
+assert(ownerForGate(gates[5]) === "Field Operations", "field env closeout gate should map to Field Operations");
 assert(priorityForGate(gates[0]) === "P0", "blocked security gate should be P0");
+assert(priorityForGate(gates[5]) === "P1", "open field env closeout gate should be P1");
 assert(phaseForGate(gates[0]) === "Security Evidence", "security gate should map to Security Evidence phase");
 assert(phaseForGate(gates[1]) === "Security Evidence", "scanner closeout gate should map to Security Evidence phase");
 assert(commandForGate(gates[1], "http://field.local:8080").includes("--use-docker-scanners"), "scanner closeout gate should prefer specific Docker fallback command");
@@ -167,9 +179,11 @@ assert(!commandForGate(gates[2], "http://field.local:8080").includes("field-revi
 assert(commandForGate(gates[2], "http://field.local:8080").includes("-AllowLiveTcp"), "live TCP closeout command should include explicit -AllowLiveTcp approval switch");
 assert(phaseForGate(gates[3]) === "Manual Evidence", "manual gate should map to Manual Evidence phase");
 assert(phaseForGate(gates[4]) === "Field Preflight", "CORS/CSP gate should map to Field Preflight phase");
+assert(phaseForGate(gates[5]) === "Field Env Closeout", "field env closeout gate should map to Field Env Closeout phase");
 assert(commandForGate(gates[2], "http://field.local:8080").includes("control-board-field-rehearsal.ps1"), "control-board gate should map to control-board rehearsal command");
 assert(commandForGate(gates[0], "http://field.local:8080").includes("security:evidence"), "delivery-fix security gate should map to security evidence command");
 assert(commandForGate(gates[4], "http://field.local:8080").includes("field:preflight"), "CORS/CSP gate should map to field preflight command");
+assert(commandForGate(gates[5], "http://field.local:8080").includes("field:env-closeout"), "field env closeout gate should map to env closeout command");
 assert(commandForGate(gates[4], "http://field.local:8080").includes("-Strict"), "field preflight command should use the field-preflight.ps1 -Strict flag");
 assert(!commandForGate(gates[4], "http://field.local:8080").includes("-StrictPreflight"), "field preflight command must not use the field-acceptance.ps1 -StrictPreflight flag");
 assert(
@@ -188,6 +202,11 @@ assert(
 assert(
   prerequisiteHintsForGate(gates[4]).env.includes("CORS_ORIGINS"),
   "CORS gate should expose CORS env prerequisite",
+);
+assert(
+  prerequisiteHintsForGate(gates[5]).env.includes("JWT_SECRET") &&
+    prerequisiteHintsForGate(gates[5]).env.includes("NGINX_CONTENT_SECURITY_POLICY"),
+  "field env closeout gate should expose env closeout prerequisites",
 );
 const cookieGate = { category: "Field Evidence", message: "Field Preflight: auth cookie delivery settings", closeWhen: "Set HTTPS cookie posture." };
 assert(prerequisiteHintsForGate(cookieGate).env.includes("AUTH_COOKIE_SECURE"), "cookie gate should expose AUTH_COOKIE_SECURE env prerequisite");
@@ -228,18 +247,19 @@ assert(
 );
 
 const actionItems = buildActionItems({ data: { remainingGates: gates } }, "http://field.local:8080");
-assert(actionItems.length === 5, "action items should preserve gate count");
+assert(actionItems.length === 6, "action items should preserve gate count");
 assert(actionItems.every((item) => item.id.startsWith("GATE-")), "action item ids should be stable gate ids");
 assert(actionItems.every((item) => item.phase), "action items should expose execution phase");
 assert(actionItems.every((item) => item.prerequisites?.env?.includes("FIELD_REVIEWER")), "action items should expose common field metadata prerequisites");
 assert(actionItems.some((item) => item.scanner === "gitleaks" && item.closeoutCommands?.riskAcceptanceEvidence), "action items should preserve scanner closeout details");
 assert(actionItems.some((item) => item.scanner === "gitleaks" && item.runtimeNote.includes("Docker daemon")), "action items should preserve scanner runtime notes");
 assert(groupByOwner(actionItems).some((group) => group.owner === "Auth/Security" && group.total === 3), "owner grouping should count security/CORS owner");
+assert(groupByOwner(actionItems).some((group) => group.owner === "Field Operations" && group.total === 1), "owner grouping should count field env closeout owner");
 assert(groupByOwner(actionItems).some((group) => group.byPhase["Security Evidence"] === 2), "owner grouping should count phases");
 assert(groupByPhase(actionItems).some((group) => group.phase === "Security Evidence" && group.total === 2), "phase grouping should count security phase");
 assert(groupByPhase(actionItems).some((group) => group.phase === "Field Preflight" && group.total === 1), "phase grouping should count CORS/CSP preflight phase");
 const executionQueue = buildExecutionQueue(actionItems);
-assert(executionQueue.length === 5, "execution queue should dedupe commands by phase");
+assert(executionQueue.length === 6, "execution queue should dedupe commands by phase");
 assert(executionQueue[0].phase === "Manual Evidence", "execution queue should start with manual evidence phase");
 assert(executionQueue.some((item) => item.phase === "Security Evidence" && item.command.includes("--use-docker-scanners")), "execution queue should expose scanner closeout command");
 assert(executionQueue.some((item) => (item.runtimeNotes || []).some((note) => note.includes("Docker daemon"))), "execution queue should expose scanner runtime notes");
@@ -262,10 +282,10 @@ const manifest = buildManifest({
 });
 
 assert(manifest.status === "OPEN", "fixture with gates should produce OPEN board");
-assert(manifest.openActionCount === 5, "manifest should preserve open action count");
-assert(manifest.ownerGroups.length === 3, "manifest should group by owner");
-assert(manifest.phaseGroups.length === 4, "manifest should group by phase");
-assert(manifest.executionQueue.length === 5, "manifest should expose execution queue");
+assert(manifest.openActionCount === 6, "manifest should preserve open action count");
+assert(manifest.ownerGroups.length === 4, "manifest should group by owner");
+assert(manifest.phaseGroups.length === 5, "manifest should group by phase");
+assert(manifest.executionQueue.length === 6, "manifest should expose execution queue");
 assert(manifest.sourceFinalStatus.includes("artifacts/final-status"), "manifest should reference final status");
 
 const markdown = buildMarkdown(manifest);
@@ -276,6 +296,7 @@ assert(markdown.includes("Execution Queue"), "markdown should include execution 
 assert(markdown.includes("Phase Summary"), "markdown should include phase summary");
 assert(markdown.includes("control-board-field-rehearsal.ps1"), "markdown should include mapped field command");
 assert(markdown.includes("field:preflight"), "markdown should include mapped preflight command");
+assert(markdown.includes("field:env-closeout"), "markdown should include mapped field env closeout command");
 assert(markdown.includes("Risk Acceptance Evidence"), "markdown should include scanner risk acceptance column");
 assert(markdown.includes("Runtime Note"), "markdown should include runtime note column");
 assert(markdown.includes("Prerequisites"), "markdown should include prerequisites column");
