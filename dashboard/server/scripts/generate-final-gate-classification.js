@@ -43,6 +43,13 @@ function bucketForGate(gate) {
   return "package_refresh";
 }
 
+function slug(value) {
+  return String(value || "unknown")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "unknown";
+}
+
 const bucketDefinitions = {
   field_configuration: {
     label: "Field Configuration",
@@ -209,7 +216,11 @@ function buildOwnerCloseoutQueue(buckets) {
       };
       return (priority[String(left.localAutomationAllowed)] ?? 5) - (priority[String(right.localAutomationAllowed)] ?? 5) || right.gateCount - left.gateCount;
     })
-    .map((item, index) => ({ ...item, order: index + 1 }));
+    .map((item, index) => ({
+      ...item,
+      order: index + 1,
+      fileName: `${String(index + 1).padStart(2, "0")}-${slug(item.bucketId)}.md`,
+    }));
 }
 
 function buildManifest(options) {
@@ -255,6 +266,14 @@ function buildManifest(options) {
     },
     buckets,
     ownerCloseoutQueue,
+    ownerCloseoutFileIndex: ownerCloseoutQueue.map((item) => ({
+      order: item.order,
+      bucketId: item.bucketId,
+      bucketLabel: item.bucketLabel,
+      owner: item.owner,
+      gateCount: item.gateCount,
+      fileName: item.fileName,
+    })),
     nextCodexActions: buildNextActions(buckets, options.baseUrl),
     guardrails: [
       "This classification is routing evidence, not completion evidence.",
@@ -312,6 +331,17 @@ function buildMarkdown(manifest) {
         `| ${item.order} | ${markdownCell(item.bucketLabel)} | ${markdownCell(item.owner)} | ${item.gateCount} | ${markdownCell(item.localAutomationAllowed)} | ${markdownCell(item.topCategories.join(", "))} | ${markdownCell(item.nextAction)} | ${markdownCell(item.doneWhen)} |`,
     ),
     "",
+    "## Owner Closeout Files",
+    "",
+    "| Order | Bucket | Owner | Gates | File |",
+    "| ---: | --- | --- | ---: | --- |",
+    ...(manifest.ownerCloseoutFileIndex.length > 0
+      ? manifest.ownerCloseoutFileIndex.map(
+          (item) =>
+            `| ${item.order} | ${markdownCell(item.bucketLabel)} | ${markdownCell(item.owner)} | ${item.gateCount} | \`${markdownCell(item.fileName)}\` |`,
+        )
+      : ["| - | none | none | 0 | none |"]),
+    "",
     "## Next Codex Actions",
     "",
     "| ID | Mode | Command | Guardrail |",
@@ -350,6 +380,55 @@ function buildMarkdown(manifest) {
   ].join("\n");
 }
 
+function buildOwnerCloseoutMarkdown(queueItem, bucket, manifest) {
+  return [
+    `# Owner Closeout - ${queueItem.bucketLabel}`,
+    "",
+    `- Bucket ID: ${queueItem.bucketId}`,
+    `- Owner: ${queueItem.owner}`,
+    `- Gate count: ${queueItem.gateCount}`,
+    `- Local automation: ${queueItem.localAutomationAllowed}`,
+    `- Source final status: ${manifest.sourceFinalStatus.path || "missing"}`,
+    `- Generated at: ${manifest.generatedAt}`,
+    `- Site name: ${manifest.siteName}`,
+    "",
+    "## Guardrails",
+    "",
+    "- This file is an execution aid, not completion evidence.",
+    "- Do not write secrets, private IP details, or unsigned approvals into this file.",
+    "- Final completion still requires final:status READY_TO_CLOSE and canMarkGoalComplete=true.",
+    "",
+    "## Owner Action",
+    "",
+    `- Next action: ${queueItem.nextAction}`,
+    `- Done when: ${queueItem.doneWhen}`,
+    "",
+    "## Top Categories",
+    "",
+    ...(queueItem.topCategories.length > 0 ? queueItem.topCategories.map((item) => `- ${item}`) : ["- none"]),
+    "",
+    "## Gates",
+    "",
+    "| # | Category | Status | Action Type | Message | Evidence | Close When |",
+    "| ---: | --- | --- | --- | --- | --- | --- |",
+    ...((bucket?.gates || []).length > 0
+      ? bucket.gates.map(
+          (gate, index) =>
+            `| ${index + 1} | ${markdownCell(gate.category)} | ${markdownCell(gate.status)} | ${markdownCell(gate.actionType)} | ${markdownCell(gate.message)} | ${markdownCell(gate.evidence || "missing")} | ${markdownCell(gate.closeWhen)} |`,
+        )
+      : ["| - | none | PASS | - | No open gates. | - | - |"]),
+    "",
+  ].join("\n");
+}
+
+function writeOwnerCloseoutFiles(outputDir, manifest) {
+  return manifest.ownerCloseoutQueue.map((queueItem) => {
+    const bucket = manifest.buckets.find((item) => item.id === queueItem.bucketId);
+    fs.writeFileSync(path.join(outputDir, queueItem.fileName), buildOwnerCloseoutMarkdown(queueItem, bucket, manifest));
+    return queueItem.fileName;
+  });
+}
+
 function main() {
   const outputRoot = argValue("output-root", "artifacts/final-gate-classification");
   const outputDir = path.join(root, outputRoot, timestampForPath());
@@ -360,6 +439,7 @@ function main() {
     siteName: argValue("site-name", "unspecified"),
   });
   fs.writeFileSync(path.join(outputDir, "manifest.json"), JSON.stringify(manifest, null, 2));
+  writeOwnerCloseoutFiles(outputDir, manifest);
   fs.writeFileSync(path.join(outputDir, "manifest.md"), buildMarkdown(manifest));
   console.log(`final gate classification written to ${path.relative(root, outputDir)}`);
   console.log(`final gate classification status: ${manifest.status}`);
@@ -374,6 +454,9 @@ module.exports = {
   bucketForGate,
   buildManifest,
   buildMarkdown,
+  buildOwnerCloseoutMarkdown,
   buildOwnerCloseoutQueue,
   summarizeBuckets,
+  slug,
+  writeOwnerCloseoutFiles,
 };
