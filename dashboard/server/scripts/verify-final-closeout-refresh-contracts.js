@@ -34,6 +34,7 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "OPEN_GATES", "final closeout refresh generator"],
   [generator, "latestFinalStatus", "final closeout refresh generator"],
   [generator, "latestHandoverPackage", "final closeout refresh generator"],
+  [generator, "latestFieldClosurePlan", "final closeout refresh generator"],
   [generator, "latestFinalExecutionPlan", "final closeout refresh generator"],
   [generator, "latestFinalBundleHandoff", "final closeout refresh generator"],
   [generator, "latestFinalGateClassification", "final closeout refresh generator"],
@@ -77,6 +78,7 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "handover-package-final-index", "final closeout refresh generator"],
   [generator, "final-status-final-index", "final closeout refresh generator"],
   [generator, "final-execution-plan-final-index", "final closeout refresh generator"],
+  [generator, "field-closure-plan-final-index", "final closeout refresh generator"],
   [generator, "final-bundle-handoff-final-index", "final closeout refresh generator"],
   [generator, "final-gate-classification-final-index", "final closeout refresh generator"],
   [generator, "evidenceRefs.finalBundleHandoff points to the latest final-bundle-handoff manifest", "final closeout refresh generator"],
@@ -121,6 +123,7 @@ const ids = steps.map((step) => step.id);
   "handover-package-final-index",
   "final-status-final-index",
   "final-execution-plan-final-index",
+  "field-closure-plan-final-index",
   "final-bundle-handoff-final-index",
   "final-gate-classification-final-index",
 ].forEach((id) => assert(ids.includes(id), `steps should include ${id}`));
@@ -135,10 +138,11 @@ assert(
     ids.indexOf("final-gate-classification") < ids.indexOf("handover-package-final-index") &&
     ids.indexOf("handover-package-final-index") < ids.indexOf("final-status-final-index") &&
     ids.indexOf("final-status-final-index") < ids.indexOf("final-execution-plan-final-index") &&
-    ids.indexOf("final-execution-plan-final-index") < ids.indexOf("final-bundle-handoff-final-index") &&
+    ids.indexOf("final-execution-plan-final-index") < ids.indexOf("field-closure-plan-final-index") &&
+    ids.indexOf("field-closure-plan-final-index") < ids.indexOf("final-bundle-handoff-final-index") &&
     ids.indexOf("final-bundle-handoff-final-index") < ids.indexOf("final-gate-classification-final-index") &&
     ids.indexOf("final-status-final-index") < ids.indexOf("final-gate-classification-final-index"),
-  "refresh should converge final status, action artifacts, handover package, final status, execution plan, bundle handoff, gate classification, final handover package index, final status, final execution plan, final bundle handoff, then final gate classification",
+  "refresh should converge final status, action artifacts, handover package, final status, execution plan, bundle handoff, gate classification, final handover package index, final status, final execution plan, field closure plan, final bundle handoff, then final gate classification",
 );
 assert(
   ids.indexOf("field-readiness") < ids.indexOf("field-env-closeout") &&
@@ -241,6 +245,7 @@ assert(manifest.reviewRecordedStepCount === 1, "manifest should count review-rec
 assert(manifest.externalCiDispatch === false, "manifest should record that external CI dispatch did not occur");
 assert(manifest.latestFinalStatus, "manifest should include latest final status summary");
 assert(manifest.latestHandoverPackage, "manifest should include latest handover package summary");
+assert(manifest.latestFieldClosurePlan, "manifest should include latest field closure plan summary");
 assert(manifest.latestFinalExecutionPlan, "manifest should include latest final execution plan summary");
 assert(manifest.latestFinalBundleHandoff, "manifest should include latest final bundle handoff summary");
 assert(manifest.latestFinalGateClassification, "manifest should include latest final gate classification summary");

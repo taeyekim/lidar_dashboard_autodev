@@ -363,6 +363,14 @@ function buildSteps(options) {
       doneWhen: "Final execution plan sourceFinalStatus points to final-status-final-index.",
     },
     {
+      id: "field-closure-plan-final-index",
+      phase: "Final Decision",
+      command: npm,
+      args: ["run", "field:closure-plan", "--", `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Rebuild the field closure plan after the final execution plan so Closure Command Queue points to the latest ordered commands.",
+      doneWhen: "Field closure plan sourceFinalExecutionPlan points to final-execution-plan-final-index.",
+    },
+    {
       id: "final-bundle-handoff-final-index",
       phase: "Final Decision",
       command: npm,
@@ -401,6 +409,8 @@ function buildMarkdown(manifest) {
     `- Latest final status: ${manifest.latestFinalStatus.status} (${manifest.latestFinalStatus.path || "missing"})`,
     `- Latest final status remaining gates: ${manifest.latestFinalStatus.remainingGateCount ?? "unknown"}`,
     `- Latest handover package: ${manifest.latestHandoverPackage.status} (${manifest.latestHandoverPackage.path || "missing"})`,
+    `- Latest field closure plan: ${manifest.latestFieldClosurePlan.status} (${manifest.latestFieldClosurePlan.path || "missing"})`,
+    `- Latest field closure queue count: ${manifest.latestFieldClosurePlan.closureCommandQueueCount ?? "unknown"}`,
     `- Latest final execution plan: ${manifest.latestFinalExecutionPlan.status} (${manifest.latestFinalExecutionPlan.path || "missing"})`,
     `- Latest final execution plan remaining gates: ${manifest.latestFinalExecutionPlan.remainingGateCount ?? "unknown"}`,
     `- Latest final bundle handoff: ${manifest.latestFinalBundleHandoff.status} (${manifest.latestFinalBundleHandoff.path || "missing"})`,
@@ -430,6 +440,7 @@ function buildManifest(options, stepResults) {
   const reviewSteps = stepResults.filter((step) => step.status === "REVIEW_RECORDED");
   const latestFinalStatus = readLatestJsonManifest("artifacts/final-status");
   const latestHandoverPackage = readLatestJsonManifest("artifacts/handover-package");
+  const latestFieldClosurePlan = readLatestJsonManifest("artifacts/field-closure-plan");
   const latestFinalExecutionPlan = readLatestJsonManifest("artifacts/final-execution-plan");
   const latestFinalBundleHandoff = readLatestJsonManifest("artifacts/final-bundle-handoff");
   const latestFinalGateClassification = readLatestJsonManifest("artifacts/final-gate-classification");
@@ -459,6 +470,12 @@ function buildManifest(options, stepResults) {
       path: latestHandoverPackage?.path || null,
       status: latestHandoverPackage?.data?.status || "MISSING",
       finalBundleHandoff: latestHandoverPackage?.data?.evidenceRefs?.finalBundleHandoff || null,
+    },
+    latestFieldClosurePlan: {
+      path: latestFieldClosurePlan?.path || null,
+      status: latestFieldClosurePlan?.data?.status || "MISSING",
+      sourceFinalExecutionPlan: latestFieldClosurePlan?.data?.sourceFinalExecutionPlan || null,
+      closureCommandQueueCount: latestFieldClosurePlan?.data?.counts?.closureCommandQueueCount ?? null,
     },
     latestFinalExecutionPlan: {
       path: latestFinalExecutionPlan?.path || null,
