@@ -170,11 +170,55 @@ function buildNextActions(buckets, baseUrl) {
   return actions;
 }
 
+function buildBucketGateCounts(buckets) {
+  return Object.fromEntries(buckets.map((bucket) => [bucket.id, bucket.gateCount]));
+}
+
+function buildOwnerCloseoutQueue(buckets) {
+  return buckets
+    .map((bucket, index) => ({
+      order: index + 1,
+      bucketId: bucket.id,
+      bucketLabel: bucket.label,
+      owner: bucket.owner,
+      gateCount: bucket.gateCount,
+      localAutomationAllowed: bucket.localAutomationAllowed,
+      topCategories: Object.entries(bucket.categories)
+        .sort((left, right) => right[1] - left[1])
+        .map(([category, count]) => `${category}:${count}`),
+      nextAction:
+        bucket.localAutomationAllowed === "refresh_only"
+          ? "Regenerate package/status artifacts after upstream field, security, CI, or reviewer evidence changes."
+          : bucket.localAutomationAllowed === "read_only"
+            ? "Record read-only status and obtain release/PM approval before any external dispatch."
+            : bucket.localAutomationAllowed === "conditional"
+              ? "Run approved local tooling only when scanner/runtime prerequisites are available; otherwise record reviewer evidence."
+              : "Collect real field evidence from the listed owner and rerun the mapped closeout commands.",
+      doneWhen:
+        bucket.localAutomationAllowed === "refresh_only"
+          ? "The package refresh bucket disappears after upstream evidence closes."
+          : `${bucket.label} gate count is 0 in final:gate-classification and final:status no longer lists this bucket's gates.`,
+    }))
+    .sort((left, right) => {
+      const priority = {
+        false: 0,
+        conditional: 1,
+        read_only: 2,
+        refresh_only: 3,
+        true: 4,
+      };
+      return (priority[String(left.localAutomationAllowed)] ?? 5) - (priority[String(right.localAutomationAllowed)] ?? 5) || right.gateCount - left.gateCount;
+    })
+    .map((item, index) => ({ ...item, order: index + 1 }));
+}
+
 function buildManifest(options) {
   const latestFinalStatus = readLatestJsonManifest("artifacts/final-status");
   const finalStatusData = latestFinalStatus?.data || {};
   const remainingGates = Array.isArray(finalStatusData.remainingGates) ? finalStatusData.remainingGates : [];
   const buckets = summarizeBuckets(remainingGates);
+  const bucketGateCounts = buildBucketGateCounts(buckets);
+  const ownerCloseoutQueue = buildOwnerCloseoutQueue(buckets);
   const localOnlyClosableCount = buckets
     .filter((bucket) => bucket.localAutomationAllowed === true)
     .reduce((sum, bucket) => sum + bucket.gateCount, 0);
@@ -206,9 +250,11 @@ function buildManifest(options) {
       conditionalLocalCount,
       refreshOnlyCount,
       fieldRequiredCount,
+      bucketGateCounts,
       bucketCount: buckets.length,
     },
     buckets,
+    ownerCloseoutQueue,
     nextCodexActions: buildNextActions(buckets, options.baseUrl),
     guardrails: [
       "This classification is routing evidence, not completion evidence.",
@@ -238,6 +284,7 @@ function buildMarkdown(manifest) {
     `- Conditional/read-only local gates: ${manifest.summary.conditionalLocalCount}`,
     `- Refresh-only gates: ${manifest.summary.refreshOnlyCount}`,
     `- Field-required gates: ${manifest.summary.fieldRequiredCount}`,
+    `- Bucket gate counts: ${Object.entries(manifest.summary.bucketGateCounts || {}).map(([key, count]) => `${key}:${count}`).join(", ") || "none"}`,
     `- Git commit: ${manifest.git.commit}`,
     `- Git branch: ${manifest.git.branch}`,
     `- Git pushed to origin/dev: ${manifest.git.pushed ? "yes" : "no"}`,
@@ -254,6 +301,15 @@ function buildMarkdown(manifest) {
     ...manifest.buckets.map(
       (bucket) =>
         `| ${markdownCell(bucket.label)} | ${bucket.gateCount} | ${markdownCell(bucket.owner)} | ${markdownCell(bucket.localAutomationAllowed)} | ${markdownCell(bucket.reason)} | ${markdownCell(Object.entries(bucket.categories).map(([key, count]) => `${key}:${count}`).join(", "))} |`,
+    ),
+    "",
+    "## Owner Closeout Queue",
+    "",
+    "| Order | Bucket | Owner | Gates | Local Automation | Top Categories | Next Action | Done When |",
+    "| ---: | --- | --- | ---: | --- | --- | --- | --- |",
+    ...manifest.ownerCloseoutQueue.map(
+      (item) =>
+        `| ${item.order} | ${markdownCell(item.bucketLabel)} | ${markdownCell(item.owner)} | ${item.gateCount} | ${markdownCell(item.localAutomationAllowed)} | ${markdownCell(item.topCategories.join(", "))} | ${markdownCell(item.nextAction)} | ${markdownCell(item.doneWhen)} |`,
     ),
     "",
     "## Next Codex Actions",
@@ -314,8 +370,10 @@ if (require.main === module) {
 }
 
 module.exports = {
+  buildBucketGateCounts,
   bucketForGate,
   buildManifest,
   buildMarkdown,
+  buildOwnerCloseoutQueue,
   summarizeBuckets,
 };

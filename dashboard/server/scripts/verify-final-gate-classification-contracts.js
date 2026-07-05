@@ -1,9 +1,11 @@
 const fs = require("fs");
 const path = require("path");
 const {
+  buildBucketGateCounts,
   bucketForGate,
   buildManifest,
   buildMarkdown,
+  buildOwnerCloseoutQueue,
   summarizeBuckets,
 } = require("./generate-final-gate-classification");
 
@@ -36,6 +38,12 @@ const checklist = readProjectFile("docs/ops/acceptance-checklist.md");
   [generator, "conditionalLocalCount", "final gate classification generator"],
   [generator, "refreshOnlyCount", "final gate classification generator"],
   [generator, "fieldRequiredCount", "final gate classification generator"],
+  [generator, "bucketGateCounts", "final gate classification generator"],
+  [generator, "buildBucketGateCounts", "final gate classification generator"],
+  [generator, "ownerCloseoutQueue", "final gate classification generator"],
+  [generator, "buildOwnerCloseoutQueue", "final gate classification generator"],
+  [generator, "Owner Closeout Queue", "final gate classification generator"],
+  [generator, "| Order | Bucket | Owner | Gates | Local Automation | Top Categories | Next Action | Done When |", "final gate classification generator"],
   [generator, "All Gates By Bucket", "final gate classification generator"],
   [generator, "Codex must not fabricate reviewer signatures", "final gate classification generator"],
   [generator, "final:status READY_TO_CLOSE", "final gate classification generator"],
@@ -46,6 +54,7 @@ const checklist = readProjectFile("docs/ops/acceptance-checklist.md");
   [finalRefresh, "latestFinalGateClassification", "final closeout refresh generator"],
   [checklist, "npm run final:gate-classification", "acceptance checklist"],
   [checklist, "artifacts/final-gate-classification/<timestamp>/manifest.json", "acceptance checklist"],
+  [checklist, "Owner Closeout Queue", "acceptance checklist"],
   [checklist, "auto-mode routing evidence", "acceptance checklist"],
 ].forEach(([content, token, label]) => assertIncludes(content, token, label));
 
@@ -69,6 +78,12 @@ assert(
   buckets.reduce((sum, bucket) => sum + bucket.gates.length, 0) === 3,
   "bucket gate rows should cover the full remaining gate set",
 );
+const bucketGateCounts = buildBucketGateCounts(buckets);
+assert(bucketGateCounts.hardware_runtime === 1, "bucket gate counts should expose hardware runtime count by id");
+assert(bucketGateCounts.security_tooling === 1, "bucket gate counts should expose security tooling count by id");
+const ownerQueue = buildOwnerCloseoutQueue(buckets);
+assert(ownerQueue.length === buckets.length, "owner closeout queue should include every open bucket");
+assert(ownerQueue[0].gateCount > 0, "owner closeout queue should preserve gate counts");
 
 const manifest = buildManifest({
   baseUrl: "http://field.local:8080",
@@ -77,7 +92,9 @@ const manifest = buildManifest({
 });
 assert(manifest.sourceFinalStatus, "manifest should include source final status");
 assert(manifest.summary, "manifest should include summary");
+assert(manifest.summary.bucketGateCounts, "manifest summary should include bucket gate counts");
 assert(Array.isArray(manifest.buckets), "manifest should include buckets");
+assert(Array.isArray(manifest.ownerCloseoutQueue), "manifest should include owner closeout queue");
 assert(
   manifest.buckets.reduce((sum, bucket) => sum + (bucket.gates || []).length, 0) === manifest.summary.remainingGateCount,
   "manifest bucket gate rows should add up to the remaining gate count",
@@ -94,13 +111,17 @@ const markdown = buildMarkdown({
     conditionalLocalCount: 1,
     refreshOnlyCount: 0,
     fieldRequiredCount: 2,
+    bucketGateCounts,
     bucketCount: 2,
   },
   buckets,
+  ownerCloseoutQueue: ownerQueue,
 });
 assert(markdown.includes("Final Gate Classification"), "markdown should include title");
 assert(markdown.includes("Field-required gates"), "markdown should include field-required summary");
 assert(markdown.includes("Refresh-only gates"), "markdown should include refresh-only summary");
+assert(markdown.includes("Bucket gate counts"), "markdown should include bucket gate count summary");
+assert(markdown.includes("Owner Closeout Queue"), "markdown should include owner closeout queue");
 assert(markdown.includes("Next Codex Actions"), "markdown should include next action table");
 assert(markdown.includes("All Gates By Bucket"), "markdown should include the full gate table section");
 assert(markdown.includes("This classification is routing evidence"), "markdown should include evidence guardrail");
