@@ -368,6 +368,7 @@ function buildControlBoardFieldRehearsalSummary(controlBoardFieldRehearsal) {
   const commandResults = results.filter((item) => String(item.name || "").includes("command rehearsal"));
   const failedResults = results.filter((item) => item.status !== "PASS");
   const acknowledgedCommands = commandResults.filter((item) => item.response?.command?.status === "ACKNOWLEDGED");
+  const unavailable = data.evidenceType === "FIELD_REHEARSAL_UNAVAILABLE";
 
   return {
     path: evidencePath(controlBoardFieldRehearsal),
@@ -377,12 +378,16 @@ function buildControlBoardFieldRehearsalSummary(controlBoardFieldRehearsal) {
     liveApproved: data.liveApproved === true,
     initialMode: data.initialMode || "MISSING",
     finalMode: data.finalMode || "MISSING",
-    safetyStatus: data.safetyStatus || "MISSING",
+    safetyStatus: data.safetyStatus || (unavailable ? "REVIEW" : "MISSING"),
     liveTcpReady: data.liveTcpReady === true,
     resultCount: results.length,
     failedResultCount: failedResults.length,
     commandResultCount: commandResults.length,
     acknowledgedCommandCount: acknowledgedCommands.length,
+    unavailable,
+    unavailableReason: data.unavailableAcceptance?.reason || "",
+    replacementOwner: data.unavailableAcceptance?.replacementOwner || "",
+    targetRecheckDate: data.unavailableAcceptance?.targetRecheckDate || "",
   };
 }
 
@@ -583,12 +588,15 @@ function buildFinalStatusReport(input = {}) {
       controlBoardFieldRehearsalSummary.acknowledgedCommandCount >= 3;
 
     if (!liveReadyRehearsal) {
+      const unavailableDetail = controlBoardFieldRehearsalSummary.unavailable
+        ? ` Unavailable REVIEW evidence is recorded: reason=${controlBoardFieldRehearsalSummary.unavailableReason || "unspecified"}, replacementOwner=${controlBoardFieldRehearsalSummary.replacementOwner || "unspecified"}, targetRecheckDate=${controlBoardFieldRehearsalSummary.targetRecheckDate || "unspecified"}.`
+        : "";
       addGate(
         gates,
         "Control Board Field Rehearsal",
         controlBoardFieldRehearsalSummary.safetyStatus || "REVIEW",
-        `Control-board field rehearsal is not approved LIVE_TCP ACK evidence: allowLiveTcp=${controlBoardFieldRehearsalSummary.allowLiveTcp}, liveApproved=${controlBoardFieldRehearsalSummary.liveApproved}, initialMode=${controlBoardFieldRehearsalSummary.initialMode}, finalMode=${controlBoardFieldRehearsalSummary.finalMode}, acknowledgedCommands=${controlBoardFieldRehearsalSummary.acknowledgedCommandCount}/${controlBoardFieldRehearsalSummary.commandResultCount}.`,
-        "Run the control-board field rehearsal with -AllowLiveTcp against the approved integrated control board and confirm all command rehearsals are ACKNOWLEDGED.",
+        `Control-board field rehearsal is not approved LIVE_TCP ACK evidence: allowLiveTcp=${controlBoardFieldRehearsalSummary.allowLiveTcp}, liveApproved=${controlBoardFieldRehearsalSummary.liveApproved}, initialMode=${controlBoardFieldRehearsalSummary.initialMode}, finalMode=${controlBoardFieldRehearsalSummary.finalMode}, acknowledgedCommands=${controlBoardFieldRehearsalSummary.acknowledgedCommandCount}/${controlBoardFieldRehearsalSummary.commandResultCount}.${unavailableDetail}`,
+        "Replace REVIEW/unavailable evidence by running the control-board field rehearsal with -AllowLiveTcp against the approved integrated control board and confirm all command rehearsals are ACKNOWLEDGED, including STAGE_2_RETURN rollback/return proof.",
         evidencePath(controlBoardFieldRehearsal),
       );
     }

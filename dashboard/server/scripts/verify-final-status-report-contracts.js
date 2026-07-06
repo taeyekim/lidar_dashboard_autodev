@@ -517,6 +517,43 @@ assert(
   "automated refresh runbook should mention ci closeout",
 );
 
+const unavailableControlBoardRehearsal = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    controlBoardFieldRehearsal: {
+      path: "artifacts/field-control-board-rehearsal/20260101-010000/manifest.json",
+      data: {
+        evidenceType: "FIELD_REHEARSAL_UNAVAILABLE",
+        unavailableAcceptance: {
+          reason: "field hardware unavailable",
+          replacementOwner: "control-board owner",
+          targetRecheckDate: "2026-08-01",
+        },
+        results: [
+          {
+            name: "Control Board TCP field rehearsal unavailable",
+            status: "REVIEW",
+          },
+        ],
+      },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
+  git: readyGit,
+});
+assert(
+  unavailableControlBoardRehearsal.remainingGates.some(
+    (item) =>
+      item.category === "Control Board Field Rehearsal" &&
+      item.status === "REVIEW" &&
+      item.message.includes("replacementOwner=control-board owner") &&
+      item.closeWhen.includes("STAGE_2_RETURN"),
+  ),
+  "unavailable control-board evidence should be reported as REVIEW with replacement owner and rollback closeout",
+);
+
 const reviewCiStatus = buildFinalStatusReport({
   evidenceRefs: {
     ...readyEvidence,
