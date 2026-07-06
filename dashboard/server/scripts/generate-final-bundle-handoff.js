@@ -149,14 +149,14 @@ function buildIndexMarkdown(manifest) {
     "",
     "## Bundles",
     "",
-    "| Order | Bundle | Gates | Owners | File | Reviewer Checklist |",
-    "| --- | --- | ---: | --- | --- | --- |",
+    "| Order | Bundle | Gates | Source Gate IDs | Owners | File | Reviewer Checklist |",
+    "| --- | --- | ---: | --- | --- | --- | --- |",
     ...(manifest.bundles.length > 0
       ? manifest.bundles.map(
           (bundle) =>
-            `| ${bundle.order} | ${markdownCell(bundle.label)} | ${bundle.gateCount} | ${markdownCell((bundle.owners || []).join(", ") || "none")} | \`${markdownCell(bundle.fileName)}\` | ${markdownCell((bundle.reviewerChecklist || []).join("; ") || "none")} |`,
+            `| ${bundle.order} | ${markdownCell(bundle.label)} | ${bundle.gateCount} | ${markdownCell((bundle.sourceGateIds || []).join(", ") || "none")} | ${markdownCell((bundle.owners || []).join(", ") || "none")} | \`${markdownCell(bundle.fileName)}\` | ${markdownCell((bundle.reviewerChecklist || []).join("; ") || "none")} |`,
         )
-      : ["| none | none | 0 | none | none | none |"]),
+      : ["| none | none | 0 | none | none | none | none |"]),
     ...(manifest.metadataReview.length
       ? ["", "## Metadata Review", "", ...manifest.metadataReview.map((item) => `- ${item}`)]
       : []),
@@ -172,6 +172,7 @@ function buildBundleMarkdown(bundle, manifest) {
     `- Order: ${bundle.order}`,
     `- Status: ${bundle.status}`,
     `- Gate count: ${bundle.gateCount}`,
+    `- Source gate IDs: ${(bundle.sourceGateIds || []).join(", ") || "none"}`,
     `- Owners: ${(bundle.owners || []).join(", ") || "none"}`,
     `- Source final execution plan: ${manifest.sourceFinalExecutionPlan || "missing"}`,
     "",

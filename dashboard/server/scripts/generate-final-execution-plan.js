@@ -293,6 +293,7 @@ function buildOrderedCommands(gates, baseUrl) {
 function buildCommandGateCoverage(orderedCommands, gates) {
   return orderedCommands.map((command) => {
     const matchedGates = gates.filter((gate) => command.actionTypes.includes(gate.actionType || "REVIEW_REQUIRED"));
+    const sourceGateIds = [...new Set(matchedGates.map((gate) => gate.id).filter(Boolean))];
     const categories = [...new Set(matchedGates.map((gate) => gate.category).filter(Boolean))];
     const statuses = [...new Set(matchedGates.map((gate) => gate.status).filter(Boolean))];
     const evidence = [...new Set(matchedGates.map((gate) => gate.evidence).filter(Boolean))];
@@ -304,6 +305,7 @@ function buildCommandGateCoverage(orderedCommands, gates) {
       command: command.command,
       actionTypes: command.actionTypes,
       gateCount: matchedGates.length,
+      sourceGateIds,
       categories,
       statuses,
       evidence,
@@ -518,6 +520,7 @@ function buildRootCauseGroups(gates) {
         categories: new Set(),
         statuses: new Set(),
         evidence: new Set(),
+        sourceGateIds: new Set(),
         evidenceTargets: rootCause.evidenceTargets || [],
         sampleMessages: [],
       });
@@ -528,6 +531,7 @@ function buildRootCauseGroups(gates) {
     if (gate.category) group.categories.add(gate.category);
     if (gate.status) group.statuses.add(gate.status);
     if (gate.evidence) group.evidence.add(gate.evidence);
+    if (gate.id) group.sourceGateIds.add(gate.id);
     if (group.sampleMessages.length < 3 && gate.message) group.sampleMessages.push(gate.message);
   });
 
@@ -538,6 +542,7 @@ function buildRootCauseGroups(gates) {
       categories: [...group.categories],
       statuses: [...group.statuses],
       evidence: [...group.evidence],
+      sourceGateIds: [...group.sourceGateIds],
     }))
     .sort((a, b) => b.gateCount - a.gateCount || a.label.localeCompare(b.label));
 }
@@ -624,6 +629,7 @@ function buildClosureBundles(rootCauseGroups, orderedCommands, baseUrl = "http:/
         rootCauseIds: groups.map((group) => group.id),
         owners: uniqueValues(groups.map((group) => group.owner)),
         evidenceTargets: uniqueValues(groups.flatMap((group) => group.evidenceTargets || [])),
+        sourceGateIds: uniqueValues(groups.flatMap((group) => group.sourceGateIds || [])),
         commandIds,
         commands: commandIds
           .map((id) => commandById.get(id))
@@ -764,25 +770,25 @@ function buildMarkdown(manifest) {
     "",
     "## Root Cause Groups",
     "",
-    "| Root Cause | Owner | Gates | Action Types | Categories | Evidence Targets | Closeout Commands | Close When | Sample Messages |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Root Cause | Owner | Gates | Source Gate IDs | Action Types | Categories | Evidence Targets | Closeout Commands | Close When | Sample Messages |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(manifest.rootCauseGroups.length > 0
       ? manifest.rootCauseGroups.map(
           (group) =>
-            `| ${markdownCell(group.label)} | ${markdownCell(group.owner)} | ${group.gateCount} | ${markdownCell(group.actionTypes.join(", ") || "none")} | ${markdownCell(group.categories.join(", ") || "none")} | ${markdownCell((group.evidenceTargets || []).join(", ") || "none")} | ${markdownCell(group.closeoutCommandIds.join(", ") || "none")} | ${markdownCell(group.closeWhen)} | ${markdownCell(group.sampleMessages.join("; "))} |`,
+            `| ${markdownCell(group.label)} | ${markdownCell(group.owner)} | ${group.gateCount} | ${markdownCell((group.sourceGateIds || []).join(", ") || "none")} | ${markdownCell(group.actionTypes.join(", ") || "none")} | ${markdownCell(group.categories.join(", ") || "none")} | ${markdownCell((group.evidenceTargets || []).join(", ") || "none")} | ${markdownCell(group.closeoutCommandIds.join(", ") || "none")} | ${markdownCell(group.closeWhen)} | ${markdownCell(group.sampleMessages.join("; "))} |`,
         )
-      : ["| none | none | 0 | none | none | none | none | No remaining root causes. | - |"]),
+      : ["| none | none | 0 | none | none | none | none | none | No remaining root causes. | - |"]),
     "",
     "## Closure Bundles",
     "",
-    "| Order | Bundle | Status | Gates | Root Causes | Owners | Evidence Targets | Commands | Outcome | Reviewer Checklist | Close When |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Order | Bundle | Status | Gates | Source Gate IDs | Root Causes | Owners | Evidence Targets | Commands | Outcome | Reviewer Checklist | Close When |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(manifest.closureBundles.length > 0
       ? manifest.closureBundles.map(
           (bundle) =>
-            `| ${bundle.order} | ${markdownCell(bundle.label)} | ${markdownCell(bundle.status)} | ${bundle.gateCount} | ${markdownCell(bundle.rootCauseIds.join(", ") || "none")} | ${markdownCell(bundle.owners.join(", ") || "none")} | ${markdownCell(bundle.evidenceTargets.join(", ") || "none")} | ${markdownCell(bundle.commandIds.join(", ") || "none")} | ${markdownCell(bundle.outcome)} | ${markdownCell((bundle.reviewerChecklist || []).join("; ") || "none")} | ${markdownCell(bundle.closeWhen)} |`,
+            `| ${bundle.order} | ${markdownCell(bundle.label)} | ${markdownCell(bundle.status)} | ${bundle.gateCount} | ${markdownCell((bundle.sourceGateIds || []).join(", ") || "none")} | ${markdownCell(bundle.rootCauseIds.join(", ") || "none")} | ${markdownCell(bundle.owners.join(", ") || "none")} | ${markdownCell(bundle.evidenceTargets.join(", ") || "none")} | ${markdownCell(bundle.commandIds.join(", ") || "none")} | ${markdownCell(bundle.outcome)} | ${markdownCell((bundle.reviewerChecklist || []).join("; ") || "none")} | ${markdownCell(bundle.closeWhen)} |`,
         )
-      : ["| none | none | READY | 0 | none | none | none | none | No closure bundles required. | none | No open final gates. |"]),
+      : ["| none | none | READY | 0 | none | none | none | none | none | No closure bundles required. | none | No open final gates. |"]),
     "",
     "## Ordered Commands",
     "",
@@ -797,14 +803,14 @@ function buildMarkdown(manifest) {
     "",
     "## Command Gate Coverage",
     "",
-    "| Order | Command ID | Gate Count | Action Types | Categories | Statuses | Evidence | Command Hints | Done When |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Order | Command ID | Gate Count | Source Gate IDs | Action Types | Categories | Statuses | Evidence | Command Hints | Done When |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(manifest.commandGateCoverage.length > 0
       ? manifest.commandGateCoverage.map(
-          (item) =>
-            `| ${item.order} | ${markdownCell(item.id)} | ${item.gateCount} | ${markdownCell(item.actionTypes.join(", "))} | ${markdownCell(item.categories.join(", ") || "none")} | ${markdownCell(item.statuses.join(", ") || "none")} | ${markdownCell(item.evidence.join(", ") || "missing")} | ${markdownCell(formatCommandHints(item.commandHints))} | ${markdownCell(item.doneWhen)} |`,
+        (item) =>
+            `| ${item.order} | ${markdownCell(item.id)} | ${item.gateCount} | ${markdownCell((item.sourceGateIds || []).join(", ") || "none")} | ${markdownCell(item.actionTypes.join(", "))} | ${markdownCell(item.categories.join(", ") || "none")} | ${markdownCell(item.statuses.join(", ") || "none")} | ${markdownCell(item.evidence.join(", ") || "missing")} | ${markdownCell(formatCommandHints(item.commandHints))} | ${markdownCell(item.doneWhen)} |`,
         )
-      : ["| none | none | 0 | none | none | none | missing | none | No commands are required by the latest final status. |"]),
+      : ["| none | none | 0 | none | none | none | none | missing | none | No commands are required by the latest final status. |"]),
     "",
     "## Manual Evidence Targets",
     "",

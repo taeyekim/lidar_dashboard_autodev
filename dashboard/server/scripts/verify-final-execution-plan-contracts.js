@@ -42,6 +42,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "gatesByActionType", "final execution plan generator"],
   [generator, "orderedCommands", "final execution plan generator"],
   [generator, "commandGateCoverage", "final execution plan generator"],
+  [generator, "sourceGateIds", "final execution plan generator"],
+  [generator, "Source Gate IDs", "final execution plan generator"],
   [generator, "rootCauseGroups", "final execution plan generator"],
   [generator, "buildRootCauseGroups", "final execution plan generator"],
   [generator, "Root Cause Groups", "final execution plan generator"],
@@ -159,10 +161,10 @@ const openPlan = buildFinalExecutionPlan({
       status: "FIELD_OR_SECURITY_REVIEW_REQUIRED",
       siteName: "field-site",
       remainingGates: [
-        { actionType: "MANUAL_EVIDENCE_REQUIRED", category: "Manual Evidence", status: "MISSING", message: "Operator walkthrough missing.", closeWhen: "Attach evidence." },
-        { actionType: "FIELD_ACTION_REQUIRED", category: "Control Board TCP", status: "DRY_RUN_SAFE", message: "Live TCP missing.", closeWhen: "Run rehearsal." },
-        { actionType: "SECURITY_REVIEW_REQUIRED", category: "Security Evidence", status: "DELIVERY_FIX_REQUIRED", message: "Security delivery fix required.", closeWhen: "Fix findings and rerun scanners." },
-        { actionType: "AUTOMATED_REFRESH_AVAILABLE", category: "Source Code State", status: "UNPUSHED", message: "Source revision needs push and evidence refresh.", closeWhen: "Push dev and regenerate final evidence." },
+        { id: "final-manual-evidence", actionType: "MANUAL_EVIDENCE_REQUIRED", category: "Manual Evidence", status: "MISSING", message: "Operator walkthrough missing.", closeWhen: "Attach evidence." },
+        { id: "final-control-board-tcp", actionType: "FIELD_ACTION_REQUIRED", category: "Control Board TCP", status: "DRY_RUN_SAFE", message: "Live TCP missing.", closeWhen: "Run rehearsal." },
+        { id: "final-security-evidence", actionType: "SECURITY_REVIEW_REQUIRED", category: "Security Evidence", status: "DELIVERY_FIX_REQUIRED", message: "Security delivery fix required.", closeWhen: "Fix findings and rerun scanners." },
+        { id: "final-source-revision", actionType: "AUTOMATED_REFRESH_AVAILABLE", category: "Source Code State", status: "UNPUSHED", message: "Source revision needs push and evidence refresh.", closeWhen: "Push dev and regenerate final evidence." },
       ],
     },
   },
@@ -192,11 +194,13 @@ assert(
 );
 assert(openPlan.remainingGateCount === 4, "execution plan should preserve remaining gate count");
 assert(openPlan.rootCauseGroups.some((group) => group.id === "manual-field-evidence" && group.gateCount === 1), "manual evidence root cause should count manual gate");
+assert(openPlan.rootCauseGroups.some((group) => group.id === "manual-field-evidence" && group.sourceGateIds.includes("final-manual-evidence")), "root cause groups should preserve source gate ids");
 assert(openPlan.rootCauseGroups.some((group) => group.id === "field-runtime-rehearsal" && group.gateCount === 1), "field runtime root cause should count control-board gate");
 assert(openPlan.rootCauseGroups.some((group) => group.id === "security-scanner-evidence" && group.gateCount === 1), "security root cause should count scanner gate");
 assert(openPlan.rootCauseGroups.some((group) => group.id === "source-revision-closeout" && group.gateCount === 1), "source revision root cause should count source gate");
 assert(openPlan.rootCauseGroups.some((group) => group.evidenceTargets?.length > 0), "root cause groups should expose evidence targets");
 assert(openPlan.closureBundles.some((bundle) => bundle.id === "field-input-and-risk-acceptance" && bundle.gateCount === 1), "closure bundles should include manual field input bundle");
+assert(openPlan.closureBundles.some((bundle) => bundle.id === "field-input-and-risk-acceptance" && bundle.sourceGateIds.includes("final-manual-evidence")), "closure bundles should preserve source gate ids");
 assert(openPlan.closureBundles.some((bundle) => bundle.id === "runtime-and-hardware-proof" && bundle.gateCount === 1), "closure bundles should include runtime and hardware bundle");
 assert(openPlan.closureBundles.some((bundle) => bundle.id === "security-and-ci-proof" && bundle.gateCount === 2), "closure bundles should include security and CI bundle");
 assert(openPlan.closureBundles.some((bundle) => bundle.commandIds.includes("manual-evidence-readiness")), "closure bundles should expose command ids");
@@ -213,6 +217,7 @@ assert(openPlan.closureBundles.every((bundle) => bundle.reviewerChecklist?.lengt
 assert(openPlan.git.upstream === "origin/dev", "execution plan should expose git upstream");
 assert(openPlan.git.pushed === true, "execution plan should expose pushed source state");
 assert(openPlan.commandGateCoverage.some((item) => item.id === "security-evidence" && item.gateCount === 1), "security command coverage should count matching security gates");
+assert(openPlan.commandGateCoverage.some((item) => item.id === "security-evidence" && item.sourceGateIds.includes("final-security-evidence")), "command coverage should preserve source gate ids");
 assert(
   openPlan.commandGateCoverage.some(
     (item) => item.id === "field-acceptance" && item.categories.includes("Control Board TCP") && item.statuses.includes("DRY_RUN_SAFE"),
@@ -290,6 +295,8 @@ assert(openMarkdown.includes("Field Input And Risk Acceptance"), "markdown shoul
 assert(openMarkdown.includes("Reviewer Checklist"), "markdown should include reviewer checklist column");
 assert(openMarkdown.includes("Evidence Targets"), "markdown should include evidence target column");
 assert(openMarkdown.includes("Command Gate Coverage"), "markdown should include command gate coverage table");
+assert(openMarkdown.includes("Source Gate IDs"), "markdown should include source gate id columns");
+assert(openMarkdown.includes("final-control-board-tcp"), "markdown should include source final-status gate ids");
 assert(openMarkdown.includes("Git upstream: origin/dev"), "markdown should include git upstream");
 assert(openMarkdown.includes("Git pushed to origin/dev: yes"), "markdown should include git pushed state");
 
@@ -412,15 +419,16 @@ const directCoverage = buildCommandGateCoverage(
   ],
 );
 const rootCauseGroups = buildRootCauseGroups([
-  { actionType: "FIELD_ACTION_REQUIRED", category: "Field Evidence", status: "REVIEW", message: "Field Preflight: JWT secret placeholder", evidence: "artifacts/field-preflight/latest/manifest.json" },
-  { actionType: "FIELD_ACTION_REQUIRED", category: "Field Env Closeout", status: "OPEN", message: "Field environment closeout has 3 open .env item(s).", evidence: "artifacts/field-env-closeout/latest/manifest.json" },
-  { actionType: "MANUAL_EVIDENCE_REQUIRED", category: "Manual Evidence", status: "INVALID", message: "Operator UI Walkthrough evidence is INVALID", evidence: "artifacts/manual/operator-ui-walkthrough.md" },
-  { actionType: "REVIEW_REQUIRED", category: "CI Status", status: "REVIEW", message: "No CI workflow run was found for branch dev.", evidence: "artifacts/ci-status/latest/manifest.json" },
-  { actionType: "FIELD_ACTION_REQUIRED", category: "Field Acceptance", status: "REVIEW", message: "Field acceptance status is REVIEW.", evidence: "artifacts/field-acceptance/latest/manifest.json" },
-  { actionType: "REVIEW_REQUIRED", category: "Handover Package", status: "REVIEW", message: "handover package status is REVIEW.", evidence: "artifacts/handover-package/latest/manifest.json" },
+  { id: "final-jwt", actionType: "FIELD_ACTION_REQUIRED", category: "Field Evidence", status: "REVIEW", message: "Field Preflight: JWT secret placeholder", evidence: "artifacts/field-preflight/latest/manifest.json" },
+  { id: "final-env-closeout", actionType: "FIELD_ACTION_REQUIRED", category: "Field Env Closeout", status: "OPEN", message: "Field environment closeout has 3 open .env item(s).", evidence: "artifacts/field-env-closeout/latest/manifest.json" },
+  { id: "final-operator-ui", actionType: "MANUAL_EVIDENCE_REQUIRED", category: "Manual Evidence", status: "INVALID", message: "Operator UI Walkthrough evidence is INVALID", evidence: "artifacts/manual/operator-ui-walkthrough.md" },
+  { id: "final-ci-status", actionType: "REVIEW_REQUIRED", category: "CI Status", status: "REVIEW", message: "No CI workflow run was found for branch dev.", evidence: "artifacts/ci-status/latest/manifest.json" },
+  { id: "final-field-acceptance", actionType: "FIELD_ACTION_REQUIRED", category: "Field Acceptance", status: "REVIEW", message: "Field acceptance status is REVIEW.", evidence: "artifacts/field-acceptance/latest/manifest.json" },
+  { id: "final-handover-package", actionType: "REVIEW_REQUIRED", category: "Handover Package", status: "REVIEW", message: "handover package status is REVIEW.", evidence: "artifacts/handover-package/latest/manifest.json" },
 ]);
 const closureBundles = buildClosureBundles(rootCauseGroups, commandCatalog("http://localhost:8080").map((item, index) => ({ order: index + 1, ...item })));
 assert(closureBundles.some((bundle) => bundle.id === "field-input-and-risk-acceptance" && bundle.rootCauseIds.includes("manual-field-evidence")), "closure bundles should map manual root causes");
+assert(closureBundles.some((bundle) => bundle.id === "field-input-and-risk-acceptance" && bundle.sourceGateIds.includes("final-operator-ui")), "closure bundles should preserve root-cause source gate ids");
 assert(closureBundles.some((bundle) => bundle.id === "final-handover-refresh" && bundle.rootCauseIds.length > 0), "closure bundles should map final handover root causes");
 assert(
   closureBundles.some((bundle) => bundle.id === "final-handover-refresh" && bundle.commands.some((command) => command.id === "final-execution-plan")),

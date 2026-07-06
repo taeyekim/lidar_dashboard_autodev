@@ -34,6 +34,7 @@ const finalExecutionPlanGenerator = readProjectFile("dashboard/server/scripts/ge
   [generator, "artifacts/final-bundle-handoff", "final bundle handoff generator"],
   [generator, "Final bundle handoff files are field execution aids", "final bundle handoff generator"],
   [generator, "Reviewer Checklist", "final bundle handoff generator"],
+  [generator, "Source Gate IDs", "final bundle handoff generator"],
   [generator, "Evidence Targets", "final bundle handoff generator"],
   [generator, "commandGuardrail", "final bundle handoff generator"],
   [generator, "approved external CI closeout window", "final bundle handoff generator"],
@@ -64,6 +65,7 @@ const fixture = buildBundleHandoff({
           label: "Field Input And Risk Acceptance",
           status: "OPEN",
           gateCount: 17,
+          sourceGateIds: ["final-manual-evidence", "final-control-board-tcp"],
           owners: ["Field Operations"],
           evidenceTargets: ["artifacts/manual/operator-ui-walkthrough.md"],
           commandIds: ["manual-evidence-readiness"],
@@ -103,15 +105,19 @@ assert(fixture.status === "OPEN", "fixture bundle handoff should be OPEN");
 assert(fixture.bundleCount === 1, "fixture should count bundles");
 assert(fixture.totalBundleGateCount === 17, "fixture should sum bundle gates");
 assert(fixture.bundles[0].fileName === "01-field-input-and-risk-acceptance.md", "bundle handoff should create stable file names");
+assert(fixture.bundles[0].sourceGateIds.includes("final-manual-evidence"), "bundle handoff should preserve source gate ids");
 assert(fixture.git.pushed === true, "bundle handoff should expose pushed git state");
 
 const indexMarkdown = buildIndexMarkdown(fixture);
 assert(indexMarkdown.includes("Final Bundle Handoff"), "index markdown should include title");
 assert(indexMarkdown.includes("Reviewer Checklist"), "index markdown should include checklist column");
+assert(indexMarkdown.includes("Source Gate IDs"), "index markdown should include source gate id column");
+assert(indexMarkdown.includes("final-manual-evidence"), "index markdown should include source final-status gate id");
 assert(indexMarkdown.includes("01-field-input-and-risk-acceptance.md"), "index markdown should link bundle file names");
 
 const bundleMarkdown = buildBundleMarkdown(fixture.bundles[0], fixture);
 assert(bundleMarkdown.includes("Bundle Handoff - Field Input And Risk Acceptance"), "bundle markdown should include title");
+assert(bundleMarkdown.includes("Source gate IDs: final-manual-evidence"), "bundle markdown should include source gate ids");
 assert(bundleMarkdown.includes("- [ ] Operator UI walkthrough"), "bundle markdown should render reviewer checklist");
 assert(bundleMarkdown.includes("manual:evidence-readiness"), "bundle markdown should include commands");
 assert(bundleMarkdown.includes("artifacts/manual/operator-ui-walkthrough.md"), "bundle markdown should include evidence targets");
