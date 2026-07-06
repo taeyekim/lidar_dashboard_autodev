@@ -103,6 +103,39 @@ function buildSuggestedEnvLines(items) {
   return (items || []).map((item) => `${item.name}=${suggestedValueForItem(item)}`);
 }
 
+function readEnvKeySet(envPath = path.join(root, ".env")) {
+  if (!fs.existsSync(envPath)) {
+    return {
+      present: false,
+      path: path.relative(root, envPath).replace(/\\/g, "/"),
+      keys: [],
+    };
+  }
+
+  const keys = fs
+    .readFileSync(envPath, "utf8")
+    .split(/\r?\n/)
+    .map((line) => {
+      const match = line.match(/^\s*([^#=\s]+)\s*=/);
+      return match ? match[1].trim() : "";
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+
+  return {
+    present: true,
+    path: path.relative(root, envPath).replace(/\\/g, "/"),
+    keys: [...new Set(keys)],
+  };
+}
+
+function buildAppendMissingEnvLines(items, currentKeys) {
+  const keySet = new Set(currentKeys || []);
+  return (items || [])
+    .filter((item) => !keySet.has(item.name))
+    .map((item) => `${item.name}=${suggestedValueForItem(item)}`);
+}
+
 function buildOwnerCloseoutChecklists(items, strictPreflightCommand) {
   const ownerMap = (items || []).reduce((acc, item) => {
     if (!acc[item.owner]) acc[item.owner] = [];
@@ -182,6 +215,11 @@ function buildManifest(options = {}) {
   });
 
   const strictPreflightCommand = `npm.cmd run field:preflight -- -BaseUrl ${baseUrl} -Reviewer "$env:FIELD_REVIEWER" -SiteName "$env:FIELD_SITE_NAME" -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -Strict`;
+  const envInventory = options.envInventory || readEnvKeySet();
+  const missingCurrentEnvKeys = closeoutItems
+    .map((item) => item.name)
+    .filter((name) => !envInventory.keys.includes(name));
+  const appendMissingEnvBlockLines = buildAppendMissingEnvLines(closeoutItems, envInventory.keys);
 
   return {
     generatedAt: options.generatedAt || new Date().toISOString(),
@@ -194,6 +232,14 @@ function buildManifest(options = {}) {
     readinessEvidence: readiness?.path || null,
     readinessStatus: readiness?.data?.status || null,
     controlBoardSafetyStatus: readiness?.data?.env?.controlBoardSafetyStatus || null,
+    envFile: {
+      path: envInventory.path,
+      present: envInventory.present,
+      keyCount: envInventory.keys.length,
+      keys: envInventory.keys,
+      missingCurrentEnvKeys,
+      appendMissingEnvBlockLines,
+    },
     requiredFieldValueCount: requiredFieldValues.length,
     blockingCount: blockingItems.length,
     reviewCount: reviewItems.length,
@@ -251,6 +297,21 @@ function buildMarkdown(manifest) {
     "",
     "```dotenv",
     ...(manifest.envTemplateLines.length > 0 ? manifest.envTemplateLines : ["# no open env keys"]),
+    "```",
+    "",
+    "## Current Env Key Coverage",
+    "",
+    `- Env file: ${manifest.envFile.path}`,
+    `- Env file present: ${manifest.envFile.present ? "yes" : "no"}`,
+    `- Current env key count: ${manifest.envFile.keyCount}`,
+    `- Missing current env keys: ${manifest.envFile.missingCurrentEnvKeys.length > 0 ? manifest.envFile.missingCurrentEnvKeys.join(", ") : "none"}`,
+    "",
+    "## Append Missing Env Block",
+    "",
+    "Append these missing keys to the local field `.env` only, then replace placeholders on the delivery PC. Secret values stay redacted here.",
+    "",
+    "```dotenv",
+    ...(manifest.envFile.appendMissingEnvBlockLines.length > 0 ? manifest.envFile.appendMissingEnvBlockLines : ["# no missing open env keys"]),
     "```",
     "",
     "## Suggested Field Env Draft",
@@ -333,6 +394,8 @@ module.exports = {
   buildOwnerCloseoutChecklists,
   buildEnvTemplateLines,
   buildSuggestedEnvLines,
+  buildAppendMissingEnvLines,
+  readEnvKeySet,
   envPlaceholderForItem,
   suggestedValueForItem,
 };

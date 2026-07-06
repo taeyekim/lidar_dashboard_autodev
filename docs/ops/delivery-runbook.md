@@ -99,7 +99,9 @@ After `field:readiness`, run `npm.cmd run field:env-closeout -- --base-url=<deli
 `artifacts/field-env-closeout/<timestamp>/manifest.json` and `manifest.md`.
 That closeout board groups the redacted field `.env` gaps by owner, lists the
 strict preflight command, gives key-specific actions without printing secret
-values, and adds owner closeout checklists with reviewer/session metadata,
+values, records current `.env` key coverage without exposing values, adds an
+`Append Missing Env Block` for keys that are not yet present in the local
+`.env`, and adds owner closeout checklists with reviewer/session metadata,
 redacted key placeholders, and the strict preflight rerun command.
 Use `-RequireDeviceKey`, `-RequireHttpsCookies`, `-RequireSwaggerAllowlist`,
 and `-Strict` with `scripts/field-preflight.ps1` or `npm.cmd run field:preflight`

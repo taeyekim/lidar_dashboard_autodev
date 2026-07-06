@@ -7,6 +7,7 @@ const {
   buildOwnerCloseoutChecklists,
   buildEnvTemplateLines,
   buildSuggestedEnvLines,
+  buildAppendMissingEnvLines,
   envPlaceholderForItem,
   suggestedValueForItem,
 } = require("./generate-field-env-closeout");
@@ -42,6 +43,11 @@ const runbook = readProjectFile("docs/ops/delivery-runbook.md");
   [generator, "Redacted Env Skeleton", "field env closeout generator"],
   [generator, "Suggested Field Env Draft", "field env closeout generator"],
   [generator, "suggestedEnvLines", "field env closeout generator"],
+  [generator, "Current Env Key Coverage", "field env closeout generator"],
+  [generator, "Append Missing Env Block", "field env closeout generator"],
+  [generator, "readEnvKeySet", "field env closeout generator"],
+  [generator, "missingCurrentEnvKeys", "field env closeout generator"],
+  [generator, "appendMissingEnvBlockLines", "field env closeout generator"],
   [generator, "127.0.0.1/32", "field env closeout generator"],
   [generator, "<field-secret-redacted>", "field env closeout generator"],
   [generator, "Do not paste real secret values into evidence", "field env closeout generator"],
@@ -107,6 +113,11 @@ const manifest = buildManifest({
   generatedAt: "2026-01-01T00:00:00.000Z",
   generatedBy: "reviewer-a",
   siteName: "delivery-site",
+  envInventory: {
+    present: true,
+    path: ".env",
+    keys: ["CORS_ORIGINS"],
+  },
 });
 
 assert(manifest.status === "OPEN", "fixture should expose open env closeout status");
@@ -121,6 +132,13 @@ assert(manifest.envTemplateLines.includes("JWT_SECRET=<field-secret-redacted>"),
 assert(manifest.envTemplateLines.includes("NGINX_SWAGGER_ALLOW=<field-value>"), "manifest should include non-secret env skeleton line");
 assert(manifest.suggestedEnvLines.includes("JWT_SECRET=<field-secret-redacted>"), "manifest should keep secrets redacted in suggested env lines");
 assert(manifest.suggestedEnvLines.includes("NGINX_SWAGGER_ALLOW=127.0.0.1/32"), "manifest should suggest a restricted Swagger allowlist");
+assert(manifest.envFile.present === true, "manifest should record .env presence without exposing values");
+assert(manifest.envFile.keys.includes("CORS_ORIGINS"), "manifest should expose .env key inventory only");
+assert(manifest.envFile.missingCurrentEnvKeys.includes("JWT_SECRET"), "manifest should identify missing open env keys");
+assert(manifest.envFile.missingCurrentEnvKeys.includes("NGINX_SWAGGER_ALLOW"), "manifest should identify missing non-secret env keys");
+assert(!manifest.envFile.missingCurrentEnvKeys.includes("CORS_ORIGINS"), "manifest should not ask for keys already present in .env");
+assert(manifest.envFile.appendMissingEnvBlockLines.includes("JWT_SECRET=<field-secret-redacted>"), "manifest should build appendable redacted missing secret lines");
+assert(manifest.envFile.appendMissingEnvBlockLines.includes("NGINX_SWAGGER_ALLOW=127.0.0.1/32"), "manifest should build appendable suggested non-secret lines");
 assert(
   manifest.ownerEnvTemplates.some((group) => group.owner === "Auth/Security" && group.envTemplateLines.includes("JWT_SECRET=<field-secret-redacted>")),
   "manifest should split env skeleton lines by owner",
@@ -146,6 +164,26 @@ assert(
   "suggested env helper should redact secrets",
 );
 assert(
+  buildAppendMissingEnvLines(
+    [
+      { name: "DEVICE_INGEST_API_KEY", redacted: true },
+      { name: "CORS_ORIGINS", redacted: false },
+    ],
+    ["CORS_ORIGINS"],
+  ).includes("DEVICE_INGEST_API_KEY=<field-secret-redacted>"),
+  "append missing env helper should include missing redacted secrets",
+);
+assert(
+  !buildAppendMissingEnvLines(
+    [
+      { name: "DEVICE_INGEST_API_KEY", redacted: true },
+      { name: "CORS_ORIGINS", redacted: false },
+    ],
+    ["CORS_ORIGINS"],
+  ).some((line) => line.startsWith("CORS_ORIGINS=")),
+  "append missing env helper should skip keys already present",
+);
+assert(
   buildOwnerCloseoutChecklists([{ name: "DEVICE_INGEST_API_KEY", owner: "LiDAR Integration", redacted: true, closeoutCommand: "close it" }], "npm.cmd run field:preflight")[0].steps.some(
     (step) => step.command === "DEVICE_INGEST_API_KEY=<field-secret-redacted>",
   ),
@@ -157,6 +195,8 @@ assert(markdown.includes("Field Environment Closeout"), "markdown should include
 assert(markdown.includes("Strict Preflight Command"), "markdown should include strict command section");
 assert(markdown.includes("Redacted Env Skeleton"), "markdown should include redacted env skeleton section");
 assert(markdown.includes("Suggested Field Env Draft"), "markdown should include suggested env draft section");
+assert(markdown.includes("Current Env Key Coverage"), "markdown should include current env coverage section");
+assert(markdown.includes("Append Missing Env Block"), "markdown should include append missing env section");
 assert(markdown.includes("Owner Closeout Checklists"), "markdown should include owner closeout checklist section");
 assert(markdown.includes("Set reviewer/session metadata"), "markdown should include reviewer metadata step");
 assert(markdown.includes("JWT_SECRET=<field-secret-redacted>"), "markdown should include redacted secret placeholder");
