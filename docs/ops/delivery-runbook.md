@@ -59,6 +59,7 @@ npm.cmd run field:owner-briefs -- --base-url=http://localhost:8080 --generated-b
 npm.cmd run ci:status -- --generated-by="$env:FIELD_REVIEWER"
 # If no CI run exists for the final dev commit, trigger and wait intentionally during the approved external CI closeout window:
 # npm.cmd run ci:closeout -- --dispatch --generated-by="$env:FIELD_REVIEWER"
+npm.cmd run delivery:evidence -- --base-url="$env:FIELD_BASE_URL" --target-url="$env:FIELD_BASE_URL" --reuse-existing-companions
 npm.cmd run handover:index -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
 npm.cmd run field:closure-plan -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
 npm.cmd run handover:package -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
@@ -68,6 +69,10 @@ npm.cmd run final:execution-plan -- --base-url=http://localhost:8080 --generated
 
 Use `npm.cmd` and `curl.exe` on Windows when the local PowerShell execution
 policy blocks `npm.ps1` or aliases `curl`.
+Use `delivery:evidence -- --reuse-existing-companions` only after separately
+regenerating `runtime:evidence` and `security:evidence` for the same final
+source revision; it keeps the delivery package refresh from rerunning slower
+companion scans while still linking their latest manifests.
 The read-only `ci:status` report includes a `CI Closeout Checklist` for source
 branch, pushed HEAD, workflow state, manual dispatch configuration, push
 trigger, Actions permissions, matching HEAD run, and successful completion.

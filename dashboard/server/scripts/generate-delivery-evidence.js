@@ -48,6 +48,21 @@ function runCommand(label, command, args, options = {}) {
   };
 }
 
+function reusedCommand(label, command, args, outputRoot) {
+  const timestamp = new Date().toISOString();
+  return {
+    label,
+    command: [command, ...args].join(" "),
+    startedAt: timestamp,
+    finishedAt: timestamp,
+    exitCode: 0,
+    stdout: `Reused latest existing companion evidence from ${outputRoot}.`,
+    stderr: "",
+    error: null,
+    reusedExistingEvidence: true,
+  };
+}
+
 function gitValue(args) {
   const result = runCommand(`git ${args.join(" ")}`, "git", args);
   return result.stdout.trim();
@@ -984,14 +999,15 @@ function main() {
   const includeZap = hasFlag("include-zap");
   const requireScanners = hasFlag("require-scanners");
   const useDockerScanners = hasFlag("use-docker-scanners");
+  const reuseExistingCompanions = hasFlag("reuse-existing-companions");
   const outputDir = path.join(root, outputRoot, timestampForPath());
   ensureDir(outputDir);
   const companionEvidence = {
     runtime: {
-      outputRoot: toOutputRootArg(path.join(outputDir, "runtime")),
+      outputRoot: reuseExistingCompanions ? "artifacts/runtime" : toOutputRootArg(path.join(outputDir, "runtime")),
     },
     security: {
-      outputRoot: toOutputRootArg(path.join(outputDir, "security")),
+      outputRoot: reuseExistingCompanions ? "artifacts/security" : toOutputRootArg(path.join(outputDir, "security")),
     },
   };
   const fieldRehearsalEvidence = {
@@ -1017,7 +1033,7 @@ function main() {
   if (requireScanners) securityEvidenceArgs.push("--require-scanners");
   if (useDockerScanners) securityEvidenceArgs.push("--use-docker-scanners");
 
-  const commands = [
+  const commandSpecs = [
     ["smoke", npmCommand, ["run", "smoke"]],
     ["server test", npmCommand, ["run", "server:test"]],
     ["frontend lint", npmCommand, ["--prefix", "dashboard/dashboard-web", "run", "lint"]],
@@ -1026,7 +1042,16 @@ function main() {
     ["docker compose config", "docker", ["compose", "config", "--quiet"]],
     ["runtime evidence", npmCommand, runtimeEvidenceArgs],
     ["security evidence", npmCommand, securityEvidenceArgs],
-  ].map(([label, command, args]) => runCommand(label, command, args));
+  ];
+  const commands = commandSpecs.map(([label, command, args]) => {
+    if (reuseExistingCompanions && label === "runtime evidence") {
+      return reusedCommand(label, command, args, companionEvidence.runtime.outputRoot);
+    }
+    if (reuseExistingCompanions && label === "security evidence") {
+      return reusedCommand(label, command, args, companionEvidence.security.outputRoot);
+    }
+    return runCommand(label, command, args);
+  });
 
   companionEvidence.summaries = [
     summarizeCompanionEvidence("Runtime", companionEvidence.runtime.outputRoot),
@@ -1072,6 +1097,7 @@ function main() {
       includeZap,
       requireScanners,
       useDockerScanners,
+      reuseExistingCompanions,
     },
     commands: commands.map((item) => ({
       label: item.label,
