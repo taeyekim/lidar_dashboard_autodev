@@ -30,6 +30,10 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "READY_TO_CLOSE", "final status report generator"],
   [generator, "FIELD_OR_SECURITY_REVIEW_REQUIRED", "final status report generator"],
   [generator, "remainingGates", "final status report generator"],
+  [generator, "buildGateId", "final status report generator"],
+  [generator, "slugifyGatePart", "final status report generator"],
+  [generator, "area: category", "final status report generator"],
+  [generator, "gate: `${category}: ${status}`", "final status report generator"],
   [generator, "gateSummary", "final status report generator"],
   [generator, "gateActionRunbook", "final status report generator"],
   [generator, "formatCompletionBlocker", "final status report generator"],
@@ -806,6 +810,10 @@ assert(
     (item) => item.category === "Security Scanner Closeout" && item.message.includes("Docker scanner runtime is not ready"),
   ),
   "open scanner closeout gate should surface Docker daemon readiness when Docker fallback is requested",
+);
+assert(
+  openScannerCloseout.remainingGates.every((item) => item.id && item.area === item.category && item.gate === `${item.category}: ${item.status}`),
+  "remaining gates should expose stable id, area, and gate tracking fields",
 );
 assert(
   openScannerCloseout.securityEvidence.scannerCloseoutSummary.open === 1,

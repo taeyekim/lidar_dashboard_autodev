@@ -126,9 +126,32 @@ function actionTypeForGate(category, status, message) {
   return "REVIEW_REQUIRED";
 }
 
+function slugifyGatePart(value) {
+  const slug = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "gate";
+}
+
+function buildGateId(category, status, message, evidence) {
+  const evidencePart = evidence ? path.dirname(String(evidence)).split(/[\\/]/).filter(Boolean).slice(-1)[0] : "";
+  return [
+    slugifyGatePart(category),
+    slugifyGatePart(status),
+    slugifyGatePart(evidencePart || message).slice(0, 48),
+  ]
+    .filter(Boolean)
+    .join(":");
+}
+
 function addGate(gates, category, status, message, closeWhen, evidence, metadata = {}) {
   const normalizedMessage = String(message || "Gate requires review.").replace(/\s+/g, " ").trim();
   const gate = {
+    id: buildGateId(category, status, normalizedMessage, evidence),
+    area: category,
+    gate: `${category}: ${status}`,
     category,
     status,
     actionType: actionTypeForGate(category, status, normalizedMessage),
