@@ -176,8 +176,16 @@ assert(
   "strict security REVIEW exit should be recorded without failing refresh",
 );
 assert(
+  steps.find((step) => step.id === "delivery-evidence").acceptReviewExitCodes.includes(1),
+  "delivery evidence REVIEW exit should be recorded without failing refresh when strict security evidence remains open",
+);
+assert(
   steps.find((step) => step.id === "security-evidence").acceptTimeoutAsReview === true,
   "strict security timeout should be recorded without failing refresh",
+);
+assert(
+  steps.find((step) => step.id === "delivery-evidence").acceptTimeoutAsReview === true,
+  "delivery evidence timeout should be recorded without failing refresh",
 );
 assert(
   steps.find((step) => step.id === "security-evidence").timeoutMs > 0,
