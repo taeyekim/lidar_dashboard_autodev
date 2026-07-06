@@ -121,7 +121,22 @@ function isPassRehearsalManifest(manifest) {
   return results.length > 0 && results.every((result) => result.status === "PASS");
 }
 
-function readLatestPassRehearsalManifest(outputRoot) {
+function isReusablePassRehearsalManifest(config, manifest) {
+  if (!isPassRehearsalManifest(manifest)) return false;
+  if (!config.requireLiveTcpReady) return true;
+  const data = manifest.data || {};
+  return (
+    data.allowLiveTcp === true &&
+    data.liveApproved === true &&
+    data.liveTcpReady === true &&
+    data.safetyStatus === "LIVE_TCP_READY" &&
+    data.initialMode === "LIVE_TCP" &&
+    data.finalMode === "LIVE_TCP"
+  );
+}
+
+function readLatestPassRehearsalManifest(config) {
+  const outputRoot = config.outputRoot;
   const absoluteRoot = path.join(root, outputRoot);
   if (!fs.existsSync(absoluteRoot)) return null;
 
@@ -141,7 +156,7 @@ function readLatestPassRehearsalManifest(outputRoot) {
         path: path.relative(root, manifestPath).replace(/\\/g, "/"),
         data,
       };
-      if (isPassRehearsalManifest(manifest)) return manifest;
+      if (isReusablePassRehearsalManifest(config, manifest)) return manifest;
     } catch {
       // Ignore malformed historical evidence and continue looking for a valid PASS manifest.
     }
@@ -151,7 +166,7 @@ function readLatestPassRehearsalManifest(outputRoot) {
 }
 
 function writeUnavailableUnlessPassExists(config, runId, options) {
-  const passManifest = readLatestPassRehearsalManifest(config.outputRoot);
+  const passManifest = readLatestPassRehearsalManifest(config);
   if (passManifest) {
     return {
       path: passManifest.path,
@@ -203,6 +218,7 @@ function main() {
     {
       area: "Control Board TCP",
       outputRoot: "artifacts/field-control-board-rehearsal",
+      requireLiveTcpReady: true,
       requiredCommand: "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080",
       nextActions: [
         "Confirm operator credentials and CONTROL_BOARD_DRY_RUN mode before rehearsal.",
