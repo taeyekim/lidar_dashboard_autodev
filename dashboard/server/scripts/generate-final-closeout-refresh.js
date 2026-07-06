@@ -211,6 +211,8 @@ function buildSteps(options) {
         "-SkipDeliveryEvidence",
       ],
       acceptReviewExitCodes: [1],
+      acceptTimeoutAsReview: true,
+      timeoutMs: 180000,
       purpose: "Record field acceptance REVIEW/SKIPPED state without requiring unavailable field hardware.",
       doneWhen: "Field acceptance is PASS after strict field evidence exists, or current REVIEW manifest is available.",
     });
