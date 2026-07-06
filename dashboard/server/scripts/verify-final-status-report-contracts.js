@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { buildFinalStatusReport, buildMarkdown, isPlaceholderFieldText } = require("./generate-final-status-report");
+const { isLiveControlBoardFieldRehearsalPass, isPassingFieldRehearsal } = require("./generate-delivery-evidence");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -1328,6 +1329,29 @@ assert(
     (item) => item.category === "Control Board Field Rehearsal" && item.message.includes("approved LIVE_TCP ACK evidence"),
   ),
   "DRY_RUN control-board rehearsal should expose approved LIVE_TCP ACK evidence gate",
+);
+const dryRunControlBoardData = {
+  ...readyEvidence.controlBoardFieldRehearsal.data,
+  allowLiveTcp: false,
+  liveApproved: false,
+  initialMode: "DRY_RUN",
+  finalMode: "DRY_RUN",
+  safetyStatus: "DRY_RUN_SAFE",
+  liveTcpReady: false,
+  results: readyEvidence.controlBoardFieldRehearsal.data.results.map((item) =>
+    String(item.name || "").includes("command rehearsal")
+      ? { ...item, response: { command: { status: "DRY_RUN" } } }
+      : item,
+  ),
+};
+assert(isPassingFieldRehearsal(dryRunControlBoardData) === true, "dry-run control-board evidence can still be a passing field rehearsal");
+assert(
+  isLiveControlBoardFieldRehearsalPass(dryRunControlBoardData) === false,
+  "dry-run control-board evidence must not be selected as final live TCP proof",
+);
+assert(
+  isLiveControlBoardFieldRehearsalPass(readyEvidence.controlBoardFieldRehearsal.data) === true,
+  "approved control-board evidence should be selectable as final live TCP proof",
 );
 
 const incompleteLidarRehearsal = buildFinalStatusReport({

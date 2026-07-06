@@ -132,6 +132,28 @@ function toOutputRootArg(dir) {
   return path.relative(root, dir).replace(/\\/g, "/");
 }
 
+function isPassingFieldRehearsal(data) {
+  const results = Array.isArray(data?.results) ? data.results : [];
+  return data?.evidenceType === "FIELD_REHEARSAL_PASS" && results.length > 0 && results.every((result) => result.status === "PASS");
+}
+
+function isLiveControlBoardFieldRehearsalPass(data) {
+  if (!isPassingFieldRehearsal(data)) return false;
+  const results = Array.isArray(data?.results) ? data.results : [];
+  const commandResults = results.filter((item) => String(item.name || "").includes("command rehearsal"));
+  const acknowledgedCommands = commandResults.filter((item) => item.response?.command?.status === "ACKNOWLEDGED");
+  return (
+    data.allowLiveTcp === true &&
+    data.liveApproved === true &&
+    data.initialMode === "LIVE_TCP" &&
+    data.finalMode === "LIVE_TCP" &&
+    data.safetyStatus === "LIVE_TCP_READY" &&
+    data.liveTcpReady === true &&
+    commandResults.length >= 3 &&
+    acknowledgedCommands.length >= 3
+  );
+}
+
 function readLatestJsonManifest(outputRoot, options = {}) {
   const absoluteRoot = path.join(root, outputRoot);
   if (!fs.existsSync(absoluteRoot)) return null;
@@ -146,21 +168,25 @@ function readLatestJsonManifest(outputRoot, options = {}) {
     .reverse();
 
   if (manifests.length === 0) return null;
-  const fieldRehearsalRoots = new Set([
-    "artifacts/field-db-rehearsal",
-    "artifacts/field-lidar-rehearsal",
-    "artifacts/field-control-board-rehearsal",
-  ]);
-  const selectedManifest = fieldRehearsalRoots.has(outputRoot)
+  const standardFieldRehearsalRoots = new Set(["artifacts/field-db-rehearsal", "artifacts/field-lidar-rehearsal"]);
+  const selectedManifest = outputRoot === "artifacts/field-control-board-rehearsal"
     ? manifests.find((manifestPath) => {
         try {
           const data = JSON.parse(fs.readFileSync(manifestPath, "utf8").replace(/^\uFEFF/, ""));
-          const results = Array.isArray(data.results) ? data.results : [];
-          return data.evidenceType === "FIELD_REHEARSAL_PASS" && results.length > 0 && results.every((result) => result.status === "PASS");
+          return isLiveControlBoardFieldRehearsalPass(data);
         } catch {
           return false;
         }
       }) || manifests[0]
+    : standardFieldRehearsalRoots.has(outputRoot)
+      ? manifests.find((manifestPath) => {
+          try {
+            const data = JSON.parse(fs.readFileSync(manifestPath, "utf8").replace(/^\uFEFF/, ""));
+            return isPassingFieldRehearsal(data);
+          } catch {
+            return false;
+          }
+        }) || manifests[0]
     : preferPassingFieldAcceptance && (outputRoot === "artifacts/field-acceptance" || outputRoot.includes("field-acceptance"))
       ? manifests.find((manifestPath) => {
           try {
@@ -1093,6 +1119,8 @@ module.exports = {
   buildAutomatedEvidenceCoverage,
   buildHandoverSummary,
   extractBacktickTokens,
+  isLiveControlBoardFieldRehearsalPass,
+  isPassingFieldRehearsal,
   isPlaceholderEvidenceText,
   parseEvidenceMatrix,
   readLatestJsonManifest,
