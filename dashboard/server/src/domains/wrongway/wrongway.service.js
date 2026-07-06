@@ -1,6 +1,7 @@
 const { prisma } = require("../../prisma/client");
 const { logger } = require("../../utils/logger");
 const { broadcastRealtime } = require("../../realtime/bus");
+const { ENV_KEYS, envBoolean, envInteger, envNumber } = require("../../config/env");
 const controlBoardService = require("../control-board/controlBoard.service");
 const mockLidarService = require("../mock-lidar/mockLidar.service");
 
@@ -104,10 +105,14 @@ function warningLevelFor(type, payload) {
 }
 
 function level2EscalationConfig() {
+  const WRONGWAY_LEVEL2_ESCALATION_ENABLED = ENV_KEYS.WRONGWAY_LEVEL2_ESCALATION_ENABLED;
+  const WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT = ENV_KEYS.WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT;
+  const WRONGWAY_LEVEL2_MIN_CONFIDENCE = ENV_KEYS.WRONGWAY_LEVEL2_MIN_CONFIDENCE;
+
   return {
-    enabled: toBoolean(process.env.WRONGWAY_LEVEL2_ESCALATION_ENABLED) === true,
-    minConsecutiveCount: toInteger(process.env.WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT),
-    minConfidence: toNumber(process.env.WRONGWAY_LEVEL2_MIN_CONFIDENCE),
+    enabled: envBoolean(WRONGWAY_LEVEL2_ESCALATION_ENABLED, false) === true,
+    minConsecutiveCount: envInteger(WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT, null),
+    minConfidence: envNumber(WRONGWAY_LEVEL2_MIN_CONFIDENCE, null),
   };
 }
 

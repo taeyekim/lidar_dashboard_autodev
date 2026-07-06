@@ -184,6 +184,7 @@ function writeUnavailableUnlessPassExists(config, runId, options) {
 
 function main() {
   const runId = timestampForPath();
+  const baseUrl = process.env.FIELD_BASE_URL || "http://localhost:8080";
   const reason = argValue(
     "reason",
     "Docker runtime, field network, or delivery hardware was not available on this workstation.",
@@ -198,7 +199,7 @@ function main() {
     {
       area: "DB And Prisma",
       outputRoot: "artifacts/field-db-rehearsal",
-      requiredCommand: "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-field-rehearsal.ps1 -BaseUrl http://localhost:8080",
+      requiredCommand: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-field-rehearsal.ps1 -BaseUrl ${baseUrl}`,
       nextActions: [
         "Start the delivery Docker stack or field API endpoint.",
         "Run DB deploy/seed only after the field PostgreSQL target is confirmed.",
@@ -208,7 +209,7 @@ function main() {
     {
       area: "Lidar Ingest",
       outputRoot: "artifacts/field-lidar-rehearsal",
-      requiredCommand: "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl http://localhost:8080",
+      requiredCommand: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl ${baseUrl}`,
       nextActions: [
         "Start the delivery API entrypoint and confirm the lidar ingest device key policy.",
         "Run representative normal-driving, wrong-way-level-1, wrong-way-level-2, and situation-ended payloads.",
@@ -219,7 +220,7 @@ function main() {
       area: "Control Board TCP",
       outputRoot: "artifacts/field-control-board-rehearsal",
       requireLiveTcpReady: true,
-      requiredCommand: "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080",
+      requiredCommand: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl ${baseUrl}`,
       nextActions: [
         "Confirm operator credentials and CONTROL_BOARD_DRY_RUN mode before rehearsal.",
         "Use -AllowLiveTcp only after field IP/port and hardware approval are confirmed.",

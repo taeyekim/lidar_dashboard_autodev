@@ -2,7 +2,7 @@ param(
   [switch]$IncludeRuntime,
   [switch]$StartCompose,
   [switch]$StopCompose,
-  [string]$BaseUrl = "http://localhost:8080"
+  [string]$BaseUrl = $(if ($env:FIELD_BASE_URL) { $env:FIELD_BASE_URL } else { "http://localhost:8080" })
 )
 
 Set-StrictMode -Version Latest

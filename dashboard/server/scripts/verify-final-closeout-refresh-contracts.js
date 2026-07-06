@@ -67,6 +67,12 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "handover:package", "final closeout refresh generator"],
   [generator, "--reuse-existing-evidence", "final closeout refresh generator"],
   [generator, "HANDOVER_PACKAGE_TIMEOUT_MS", "final closeout refresh generator"],
+  [generator, "FIELD_REFRESH_DEFAULTS", "final closeout refresh generator"],
+  [generator, "FIELD_BASE_URL", "final closeout refresh generator"],
+  [generator, "FIELD_REHEARSAL_UNAVAILABLE_REASON", "final closeout refresh generator"],
+  [generator, "FIELD_REHEARSAL_REPLACEMENT_OWNER", "final closeout refresh generator"],
+  [generator, "FIELD_REHEARSAL_TARGET_RECHECK_DATE", "final closeout refresh generator"],
+  [generator, "FIELD_REHEARSAL_APPROVAL_NOTE", "final closeout refresh generator"],
   [generator, "final:status", "final closeout refresh generator"],
   [generator, "field:risk-register", "final closeout refresh generator"],
   [generator, "field:action-board", "final closeout refresh generator"],
@@ -192,6 +198,10 @@ assert(
 assert(
   steps.find((step) => step.id === "field-acceptance-carry-forward").acceptReviewExitCodes.includes(1),
   "field acceptance carry-forward runtime-change exit should be recorded without failing refresh",
+);
+assert(
+  steps.find((step) => step.id === "field-rehearsal-unavailable").args.some((arg) => arg.includes("--replacement-owner=")),
+  "field rehearsal unavailable step should pass replacement owner from environment-aware defaults",
 );
 assert(
   steps.find((step) => step.id === "security-evidence").acceptReviewExitCodes.includes(1),

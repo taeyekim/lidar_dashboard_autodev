@@ -1,5 +1,5 @@
 param(
-  [string]$BaseUrl = "http://localhost:8080",
+  [string]$BaseUrl = $(if ($env:FIELD_BASE_URL) { $env:FIELD_BASE_URL } else { "http://localhost:8080" }),
   [switch]$StartCompose,
   [switch]$StopCompose,
   [int]$ReadyTimeoutSeconds = 90,

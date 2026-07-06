@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { ENV_KEYS, envList } = require("../config/env");
 
 const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
@@ -10,10 +11,8 @@ function timingSafeStringEqual(left, right) {
 }
 
 function deviceIngestKeys() {
-  return String(process.env.DEVICE_INGEST_API_KEY || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
+  const DEVICE_INGEST_API_KEY = ENV_KEYS.DEVICE_INGEST_API_KEY;
+  return envList(DEVICE_INGEST_API_KEY);
 }
 
 function securityHeaders(req, res, next) {

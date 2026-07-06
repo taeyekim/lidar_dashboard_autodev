@@ -1,5 +1,5 @@
 param(
-  [string]$TargetUrl = "http://localhost:8080",
+  [string]$TargetUrl = $(if ($env:FIELD_BASE_URL) { $env:FIELD_BASE_URL } else { "http://localhost:8080" }),
   [switch]$IncludeContainerImages,
   [switch]$IncludeZap,
   [switch]$RequireScanners,

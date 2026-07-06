@@ -8,6 +8,13 @@ const { buildGitState } = require("./generate-final-status-report");
 
 const root = path.join(__dirname, "..", "..", "..");
 const HANDOVER_PACKAGE_TIMEOUT_MS = 900000;
+const FIELD_REFRESH_DEFAULTS = Object.freeze({
+  baseUrl: "http://localhost:8080",
+  unavailableReason: "Delivery runtime or field hardware is unavailable in this local closeout refresh.",
+  replacementOwner: "field-owner",
+  targetRecheckDate: "2026-08-01",
+  approvalNote: "temporary local refresh evidence",
+});
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -83,6 +90,10 @@ function buildSteps(options) {
   const baseUrl = options.baseUrl;
   const reviewer = options.generatedBy;
   const siteName = options.siteName;
+  const unavailableReason = process.env.FIELD_REHEARSAL_UNAVAILABLE_REASON || FIELD_REFRESH_DEFAULTS.unavailableReason;
+  const replacementOwner = process.env.FIELD_REHEARSAL_REPLACEMENT_OWNER || FIELD_REFRESH_DEFAULTS.replacementOwner;
+  const targetRecheckDate = process.env.FIELD_REHEARSAL_TARGET_RECHECK_DATE || FIELD_REFRESH_DEFAULTS.targetRecheckDate;
+  const approvalNote = process.env.FIELD_REHEARSAL_APPROVAL_NOTE || FIELD_REFRESH_DEFAULTS.approvalNote;
   const steps = [
     {
       id: "manual-evidence-readiness",
@@ -174,12 +185,12 @@ function buildSteps(options) {
         "run",
         "field:rehearsal-unavailable",
         "--",
-        "--reason=Delivery runtime or field hardware is unavailable in this local closeout refresh.",
+        `--reason=${unavailableReason}`,
         `--reviewer=${reviewer}`,
         `--site-name=${siteName}`,
-        "--replacement-owner=field-owner",
-        "--target-recheck-date=2026-08-01",
-        "--approval-note=temporary local refresh evidence",
+        `--replacement-owner=${replacementOwner}`,
+        `--target-recheck-date=${targetRecheckDate}`,
+        `--approval-note=${approvalNote}`,
       ],
       purpose: "Refresh unavailable DB, LiDAR, and control-board rehearsal REVIEW evidence for the current source revision.",
       doneWhen: "Unavailable rehearsal manifests are current, or PASS rehearsal manifests replace them.",
@@ -571,7 +582,7 @@ function main() {
   const outputDir = path.join(root, outputRoot, timestampForPath());
   ensureDir(outputDir);
   const options = {
-    baseUrl: argValue("base-url", "http://localhost:8080"),
+    baseUrl: argValue("base-url", process.env.FIELD_BASE_URL || FIELD_REFRESH_DEFAULTS.baseUrl),
     generatedBy: argValue("generated-by", process.env.USERNAME || process.env.USER || "Codex"),
     siteName: argValue("site-name", "unspecified"),
     includeFieldAcceptance: !hasFlag("skip-field-acceptance"),

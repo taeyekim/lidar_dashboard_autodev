@@ -49,6 +49,13 @@ const requiredEnvKeys = [
   "DETECTOR_PORT",
   "NGINX_PORT",
   "PUBLIC_HOST",
+  "FIELD_BASE_URL",
+  "FIELD_REVIEWER",
+  "FIELD_SITE_NAME",
+  "FIELD_REHEARSAL_UNAVAILABLE_REASON",
+  "FIELD_REHEARSAL_REPLACEMENT_OWNER",
+  "FIELD_REHEARSAL_TARGET_RECHECK_DATE",
+  "FIELD_REHEARSAL_APPROVAL_NOTE",
   "VITE_API_BASE_URL",
   "VITE_WS_BASE_URL",
   "VITE_DETECTOR_BASE_URL",
@@ -113,6 +120,11 @@ composeVariables.forEach((key) => {
 });
 
 assert(env.get("CONTROL_BOARD_TRANSPORT") === "tcp", "CONTROL_BOARD_TRANSPORT must default to tcp");
+assert(env.get("FIELD_BASE_URL") === "http://localhost:8080", "FIELD_BASE_URL must default to the local Nginx entrypoint");
+assert(env.get("FIELD_REVIEWER") === "", "FIELD_REVIEWER must stay blank in .env.example");
+assert(env.get("FIELD_SITE_NAME") === "", "FIELD_SITE_NAME must stay blank in .env.example");
+assert(env.get("FIELD_REHEARSAL_REPLACEMENT_OWNER") === "field-owner", "FIELD_REHEARSAL_REPLACEMENT_OWNER must be an obvious placeholder");
+assert(env.get("FIELD_REHEARSAL_TARGET_RECHECK_DATE") === "2026-08-01", "FIELD_REHEARSAL_TARGET_RECHECK_DATE must be an ISO placeholder date");
 assert(env.get("WRONGWAY_LEVEL2_ESCALATION_ENABLED") === "false", "WRONGWAY_LEVEL2_ESCALATION_ENABLED must default to false");
 assert(env.get("WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT") === "", "WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT must stay blank in .env.example");
 assert(env.get("WRONGWAY_LEVEL2_MIN_CONFIDENCE") === "", "WRONGWAY_LEVEL2_MIN_CONFIDENCE must stay blank in .env.example");
@@ -262,6 +274,7 @@ assert(
   [securityEvidenceScript, "납품 전 수정", "security evidence script"],
   [securityEvidenceScript, "미검증", "security evidence script"],
   [securityScanScript, "RequireScanners", "security scan powershell script"],
+  [fieldPreflightScript, "FIELD_BASE_URL", "field preflight script"],
   [fieldPreflightScript, "JWT_SECRET", "field preflight script"],
   [fieldPreflightScript, "DEVICE_INGEST_API_KEY", "field preflight script"],
   [fieldPreflightScript, "CONTROL_BOARD_DRY_RUN", "field preflight script"],
@@ -290,6 +303,7 @@ assert(
   [runtimeEvidenceScript, "presentKeys", "runtime evidence script"],
   [runtimeEvidenceScript, "missingKeys", "runtime evidence script"],
   [runtimeEvidenceScript, "Values are intentionally omitted.", "runtime evidence script"],
+  [runtimeSmoke, "FIELD_BASE_URL", "runtime smoke script"],
   [runtimeSmoke, "DEVICE_INGEST_API_KEY", "runtime smoke script"],
   [runtimeSmoke, "X-Device-Key", "runtime smoke script"],
   [runtimeSmoke, "/api/ingest/control-board/tcp/test", "runtime smoke script"],

@@ -140,7 +140,7 @@ function buildManifest(options = {}) {
   const readiness = Object.prototype.hasOwnProperty.call(options, "readiness")
     ? options.readiness
     : readLatestJsonManifest("artifacts/field-readiness");
-  const baseUrl = options.baseUrl || readiness?.data?.baseUrl || "http://localhost:8080";
+  const baseUrl = options.baseUrl || process.env.FIELD_BASE_URL || readiness?.data?.baseUrl || "http://localhost:8080";
   const requiredFieldValues = Array.isArray(readiness?.data?.env?.requiredFieldValues)
     ? readiness.data.env.requiredFieldValues
     : [];
