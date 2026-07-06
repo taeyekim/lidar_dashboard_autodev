@@ -634,6 +634,7 @@ function buildClosureBundles(rootCauseGroups, orderedCommands, baseUrl = "http:/
         commands: commandIds
           .map((id) => commandById.get(id))
           .filter(Boolean)
+          .sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.id).localeCompare(String(b.id)))
           .map((command) => ({
             id: command.id,
             order: command.order,

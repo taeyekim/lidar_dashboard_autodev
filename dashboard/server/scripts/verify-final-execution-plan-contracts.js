@@ -209,6 +209,10 @@ assert(
   "closure bundles should include command detail rows for every closeout command id",
 );
 assert(
+  openPlan.closureBundles.every((bundle) => bundle.commands.every((command, index, commands) => index === 0 || commands[index - 1].order <= command.order)),
+  "closure bundle command detail rows should be sorted by executable order",
+);
+assert(
   openPlan.closureBundles.some((bundle) => bundle.id === "field-input-and-risk-acceptance" && bundle.commands.some((command) => command.id === "manual-evidence-drafts")),
   "field input bundle should include fallback manual evidence draft command details",
 );
