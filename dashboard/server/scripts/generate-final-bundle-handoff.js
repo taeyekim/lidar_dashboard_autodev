@@ -112,7 +112,7 @@ function commandGuardrail(command) {
     return "Requires an approved external CI closeout window; do not dispatch from local auto-mode.";
   }
   if (text.includes("-allowlivetcp")) {
-    return "Requires hardware owner approval, field CONTROL_BOARD_HOST/PORT, and CONTROL_BOARD_LIVE_APPROVED=true.";
+    return "Requires hardware owner approval, field CONTROL_BOARD_HOST/PORT, CONTROL_BOARD_LIVE_APPROVED=true, ACK capture, and STAGE_2_RETURN rollback/return confirmation.";
   }
   if (text.includes("field:preflight") || text.includes("field:acceptance")) {
     return "Do not paste or publish secrets; attach only redacted manifests and signed field evidence.";

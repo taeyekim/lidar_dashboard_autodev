@@ -217,8 +217,13 @@ assert(
 );
 assert(
   prerequisiteHintsForGate(gates[2]).env.includes("CONTROL_BOARD_HOST") &&
+    prerequisiteHintsForGate(gates[2]).env.includes("CONTROL_BOARD_DRY_RUN") &&
     prerequisiteHintsForGate(gates[2]).env.includes("CONTROL_BOARD_LIVE_APPROVED"),
-  "control-board gate should expose live TCP env prerequisites",
+  "control-board gate should expose live TCP env prerequisites and dry-run transition state",
+);
+assert(
+  prerequisiteHintsForGate(gates[2]).closeout.some((item) => item.includes("STAGE_2_RETURN")),
+  "control-board gate should expose rollback/return closeout prerequisite",
 );
 assert(
   prerequisiteHintsForGate(gates[4]).env.includes("CORS_ORIGINS"),

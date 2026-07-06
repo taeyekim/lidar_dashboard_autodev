@@ -249,6 +249,10 @@ assert(
   openPlan.orderedCommands.some((item) => item.id === "control-board-field-rehearsal" && item.command.includes("-AllowLiveTcp")),
   "final live TCP closeout command should include explicit -AllowLiveTcp approval switch",
 );
+assert(
+  openPlan.orderedCommands.some((item) => item.id === "control-board-field-rehearsal" && item.doneWhen.includes("STAGE_2_RETURN")),
+  "final live TCP closeout command should require rollback/return evidence",
+);
 assert(openPlan.orderedCommands.some((item) => item.id === "field-env-closeout"), "field gates should include env closeout command");
 assert(
   openPlan.orderedCommands.findIndex((item) => item.id === "field-readiness") <
@@ -436,6 +440,10 @@ assert(
 );
 assert(closureBundles.every((bundle) => bundle.evidenceTargets.length > 0), "closure bundles should expose evidence targets");
 assert(closureBundles.every((bundle) => bundle.reviewerChecklist.length >= 3), "closure bundles should include reviewer handoff checklists");
+assert(
+  closureBundles.some((bundle) => bundle.id === "runtime-and-hardware-proof" && bundle.reviewerChecklist.some((item) => item.includes("STAGE_2_RETURN"))),
+  "runtime hardware bundle checklist should require STAGE_2_RETURN rollback/return proof",
+);
 assert(
   closureBundles.every((bundle) => bundle.commandIds.every((id) => bundle.commands.some((command) => command.id === id))),
   "closure bundles should include command detail rows for every closeout command id",

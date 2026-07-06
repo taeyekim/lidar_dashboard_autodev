@@ -123,13 +123,14 @@ assert(bundleMarkdown.includes("manual:evidence-readiness"), "bundle markdown sh
 assert(bundleMarkdown.includes("artifacts/manual/operator-ui-walkthrough.md"), "bundle markdown should include evidence targets");
 assert(bundleMarkdown.includes("approved external CI closeout window"), "bundle markdown should warn before CI dispatch");
 assert(bundleMarkdown.includes("CONTROL_BOARD_LIVE_APPROVED=true"), "bundle markdown should warn before live TCP commands");
+assert(bundleMarkdown.includes("STAGE_2_RETURN"), "bundle markdown should warn live TCP operators to confirm rollback/return evidence");
 assert(
   commandGuardrail({ command: "npm.cmd run ci:closeout -- --dispatch" }).includes("approved external CI closeout window"),
   "ci dispatch command should expose external approval guardrail",
 );
 assert(
-  commandGuardrail({ command: "powershell.exe -File scripts/control-board-field-rehearsal.ps1 -AllowLiveTcp" }).includes("CONTROL_BOARD_LIVE_APPROVED=true"),
-  "live TCP command should expose hardware approval guardrail",
+  commandGuardrail({ command: "powershell.exe -File scripts/control-board-field-rehearsal.ps1 -AllowLiveTcp" }).includes("STAGE_2_RETURN"),
+  "live TCP command should expose hardware approval and rollback/return guardrail",
 );
 
 const ready = buildBundleHandoff({

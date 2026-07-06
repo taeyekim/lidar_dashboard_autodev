@@ -111,6 +111,12 @@ const actionBoard = {
         priority: "P0",
         gateCount: 1,
         command: "powershell.exe -File scripts/control-board-field-rehearsal.ps1",
+        prerequisites: {
+          env: ["CONTROL_BOARD_HOST", "CONTROL_BOARD_PORT", "CONTROL_BOARD_DRY_RUN", "CONTROL_BOARD_LIVE_APPROVED"],
+          evidence: [],
+          runtime: ["Approved integrated control board reachable on the field network"],
+          closeout: ["Confirm DRY_RUN evidence first, switch to LIVE only after hardware-owner approval, capture ACK, then verify STAGE_2_RETURN rollback/return evidence."],
+        },
       },
     ],
     ownerGroups: [
@@ -199,6 +205,42 @@ assert(ownerMarkdown.includes("OWASP ZAP"), "owner markdown should include scann
 assert(ownerMarkdown.includes("Docker daemon is not reachable."), "owner markdown should include scanner runtime note");
 assert(ownerMarkdown.includes("--use-docker-scanners"), "owner markdown should include scanner fallback command");
 assert(ownerMarkdown.includes("This owner brief is an execution aid"), "owner markdown should include guardrail");
+const controlBoardOwnerMarkdown = buildOwnerBrief(
+  {
+    owner: "Control-board TCP",
+    total: 1,
+    byPriority: { P0: 1 },
+    byPhase: { "Field Rehearsal": 1 },
+    byActionType: { FIELD_ACTION_REQUIRED: 1 },
+    commands: ["powershell.exe -File scripts/control-board-field-rehearsal.ps1"],
+    items: [
+      {
+        id: "GATE-002",
+        sourceGateId: "final-control-board-tcp",
+        sourceGate: "Control Board TCP: DRY_RUN_SAFE",
+        area: "Control Board TCP",
+        priority: "P0",
+        phase: "Field Rehearsal",
+        actionType: "FIELD_ACTION_REQUIRED",
+        category: "Control Board TCP",
+        status: "DRY_RUN_SAFE",
+        message: "Control-board safety is not LIVE_TCP_READY.",
+        closeWhen: "Capture live TCP ACK evidence.",
+        prerequisites: {
+          env: ["CONTROL_BOARD_HOST", "CONTROL_BOARD_PORT", "CONTROL_BOARD_DRY_RUN", "CONTROL_BOARD_LIVE_APPROVED"],
+          evidence: [],
+          runtime: ["Approved integrated control board reachable on the field network"],
+          closeout: ["Confirm DRY_RUN evidence first, switch to LIVE only after hardware-owner approval, capture ACK, then verify STAGE_2_RETURN rollback/return evidence."],
+        },
+        command: "powershell.exe -File scripts/control-board-field-rehearsal.ps1 -AllowLiveTcp",
+      },
+    ],
+  },
+  actionBoard.path,
+  actionBoard.data.executionQueue,
+);
+assert(controlBoardOwnerMarkdown.includes("CONTROL_BOARD_DRY_RUN"), "control-board owner brief should include dry-run transition env");
+assert(controlBoardOwnerMarkdown.includes("STAGE_2_RETURN"), "control-board owner brief should include rollback/return evidence prerequisite");
 
 const placeholderMetadata = buildManifest({
   generatedAt: "2026-01-01T00:00:00.000Z",

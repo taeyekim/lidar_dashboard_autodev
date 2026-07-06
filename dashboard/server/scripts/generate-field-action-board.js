@@ -184,8 +184,11 @@ function prerequisiteHintsForGate(gate) {
   if (text.includes("rate limit") || text.includes("burst")) hints.env.push("NGINX_WRONGWAY_RATE_LIMIT", "NGINX_WRONGWAY_BURST");
   if (text.includes("content security") || text.includes("csp")) hints.env.push("NGINX_CONTENT_SECURITY_POLICY");
   if (text.includes("control-board") || text.includes("live_tcp") || text.includes("tcp") || text.includes("hardware")) {
-    hints.env.push("CONTROL_BOARD_HOST", "CONTROL_BOARD_PORT", "CONTROL_BOARD_LIVE_APPROVED");
+    hints.env.push("CONTROL_BOARD_HOST", "CONTROL_BOARD_PORT", "CONTROL_BOARD_DRY_RUN", "CONTROL_BOARD_LIVE_APPROVED");
     hints.runtime.push("Approved integrated control board reachable on the field network");
+    hints.closeout.push(
+      "Confirm DRY_RUN evidence first, switch to LIVE only after hardware-owner approval, capture ACK, then verify STAGE_2_RETURN rollback/return evidence.",
+    );
   }
   if (text.includes("lidar") || text.includes("ingest")) {
     hints.runtime.push("Representative LiDAR PC payload source or approved replay fixture");

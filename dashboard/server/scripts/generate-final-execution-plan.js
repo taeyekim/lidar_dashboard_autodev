@@ -143,8 +143,8 @@ function commandCatalog(baseUrl) {
       phase: "Field Rehearsal",
       actionTypes: ["FIELD_ACTION_REQUIRED"],
       command: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} -AllowLiveTcp`,
-      purpose: "Prove approved LIVE_TCP control-board command lifecycle after hardware owner approval.",
-      doneWhen: "Control-board field rehearsal manifest is PASS and LIVE_TCP evidence is attached when required.",
+      purpose: "Prove approved LIVE_TCP control-board command lifecycle after hardware owner approval, including ACK capture and safe return.",
+      doneWhen: "Control-board field rehearsal manifest is PASS, LIVE_TCP ACK evidence is attached when required, and STAGE_2_RETURN rollback/return evidence is recorded.",
     },
     {
       id: "security-evidence",
@@ -579,7 +579,7 @@ const closureBundleDefinitions = [
     reviewerChecklist: [
       "Delivery Nginx/API runtime evidence was generated for the final base URL.",
       "DB, LiDAR, and control-board rehearsal manifests are PASS or have accepted unavailable replacement evidence.",
-      "Control-board LIVE_TCP evidence includes hardware approval, host/port, and ACK/response proof when live mode is required.",
+      "Control-board LIVE_TCP evidence includes hardware approval, host/port, ACK/response proof, and STAGE_2_RETURN rollback/return proof when live mode is required.",
     ],
   },
   {
