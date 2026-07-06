@@ -121,14 +121,14 @@ function buildOwnerBrief(ownerGroup, actionBoardPath, executionQueue = []) {
     "",
     "## Items",
     "",
-    "| ID | Priority | Phase | Action Type | Category | Status | Message | Close When | Evidence | Scanner | Risk Acceptance Evidence | Runtime Note | Prerequisites | Command |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| ID | Source Gate ID | Source Gate | Area | Priority | Phase | Action Type | Category | Status | Message | Close When | Evidence | Scanner | Risk Acceptance Evidence | Runtime Note | Prerequisites | Command |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(items.length > 0
       ? items.map(
           (item) =>
-            `| ${item.id} | ${item.priority} | ${markdownCell(item.phase)} | ${markdownCell(item.actionType)} | ${markdownCell(item.category)} | ${markdownCell(item.status)} | ${markdownCell(item.message)} | ${markdownCell(item.closeWhen)} | ${item.evidence ? `\`${markdownCell(item.evidence)}\`` : "missing"} | ${markdownCell(item.scanner || "-")} | ${item.closeoutCommands?.riskAcceptanceEvidence ? `\`${markdownCell(item.closeoutCommands.riskAcceptanceEvidence)}\`` : "-"} | ${markdownCell(item.runtimeNote || "-")} | ${markdownCell(formatPrerequisites(item.prerequisites))} | ${item.command ? `\`${markdownCell(item.command)}\`` : "-"} |`,
+            `| ${item.id} | ${markdownCell(item.sourceGateId || "missing")} | ${markdownCell(item.sourceGate || "missing")} | ${markdownCell(item.area || item.category)} | ${item.priority} | ${markdownCell(item.phase)} | ${markdownCell(item.actionType)} | ${markdownCell(item.category)} | ${markdownCell(item.status)} | ${markdownCell(item.message)} | ${markdownCell(item.closeWhen)} | ${item.evidence ? `\`${markdownCell(item.evidence)}\`` : "missing"} | ${markdownCell(item.scanner || "-")} | ${item.closeoutCommands?.riskAcceptanceEvidence ? `\`${markdownCell(item.closeoutCommands.riskAcceptanceEvidence)}\`` : "-"} | ${markdownCell(item.runtimeNote || "-")} | ${markdownCell(formatPrerequisites(item.prerequisites))} | ${item.command ? `\`${markdownCell(item.command)}\`` : "-"} |`,
         )
-      : ["| none | - | - | - | - | PASS | No open items. | - | - | - | - | - | - | - |"]),
+      : ["| none | - | - | - | - | - | - | - | PASS | No open items. | - | - | - | - | - | - | - |"]),
     "",
   ].join("\n");
 }

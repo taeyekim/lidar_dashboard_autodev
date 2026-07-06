@@ -49,6 +49,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "buildOwnerBrief",
   "writeOwnerBriefs",
   "Runtime Note",
+  "Source Gate ID",
   "Risk Acceptance Evidence",
   "Prerequisites",
   "formatPrerequisites",
@@ -123,6 +124,9 @@ const actionBoard = {
         items: [
           {
             id: "GATE-001",
+            sourceGateId: "final-security-delivery-fix",
+            sourceGate: "Security Evidence: DELIVERY_FIX_REQUIRED",
+            area: "Security Evidence",
             priority: "P0",
             phase: "Security Evidence",
             actionType: "SECURITY_REVIEW_REQUIRED",
@@ -181,6 +185,8 @@ assert(ownerMarkdown.includes("Field Owner Brief - Auth/Security"), "owner markd
 assert(ownerMarkdown.includes("Execution Queue"), "owner markdown should include owner execution queue");
 assert(ownerMarkdown.includes("| 1 | Security Evidence | P0 | 1 |"), "owner markdown should include queued command order");
 assert(ownerMarkdown.includes("GATE-001"), "owner markdown should include action items");
+assert(ownerMarkdown.includes("Source Gate ID"), "owner markdown should include source gate id column");
+assert(ownerMarkdown.includes("final-security-delivery-fix"), "owner markdown should include source final-status gate id");
 assert(ownerMarkdown.includes("Security Evidence"), "owner markdown should include item phase");
 assert(ownerMarkdown.includes("DELIVERY_FIX_REQUIRED"), "owner markdown should include delivery-fix status");
 assert(ownerMarkdown.includes("Security delivery fix is required."), "owner markdown should include message");

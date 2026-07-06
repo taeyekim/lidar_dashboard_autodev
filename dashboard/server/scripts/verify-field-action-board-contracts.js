@@ -59,6 +59,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "phaseGroups",
   "byPhase",
   "sourceFinalStatus",
+  "sourceGateId",
+  "Source Gate ID",
+  "sourceGateIds",
   "FIELD_REVIEWER",
   "FIELD_SITE_NAME",
   "closeoutCommands",
@@ -102,6 +105,9 @@ assertIncludes(matrix, "Execution Queue", "delivery evidence matrix");
 
 const gates = [
   {
+    id: "final-security-delivery-fix",
+    area: "Security Evidence",
+    gate: "Security Evidence: DELIVERY_FIX_REQUIRED",
     actionType: "SECURITY_REVIEW_REQUIRED",
     category: "Security Evidence",
     status: "DELIVERY_FIX_REQUIRED",
@@ -110,6 +116,9 @@ const gates = [
     evidence: "artifacts/security/example/manifest.json",
   },
   {
+    id: "final-security-scanner-closeout",
+    area: "Security Scanner Closeout",
+    gate: "Security Scanner Closeout: UNVERIFIED",
     actionType: "SECURITY_REVIEW_REQUIRED",
     category: "Security Scanner Closeout",
     status: "UNVERIFIED",
@@ -128,6 +137,9 @@ const gates = [
     },
   },
   {
+    id: "final-control-board-tcp",
+    area: "Control Board TCP",
+    gate: "Control Board TCP: DRY_RUN_SAFE",
     actionType: "FIELD_ACTION_REQUIRED",
     category: "Control Board TCP",
     status: "DRY_RUN_SAFE",
@@ -136,6 +148,9 @@ const gates = [
     evidence: "artifacts/field-readiness/example/manifest.json",
   },
   {
+    id: "final-manual-evidence",
+    area: "Manual Evidence",
+    gate: "Manual Evidence: INVALID",
     actionType: "MANUAL_EVIDENCE_REQUIRED",
     category: "Manual Evidence",
     status: "INVALID",
@@ -144,6 +159,9 @@ const gates = [
     evidence: "artifacts/manual/operator-ui-walkthrough.md",
   },
   {
+    id: "final-field-readiness",
+    area: "Field Readiness",
+    gate: "Field Readiness: REVIEW",
     actionType: "FIELD_ACTION_REQUIRED",
     category: "Field Readiness",
     status: "REVIEW",
@@ -152,6 +170,9 @@ const gates = [
     evidence: "artifacts/field-readiness/example/manifest.json",
   },
   {
+    id: "final-field-env-closeout",
+    area: "Field Env Closeout",
+    gate: "Field Env Closeout: OPEN",
     actionType: "FIELD_ACTION_REQUIRED",
     category: "Field Env Closeout",
     status: "OPEN",
@@ -260,6 +281,8 @@ assert(
 const actionItems = buildActionItems({ data: { remainingGates: gates } }, "http://field.local:8080");
 assert(actionItems.length === 6, "action items should preserve gate count");
 assert(actionItems.every((item) => item.id.startsWith("GATE-")), "action item ids should be stable gate ids");
+assert(actionItems.every((item) => item.sourceGateId?.startsWith("final-")), "action items should preserve source final-status gate ids");
+assert(actionItems.every((item) => item.sourceGate && item.area), "action items should preserve source final-status gate labels");
 assert(actionItems.every((item) => item.phase), "action items should expose execution phase");
 assert(actionItems.every((item) => item.prerequisites?.env?.includes("FIELD_REVIEWER")), "action items should expose common field metadata prerequisites");
 assert(actionItems.some((item) => item.scanner === "gitleaks" && item.closeoutCommands?.riskAcceptanceEvidence), "action items should preserve scanner closeout details");
@@ -276,6 +299,7 @@ assert(executionQueue.some((item) => item.phase === "Security Evidence" && item.
 assert(executionQueue.some((item) => (item.runtimeNotes || []).some((note) => note.includes("Docker daemon"))), "execution queue should expose scanner runtime notes");
 assert(executionQueue.some((item) => item.prerequisites?.runtime?.some((entry) => entry.includes("OWASP ZAP"))), "execution queue should aggregate runtime prerequisites");
 assert(executionQueue.some((item) => item.prerequisites?.env?.includes("CONTROL_BOARD_PORT")), "execution queue should aggregate control-board env prerequisites");
+assert(executionQueue.some((item) => (item.sourceGateIds || []).includes("final-control-board-tcp")), "execution queue should aggregate source gate ids");
 assert(executionQueue.every((item, index) => item.order === index + 1), "execution queue order should be stable and one-based");
 
 const manifest = buildManifest({
@@ -304,6 +328,8 @@ assert(markdown.includes("Field Action Board"), "markdown should include title")
 assert(markdown.includes("Owner Summary"), "markdown should include owner summary");
 assert(markdown.includes("Owner Commands"), "markdown should include owner commands");
 assert(markdown.includes("Execution Queue"), "markdown should include execution queue");
+assert(markdown.includes("Source Gate ID"), "markdown should include source gate id column");
+assert(markdown.includes("final-control-board-tcp"), "markdown should include source final-status gate id");
 assert(markdown.includes("Phase Summary"), "markdown should include phase summary");
 assert(markdown.includes("control-board-field-rehearsal.ps1"), "markdown should include mapped field command");
 assert(markdown.includes("field:preflight"), "markdown should include mapped preflight command");

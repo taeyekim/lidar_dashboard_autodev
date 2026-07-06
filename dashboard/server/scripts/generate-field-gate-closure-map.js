@@ -89,6 +89,7 @@ function buildCommandGroups(actionBoard) {
           executionGateCount: queueItem.executionGateCount || null,
           gateCount: 0,
           gateIds: [],
+          sourceGateIds: [],
           owners: [],
           phases: [],
           priorityCounts: {},
@@ -108,6 +109,7 @@ function buildCommandGroups(actionBoard) {
       const group = acc[groupKey];
       group.gateCount += 1;
       group.gateIds.push(item.id);
+      if (item.sourceGateId) group.sourceGateIds = unique([...group.sourceGateIds, item.sourceGateId]);
       group.owners = unique([...group.owners, item.owner]);
       group.phases = unique([...group.phases, item.phase]);
       group.priorityCounts = incrementCount(group.priorityCounts, item.priority);
@@ -266,14 +268,14 @@ function buildMarkdown(manifest) {
     "",
     "## Closure Map",
     "",
-    "| Command ID | Command | Gate IDs | Evidence Paths | Prerequisites | Close Criteria |",
-    "| --- | --- | --- | --- | --- | --- |",
+    "| Command ID | Command | Gate IDs | Source Gate IDs | Evidence Paths | Prerequisites | Close Criteria |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
     ...(manifest.commandGroups.length > 0
       ? manifest.commandGroups.map(
           (group) =>
-            `| ${group.commandId} | \`${markdownCell(group.command)}\` | ${markdownCell(group.gateIds.join(", "))} | ${markdownCell(group.evidencePaths.join(", ")) || "missing"} | ${markdownCell(formatPrerequisites(group.prerequisites))} | ${markdownCell(group.closeCriteria.join(" / "))} |`,
+            `| ${group.commandId} | \`${markdownCell(group.command)}\` | ${markdownCell(group.gateIds.join(", "))} | ${markdownCell((group.sourceGateIds || []).join(", ") || "missing")} | ${markdownCell(group.evidencePaths.join(", ")) || "missing"} | ${markdownCell(formatPrerequisites(group.prerequisites))} | ${markdownCell(group.closeCriteria.join(" / "))} |`,
         )
-      : ["| none | No commands required. | - | - | - | - |"]),
+      : ["| none | No commands required. | - | - | - | - | - |"]),
     "",
   ].join("\n");
 }

@@ -39,6 +39,8 @@ const checklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "commandGroups",
   "executionOrder",
   "openGateCount",
+  "sourceGateIds",
+  "Source Gate IDs",
   "categoryCounts",
   "statusCounts",
 ].forEach((token) => assertIncludes(generator, token, "field gate closure map generator"));
@@ -96,6 +98,7 @@ const actionBoard = {
     actionItems: [
       {
         id: "GATE-001",
+        sourceGateId: "final-security-delivery-fix",
         owner: "Auth/Security",
         phase: "Security Evidence",
         priority: "P0",
@@ -114,6 +117,7 @@ const actionBoard = {
       },
       {
         id: "GATE-002",
+        sourceGateId: "final-security-blocked",
         owner: "Auth/Security",
         phase: "Security Evidence",
         priority: "P1",
@@ -132,6 +136,7 @@ const actionBoard = {
       },
       {
         id: "GATE-003",
+        sourceGateId: "final-control-board-tcp",
         owner: "Control-board TCP",
         phase: "Field Rehearsal",
         priority: "P0",
@@ -160,6 +165,7 @@ assert(groups[0].executionPriority === "P0", "command groups should preserve exe
 assert(groups[0].executionGateCount === 2, "command groups should preserve execution queue gate count");
 assert(groups[0].gateCount === 2, "largest command group should preserve gate count");
 assert(groups[0].gateIds.includes("GATE-001") && groups[0].gateIds.includes("GATE-002"), "group should preserve gate ids");
+assert(groups[0].sourceGateIds.includes("final-security-delivery-fix") && groups[0].sourceGateIds.includes("final-security-blocked"), "group should preserve source final-status gate ids");
 assert(groups[0].owners.includes("Auth/Security"), "group should preserve owners");
 assert(groups[0].phases.includes("Security Evidence"), "group should preserve phases");
 assert(groups[0].categoryCounts["Security Evidence"] === 2, "group should count categories");
@@ -194,6 +200,8 @@ assert(markdown.includes("Field Gate Closure Map"), "markdown should include tit
 assert(markdown.includes("Command Summary"), "markdown should include command summary");
 assert(markdown.includes("Execution Queue Linkage"), "markdown should include execution queue linkage");
 assert(markdown.includes("Closure Map"), "markdown should include closure map");
+assert(markdown.includes("Source Gate IDs"), "markdown should include source gate ids column");
+assert(markdown.includes("final-security-delivery-fix"), "markdown should include source final-status gate id");
 assert(markdown.includes("Prerequisites"), "markdown should include prerequisites");
 assert(markdown.includes("FIELD_REVIEWER"), "markdown should include env prerequisites");
 assert(markdown.includes("OWASP ZAP"), "markdown should include runtime prerequisites");
