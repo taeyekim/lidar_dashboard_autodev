@@ -120,7 +120,7 @@ const acceptanceChecklist = readProjectFile("docs/ops/acceptance-checklist.md");
   "manual evidence readiness",
   "security evidence",
   "no residual field gates",
-  "fresh delivery/readiness/acceptance/security/index/closure references",
+  "fresh delivery/readiness/acceptance/security/index/closure/classification references",
   "DRY_RUN/LIVE command separation",
   "HTTP bridge diagnostics",
   "legacy serial alias",

@@ -60,11 +60,13 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [finalStatusReport, "fieldActionBoard", "final status report generator"],
   [finalStatusReport, "fieldGateClosureMap", "final status report generator"],
   [finalStatusReport, "fieldOwnerBriefs", "final status report generator"],
+  [finalStatusReport, "finalGateClassification", "final status report generator"],
   [finalStatusReport, "artifacts/manual-evidence-readiness", "final status report generator"],
   [finalStatusReport, "artifacts/field-risk-register", "final status report generator"],
   [finalStatusReport, "artifacts/field-action-board", "final status report generator"],
   [finalStatusReport, "artifacts/field-gate-closure-map", "final status report generator"],
   [finalStatusReport, "artifacts/field-owner-briefs", "final status report generator"],
+  [finalStatusReport, "artifacts/final-gate-classification", "final status report generator"],
   [finalStatusReport, "Do not mark the Codex goal complete", "final status report generator"],
   [handoverIndex, "canMarkGoalComplete", "handover index generator"],
   [fieldClosurePlan, "canMarkGoalComplete", "field closure plan generator"],
@@ -107,6 +109,7 @@ const latestRiskRegister = readLatestJsonManifest("artifacts/field-risk-register
 const latestActionBoard = readLatestJsonManifest("artifacts/field-action-board");
 const latestGateClosureMap = readLatestJsonManifest("artifacts/field-gate-closure-map");
 const latestOwnerBriefs = readLatestJsonManifest("artifacts/field-owner-briefs");
+const latestFinalGateClassification = readLatestJsonManifest("artifacts/final-gate-classification");
 const latestDelivery = readLatestJsonManifest("artifacts/delivery");
 const latestIndex = readLatestJsonManifest("artifacts/handover-index");
 const latestClosurePlan = readLatestJsonManifest("artifacts/field-closure-plan");
@@ -270,6 +273,11 @@ if (latestPackage) {
     assert(
       data.evidenceRefs?.fieldOwnerBriefs === latestOwnerBriefs.path,
       "READY package must reference latest field owner briefs",
+    );
+    assert(latestFinalGateClassification, "READY package requires latest final gate classification");
+    assert(
+      data.evidenceRefs?.finalGateClassification === latestFinalGateClassification.path,
+      "READY package must reference latest final gate classification",
     );
     assert(data.evidenceRefs?.handoverIndex === latestIndex?.path, "READY package must reference latest handover index");
     assert(data.evidenceRefs?.fieldClosurePlan === latestClosurePlan?.path, "READY package must reference latest field closure plan");

@@ -314,6 +314,15 @@ const readyEvidence = {
     path: "artifacts/field-owner-briefs/20260101-000000/manifest.json",
     data: { status: "READY_TO_CLOSE", ownerCount: 0, openItemCount: 0, git: readyEvidenceGit },
   },
+  finalGateClassification: {
+    path: "artifacts/final-gate-classification/20260101-000000/manifest.json",
+    data: {
+      status: "NO_OPEN_GATES",
+      remainingGateCount: 0,
+      bucketGateCounts: {},
+      git: readyEvidenceGit,
+    },
+  },
   ciStatus: {
     path: "artifacts/ci-status/20260101-000000/manifest.json",
     data: {
@@ -347,6 +356,7 @@ readyEvidence.handoverPackage = {
       fieldActionBoard: readyEvidence.fieldActionBoard.path,
       fieldGateClosureMap: readyEvidence.fieldGateClosureMap.path,
       fieldOwnerBriefs: readyEvidence.fieldOwnerBriefs.path,
+      finalGateClassification: readyEvidence.finalGateClassification.path,
       ciStatus: readyEvidence.ciStatus.path,
       handoverIndex: readyEvidence.handoverIndex.path,
       fieldClosurePlan: readyEvidence.fieldClosurePlan.path,
@@ -411,6 +421,10 @@ assert(
   "complete fixture should verify fresh field owner briefs reference",
 );
 assert(
+  ready.referenceFreshness.some((item) => item.key === "finalGateClassification" && item.fresh === true),
+  "complete fixture should verify fresh final gate classification reference",
+);
+assert(
   ready.referenceFreshness.some((item) => item.key === "ciStatus" && item.fresh === true),
   "complete fixture should verify fresh CI status reference",
 );
@@ -433,6 +447,10 @@ assert(
 assert(
   ready.sourceRevisionFreshness.some((item) => item.key === "ciStatus" && item.fresh === true && item.pushed === true),
   "complete fixture should verify CI status source revision freshness",
+);
+assert(
+  ready.sourceRevisionFreshness.some((item) => item.key === "finalGateClassification" && item.fresh === true && item.pushed === true),
+  "complete fixture should verify final gate classification source revision freshness",
 );
 assert(
   ready.sourceRevisionFreshness.every((item) => item.branch === "dev" && item.branchOk === true),
@@ -1079,6 +1097,37 @@ assert(staleOwnerBriefs.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED", "stale o
 assert(
   staleOwnerBriefs.remainingGates.some((item) => item.category === "Evidence Freshness" && item.message.includes("fieldOwnerBriefs")),
   "stale owner briefs fixture should expose stale field owner briefs reference",
+);
+
+const staleFinalGateClassification = buildFinalStatusReport({
+  evidenceRefs: {
+    ...readyEvidence,
+    handoverPackage: {
+      ...readyEvidence.handoverPackage,
+      data: {
+        ...readyEvidence.handoverPackage.data,
+        evidenceRefs: {
+          ...readyEvidence.handoverPackage.data.evidenceRefs,
+          finalGateClassification: "artifacts/final-gate-classification/old/manifest.json",
+        },
+      },
+    },
+  },
+  manualEvidence: manualPresent,
+  generatedAt: "2026-01-01T00:00:00.000Z",
+  baseUrl: "http://field.local:8080",
+  git: readyGit,
+});
+
+assert(
+  staleFinalGateClassification.status === "FIELD_OR_SECURITY_REVIEW_REQUIRED",
+  "stale final gate classification fixture should require review",
+);
+assert(
+  staleFinalGateClassification.remainingGates.some(
+    (item) => item.category === "Evidence Freshness" && item.message.includes("finalGateClassification"),
+  ),
+  "stale final gate classification fixture should expose stale final gate classification reference",
 );
 
 const openFieldRiskRegister = buildFinalStatusReport({

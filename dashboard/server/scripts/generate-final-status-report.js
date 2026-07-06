@@ -18,6 +18,7 @@ const REQUIRED_SOURCE_REVISION_EVIDENCE_KEYS = [
   "fieldActionBoard",
   "fieldGateClosureMap",
   "fieldOwnerBriefs",
+  "finalGateClassification",
   "ciStatus",
   "handoverPackage",
 ];
@@ -88,6 +89,7 @@ function latestEvidenceRefs() {
     fieldActionBoard: readLatestJsonManifest("artifacts/field-action-board"),
     fieldGateClosureMap: readLatestJsonManifest("artifacts/field-gate-closure-map"),
     fieldOwnerBriefs: readLatestJsonManifest("artifacts/field-owner-briefs"),
+    finalGateClassification: readLatestJsonManifest("artifacts/final-gate-classification"),
     ciStatus: readLatestJsonManifest("artifacts/ci-status"),
   };
 }
@@ -242,6 +244,7 @@ function refsAreFresh(handoverPackage, evidenceRefs) {
     fieldActionBoard: evidencePath(evidenceRefs.fieldActionBoard),
     fieldGateClosureMap: evidencePath(evidenceRefs.fieldGateClosureMap),
     fieldOwnerBriefs: evidencePath(evidenceRefs.fieldOwnerBriefs),
+    finalGateClassification: evidencePath(evidenceRefs.finalGateClassification),
     ciStatus: evidencePath(evidenceRefs.ciStatus),
     handoverIndex: evidencePath(evidenceRefs.handoverIndex),
     fieldClosurePlan: evidencePath(evidenceRefs.fieldClosurePlan),
