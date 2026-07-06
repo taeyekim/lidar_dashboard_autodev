@@ -137,6 +137,7 @@ function latestEvidenceRefs() {
     fieldGateClosureMap: readLatestJsonManifest("artifacts/field-gate-closure-map")?.path || null,
     fieldOwnerBriefs: readLatestJsonManifest("artifacts/field-owner-briefs")?.path || null,
     finalBundleHandoff: readLatestJsonManifest("artifacts/final-bundle-handoff")?.path || null,
+    finalGateClassification: readLatestJsonManifest("artifacts/final-gate-classification")?.path || null,
     ciStatus: readLatestJsonManifest("artifacts/ci-status")?.path || null,
   };
 }
@@ -563,6 +564,7 @@ function buildMarkdown(manifest) {
     `- Field gate closure map: ${manifest.evidenceRefs.fieldGateClosureMap || "missing"}`,
     `- Field owner briefs: ${manifest.evidenceRefs.fieldOwnerBriefs || "missing"}`,
     `- Final bundle handoff: ${manifest.evidenceRefs.finalBundleHandoff || "missing"}`,
+    `- Final gate classification: ${manifest.evidenceRefs.finalGateClassification || "missing"}`,
     `- CI status: ${manifest.evidenceRefs.ciStatus || "missing"}`,
     "",
     "## Manual Evidence References",
@@ -657,6 +659,7 @@ function buildMarkdown(manifest) {
     "- This command refreshes the final evidence chain in order: delivery evidence, field readiness, field risk register, manual evidence drafts, manual evidence readiness, field action board, field gate closure map, field owner briefs, CI status, completion audit, field closure plan, then handover index.",
     "- Attach this manifest together with the referenced evidence folders.",
     "- Attach the latest final bundle handoff when available so field reviewers can open bundle-specific closeout files.",
+    "- Attach the latest final gate classification when available so field reviewers can open per-bucket owner closeout files.",
     "- `--reuse-existing-evidence` packages the latest evidence refs without rerunning refresh commands; use it only inside an orchestrator that has already refreshed those refs.",
     "- `canMarkGoalComplete=false` means field/runtime/hardware evidence is still open.",
     "- Strict security acceptance should attach `npm.cmd run security:evidence -- --include-container-images --include-zap --require-scanners --target-url=<delivery-url>` output so skipped scanners become blocking evidence.",

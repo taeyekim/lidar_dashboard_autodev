@@ -88,6 +88,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "manualEvidenceReadiness",
   "fieldGateClosureMap",
   "finalBundleHandoff",
+  "finalGateClassification",
   "ciStatus",
   "openRiskCount",
   "openActionCount",
@@ -150,6 +151,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "controlBoardSafetyStatus",
   "Control-board safety status",
   "Final bundle handoff",
+  "Final gate classification",
   "CI status",
   "baseUrl",
   "--base-url",
@@ -190,6 +192,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "field gate closure map has",
   "field owner briefs have",
   "Attach the latest final bundle handoff",
+  "Attach the latest final gate classification",
   "CI status evidence",
 ].forEach((token) => assertIncludes(generator, token, "handover package generator"));
 
@@ -254,7 +257,7 @@ assertIncludes(checklist, "npm run handover:package", "acceptance checklist");
 assertIncludes(checklist, "--reuse-existing-evidence", "acceptance checklist");
 assertIncludes(checklist, "do not use it as a standalone final-close proof", "acceptance checklist");
 assertIncludes(checklist, "field gate closure map", "acceptance checklist");
-assertIncludes(checklist, "gate-closure-map/owner-brief/final-bundle-handoff references", "acceptance checklist");
+assertIncludes(checklist, "gate-closure-map/owner-brief/final-bundle-handoff/final-gate-classification references", "acceptance checklist");
 assertIncludes(checklist, "Git commit", "acceptance checklist");
 assertIncludes(checklist, "Git pushed to origin/dev", "acceptance checklist");
 assertIncludes(matrix, "npm run handover:package", "delivery evidence matrix");
@@ -262,7 +265,9 @@ assertIncludes(matrix, "handover:package --reuse-existing-evidence", "delivery e
 assertIncludes(matrix, "already been regenerated in the same orchestrated run", "delivery evidence matrix");
 assertIncludes(matrix, "npm run final:bundle-handoff", "delivery evidence matrix");
 assertIncludes(matrix, "artifacts/final-bundle-handoff/<timestamp>/manifest.json", "delivery evidence matrix");
+assertIncludes(matrix, "artifacts/final-gate-classification/<timestamp>/manifest.json", "delivery evidence matrix");
 assertIncludes(matrix, "final bundle handoff", "delivery evidence matrix");
+assertIncludes(matrix, "final gate classification", "delivery evidence matrix");
 assertIncludes(matrix, "npm run ci:status", "delivery evidence matrix");
 
 console.log("handover package contracts ok");
