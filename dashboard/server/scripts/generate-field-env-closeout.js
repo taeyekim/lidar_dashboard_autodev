@@ -72,8 +72,35 @@ function envPlaceholderForItem(item) {
   return "<field-value>";
 }
 
+function suggestedValueForItem(item) {
+  if (item.redacted !== false) return "<field-secret-redacted>";
+  const suggestions = {
+    CONTROL_BOARD_HOST: "<approved-control-board-ip>",
+    CONTROL_BOARD_LIVE_APPROVED: "false",
+    CONTROL_BOARD_PORT: "<approved-tcp-port>",
+    CONTROL_BOARD_DRY_RUN: "true",
+    CONTROL_BOARD_CONNECT_TIMEOUT_MS: "1000",
+    CONTROL_BOARD_RESPONSE_TIMEOUT_MS: "1000",
+    CONTROL_BOARD_RETRY_COUNT: "1",
+    CONTROL_BOARD_HEARTBEAT_INTERVAL_MS: "5000",
+    AUTH_COOKIE_SECURE: "true",
+    AUTH_COOKIE_SAMESITE: "lax",
+    CORS_ORIGINS: "<approved-operator-ui-origin>",
+    NGINX_WRONGWAY_RATE_LIMIT: "30r/s",
+    NGINX_WRONGWAY_BURST: "60",
+    NGINX_CONTENT_SECURITY_POLICY:
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; media-src 'self' blob: http: https:; connect-src 'self' http: https: ws: wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'",
+    NGINX_SWAGGER_ALLOW: "127.0.0.1/32",
+  };
+  return suggestions[item.name] || envPlaceholderForItem(item);
+}
+
 function buildEnvTemplateLines(items) {
   return (items || []).map((item) => `${item.name}=${envPlaceholderForItem(item)}`);
+}
+
+function buildSuggestedEnvLines(items) {
+  return (items || []).map((item) => `${item.name}=${suggestedValueForItem(item)}`);
 }
 
 function buildOwnerCloseoutChecklists(items, strictPreflightCommand) {
@@ -175,6 +202,7 @@ function buildManifest(options = {}) {
     ownerEnvTemplates,
     ownerCloseoutChecklists: buildOwnerCloseoutChecklists(closeoutItems, strictPreflightCommand),
     envTemplateLines: buildEnvTemplateLines(closeoutItems),
+    suggestedEnvLines: buildSuggestedEnvLines(closeoutItems),
     closeoutItems,
     strictPreflightCommand,
   };
@@ -223,6 +251,14 @@ function buildMarkdown(manifest) {
     "",
     "```dotenv",
     ...(manifest.envTemplateLines.length > 0 ? manifest.envTemplateLines : ["# no open env keys"]),
+    "```",
+    "",
+    "## Suggested Field Env Draft",
+    "",
+    "Use this as a safer starting shape only. Replace host, port, CIDR, origin, and secret placeholders with approved field values before strict acceptance.",
+    "",
+    "```dotenv",
+    ...(manifest.suggestedEnvLines.length > 0 ? manifest.suggestedEnvLines : ["# no open env keys"]),
     "```",
     "",
     "## Owner Env Skeletons",
@@ -296,5 +332,7 @@ module.exports = {
   actionCommandForItem,
   buildOwnerCloseoutChecklists,
   buildEnvTemplateLines,
+  buildSuggestedEnvLines,
   envPlaceholderForItem,
+  suggestedValueForItem,
 };

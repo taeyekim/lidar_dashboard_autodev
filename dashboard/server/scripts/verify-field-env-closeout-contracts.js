@@ -6,7 +6,9 @@ const {
   actionCommandForItem,
   buildOwnerCloseoutChecklists,
   buildEnvTemplateLines,
+  buildSuggestedEnvLines,
   envPlaceholderForItem,
+  suggestedValueForItem,
 } = require("./generate-field-env-closeout");
 
 function assert(condition, message) {
@@ -38,6 +40,9 @@ const runbook = readProjectFile("docs/ops/delivery-runbook.md");
   [generator, "Set reviewer/session metadata", "field env closeout generator"],
   [generator, "Rerun strict field preflight", "field env closeout generator"],
   [generator, "Redacted Env Skeleton", "field env closeout generator"],
+  [generator, "Suggested Field Env Draft", "field env closeout generator"],
+  [generator, "suggestedEnvLines", "field env closeout generator"],
+  [generator, "127.0.0.1/32", "field env closeout generator"],
   [generator, "<field-secret-redacted>", "field env closeout generator"],
   [generator, "Do not paste real secret values into evidence", "field env closeout generator"],
   [generator, "strictPreflightCommand", "field env closeout generator"],
@@ -114,6 +119,8 @@ assert(manifest.closeoutItems.some((item) => item.name === "JWT_SECRET" && item.
 assert(manifest.closeoutItems.some((item) => item.owner === "Nginx Delivery"), "manifest should map env items to owner groups");
 assert(manifest.envTemplateLines.includes("JWT_SECRET=<field-secret-redacted>"), "manifest should include redacted secret env skeleton line");
 assert(manifest.envTemplateLines.includes("NGINX_SWAGGER_ALLOW=<field-value>"), "manifest should include non-secret env skeleton line");
+assert(manifest.suggestedEnvLines.includes("JWT_SECRET=<field-secret-redacted>"), "manifest should keep secrets redacted in suggested env lines");
+assert(manifest.suggestedEnvLines.includes("NGINX_SWAGGER_ALLOW=127.0.0.1/32"), "manifest should suggest a restricted Swagger allowlist");
 assert(
   manifest.ownerEnvTemplates.some((group) => group.owner === "Auth/Security" && group.envTemplateLines.includes("JWT_SECRET=<field-secret-redacted>")),
   "manifest should split env skeleton lines by owner",
@@ -131,7 +138,13 @@ assert(manifest.strictPreflightCommand.includes("-RequireDeviceKey -RequireHttps
 assert(actionCommandForItem({ name: "JWT_SECRET" }, "https://delivery.example.local").includes("Do not paste the value into evidence"), "JWT action should protect secret values");
 assert(envPlaceholderForItem({ name: "CONTROL_BOARD_PORT", redacted: false }) === "<number>", "numeric env values should use number placeholder");
 assert(envPlaceholderForItem({ name: "CONTROL_BOARD_DRY_RUN", redacted: false }) === "<true-or-false>", "boolean env values should use boolean placeholder");
+assert(suggestedValueForItem({ name: "AUTH_COOKIE_SECURE", redacted: false }) === "true", "suggested env should prefer secure cookies");
+assert(suggestedValueForItem({ name: "NGINX_SWAGGER_ALLOW", redacted: false }) === "127.0.0.1/32", "suggested env should restrict Swagger allowlist");
 assert(buildEnvTemplateLines([{ name: "DEVICE_INGEST_API_KEY", redacted: true }]).includes("DEVICE_INGEST_API_KEY=<field-secret-redacted>"), "template helper should redact secrets");
+assert(
+  buildSuggestedEnvLines([{ name: "DEVICE_INGEST_API_KEY", redacted: true }]).includes("DEVICE_INGEST_API_KEY=<field-secret-redacted>"),
+  "suggested env helper should redact secrets",
+);
 assert(
   buildOwnerCloseoutChecklists([{ name: "DEVICE_INGEST_API_KEY", owner: "LiDAR Integration", redacted: true, closeoutCommand: "close it" }], "npm.cmd run field:preflight")[0].steps.some(
     (step) => step.command === "DEVICE_INGEST_API_KEY=<field-secret-redacted>",
@@ -143,6 +156,7 @@ const markdown = buildMarkdown(manifest);
 assert(markdown.includes("Field Environment Closeout"), "markdown should include title");
 assert(markdown.includes("Strict Preflight Command"), "markdown should include strict command section");
 assert(markdown.includes("Redacted Env Skeleton"), "markdown should include redacted env skeleton section");
+assert(markdown.includes("Suggested Field Env Draft"), "markdown should include suggested env draft section");
 assert(markdown.includes("Owner Closeout Checklists"), "markdown should include owner closeout checklist section");
 assert(markdown.includes("Set reviewer/session metadata"), "markdown should include reviewer metadata step");
 assert(markdown.includes("JWT_SECRET=<field-secret-redacted>"), "markdown should include redacted secret placeholder");
