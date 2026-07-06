@@ -140,10 +140,22 @@ function buildGateId(category, status, message, evidence) {
   return [
     slugifyGatePart(category),
     slugifyGatePart(status),
-    slugifyGatePart(evidencePart || message).slice(0, 48),
+    slugifyGatePart(evidencePart).slice(0, 24),
+    slugifyGatePart(message).slice(0, 72),
   ]
     .filter(Boolean)
     .join(":");
+}
+
+function ensureUniqueGateIds(gates) {
+  const seen = new Map();
+  gates.forEach((gate) => {
+    const baseId = gate.id || buildGateId(gate.category, gate.status, gate.message, gate.evidence);
+    const count = seen.get(baseId) || 0;
+    seen.set(baseId, count + 1);
+    gate.id = count === 0 ? baseId : `${baseId}:${count + 1}`;
+  });
+  return gates;
 }
 
 function addGate(gates, category, status, message, closeWhen, evidence, metadata = {}) {
@@ -874,6 +886,8 @@ function buildFinalStatusReport(input = {}) {
         evidencePath(evidenceRefs[item.key]),
       );
     });
+
+  ensureUniqueGateIds(gates);
 
   const status = gates.length === 0 ? "READY_TO_CLOSE" : "FIELD_OR_SECURITY_REVIEW_REQUIRED";
   const summary = gateSummary(gates);

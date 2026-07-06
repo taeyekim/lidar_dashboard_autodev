@@ -47,6 +47,8 @@ const checklist = readProjectFile("docs/ops/acceptance-checklist.md");
   [generator, "buildOwnerCloseoutQueue", "final gate classification generator"],
   [generator, "buildOwnerCloseoutMarkdown", "final gate classification generator"],
   [generator, "writeOwnerCloseoutFiles", "final gate classification generator"],
+  [generator, "id: gate.id || null", "final gate classification generator"],
+  [generator, "Gate ID", "final gate classification generator"],
   [generator, "Owner Closeout Queue", "final gate classification generator"],
   [generator, "Owner Closeout Files", "final gate classification generator"],
   [generator, "This file is an execution aid, not completion evidence", "final gate classification generator"],
@@ -73,15 +75,19 @@ assert(bucketForGate({ category: "CI Status", message: "No CI workflow run was f
 assert(bucketForGate({ category: "Field Evidence", message: "JWT secret placeholder" }) === "field_configuration", "env gates should route to field configuration");
 
 const buckets = summarizeBuckets([
-  { category: "Control Board TCP", status: "DRY_RUN_SAFE", actionType: "FIELD_ACTION_REQUIRED", message: "LIVE_TCP ACK required" },
-  { category: "Security Scanner Closeout", status: "UNVERIFIED", actionType: "SECURITY_REVIEW_REQUIRED", message: "gitleaks scanner closeout" },
-  { category: "Manual Evidence", status: "INVALID", actionType: "MANUAL_EVIDENCE_REQUIRED", message: "Operator UI Walkthrough evidence is INVALID" },
+  { id: "gate-control", area: "Control Board TCP", gate: "Control Board TCP: DRY_RUN_SAFE", category: "Control Board TCP", status: "DRY_RUN_SAFE", actionType: "FIELD_ACTION_REQUIRED", message: "LIVE_TCP ACK required" },
+  { id: "gate-security", area: "Security Scanner Closeout", gate: "Security Scanner Closeout: UNVERIFIED", category: "Security Scanner Closeout", status: "UNVERIFIED", actionType: "SECURITY_REVIEW_REQUIRED", message: "gitleaks scanner closeout" },
+  { id: "gate-manual", area: "Manual Evidence", gate: "Manual Evidence: INVALID", category: "Manual Evidence", status: "INVALID", actionType: "MANUAL_EVIDENCE_REQUIRED", message: "Operator UI Walkthrough evidence is INVALID" },
 ]);
 
 assert(buckets.some((bucket) => bucket.id === "hardware_runtime" && bucket.gateCount === 1), "summary should include hardware runtime bucket");
 assert(buckets.some((bucket) => bucket.id === "security_tooling" && bucket.gateCount === 1), "summary should include security tooling bucket");
 assert(buckets.some((bucket) => bucket.id === "manual_reviewer" && bucket.gateCount === 1), "summary should include manual reviewer bucket");
 assert(buckets.every((bucket) => bucket.gates.length === bucket.gateCount), "each bucket should retain every classified gate row");
+assert(
+  buckets.flatMap((bucket) => bucket.gates).every((gate) => gate.id && gate.area && gate.gate),
+  "bucket gate rows should preserve final-status id, area, and gate tracking fields",
+);
 assert(
   buckets.reduce((sum, bucket) => sum + bucket.gates.length, 0) === 3,
   "bucket gate rows should cover the full remaining gate set",
@@ -144,10 +150,13 @@ assert(markdown.includes("Owner Closeout Queue"), "markdown should include owner
 assert(markdown.includes("Owner Closeout Files"), "markdown should include owner closeout files");
 assert(markdown.includes("Next Codex Actions"), "markdown should include next action table");
 assert(markdown.includes("All Gates By Bucket"), "markdown should include the full gate table section");
+assert(markdown.includes("Gate ID"), "markdown should include gate id columns");
+assert(markdown.includes("gate-control"), "markdown should preserve source gate ids");
 assert(markdown.includes("This classification is routing evidence"), "markdown should include evidence guardrail");
 const ownerMarkdown = buildOwnerCloseoutMarkdown(ownerQueue[0], buckets.find((bucket) => bucket.id === ownerQueue[0].bucketId), manifest);
 assert(ownerMarkdown.includes("Owner Closeout"), "owner markdown should include title");
 assert(ownerMarkdown.includes("execution aid, not completion evidence"), "owner markdown should include guardrail");
 assert(ownerMarkdown.includes("## Gates"), "owner markdown should include gate table");
+assert(ownerMarkdown.includes("Gate ID"), "owner markdown should include gate id columns");
 
 console.log("final gate classification contracts ok");

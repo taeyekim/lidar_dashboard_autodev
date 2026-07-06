@@ -126,6 +126,9 @@ function summarizeBuckets(gates) {
     bucket.actionTypes[actionType] = (bucket.actionTypes[actionType] || 0) + 1;
     bucket.categories[category] = (bucket.categories[category] || 0) + 1;
     const gateRow = {
+      id: gate.id || null,
+      area: gate.area || gate.category || "Unknown",
+      gate: gate.gate || `${gate.category || "Unknown"}: ${gate.status || "UNKNOWN"}`,
       category: gate.category || "Unknown",
       status: gate.status || "UNKNOWN",
       actionType,
@@ -356,11 +359,11 @@ function buildMarkdown(manifest) {
     ...manifest.buckets.flatMap((bucket) => [
       `### ${bucket.label}`,
       "",
-      "| Category | Status | Action Type | Message | Evidence | Close When |",
-      "| --- | --- | --- | --- | --- | --- |",
+      "| Gate ID | Area | Category | Status | Action Type | Message | Evidence | Close When |",
+      "| --- | --- | --- | --- | --- | --- | --- | --- |",
       ...bucket.examples.map(
         (gate) =>
-          `| ${markdownCell(gate.category)} | ${markdownCell(gate.status)} | ${markdownCell(gate.actionType)} | ${markdownCell(gate.message)} | ${markdownCell(gate.evidence || "missing")} | ${markdownCell(gate.closeWhen)} |`,
+          `| ${markdownCell(gate.id || "missing")} | ${markdownCell(gate.area || gate.category)} | ${markdownCell(gate.category)} | ${markdownCell(gate.status)} | ${markdownCell(gate.actionType)} | ${markdownCell(gate.message)} | ${markdownCell(gate.evidence || "missing")} | ${markdownCell(gate.closeWhen)} |`,
       ),
       "",
     ]),
@@ -369,11 +372,11 @@ function buildMarkdown(manifest) {
     ...manifest.buckets.flatMap((bucket) => [
       `### ${bucket.label}`,
       "",
-      "| # | Category | Status | Action Type | Message | Evidence | Close When |",
-      "| ---: | --- | --- | --- | --- | --- | --- |",
+      "| # | Gate ID | Area | Gate | Category | Status | Action Type | Message | Evidence | Close When |",
+      "| ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
       ...(bucket.gates || []).map(
         (gate, index) =>
-          `| ${index + 1} | ${markdownCell(gate.category)} | ${markdownCell(gate.status)} | ${markdownCell(gate.actionType)} | ${markdownCell(gate.message)} | ${markdownCell(gate.evidence || "missing")} | ${markdownCell(gate.closeWhen)} |`,
+          `| ${index + 1} | ${markdownCell(gate.id || "missing")} | ${markdownCell(gate.area || gate.category)} | ${markdownCell(gate.gate || `${gate.category}: ${gate.status}`)} | ${markdownCell(gate.category)} | ${markdownCell(gate.status)} | ${markdownCell(gate.actionType)} | ${markdownCell(gate.message)} | ${markdownCell(gate.evidence || "missing")} | ${markdownCell(gate.closeWhen)} |`,
       ),
       "",
     ]),
@@ -409,14 +412,14 @@ function buildOwnerCloseoutMarkdown(queueItem, bucket, manifest) {
     "",
     "## Gates",
     "",
-    "| # | Category | Status | Action Type | Message | Evidence | Close When |",
-    "| ---: | --- | --- | --- | --- | --- | --- |",
+    "| # | Gate ID | Area | Gate | Category | Status | Action Type | Message | Evidence | Close When |",
+    "| ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...((bucket?.gates || []).length > 0
       ? bucket.gates.map(
           (gate, index) =>
-            `| ${index + 1} | ${markdownCell(gate.category)} | ${markdownCell(gate.status)} | ${markdownCell(gate.actionType)} | ${markdownCell(gate.message)} | ${markdownCell(gate.evidence || "missing")} | ${markdownCell(gate.closeWhen)} |`,
+            `| ${index + 1} | ${markdownCell(gate.id || "missing")} | ${markdownCell(gate.area || gate.category)} | ${markdownCell(gate.gate || `${gate.category}: ${gate.status}`)} | ${markdownCell(gate.category)} | ${markdownCell(gate.status)} | ${markdownCell(gate.actionType)} | ${markdownCell(gate.message)} | ${markdownCell(gate.evidence || "missing")} | ${markdownCell(gate.closeWhen)} |`,
         )
-      : ["| - | none | PASS | - | No open gates. | - | - |"]),
+      : ["| - | none | none | none | none | PASS | - | No open gates. | - | - |"]),
     "",
   ].join("\n");
 }

@@ -31,6 +31,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   [generator, "FIELD_OR_SECURITY_REVIEW_REQUIRED", "final status report generator"],
   [generator, "remainingGates", "final status report generator"],
   [generator, "buildGateId", "final status report generator"],
+  [generator, "ensureUniqueGateIds", "final status report generator"],
   [generator, "slugifyGatePart", "final status report generator"],
   [generator, "area: category", "final status report generator"],
   [generator, "gate: `${category}: ${status}`", "final status report generator"],
@@ -814,6 +815,10 @@ assert(
 assert(
   openScannerCloseout.remainingGates.every((item) => item.id && item.area === item.category && item.gate === `${item.category}: ${item.status}`),
   "remaining gates should expose stable id, area, and gate tracking fields",
+);
+assert(
+  new Set(openScannerCloseout.remainingGates.map((item) => item.id)).size === openScannerCloseout.remainingGates.length,
+  "remaining gate ids should be unique within a final status report",
 );
 assert(
   openScannerCloseout.securityEvidence.scannerCloseoutSummary.open === 1,
