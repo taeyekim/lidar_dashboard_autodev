@@ -91,7 +91,7 @@ assert(
 assert(
   envExample.includes("NGINX_WRONGWAY_RATE_LIMIT=30r/s") &&
     envExample.includes("NGINX_WRONGWAY_BURST=60") &&
-    envExample.includes("NGINX_SWAGGER_ALLOW=all") &&
+    envExample.includes("NGINX_SWAGGER_ALLOW=127.0.0.1/32") &&
     envExample.includes("NGINX_CONTENT_SECURITY_POLICY="),
   ".env.example must document Nginx wrongway rate limit, Swagger allowlist, and CSP knobs",
 );

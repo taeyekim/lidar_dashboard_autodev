@@ -120,6 +120,11 @@ assert(env.get("CONTROL_BOARD_DRY_RUN") === "true", "CONTROL_BOARD_DRY_RUN must 
 assert(env.get("CONTROL_BOARD_LIVE_APPROVED") === "false", "CONTROL_BOARD_LIVE_APPROVED must default to false");
 assert(env.get("CONTROL_BOARD_HOST") === "", "CONTROL_BOARD_HOST must stay blank in .env.example");
 assert(env.get("CONTROL_BOARD_PORT") === "", "CONTROL_BOARD_PORT must stay blank in .env.example");
+assert(env.get("NGINX_SWAGGER_ALLOW") !== "all", "NGINX_SWAGGER_ALLOW must not default to all in .env.example");
+assert(
+  env.get("NGINX_SWAGGER_ALLOW") === "127.0.0.1/32",
+  "NGINX_SWAGGER_ALLOW must default to a local-only review CIDR in .env.example",
+);
 assert(
   env.get("JWT_SECRET") === "change-this-to-a-long-random-secret",
   "JWT_SECRET must be an obvious placeholder in .env.example",
