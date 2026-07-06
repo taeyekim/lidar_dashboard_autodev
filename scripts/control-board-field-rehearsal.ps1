@@ -227,6 +227,36 @@ function New-LiveTcpApprovalChecklist {
   )
 }
 
+function New-CommandSequence {
+  param(
+    [string[]]$Commands,
+    [string]$Mode
+  )
+
+  $purposeByCommand = @{
+    STAGE_1_ON = "Primary warning output rehearsal for signboard/speaker activation."
+    STAGE_2_ON = "Secondary blocking output rehearsal for barrier-down activation."
+    STAGE_2_RETURN = "Return-to-safe-state rehearsal after stage-2 blocking output."
+  }
+  $expectedResult = if ($Mode -eq "LIVE_TCP") {
+    "10-byte TCP frame sent and ACK/response evidence recorded."
+  } else {
+    "10-byte frame generated and DRY_RUN_SKIPPED_SEND log recorded without TCP send."
+  }
+
+  $order = 0
+  return @($Commands | ForEach-Object {
+    $order += 1
+    [pscustomobject]@{
+      order = $order
+      commandType = $_
+      purpose = $purposeByCommand[$_]
+      expectedFrameBytes = 10
+      expectedResult = $expectedResult
+    }
+  })
+}
+
 $envValues = Read-DotEnv ".env"
 $liveApproved = ""
 if ($env:CONTROL_BOARD_LIVE_APPROVED) { $liveApproved = $env:CONTROL_BOARD_LIVE_APPROVED }
@@ -280,6 +310,7 @@ try {
   $results = Add-Result -Results $results -Name "initial control-board status" -Status "PASS" -Response $initialStatus
 
   $commands = @("STAGE_1_ON", "STAGE_2_ON", "STAGE_2_RETURN")
+  $commandSequence = New-CommandSequence -Commands $commands -Mode $mode
   foreach ($commandType in $commands) {
     $response = Invoke-CurlJson -Method "POST" -Url "$BaseUrl/api/control-board/commands/test" -CookieJar $cookieJar -CsrfToken $csrfToken -Body @{
       commandType = $commandType
@@ -332,6 +363,7 @@ try {
     liveTcpReady = $finalStatus.liveTcpReady
     liveTcpApprovalStatus = $liveTcpApprovalStatus
     liveTcpApprovalChecklist = $liveTcpApprovalChecklist
+    commandSequence = $commandSequence
     results = $results
   }
 
@@ -368,6 +400,12 @@ try {
     "| Status | Item | Evidence |",
     "| --- | --- | --- |"
   ) + ($liveTcpApprovalChecklist | ForEach-Object { "| $($_.status) | $($_.item) | $($_.evidence) |" }) + @(
+    "",
+    "## Command Sequence",
+    "",
+    "| Order | Command | Purpose | Expected Frame Bytes | Expected Result |",
+    "| --- | --- | --- | --- | --- |"
+  ) + ($commandSequence | ForEach-Object { "| $($_.order) | $($_.commandType) | $($_.purpose) | $($_.expectedFrameBytes) | $($_.expectedResult) |" }) + @(
     "",
     "## Safety",
     "",
