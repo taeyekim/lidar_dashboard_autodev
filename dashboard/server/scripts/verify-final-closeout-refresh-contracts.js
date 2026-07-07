@@ -97,6 +97,8 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "handover-index-closeout-sync", "final closeout refresh generator"],
   [generator, "handover-package-closeout-sync", "final closeout refresh generator"],
   [generator, "final-status-closeout-sync", "final closeout refresh generator"],
+  [generator, "final-gate-classification-closeout-sync", "final closeout refresh generator"],
+  [generator, "package-refresh examples do not point at stale handover evidence", "final closeout refresh generator"],
   [generator, "does not report stale closure-plan evidence", "final closeout refresh generator"],
   [generator, "evidenceRefs.finalBundleHandoff points to the latest final-bundle-handoff manifest", "final closeout refresh generator"],
   [generator, "evidenceRefs.handoverPackage points to the latest handover-package manifest", "final closeout refresh generator"],

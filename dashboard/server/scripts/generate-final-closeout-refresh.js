@@ -477,6 +477,14 @@ function buildSteps(options) {
       purpose: "Create the final status after closeout handover sync.",
       doneWhen: "Final status contains no stale handover package gate when only field/security/CI evidence remains open.",
     },
+    {
+      id: "final-gate-classification-closeout-sync",
+      phase: "Final Decision",
+      command: npm,
+      args: ["run", "final:gate-classification", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Reclassify gates from the closeout-synced final status so package-refresh examples do not point at stale handover evidence.",
+      doneWhen: "Final gate classification sourceFinalStatus points to final-status-closeout-sync.",
+    },
   );
 
   return steps.map((step, index) => ({ order: index + 1, ...step }));
