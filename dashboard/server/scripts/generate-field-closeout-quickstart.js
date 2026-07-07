@@ -249,6 +249,46 @@ function buildEnvGuide(envKeys) {
   }));
 }
 
+function placeholderForEnvKey(key) {
+  if (ENV_KEY_GUIDE[key]?.secret === true) return "replace_in_field";
+  const placeholders = {
+    AUTH_COOKIE_SAMESITE: "lax",
+    AUTH_COOKIE_SECURE: "true",
+    CONTROL_BOARD_DRY_RUN: "true",
+    CONTROL_BOARD_HOST: "replace_in_field",
+    CONTROL_BOARD_LIVE_APPROVED: "false",
+    CONTROL_BOARD_PORT: "replace_in_field",
+    CORS_ORIGINS: "replace_in_field",
+    FIELD_REVIEWER: "replace_in_field",
+    FIELD_SITE_NAME: "replace_in_field",
+    NGINX_CONTENT_SECURITY_POLICY: "replace_in_field",
+    NGINX_SWAGGER_ALLOW: "replace_in_field",
+    NGINX_WRONGWAY_BURST: "replace_in_field",
+    NGINX_WRONGWAY_RATE_LIMIT: "replace_in_field",
+  };
+  return placeholders[key] || "replace_in_field";
+}
+
+function sanitizeEnvPatchLine(line) {
+  const match = String(line || "").match(/^\s*([^#=\s]+)\s*=(.*)$/);
+  if (!match) return "";
+  const key = match[1].trim();
+  if (!key) return "";
+  if (ENV_KEY_GUIDE[key]?.secret === true) return `${key}=replace_in_field`;
+  const value = String(match[2] || "").trim();
+  if (!value || value === "<field-secret-redacted>" || value === "<field-value>") {
+    return `${key}=${placeholderForEnvKey(key)}`;
+  }
+  return `${key}=${value}`;
+}
+
+function buildEnvPatchBlockLines(envGuide, fieldEnvCloseout) {
+  const closeoutLines = fieldEnvCloseout?.data?.envFile?.appendMissingEnvBlockLines || [];
+  const sanitizedCloseoutLines = closeoutLines.map(sanitizeEnvPatchLine).filter(Boolean);
+  if (sanitizedCloseoutLines.length > 0) return uniq(sanitizedCloseoutLines);
+  return uniq((envGuide || []).map((item) => `${item.key}=${placeholderForEnvKey(item.key)}`));
+}
+
 function buildManifest(input = {}) {
   const actionBoard = Object.prototype.hasOwnProperty.call(input, "actionBoard")
     ? input.actionBoard
@@ -259,12 +299,16 @@ function buildManifest(input = {}) {
   const finalStatus = Object.prototype.hasOwnProperty.call(input, "finalStatus")
     ? input.finalStatus
     : readLatestJsonManifest("artifacts/final-status");
+  const fieldEnvCloseout = Object.prototype.hasOwnProperty.call(input, "fieldEnvCloseout")
+    ? input.fieldEnvCloseout
+    : readLatestJsonManifest("artifacts/field-env-closeout");
   const actionItems = actionBoard?.data?.actionItems || [];
   const baseUrl = resolveFieldBaseUrl(input.baseUrl, actionBoard?.data?.baseUrl, finalStatus?.data?.baseUrl);
   const prerequisites = flattenPrerequisites(actionItems);
   const phaseQueue = buildPhaseQueue(actionItems);
   const ownerQueue = buildOwnerQueue(actionBoard);
   const summary = classification?.data?.summary || {};
+  const envGuide = buildEnvGuide(prerequisites.env);
   return {
     generatedAt: input.generatedAt || new Date().toISOString(),
     generatedBy: input.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
@@ -275,6 +319,7 @@ function buildManifest(input = {}) {
     sourceFinalStatus: finalStatus?.path || null,
     sourceFieldActionBoard: actionBoard?.path || null,
     sourceFinalGateClassification: classification?.path || null,
+    sourceFieldEnvCloseout: fieldEnvCloseout?.path || null,
     remainingGateCount: finalStatus?.data?.remainingGates?.length ?? null,
     openActionCount: actionItems.length,
     bucketGateCounts: summary.bucketGateCounts || {},
@@ -282,7 +327,8 @@ function buildManifest(input = {}) {
     securityRequiredCount: summary.bucketGateCounts?.security_tooling ?? null,
     reviewRequiredCount: (finalStatus?.data?.remainingGates || []).filter((gate) => gate.actionType === "REVIEW_REQUIRED").length,
     prerequisites,
-    envGuide: buildEnvGuide(prerequisites.env),
+    envGuide,
+    envPatchBlockLines: buildEnvPatchBlockLines(envGuide, fieldEnvCloseout),
     phaseQueue,
     ownerQueue,
     commandQueue: uniq(phaseQueue.flatMap((phase) => phase.commands)),
@@ -313,6 +359,7 @@ function buildMarkdown(manifest) {
     `- Source final status: ${manifest.sourceFinalStatus || "missing"}`,
     `- Source field action board: ${manifest.sourceFieldActionBoard || "missing"}`,
     `- Source final gate classification: ${manifest.sourceFinalGateClassification || "missing"}`,
+    `- Source field env closeout: ${manifest.sourceFieldEnvCloseout || "missing"}`,
     "",
     "## Guardrails",
     "",
@@ -328,6 +375,14 @@ function buildMarkdown(manifest) {
             `| ${markdownCell(item.key)} | ${markdownCell(item.owner)} | ${item.secret ? "yes" : "no"} | ${markdownCell(item.valueShape)} | ${markdownCell(item.closes)} | ${markdownCell(item.verify)} |`,
         )
       : ["| none | - | no | - | - | - |"]),
+    "",
+    "## Safe .env Patch Block",
+    "",
+    "Append or update these keys in the local field `.env`, then replace placeholders on the delivery PC. This block never carries real secret values.",
+    "",
+    "```dotenv",
+    ...(manifest.envPatchBlockLines.length > 0 ? manifest.envPatchBlockLines : ["# no open env keys"]),
+    "```",
     "",
     "## Evidence Files To Prepare",
     "",

@@ -98,6 +98,14 @@ const manifest = buildManifest({
       ownerGroups: [{ owner: "Auth/Security", total: 1, byPriority: { P0: 1 }, commands: ["npm.cmd run field:preflight"] }],
     },
   },
+  fieldEnvCloseout: {
+    path: "artifacts/field-env-closeout/fixture/manifest.json",
+    data: {
+      envFile: {
+        appendMissingEnvBlockLines: ["JWT_SECRET=<field-secret-redacted>", "CONTROL_BOARD_DRY_RUN=true"],
+      },
+    },
+  },
 });
 
 assert(manifest.status === "OPEN", "quickstart should be OPEN when action items exist");
@@ -107,11 +115,16 @@ assert(manifest.envGuide.some((item) => item.key === "JWT_SECRET" && item.secret
 assert(manifest.envGuide.some((item) => item.key === "CONTROL_BOARD_HOST" && item.owner === "Control-board TCP"), "quickstart should explain control board host ownership");
 assert(manifest.phaseQueue.length === 2, "quickstart should build phase queue");
 assert(manifest.ownerQueue.length === 1, "quickstart should build owner queue");
+assert(manifest.sourceFieldEnvCloseout.includes("field-env-closeout"), "quickstart should link field env closeout evidence");
+assert(manifest.envPatchBlockLines.includes("JWT_SECRET=replace_in_field"), "quickstart should sanitize secret patch values");
+assert(manifest.envPatchBlockLines.includes("CONTROL_BOARD_DRY_RUN=true"), "quickstart should include safe control-board defaults");
 
 const markdown = buildMarkdown(manifest);
 [
   "Field Closeout Quickstart",
   "Env Keys To Fill",
+  "Safe .env Patch Block",
+  "replace_in_field",
   "JWT_SECRET",
   "Value Shape",
   "Verify With",
