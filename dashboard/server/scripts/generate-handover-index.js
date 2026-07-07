@@ -187,6 +187,13 @@ function buildIndexManifest(options = {}) {
       notes: "Per-owner field execution briefs generated from the latest action board for handoff to field owners.",
     },
     {
+      area: "Field Closeout Quickstart",
+      required: true,
+      outputRoot: "artifacts/field-closeout-quickstart",
+      command: 'npm run field:closeout-quickstart -- --base-url=<delivery-url> --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"',
+      notes: "One-page field queue listing env keys, evidence files, runtime prerequisites, owner queue, phase queue, and command queue.",
+    },
+    {
       area: "Field Closure Plan",
       required: true,
       outputRoot: "artifacts/field-closure-plan",

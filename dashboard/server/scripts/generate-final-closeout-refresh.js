@@ -314,6 +314,14 @@ function buildSteps(options) {
       doneWhen: "Owner briefs source action board is current.",
     },
     {
+      id: "field-closeout-quickstart",
+      phase: "Field Action Artifacts",
+      command: npm,
+      args: ["run", "field:closeout-quickstart", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Generate a one-page field closeout queue from the latest action board and gate classification.",
+      doneWhen: "Quickstart lists env keys, runtime prerequisites, owner queue, phase queue, and command queue.",
+    },
+    {
       id: "handover-package-pass-2",
       phase: "Package Refresh",
       command: npm,
@@ -404,6 +412,14 @@ function buildSteps(options) {
       doneWhen: "Owner brief counts match the final indexed action board.",
     },
     {
+      id: "field-closeout-quickstart-final-index",
+      phase: "Field Action Artifacts",
+      command: npm,
+      args: ["run", "field:closeout-quickstart", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Refresh quickstart from the final indexed action board.",
+      doneWhen: "Quickstart open action count matches the final indexed action board.",
+    },
+    {
       id: "handover-package-action-index",
       phase: "Final Decision",
       command: npm,
@@ -484,6 +500,14 @@ function buildSteps(options) {
       args: ["run", "final:gate-classification", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
       purpose: "Reclassify gates from the closeout-synced final status so package-refresh examples do not point at stale handover evidence.",
       doneWhen: "Final gate classification sourceFinalStatus points to final-status-closeout-sync.",
+    },
+    {
+      id: "field-closeout-quickstart-closeout-sync",
+      phase: "Field Action Artifacts",
+      command: npm,
+      args: ["run", "field:closeout-quickstart", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Refresh quickstart from the closeout-synced final status and gate classification.",
+      doneWhen: "Quickstart source refs point to the final closeout-synced status, action board, and classification.",
     },
   );
 

@@ -33,6 +33,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "Manual Evidence Drafts",
   "Field Closure Plan",
   "Field Gate Closure Map",
+  "Field Closeout Quickstart",
   "DB And Prisma Field Rehearsal",
   "Lidar Ingest Field Rehearsal",
   "Control Board Field Rehearsal",
@@ -90,6 +91,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "controlBoardSafetyStatus",
   "Control-board safety status",
   "artifacts/field-gate-closure-map",
+  "artifacts/field-closeout-quickstart",
+  "field:closeout-quickstart",
+  "One-page field queue",
   "--generated-by=\"$env:FIELD_REVIEWER\"",
   "--site-name=\"$env:FIELD_SITE_NAME\"",
 ].forEach((token) => assertIncludes(generator, token, "handover index generator"));
@@ -122,7 +126,7 @@ assertIncludes(matrix, "manual evidence drafts", "delivery evidence matrix");
 const vectorManifest = buildIndexManifest({ generatedBy: "contract-vector", siteName: "contract-vector" });
 assert(
   vectorManifest.entries
-    .filter((entry) => ["Field Readiness", "Manual Evidence Readiness", "Field Risk Register", "Field Action Board", "Field Gate Closure Map", "Field Owner Briefs", "Field Closure Plan"].includes(entry.area))
+    .filter((entry) => ["Field Readiness", "Manual Evidence Readiness", "Field Risk Register", "Field Action Board", "Field Gate Closure Map", "Field Owner Briefs", "Field Closeout Quickstart", "Field Closure Plan"].includes(entry.area))
     .every((entry) => entry.command.includes("FIELD_REVIEWER") && entry.command.includes("FIELD_SITE_NAME")),
   "handover index operator commands should carry reviewer/site metadata args",
 );
