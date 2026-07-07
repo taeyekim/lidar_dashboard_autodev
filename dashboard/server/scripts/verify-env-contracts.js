@@ -31,8 +31,11 @@ const runtimeSmoke = readProjectFile("scripts/runtime-smoke.ps1");
 const packageJson = readProjectFile("package.json");
 const serverPackageJson = readProjectFile("dashboard/server/package.json");
 const evidenceScript = readProjectFile("dashboard/server/scripts/generate-delivery-evidence.js");
+const fieldEnvHelper = readProjectFile("dashboard/server/scripts/field-env.js");
 const securityEvidenceScript = readProjectFile("dashboard/server/scripts/generate-security-evidence.js");
 const runtimeEvidenceScript = readProjectFile("dashboard/server/scripts/generate-runtime-evidence.js");
+const handoverPackageScript = readProjectFile("dashboard/server/scripts/generate-handover-package.js");
+const fieldEnvCloseout = readProjectFile("dashboard/server/scripts/generate-field-env-closeout.js");
 const fieldReadinessReport = readProjectFile("dashboard/server/scripts/generate-field-readiness-report.js");
 const fieldActionBoard = readProjectFile("dashboard/server/scripts/generate-field-action-board.js");
 const fieldGateClosureMap = readProjectFile("dashboard/server/scripts/generate-field-gate-closure-map.js");
@@ -242,6 +245,9 @@ assert(
   [evidenceScript, "Git pushed to origin/dev", "delivery evidence script"],
   [evidenceScript, "pushed: Boolean", "delivery evidence script"],
   [evidenceScript, "Field Verification Still Required", "delivery evidence script"],
+  [fieldEnvHelper, "DEFAULT_FIELD_BASE_URL", "field env helper"],
+  [fieldEnvHelper, "process.env.FIELD_BASE_URL", "field env helper"],
+  [fieldEnvHelper, "resolveFieldBaseUrl", "field env helper"],
   [securityEvidenceScript, "artifacts/security", "security evidence script"],
   [securityEvidenceScript, "manifest.md", "security evidence script"],
   [securityEvidenceScript, "manifest.json", "security evidence script"],
@@ -312,17 +318,20 @@ assert(
   [runtimeEvidenceScript, "presentKeys", "runtime evidence script"],
   [runtimeEvidenceScript, "missingKeys", "runtime evidence script"],
   [runtimeEvidenceScript, "Values are intentionally omitted.", "runtime evidence script"],
-  [runtimeEvidenceScript, "process.env.FIELD_BASE_URL", "runtime evidence script"],
-  [securityEvidenceScript, "process.env.FIELD_BASE_URL", "security evidence script"],
-  [fieldReadinessReport, "process.env.FIELD_BASE_URL", "field readiness generator"],
-  [fieldActionBoard, "process.env.FIELD_BASE_URL", "field action board generator"],
-  [fieldGateClosureMap, "process.env.FIELD_BASE_URL", "field gate closure map generator"],
-  [fieldOwnerBriefs, "process.env.FIELD_BASE_URL", "field owner briefs generator"],
-  [fieldRiskRegister, "process.env.FIELD_BASE_URL", "field risk register generator"],
-  [finalExecutionPlan, "process.env.FIELD_BASE_URL", "final execution plan generator"],
-  [finalGateClassification, "process.env.FIELD_BASE_URL", "final gate classification generator"],
-  [finalStatusReport, "process.env.FIELD_BASE_URL", "final status generator"],
-  [manualEvidenceDrafts, "process.env.FIELD_BASE_URL", "manual evidence drafts generator"],
+  [evidenceScript, "resolveFieldBaseUrl", "delivery evidence script"],
+  [handoverPackageScript, "resolveFieldBaseUrl", "handover package generator"],
+  [runtimeEvidenceScript, "resolveFieldBaseUrl", "runtime evidence script"],
+  [securityEvidenceScript, "resolveFieldBaseUrl", "security evidence script"],
+  [fieldReadinessReport, "resolveFieldBaseUrl", "field readiness generator"],
+  [fieldEnvCloseout, "resolveFieldBaseUrl", "field env closeout generator"],
+  [fieldActionBoard, "resolveFieldBaseUrl", "field action board generator"],
+  [fieldGateClosureMap, "resolveFieldBaseUrl", "field gate closure map generator"],
+  [fieldOwnerBriefs, "resolveFieldBaseUrl", "field owner briefs generator"],
+  [fieldRiskRegister, "resolveFieldBaseUrl", "field risk register generator"],
+  [finalExecutionPlan, "resolveFieldBaseUrl", "final execution plan generator"],
+  [finalGateClassification, "resolveFieldBaseUrl", "final gate classification generator"],
+  [finalStatusReport, "resolveFieldBaseUrl", "final status generator"],
+  [manualEvidenceDrafts, "resolveFieldBaseUrl", "manual evidence drafts generator"],
   [runtimeSmoke, "FIELD_BASE_URL", "runtime smoke script"],
   [runtimeSmoke, "DEVICE_INGEST_API_KEY", "runtime smoke script"],
   [runtimeSmoke, "X-Device-Key", "runtime smoke script"],

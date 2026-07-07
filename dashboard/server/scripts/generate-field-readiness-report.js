@@ -5,6 +5,7 @@ const { spawnSync } = require("child_process");
 
 const { readLatestJsonManifest, timestampForPath } = require("./generate-delivery-evidence");
 const { isPlaceholderFieldText } = require("./generate-final-status-report");
+const { resolveFieldBaseUrl } = require("./field-env");
 
 const root = path.join(__dirname, "..", "..", "..");
 
@@ -616,7 +617,7 @@ function main() {
   const outputDir = path.join(root, outputRoot, timestampForPath());
   ensureDir(outputDir);
   const manifest = buildManifest({
-    baseUrl: argValue("base-url", process.env.FIELD_BASE_URL || "http://localhost:8080"),
+    baseUrl: argValue("base-url", resolveFieldBaseUrl()),
     generatedBy: argValue("generated-by", process.env.USERNAME || process.env.USER || "Codex"),
     siteName: argValue("site-name", "unspecified"),
   });

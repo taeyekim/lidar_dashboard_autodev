@@ -3,6 +3,8 @@ const os = require("os");
 const path = require("path");
 const { spawnSync } = require("child_process");
 
+const { resolveFieldBaseUrl } = require("./field-env");
+
 const {
   readLatestJsonManifest,
   summarizeFieldAcceptance,
@@ -673,7 +675,7 @@ function main() {
   const outputRoot = argValue("output-root", "artifacts/handover-package");
   const siteName = argValue("site-name", "unspecified");
   const generatedBy = argValue("generated-by", process.env.USERNAME || process.env.USER || "Codex");
-  const baseUrl = argValue("base-url", process.env.FIELD_BASE_URL || "http://localhost:8080");
+  const baseUrl = argValue("base-url", resolveFieldBaseUrl());
   const strict = hasFlag("strict");
   const reusedExistingEvidence = hasFlag("reuse-existing-evidence");
   const outputDir = path.join(root, outputRoot, timestampForPath());

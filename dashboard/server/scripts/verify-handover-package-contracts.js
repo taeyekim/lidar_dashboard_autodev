@@ -155,7 +155,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "Final gate classification",
   "CI status",
   "baseUrl",
-  "process.env.FIELD_BASE_URL",
+  "resolveFieldBaseUrl",
   "--base-url",
   "Base URL",
   "gitValue",
@@ -197,6 +197,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "Attach the latest final gate classification",
   "CI status evidence",
 ].forEach((token) => assertIncludes(generator, token, "handover package generator"));
+
+assertIncludes(generator, "resolveFieldBaseUrl", "handover package generator");
 
 [
   "summarizeFieldRehearsal",

@@ -5,6 +5,7 @@ const { spawnSync } = require("child_process");
 
 const { readLatestJsonManifest, timestampForPath } = require("./generate-delivery-evidence");
 const { isPlaceholderFieldText } = require("./generate-final-status-report");
+const { resolveFieldBaseUrl } = require("./field-env");
 
 const root = path.join(__dirname, "..", "..", "..");
 const fieldReviewerArg = '"$env:FIELD_REVIEWER"';
@@ -419,7 +420,7 @@ function buildExecutionQueue(items) {
 
 function buildManifest(input = {}) {
   const finalStatus = input.finalStatus || readLatestJsonManifest("artifacts/final-status");
-  const baseUrl = input.baseUrl || process.env.FIELD_BASE_URL || finalStatus?.data?.baseUrl || "http://localhost:8080";
+  const baseUrl = resolveFieldBaseUrl(input.baseUrl, finalStatus?.data?.baseUrl);
   const generatedBy = input.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
   const siteName = input.siteName || finalStatus?.data?.siteName || "unspecified";
   const items = [

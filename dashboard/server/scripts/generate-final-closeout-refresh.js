@@ -5,11 +5,12 @@ const { spawnSync } = require("child_process");
 
 const { readLatestJsonManifest, timestampForPath } = require("./generate-delivery-evidence");
 const { buildGitState } = require("./generate-final-status-report");
+const { DEFAULT_FIELD_BASE_URL, resolveFieldBaseUrl } = require("./field-env");
 
 const root = path.join(__dirname, "..", "..", "..");
 const HANDOVER_PACKAGE_TIMEOUT_MS = 900000;
 const FIELD_REFRESH_DEFAULTS = Object.freeze({
-  baseUrl: "http://localhost:8080",
+  baseUrl: DEFAULT_FIELD_BASE_URL,
   unavailableReason: "Delivery runtime or field hardware is unavailable in this local closeout refresh.",
   replacementOwner: "field-owner",
   targetRecheckDate: "2026-08-01",
@@ -582,7 +583,7 @@ function main() {
   const outputDir = path.join(root, outputRoot, timestampForPath());
   ensureDir(outputDir);
   const options = {
-    baseUrl: argValue("base-url", process.env.FIELD_BASE_URL || FIELD_REFRESH_DEFAULTS.baseUrl),
+    baseUrl: argValue("base-url", resolveFieldBaseUrl(undefined, FIELD_REFRESH_DEFAULTS.baseUrl)),
     generatedBy: argValue("generated-by", process.env.USERNAME || process.env.USER || "Codex"),
     siteName: argValue("site-name", "unspecified"),
     includeFieldAcceptance: !hasFlag("skip-field-acceptance"),

@@ -5,6 +5,7 @@ const { spawnSync } = require("child_process");
 
 const { readLatestJsonManifest, timestampForPath } = require("./generate-delivery-evidence");
 const { isPlaceholderFieldText } = require("./generate-final-status-report");
+const { resolveFieldBaseUrl } = require("./field-env");
 const { manualEvidenceRefs } = require("./manual-evidence");
 
 const root = path.join(__dirname, "..", "..", "..");
@@ -610,7 +611,7 @@ function uniqueValues(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
-function buildClosureBundles(rootCauseGroups, orderedCommands, baseUrl = "http://localhost:8080") {
+function buildClosureBundles(rootCauseGroups, orderedCommands, baseUrl = resolveFieldBaseUrl()) {
   const fallbackCommands = commandCatalog(baseUrl).map((command, index) => ({
     order: (orderedCommands || []).length + index + 1,
     ...command,
@@ -658,7 +659,7 @@ function buildFinalExecutionPlan(input = {}) {
   const closurePlan = hasInput("closurePlan") ? input.closurePlan : readLatestJsonManifest("artifacts/field-closure-plan");
   const gateClosureMap = hasInput("gateClosureMap") ? input.gateClosureMap : readLatestJsonManifest("artifacts/field-gate-closure-map");
   const handoverPackage = hasInput("handoverPackage") ? input.handoverPackage : readLatestJsonManifest("artifacts/handover-package");
-  const baseUrl = input.baseUrl || process.env.FIELD_BASE_URL || finalStatus?.data?.baseUrl || "http://localhost:8080";
+  const baseUrl = resolveFieldBaseUrl(input.baseUrl, finalStatus?.data?.baseUrl);
   const remainingGates = finalStatus?.data?.remainingGates || [];
   const generatedBy = input.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
   const siteName = input.siteName || finalStatus?.data?.siteName || "unspecified";

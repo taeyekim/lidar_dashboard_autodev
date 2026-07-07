@@ -5,6 +5,7 @@ const { spawnSync } = require("child_process");
 
 const { readLatestJsonManifest, timestampForPath } = require("./generate-delivery-evidence");
 const { isPlaceholderFieldText } = require("./generate-final-status-report");
+const { resolveFieldBaseUrl } = require("./field-env");
 
 const root = path.join(__dirname, "..", "..", "..");
 
@@ -184,7 +185,7 @@ function buildManifest(input = {}) {
     : readLatestJsonManifest("artifacts/field-action-board");
   const generatedBy = input.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
   const siteName = input.siteName || actionBoard?.data?.siteName || "unspecified";
-  const baseUrl = input.baseUrl || process.env.FIELD_BASE_URL || actionBoard?.data?.baseUrl || "http://localhost:8080";
+  const baseUrl = resolveFieldBaseUrl(input.baseUrl, actionBoard?.data?.baseUrl);
   const commandGroups = [
     ...buildCommandGroups(actionBoard),
     ...buildMetadataCommandGroups(generatedBy, siteName, baseUrl),

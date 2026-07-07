@@ -3,6 +3,7 @@ const os = require("os");
 const path = require("path");
 
 const { buildGitState } = require("./generate-final-status-report");
+const { resolveFieldBaseUrl } = require("./field-env");
 
 const root = path.join(__dirname, "..", "..", "..");
 
@@ -184,7 +185,7 @@ function writeUnavailableUnlessPassExists(config, runId, options) {
 
 function main() {
   const runId = timestampForPath();
-  const baseUrl = process.env.FIELD_BASE_URL || "http://localhost:8080";
+  const baseUrl = resolveFieldBaseUrl();
   const reason = argValue(
     "reason",
     "Docker runtime, field network, or delivery hardware was not available on this workstation.",

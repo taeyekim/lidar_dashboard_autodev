@@ -4,6 +4,7 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 
 const { readLatestJsonManifest, timestampForPath } = require("./generate-delivery-evidence");
+const { resolveFieldBaseUrl } = require("./field-env");
 
 const root = path.join(__dirname, "..", "..", "..");
 
@@ -173,7 +174,7 @@ function buildManifest(options = {}) {
   const readiness = Object.prototype.hasOwnProperty.call(options, "readiness")
     ? options.readiness
     : readLatestJsonManifest("artifacts/field-readiness");
-  const baseUrl = options.baseUrl || process.env.FIELD_BASE_URL || readiness?.data?.baseUrl || "http://localhost:8080";
+  const baseUrl = resolveFieldBaseUrl(options.baseUrl, readiness?.data?.baseUrl);
   const requiredFieldValues = Array.isArray(readiness?.data?.env?.requiredFieldValues)
     ? readiness.data.env.requiredFieldValues
     : [];

@@ -3,6 +3,8 @@ const os = require("os");
 const path = require("path");
 const { spawnSync } = require("child_process");
 
+const { resolveFieldBaseUrl } = require("./field-env");
+
 const root = path.join(__dirname, "..", "..", "..");
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const pathDelimiter = process.platform === "win32" ? ";" : ":";
@@ -191,11 +193,11 @@ const scannerCloseoutDefinitions = [
 ];
 
 function scannerCloseoutCommand(value, targetUrl) {
-  return String(value || "").replace(/<target-url>/g, targetUrl || "http://localhost:8080");
+  return String(value || "").replace(/<target-url>/g, resolveFieldBaseUrl(targetUrl));
 }
 
 function buildScannerCloseout(checks, options = {}) {
-  const targetUrl = options.targetUrl || process.env.FIELD_BASE_URL || "http://localhost:8080";
+  const targetUrl = resolveFieldBaseUrl(options.targetUrl);
   return scannerCloseoutDefinitions.map((definition) => {
     const relatedChecks = checks.filter((item) => definition.checks.includes(item.label));
     const blocking = relatedChecks.some((item) => item.disposition.blocksStrictAcceptance);
@@ -569,7 +571,7 @@ function main() {
   const useDockerScanners = process.argv.includes("--use-docker-scanners");
   const targetUrlArg = process.argv.find((arg) => arg.startsWith("--target-url="));
   const outputRootArg = process.argv.find((arg) => arg.startsWith("--output-root="));
-  const targetUrl = targetUrlArg ? targetUrlArg.slice("--target-url=".length) : process.env.FIELD_BASE_URL || "http://localhost:8080";
+  const targetUrl = targetUrlArg ? targetUrlArg.slice("--target-url=".length) : resolveFieldBaseUrl();
   const outputRoot = outputRootArg ? outputRootArg.slice("--output-root=".length) : "artifacts/security";
   const outputDir = path.join(root, outputRoot, timestampForPath());
   ensureDir(outputDir);

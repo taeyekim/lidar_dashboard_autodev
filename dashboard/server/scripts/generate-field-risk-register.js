@@ -5,6 +5,7 @@ const { spawnSync } = require("child_process");
 
 const { readLatestJsonManifest, timestampForPath } = require("./generate-delivery-evidence");
 const { isPlaceholderFieldText } = require("./generate-final-status-report");
+const { resolveFieldBaseUrl } = require("./field-env");
 const { manualEvidenceRefs } = require("./manual-evidence");
 
 const root = path.join(__dirname, "..", "..", "..");
@@ -330,7 +331,7 @@ function buildManifest(options = {}) {
     generatedBy,
     siteName,
     hostName: options.hostName || os.hostname(),
-    baseUrl: options.baseUrl || process.env.FIELD_BASE_URL || finalStatus?.data?.baseUrl || "http://localhost:8080",
+    baseUrl: resolveFieldBaseUrl(options.baseUrl, finalStatus?.data?.baseUrl),
     status: riskItems.length > 0 ? "OPEN" : "NO_OPEN_RISKS",
     openRiskCount: riskItems.length,
     copyToRiskAcceptanceCount: riskItems.filter((item) => item.copyToRiskAcceptance).length,

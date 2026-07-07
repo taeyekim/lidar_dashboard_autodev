@@ -3,6 +3,7 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 const { readLatestJsonManifest, timestampForPath } = require("./generate-delivery-evidence");
 const { buildGitState } = require("./generate-final-status-report");
+const { resolveFieldBaseUrl } = require("./field-env");
 
 const root = path.join(__dirname, "..", "..", "..");
 const OUTPUT_ROOT = "artifacts/field-acceptance";
@@ -117,7 +118,7 @@ function main() {
   const sourceSteps = Array.isArray(source.data.steps) ? source.data.steps : [];
   const manifest = {
     generatedAt: new Date().toISOString(),
-    baseUrl: argValue("base-url", source.data.baseUrl || "http://localhost:8080"),
+    baseUrl: argValue("base-url", resolveFieldBaseUrl(undefined, source.data.baseUrl)),
     outputDir: path.relative(root, outputDir).replace(/\\/g, "/"),
     git,
     status: "PASS",

@@ -5,6 +5,7 @@ const {
   manualEvidenceRefs,
   validateManualEvidence,
 } = require("./manual-evidence");
+const { resolveFieldBaseUrl } = require("./field-env");
 
 const root = path.join(__dirname, "..", "..", "..");
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
@@ -991,7 +992,7 @@ function buildMarkdown(manifest) {
 function main() {
   const outputRootArg = process.argv.find((arg) => arg.startsWith("--output-root="));
   const outputRoot = outputRootArg ? outputRootArg.slice("--output-root=".length) : "artifacts/delivery";
-  const baseUrl = argValue("base-url", process.env.FIELD_BASE_URL || "http://localhost:8080");
+  const baseUrl = argValue("base-url", resolveFieldBaseUrl());
   const targetUrl = argValue("target-url", baseUrl);
   const runSmoke = hasFlag("run-smoke");
   const useExistingStack = hasFlag("use-existing-stack");

@@ -4,6 +4,7 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 
 const { readLatestJsonManifest, timestampForPath } = require("./generate-delivery-evidence");
+const { resolveFieldBaseUrl } = require("./field-env");
 const { manualEvidenceRefs } = require("./manual-evidence");
 
 const root = path.join(__dirname, "..", "..", "..");
@@ -466,7 +467,7 @@ function buildFinalStatusReport(input = {}) {
   const referenceFreshness = refsAreFresh(handoverPackage, evidenceRefs);
   const git = buildGitState(input.git);
   const sourceRevisionFreshness = sourceGitFreshness(evidenceRefs, git);
-  const baseUrl = input.baseUrl || process.env.FIELD_BASE_URL || "http://localhost:8080";
+  const baseUrl = resolveFieldBaseUrl(input.baseUrl);
   const generatedBy = input.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
   const siteName = input.siteName || "unspecified";
   const deliveryEntrypointConsistency = endpointConsistency(baseUrl, evidenceRefs);
@@ -1149,7 +1150,7 @@ function main() {
   const outputRoot = argValue("output-root", "artifacts/final-status");
   const outputDir = path.join(root, outputRoot, timestampForPath());
   const manifest = buildFinalStatusReport({
-    baseUrl: argValue("base-url", process.env.FIELD_BASE_URL || "http://localhost:8080"),
+    baseUrl: argValue("base-url", resolveFieldBaseUrl()),
     siteName: argValue("site-name", "unspecified"),
     generatedBy: argValue("generated-by", process.env.USERNAME || process.env.USER || "Codex"),
   });
