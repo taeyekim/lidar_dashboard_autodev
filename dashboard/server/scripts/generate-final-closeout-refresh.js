@@ -452,6 +452,31 @@ function buildSteps(options) {
       purpose: "Reclassify remaining gates after final status has indexed the latest handover package.",
       doneWhen: "Final gate classification sourceFinalStatus points to the latest final-status manifest.",
     },
+    {
+      id: "handover-index-closeout-sync",
+      phase: "Final Decision",
+      command: npm,
+      args: ["run", "handover:index", "--", `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Re-index handover evidence after the final field closure plan so the package does not report stale closure-plan evidence.",
+      doneWhen: "Handover index source references match the latest completion audit and field closure plan.",
+    },
+    {
+      id: "handover-package-closeout-sync",
+      phase: "Final Decision",
+      command: npm,
+      args: ["run", "handover:package", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`, "--reuse-existing-evidence"],
+      timeoutMs: HANDOVER_PACKAGE_TIMEOUT_MS,
+      purpose: "Repackage the synced handover index after final field closure planning.",
+      doneWhen: "Handover package status reflects REVIEW/READY rather than stale evidence ordering.",
+    },
+    {
+      id: "final-status-closeout-sync",
+      phase: "Final Decision",
+      command: npm,
+      args: ["run", "final:status", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Create the final status after closeout handover sync.",
+      doneWhen: "Final status contains no stale handover package gate when only field/security/CI evidence remains open.",
+    },
   );
 
   return steps.map((step, index) => ({ order: index + 1, ...step }));
