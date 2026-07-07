@@ -80,6 +80,7 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "field:gate-closure-map", "final closeout refresh generator"],
   [generator, "field:owner-briefs", "final closeout refresh generator"],
   [generator, "field:closeout-quickstart", "final closeout refresh generator"],
+  [generator, "field:requirements-backlog", "final closeout refresh generator"],
   [generator, "final:execution-plan", "final closeout refresh generator"],
   [generator, "final:bundle-handoff", "final closeout refresh generator"],
   [generator, "final:gate-classification", "final closeout refresh generator"],
@@ -90,6 +91,7 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "field-gate-closure-map-final-index", "final closeout refresh generator"],
   [generator, "field-owner-briefs-final-index", "final closeout refresh generator"],
   [generator, "field-closeout-quickstart-final-index", "final closeout refresh generator"],
+  [generator, "field-requirements-backlog-final-index", "final closeout refresh generator"],
   [generator, "handover-package-action-index", "final closeout refresh generator"],
   [generator, "final-status-action-index", "final closeout refresh generator"],
   [generator, "final-execution-plan-final-index", "final closeout refresh generator"],
@@ -101,6 +103,8 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "final-status-closeout-sync", "final closeout refresh generator"],
   [generator, "final-gate-classification-closeout-sync", "final closeout refresh generator"],
   [generator, "field-closeout-quickstart-closeout-sync", "final closeout refresh generator"],
+  [generator, "field-requirements-backlog-closeout-sync", "final closeout refresh generator"],
+  [generator, "batched unresolved requirement questions", "final closeout refresh generator"],
   [generator, "latest field closeout queue", "final closeout refresh generator"],
   [generator, "package-refresh examples do not point at stale handover evidence", "final closeout refresh generator"],
   [generator, "does not report stale closure-plan evidence", "final closeout refresh generator"],
@@ -139,6 +143,7 @@ const ids = steps.map((step) => step.id);
   "field-gate-closure-map",
   "field-owner-briefs",
   "field-closeout-quickstart",
+  "field-requirements-backlog",
   "handover-package-pass-2",
   "final-status-pass-2",
   "final-execution-plan",
@@ -151,6 +156,7 @@ const ids = steps.map((step) => step.id);
   "field-gate-closure-map-final-index",
   "field-owner-briefs-final-index",
   "field-closeout-quickstart-final-index",
+  "field-requirements-backlog-final-index",
   "handover-package-action-index",
   "final-status-action-index",
   "final-execution-plan-final-index",
@@ -162,6 +168,7 @@ const ids = steps.map((step) => step.id);
   "final-status-closeout-sync",
   "final-gate-classification-closeout-sync",
   "field-closeout-quickstart-closeout-sync",
+  "field-requirements-backlog-closeout-sync",
 ].forEach((id) => assert(ids.includes(id), `steps should include ${id}`));
 
 assert(
@@ -178,7 +185,8 @@ assert(
     ids.indexOf("field-action-board-final-index") < ids.indexOf("field-gate-closure-map-final-index") &&
     ids.indexOf("field-gate-closure-map-final-index") < ids.indexOf("field-owner-briefs-final-index") &&
     ids.indexOf("field-owner-briefs-final-index") < ids.indexOf("field-closeout-quickstart-final-index") &&
-    ids.indexOf("field-closeout-quickstart-final-index") < ids.indexOf("handover-package-action-index") &&
+    ids.indexOf("field-closeout-quickstart-final-index") < ids.indexOf("field-requirements-backlog-final-index") &&
+    ids.indexOf("field-requirements-backlog-final-index") < ids.indexOf("handover-package-action-index") &&
     ids.indexOf("handover-package-action-index") < ids.indexOf("final-status-action-index") &&
     ids.indexOf("final-status-action-index") < ids.indexOf("final-execution-plan-final-index") &&
     ids.indexOf("final-execution-plan-final-index") < ids.indexOf("field-closure-plan-final-index") &&
@@ -186,7 +194,8 @@ assert(
     ids.indexOf("final-bundle-handoff-final-index") < ids.indexOf("final-gate-classification-final-index") &&
     ids.indexOf("final-status-action-index") < ids.indexOf("final-gate-classification-final-index") &&
     ids.indexOf("final-gate-classification-final-index") < ids.indexOf("field-closeout-quickstart-closeout-sync") &&
-    ids.indexOf("field-closeout-quickstart-closeout-sync") < ids.indexOf("handover-index-closeout-sync") &&
+    ids.indexOf("field-closeout-quickstart-closeout-sync") < ids.indexOf("field-requirements-backlog-closeout-sync") &&
+    ids.indexOf("field-requirements-backlog-closeout-sync") < ids.indexOf("handover-index-closeout-sync") &&
     ids.indexOf("final-status-closeout-sync") < ids.indexOf("final-gate-classification-closeout-sync"),
   "refresh should converge final status, action artifacts, handover package, final status, execution plan, bundle handoff, gate classification, final handover package index, final status, final action artifacts, final handover package, final status, final execution plan, field closure plan, final bundle handoff, then final gate classification",
 );

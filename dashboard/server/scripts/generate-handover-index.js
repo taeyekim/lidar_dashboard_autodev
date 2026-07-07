@@ -194,6 +194,13 @@ function buildIndexManifest(options = {}) {
       notes: "One-page field queue listing env keys, evidence files, runtime prerequisites, owner queue, phase queue, and command queue.",
     },
     {
+      area: "Field Requirements Backlog",
+      required: true,
+      outputRoot: "artifacts/field-requirements-backlog",
+      command: 'npm run field:requirements-backlog -- --base-url=<delivery-url> --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"',
+      notes: "Batched unresolved field questions and decisions for PM, hardware, security, operations, and CI closeout.",
+    },
+    {
       area: "Field Closure Plan",
       required: true,
       outputRoot: "artifacts/field-closure-plan",

@@ -322,6 +322,14 @@ function buildSteps(options) {
       doneWhen: "Quickstart lists env keys, runtime prerequisites, owner queue, phase queue, and command queue.",
     },
     {
+      id: "field-requirements-backlog",
+      phase: "Field Action Artifacts",
+      command: npm,
+      args: ["run", "field:requirements-backlog", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Collect field-dependent questions and decisions into a batched backlog for PM, hardware, security, and operations.",
+      doneWhen: "Backlog sourceFinalStatus points to the current final status and contains no secret values.",
+    },
+    {
       id: "handover-package-pass-2",
       phase: "Package Refresh",
       command: npm,
@@ -420,6 +428,14 @@ function buildSteps(options) {
       doneWhen: "Quickstart open action count matches the final indexed action board.",
     },
     {
+      id: "field-requirements-backlog-final-index",
+      phase: "Field Action Artifacts",
+      command: npm,
+      args: ["run", "field:requirements-backlog", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Refresh batched field question backlog from the final indexed final-status gate set.",
+      doneWhen: "Requirements backlog counts match the final indexed final status.",
+    },
+    {
       id: "handover-package-action-index",
       phase: "Final Decision",
       command: npm,
@@ -475,6 +491,14 @@ function buildSteps(options) {
       args: ["run", "field:closeout-quickstart", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
       purpose: "Refresh quickstart before the final handover package so the package references the latest field closeout queue.",
       doneWhen: "Quickstart source refs point to the latest final status, action board, and classification before packaging.",
+    },
+    {
+      id: "field-requirements-backlog-closeout-sync",
+      phase: "Field Action Artifacts",
+      command: npm,
+      args: ["run", "field:requirements-backlog", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Refresh the batched unresolved requirement questions before the final handover sync.",
+      doneWhen: "Backlog source refs point to the latest final status and classification before packaging.",
     },
     {
       id: "handover-index-closeout-sync",
