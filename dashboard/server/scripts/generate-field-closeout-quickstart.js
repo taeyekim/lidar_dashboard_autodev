@@ -297,6 +297,29 @@ function buildEnvPatchBlockLines(envGuide, fieldEnvCloseout) {
   return uniq((envGuide || []).map((item) => `${item.key}=${placeholderForEnvKey(item.key)}`));
 }
 
+function summarizeRequirementsBacklog(fieldRequirementsBacklog) {
+  const data = fieldRequirementsBacklog?.data || null;
+  if (!data) {
+    return {
+      status: "MISSING",
+      itemCount: null,
+      openItemCount: null,
+      ownerCount: null,
+      priorityCounts: {},
+      actionTypeCounts: {},
+    };
+  }
+  const summary = data.summary || {};
+  return {
+    status: data.status || "UNKNOWN",
+    itemCount: data.itemCount ?? summary.itemCount ?? null,
+    openItemCount: data.openItemCount ?? data.itemCount ?? summary.itemCount ?? null,
+    ownerCount: data.ownerCount ?? Object.keys(summary.byOwner || {}).length,
+    priorityCounts: data.priorityCounts || summary.byPriority || {},
+    actionTypeCounts: data.actionTypeCounts || summary.byActionType || {},
+  };
+}
+
 function buildManifest(input = {}) {
   const actionBoard = Object.prototype.hasOwnProperty.call(input, "actionBoard")
     ? input.actionBoard
@@ -332,6 +355,7 @@ function buildManifest(input = {}) {
     sourceFinalGateClassification: classification?.path || null,
     sourceFieldEnvCloseout: fieldEnvCloseout?.path || null,
     sourceFieldRequirementsBacklog: fieldRequirementsBacklog?.path || null,
+    requirementsBacklogSummary: summarizeRequirementsBacklog(fieldRequirementsBacklog),
     remainingGateCount: finalStatus?.data?.remainingGates?.length ?? null,
     openActionCount: actionItems.length,
     bucketGateCounts: summary.bucketGateCounts || {},
@@ -373,6 +397,15 @@ function buildMarkdown(manifest) {
     `- Source final gate classification: ${manifest.sourceFinalGateClassification || "missing"}`,
     `- Source field env closeout: ${manifest.sourceFieldEnvCloseout || "missing"}`,
     `- Source field requirements backlog: ${manifest.sourceFieldRequirementsBacklog || "missing"}`,
+    "",
+    "## Requirements Backlog Summary",
+    "",
+    `- Status: ${manifest.requirementsBacklogSummary.status}`,
+    `- Item count: ${manifest.requirementsBacklogSummary.itemCount ?? "unknown"}`,
+    `- Open item count: ${manifest.requirementsBacklogSummary.openItemCount ?? "unknown"}`,
+    `- Owner count: ${manifest.requirementsBacklogSummary.ownerCount ?? "unknown"}`,
+    `- Priority counts: ${JSON.stringify(manifest.requirementsBacklogSummary.priorityCounts)}`,
+    `- Action type counts: ${JSON.stringify(manifest.requirementsBacklogSummary.actionTypeCounts)}`,
     "",
     "## Guardrails",
     "",

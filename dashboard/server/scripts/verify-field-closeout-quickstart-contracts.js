@@ -28,6 +28,8 @@ const generator = readProjectFile("dashboard/server/scripts/generate-field-close
   [generator, "ENV_KEY_GUIDE", "quickstart generator"],
   [generator, "fieldRequirementsBacklog", "quickstart generator"],
   [generator, "sourceFieldRequirementsBacklog", "quickstart generator"],
+  [generator, "requirementsBacklogSummary", "quickstart generator"],
+  [generator, "Requirements Backlog Summary", "quickstart generator"],
   [generator, "long random JWT signing secret", "quickstart generator"],
   [generator, "integrated control-board IPv4", "quickstart generator"],
   [generator, "never paste into evidence", "quickstart generator"],
@@ -113,6 +115,11 @@ const manifest = buildManifest({
     data: {
       status: "OPEN",
       remainingGateCount: 2,
+      itemCount: 3,
+      openItemCount: 3,
+      ownerCount: 2,
+      priorityCounts: { P0: 1, P1: 2 },
+      actionTypeCounts: { FIELD_ACTION_REQUIRED: 2, REVIEW_REQUIRED: 1 },
     },
   },
 });
@@ -133,6 +140,9 @@ assert(
   manifest.sourceFieldRequirementsBacklog.includes("field-requirements-backlog"),
   "quickstart should link field requirements backlog evidence",
 );
+assert(manifest.requirementsBacklogSummary.itemCount === 3, "quickstart should summarize backlog item count");
+assert(manifest.requirementsBacklogSummary.ownerCount === 2, "quickstart should summarize backlog owner count");
+assert(manifest.requirementsBacklogSummary.priorityCounts.P0 === 1, "quickstart should preserve backlog priority counts");
 assert(manifest.envPatchBlockLines.includes("JWT_SECRET=replace_in_field"), "quickstart should sanitize secret patch values");
 assert(manifest.envPatchBlockLines.includes("CONTROL_BOARD_DRY_RUN=true"), "quickstart should include safe control-board defaults");
 
@@ -149,6 +159,8 @@ const markdown = buildMarkdown(manifest);
   "FIELD_BASE_URL",
   "delivery Nginx/operator entrypoint",
   "Source field requirements backlog",
+  "Requirements Backlog Summary",
+  "Item count: 3",
   "CONTROL_BOARD_HOST",
   "Evidence Files To Prepare",
   "Phase Queue",
