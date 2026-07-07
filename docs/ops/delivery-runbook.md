@@ -49,22 +49,23 @@ npm.cmd run delivery:evidence
 npm.cmd run completion:audit
 $env:FIELD_REVIEWER="<actual reviewer name>"
 $env:FIELD_SITE_NAME="<actual delivery site name>"
-npm.cmd run field:readiness -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
-npm.cmd run field:risk-register -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
-npm.cmd run manual:evidence-drafts -- --base-url=http://localhost:8080 --site-name="$env:FIELD_SITE_NAME" --reviewer="$env:FIELD_REVIEWER"
+$env:FIELD_BASE_URL="http://localhost:8080"
+npm.cmd run field:readiness -- --base-url="$env:FIELD_BASE_URL" --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run field:risk-register -- --base-url="$env:FIELD_BASE_URL" --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run manual:evidence-drafts -- --base-url="$env:FIELD_BASE_URL" --site-name="$env:FIELD_SITE_NAME" --reviewer="$env:FIELD_REVIEWER"
 npm.cmd run manual:evidence-readiness -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
-npm.cmd run field:action-board -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
-npm.cmd run field:gate-closure-map -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
-npm.cmd run field:owner-briefs -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run field:action-board -- --base-url="$env:FIELD_BASE_URL" --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run field:gate-closure-map -- --base-url="$env:FIELD_BASE_URL" --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run field:owner-briefs -- --base-url="$env:FIELD_BASE_URL" --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
 npm.cmd run ci:status -- --generated-by="$env:FIELD_REVIEWER"
 # If no CI run exists for the final dev commit, trigger and wait intentionally during the approved external CI closeout window:
 # npm.cmd run ci:closeout -- --dispatch --generated-by="$env:FIELD_REVIEWER"
 npm.cmd run delivery:evidence -- --base-url="$env:FIELD_BASE_URL" --target-url="$env:FIELD_BASE_URL" --reuse-existing-companions
 npm.cmd run handover:index -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
 npm.cmd run field:closure-plan -- --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
-npm.cmd run handover:package -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
-npm.cmd run final:status -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
-npm.cmd run final:execution-plan -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run handover:package -- --base-url="$env:FIELD_BASE_URL" --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run final:status -- --base-url="$env:FIELD_BASE_URL" --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run final:execution-plan -- --base-url="$env:FIELD_BASE_URL" --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
 ```
 
 Use `npm.cmd` and `curl.exe` on Windows when the local PowerShell execution
@@ -88,10 +89,11 @@ For a single ordered field acceptance pass, use the orchestrator:
 ```powershell
 $env:FIELD_REVIEWER="<actual reviewer name>"
 $env:FIELD_SITE_NAME="<actual delivery site name>"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/field-preflight.ps1 -BaseUrl http://localhost:8080 -Reviewer "$env:FIELD_REVIEWER" -SiteName "$env:FIELD_SITE_NAME"
-npm.cmd run field:preflight -- -BaseUrl http://localhost:8080 -Reviewer "$env:FIELD_REVIEWER" -SiteName "$env:FIELD_SITE_NAME"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/field-acceptance.ps1 -BaseUrl http://localhost:8080
-npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -Reviewer "$env:FIELD_REVIEWER" -SiteName "$env:FIELD_SITE_NAME"
+$env:FIELD_BASE_URL="http://localhost:8080"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/field-preflight.ps1 -BaseUrl "$env:FIELD_BASE_URL" -Reviewer "$env:FIELD_REVIEWER" -SiteName "$env:FIELD_SITE_NAME"
+npm.cmd run field:preflight -- -BaseUrl "$env:FIELD_BASE_URL" -Reviewer "$env:FIELD_REVIEWER" -SiteName "$env:FIELD_SITE_NAME"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/field-acceptance.ps1 -BaseUrl "$env:FIELD_BASE_URL"
+npm.cmd run field:acceptance -- -BaseUrl "$env:FIELD_BASE_URL" -Reviewer "$env:FIELD_REVIEWER" -SiteName "$env:FIELD_SITE_NAME"
 ```
 
 The preflight records `.env` readiness, `JWT_SECRET`, seed admin password,

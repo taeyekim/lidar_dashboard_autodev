@@ -16,6 +16,7 @@ const { manualEvidenceRefs } = require("./manual-evidence");
 const root = path.join(__dirname, "..", "..", "..");
 const fieldReviewerArg = '"$env:FIELD_REVIEWER"';
 const fieldSiteArg = '"$env:FIELD_SITE_NAME"';
+const fieldBaseUrlArg = '"$env:FIELD_BASE_URL"';
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const DEFAULT_COMMAND_TIMEOUT_MS = 180000;
 const DELIVERY_EVIDENCE_TIMEOUT_MS = 900000;
@@ -287,18 +288,18 @@ function fieldActionArtifactStrictFailures({
   return failures;
 }
 
-function fieldEvidenceNextAction(type) {
+function fieldEvidenceNextAction(type, baseUrl = fieldBaseUrlArg) {
   const actions = {
     "Field Preflight":
-      `Run npm.cmd run field:preflight -- -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} after final .env values are set.`,
+      `Run npm.cmd run field:preflight -- -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} after final .env values are set.`,
     "Field Acceptance":
-      `Run npm.cmd run field:acceptance -- -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} -OperatorUiWalkthroughEvidence artifacts/manual/operator-ui-walkthrough.md after runtime, rehearsal, security, and UI walkthrough evidence are ready.`,
+      `Run npm.cmd run field:acceptance -- -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} -OperatorUiWalkthroughEvidence artifacts/manual/operator-ui-walkthrough.md after runtime, rehearsal, security, and UI walkthrough evidence are ready.`,
     "DB And Prisma":
-      `Run powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} against the delivery runtime.`,
+      `Run powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/db-field-rehearsal.ps1 -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} against the delivery runtime.`,
     "Lidar Ingest":
-      `Run powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} with representative lidar payloads.`,
+      `Run powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lidar-ingest-rehearsal.ps1 -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} with representative lidar payloads.`,
     "Control Board TCP":
-      `Run powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl http://localhost:8080 -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} after control-board dry-run or approved live TCP conditions are confirmed.`,
+      `Run powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl ${baseUrl} -Reviewer ${fieldReviewerArg} -SiteName ${fieldSiteArg} after control-board dry-run or approved live TCP conditions are confirmed.`,
   };
   return actions[type] || "Refresh the related field evidence manifest and rerun npm.cmd run handover:package -- --generated-by=<field-reviewer> --site-name=<delivery-site>.";
 }
@@ -314,14 +315,14 @@ function fieldEvidenceDoneWhen(type) {
   return doneWhen[type] || "Replacement manifest is generated and the area is no longer REVIEW, STALE, or MISSING.";
 }
 
-function buildFieldEvidenceOpenItems(fieldEvidenceSummary) {
+function buildFieldEvidenceOpenItems(fieldEvidenceSummary, baseUrl = fieldBaseUrlArg) {
   return fieldEvidenceSummary.flatMap((item) => [
     ...(item.reviewItems || []).map((message) => ({
       type: item.type,
       status: "REVIEW",
       message,
       manifestPath: item.manifestPath || null,
-      nextAction: fieldEvidenceNextAction(item.type),
+      nextAction: fieldEvidenceNextAction(item.type, baseUrl),
       doneWhen: fieldEvidenceDoneWhen(item.type),
     })),
     ...(item.skippedItems || []).map((message) => ({
@@ -329,7 +330,7 @@ function buildFieldEvidenceOpenItems(fieldEvidenceSummary) {
       status: "SKIPPED",
       message,
       manifestPath: item.manifestPath || null,
-      nextAction: fieldEvidenceNextAction(item.type),
+      nextAction: fieldEvidenceNextAction(item.type, baseUrl),
       doneWhen: fieldEvidenceDoneWhen(item.type),
     })),
   ]);
@@ -672,7 +673,7 @@ function main() {
   const outputRoot = argValue("output-root", "artifacts/handover-package");
   const siteName = argValue("site-name", "unspecified");
   const generatedBy = argValue("generated-by", process.env.USERNAME || process.env.USER || "Codex");
-  const baseUrl = argValue("base-url", "http://localhost:8080");
+  const baseUrl = argValue("base-url", process.env.FIELD_BASE_URL || "http://localhost:8080");
   const strict = hasFlag("strict");
   const reusedExistingEvidence = hasFlag("reuse-existing-evidence");
   const outputDir = path.join(root, outputRoot, timestampForPath());
@@ -724,7 +725,7 @@ function main() {
   const controlBoardSafetyStatus = latestControlBoardSafetyStatus();
   const git = buildGitState();
   const fieldEvidenceSummary = buildFieldEvidenceSummary();
-  const fieldEvidenceOpenItems = buildFieldEvidenceOpenItems(fieldEvidenceSummary);
+  const fieldEvidenceOpenItems = buildFieldEvidenceOpenItems(fieldEvidenceSummary, baseUrl);
   const fieldEvidenceCommandRunbook = buildFieldEvidenceCommandRunbook(fieldEvidenceOpenItems);
   const fieldEvidenceFollowUps = buildFieldEvidenceFollowUps(fieldEvidenceSummary);
   const manualEvidence = manualEvidenceRefs();
