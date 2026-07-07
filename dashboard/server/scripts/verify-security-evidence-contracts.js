@@ -138,6 +138,16 @@ const dockerFrontendImageScan = withDisposition({
   exitCode: 0,
   error: null,
 });
+const missingTrivyImageScan = withDisposition({
+  label: "trivy backend image scan",
+  status: "executed",
+  command: "trivy image lidar_dashboard_autodev-backend",
+  exitCode: 1,
+  stderr: "unable to find the specified image",
+  error: null,
+});
+assert(missingTrivyImageScan.disposition.code === "BLOCKING", "missing Trivy image evidence should be blocking, not a delivery fix");
+assert(missingTrivyImageScan.disposition.blocksStrictAcceptance === true, "missing Trivy image evidence should block strict acceptance");
 
 const markdown = buildMarkdown({
   generatedAt: "2026-01-01T00:00:00.000Z",

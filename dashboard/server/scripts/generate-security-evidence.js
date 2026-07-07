@@ -343,6 +343,11 @@ function statusLabel(item) {
   return item.exitCode === 0 ? "PASS" : "REVIEW";
 }
 
+function blockingScannerExecutionFailure(item) {
+  const label = String(item.label || "").toLowerCase();
+  return label.includes("gitleaks") || label.includes("trivy");
+}
+
 function securityDisposition(item, requireScanners) {
   if (item.status === "policy_accepted") {
     return {
@@ -380,6 +385,15 @@ function securityDisposition(item, requireScanners) {
       blocksStrictAcceptance: false,
     };
   }
+  if (blockingScannerExecutionFailure(item)) {
+    return {
+      code: "BLOCKING",
+      labelKo: "李⑤떒",
+      labelEn: "Blocking",
+      reason: item.error || `${item.label} did not produce acceptable scanner evidence and exited with code ${item.exitCode}.`,
+      blocksStrictAcceptance: true,
+    };
+  }
   return {
     code: item.label === "npm audit policy gate" ? "BLOCKING" : "DELIVERY_FIX",
     labelKo: item.label === "npm audit policy gate" ? "차단" : "납품 전 수정",
@@ -387,6 +401,55 @@ function securityDisposition(item, requireScanners) {
     reason: item.error || `${item.label} exited with code ${item.exitCode}.`,
     blocksStrictAcceptance: item.label === "npm audit policy gate",
   };
+}
+
+function disposition(code, label, reason, blocksStrictAcceptance) {
+  return {
+    code,
+    labelKo: label,
+    labelEn: label,
+    reason,
+    blocksStrictAcceptance,
+  };
+}
+
+function securityDisposition(item, requireScanners) {
+  if (item.status === "policy_accepted") {
+    return disposition(
+      "RISK_ACCEPTED",
+      "Risk accepted",
+      item.reason || "Finding is accepted by the documented audit policy.",
+      false,
+    );
+  }
+  if (requiredScannerFailure(item, requireScanners)) {
+    return disposition(
+      "BLOCKING",
+      "Blocking",
+      `${item.label} is required for strict security acceptance but was skipped.`,
+      true,
+    );
+  }
+  if (item.status === "skipped") {
+    return disposition("UNVERIFIED", "Unverified", item.reason || "Security check was not executed.", false);
+  }
+  if (item.exitCode === 0) {
+    return disposition("PASS", "Pass", "Command completed successfully.", false);
+  }
+  if (blockingScannerExecutionFailure(item)) {
+    return disposition(
+      "BLOCKING",
+      "Blocking",
+      item.error || `${item.label} did not produce acceptable scanner evidence and exited with code ${item.exitCode}.`,
+      true,
+    );
+  }
+  return disposition(
+    item.label === "npm audit policy gate" ? "BLOCKING" : "DELIVERY_FIX",
+    item.label === "npm audit policy gate" ? "Blocking" : "Delivery fix required",
+    item.error || `${item.label} exited with code ${item.exitCode}.`,
+    item.label === "npm audit policy gate",
+  );
 }
 
 function summarizeDispositions(checks) {
@@ -436,6 +499,7 @@ function buildMarkdown(manifest) {
     "",
     "## Security Disposition Summary",
     "",
+    "- Label mapping: Pass=통과, Blocking=차단, Risk accepted=위험 수용, Unverified=미검증",
     `- Pass: ${manifest.dispositionSummary.pass}`,
     `- Blocking: ${manifest.dispositionSummary.blocking}`,
     `- Delivery fix: ${manifest.dispositionSummary.deliveryFix}`,
