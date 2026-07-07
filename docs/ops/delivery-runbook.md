@@ -57,6 +57,8 @@ npm.cmd run manual:evidence-readiness -- --generated-by="$env:FIELD_REVIEWER" --
 npm.cmd run field:action-board -- --base-url="$env:FIELD_BASE_URL" --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
 npm.cmd run field:gate-closure-map -- --base-url="$env:FIELD_BASE_URL" --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
 npm.cmd run field:owner-briefs -- --base-url="$env:FIELD_BASE_URL" --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run field:requirements-backlog -- --base-url="$env:FIELD_BASE_URL" --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
+npm.cmd run field:closeout-quickstart -- --base-url="$env:FIELD_BASE_URL" --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"
 npm.cmd run ci:status -- --generated-by="$env:FIELD_REVIEWER"
 # If no CI run exists for the final dev commit, trigger and wait intentionally during the approved external CI closeout window:
 # npm.cmd run ci:closeout -- --dispatch --generated-by="$env:FIELD_REVIEWER"
@@ -285,15 +287,36 @@ for field handoff, including `ownerBriefs`, `briefFileIndex`, and
 owner-specific `Execution Queue` rows; they do not replace reviewer-filled
 evidence.
 
+After owner briefs exist, run
+`npm.cmd run field:requirements-backlog -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`.
+It writes `artifacts/field-requirements-backlog/<timestamp>/manifest.json`
+plus `manifest.md`, grouping `Batched unresolved field questions` by owner,
+priority, action type, source gate, command, and close criteria. Its manifest
+also exposes top-level `itemCount`, `openItemCount`, `ownerCount`,
+`priorityCounts`, and `actionTypeCounts` so field leads can see the question
+load without parsing the full table. This backlog is a question-routing aid
+only; it does not approve field values, close hardware gates, or replace
+reviewer evidence.
+
+After the requirements backlog exists, run
+`npm.cmd run field:closeout-quickstart -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`.
+It writes `artifacts/field-closeout-quickstart/<timestamp>/manifest.json` plus
+`manifest.md`, linking the latest final status, action board, gate closure map,
+owner briefs, field env closeout, and requirements backlog. The quickstart
+contains a `Requirements Backlog Summary`, `Safe .env Patch Block`, evidence
+prerequisites, runtime prerequisites, phase queue, owner queue, and command
+queue so the field closeout can start from one file without exposing secret
+values.
+
 For the final attachment refresh, run
 `npm.cmd run handover:package -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`. Replace
 the base URL with the delivery Nginx entrypoint when it is not localhost. It
-runs `delivery:evidence`, `field:readiness`, `field:risk-register`, `manual:evidence-drafts`, `manual:evidence-readiness`, `field:action-board`, `field:gate-closure-map`, `field:owner-briefs`, `completion:audit`,
+runs `delivery:evidence`, `field:readiness`, `field:risk-register`, `manual:evidence-drafts`, `manual:evidence-readiness`, `field:action-board`, `field:gate-closure-map`, `field:owner-briefs`, `field:requirements-backlog`, `field:closeout-quickstart`, `completion:audit`,
 `field:closure-plan`, and `handover:index` in order, passing the same base URL
-into the refreshed manual draft report, readiness report, risk register, action board, gate closure map, and owner briefs and indexing the refreshed closure plan, then writes
+into the refreshed manual draft report, readiness report, risk register, action board, gate closure map, owner briefs, requirements backlog, and quickstart and indexing the refreshed closure plan, then writes
 `artifacts/handover-package/<timestamp>/manifest.json` plus `manifest.md` with
 the refreshed evidence references, command logs, base URL, strict gate reasons,
-manual evidence draft/readiness/risk-register/action-board/gate-closure-map/owner-brief/final-bundle-handoff references, and latest control-board safety status. Attach the latest final bundle handoff when available so reviewers can open bundle-specific closeout files beside the handover package. The completion audit, handover index,
+manual evidence draft/readiness/risk-register/action-board/gate-closure-map/owner-brief/field-requirements-backlog/field-closeout-quickstart/final-bundle-handoff references, and latest control-board safety status. Attach the latest final bundle handoff when available so reviewers can open bundle-specific closeout files beside the handover package. The completion audit, handover index,
 closure plan, and handover package all surface this status so `DRY_RUN_SAFE` or
 `LIVE_TCP_REVIEW` cannot be mistaken for field-ready TCP operation. Use
 `npm.cmd run handover:package -- --base-url=http://localhost:8080 --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME" --strict`
@@ -709,6 +732,8 @@ Evidence package:
 - `artifacts/handover-index/<timestamp>/manifest.json` and `artifacts/handover-index/<timestamp>/manifest.md` from `npm run handover:index`; confirm `Field Rehearsal Follow-ups` links source rehearsal manifests to the latest closure plan.
 - `artifacts/field-closure-plan/<timestamp>/manifest.json` and `manifest.md` from `npm run field:closure-plan`; confirm `Closure Command Queue` mirrors the latest final execution plan ordered commands, confirm `Field Rehearsal Follow-up Actions` lists owner, target recheck date, next action, and done-when criteria, and confirm status remains `OPEN` while completion blockers, field readiness open checks, open required field values, field rehearsal follow-ups, or manual evidence gaps remain.
 - `artifacts/field-readiness/<timestamp>/manifest.json` and `manifest.md` from `npm run field:readiness`
+- `artifacts/field-requirements-backlog/<timestamp>/manifest.json` and `manifest.md` from `npm run field:requirements-backlog`; confirm `itemCount`, `openItemCount`, `ownerCount`, `priorityCounts`, and `actionTypeCounts` summarize the batched field questions without secret values.
+- `artifacts/field-closeout-quickstart/<timestamp>/manifest.json` and `manifest.md` from `npm run field:closeout-quickstart`; confirm `Requirements Backlog Summary`, `Safe .env Patch Block`, phase queue, owner queue, and command queue link to the latest backlog and action board.
 - `artifacts/handover-package/<timestamp>/manifest.json` and `manifest.md` from `npm run handover:package`; confirm `Residual Field Gates` is empty before final READY handover and `Field Evidence Follow-ups` matches the latest audit/index/closure follow-up information.
 - Confirm the handover package `Git commit`, `Git branch`, `Git upstream`, `Git upstream commit`, `Git pushed to origin/dev`, and `Working tree clean` fields match the dev revision being delivered.
 - `npm.cmd run verify:final-status` or `npm run verify:final-status` result; confirm READY/COMPLETE claims use fresh referenced artifacts, including security evidence, and no residual field/security/manual gates.
