@@ -66,6 +66,20 @@ function questionForGate(gate) {
   if (text.includes("control-board") || text.includes("live_tcp") || text.includes("hardware")) {
     return "Confirm control-board host, TCP port, live approval owner, and command/ACK rehearsal window.";
   }
+  if (
+    text.includes(".env") ||
+    text.includes("jwt") ||
+    text.includes("password") ||
+    text.includes("cors") ||
+    text.includes("cookie") ||
+    text.includes("swagger") ||
+    text.includes("rate limit") ||
+    text.includes("burst") ||
+    text.includes("content security") ||
+    text.includes("csp")
+  ) {
+    return "Confirm approved field .env values or placeholders for the listed environment keys.";
+  }
   if (text.includes("security") || text.includes("scanner") || text.includes("trivy") || text.includes("zap") || text.includes("gitleaks")) {
     return "Confirm whether scanner evidence will be produced with native tools, Docker scanners, or approved risk acceptance.";
   }
@@ -80,9 +94,6 @@ function questionForGate(gate) {
   }
   if (text.includes("manual evidence") || text.includes("operator ui") || text.includes("risk acceptance")) {
     return "Confirm manual evidence owner, evidence file path, and acceptance wording for the open field item.";
-  }
-  if (text.includes(".env") || text.includes("jwt") || text.includes("password") || text.includes("cors") || text.includes("cookie") || text.includes("swagger") || text.includes("rate limit") || text.includes("content security")) {
-    return "Confirm approved field .env values or placeholders for the listed environment keys.";
   }
   if (text.includes("field acceptance") || text.includes("field readiness") || text.includes("handover")) {
     return "Confirm the delivery runtime URL, reviewer/site metadata, and required evidence refresh order.";
@@ -166,7 +177,7 @@ function buildManifest(input = {}) {
     sourceFinalGateClassification: classification?.path || null,
     remainingGateCount: finalStatus?.data?.remainingGates?.length ?? null,
     classificationSummary: classification?.data?.summary || null,
-    metadataEnvKeys: ["FIELD_REVIEWER", "FIELD_SITE_NAME"],
+    metadataEnvKeys: ["FIELD_REVIEWER", "FIELD_SITE_NAME", "FIELD_BASE_URL"],
     summary: summarize(items),
     backlogItems: items,
     guardrails: [

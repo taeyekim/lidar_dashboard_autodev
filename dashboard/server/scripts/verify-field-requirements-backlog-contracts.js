@@ -35,6 +35,7 @@ const packageJson = readProjectFile("package.json");
   "Confirm whether dev branch GitHub Actions",
   "FIELD_REVIEWER",
   "FIELD_SITE_NAME",
+  "FIELD_BASE_URL",
 ].forEach((token) => assertIncludes(generator, token, "field requirements backlog generator"));
 
 [
@@ -77,12 +78,21 @@ const gates = [
     message: "CI status evidence is REVIEW: No CI workflow run was found for branch dev.",
     closeWhen: "Run ci:status or dispatch only during the approved external CI closeout window.",
   },
+  {
+    id: "gate-csp",
+    actionType: "SECURITY_REVIEW_REQUIRED",
+    category: "Field Evidence",
+    status: "REVIEW",
+    message: "Field Preflight: Nginx content security policy",
+    closeWhen: "Preflight manifest has no REVIEW or SKIPPED checks required by the field acceptance policy.",
+  },
 ];
 
 assert(questionForGate(gates[0]).includes("control-board host"), "control-board question should ask for TCP field details");
 assert(questionForGate(gates[1]).includes(".env values"), "env question should ask for field env values");
 assert(questionForGate(gates[2]).includes("scanner evidence"), "security question should ask for scanner evidence route");
 assert(questionForGate(gates[3]).includes("GitHub Actions"), "CI question should ask for GitHub Actions closeout");
+assert(questionForGate(gates[4]).includes(".env values"), "CSP field gate should ask for approved env values, not scanner evidence");
 
 const finalStatus = {
   path: "artifacts/final-status/fixture/manifest.json",
@@ -96,14 +106,14 @@ const classification = {
   path: "artifacts/final-gate-classification/fixture/manifest.json",
   data: {
     summary: {
-      remainingGateCount: 4,
-      bucketGateCounts: { hardware_runtime: 1, field_configuration: 1, security_tooling: 1, external_ci: 1 },
+      remainingGateCount: 5,
+      bucketGateCounts: { hardware_runtime: 1, field_configuration: 2, security_tooling: 1, external_ci: 1 },
     },
   },
 };
 
 const items = buildBacklogItems(finalStatus, "http://field.local:8080");
-assert(items.length === 4, "backlog should preserve distinct field questions");
+assert(items.length === 5, "backlog should preserve distinct field questions");
 assert(items.some((item) => item.owner === "Control-board TCP" && item.envKeys.includes("CONTROL_BOARD_HOST")), "control-board item should include host env key");
 assert(items.some((item) => item.envKeys.includes("JWT_SECRET")), "env item should include JWT secret key without value");
 assert(items.some((item) => item.runtime.some((entry) => entry.includes("gitleaks"))), "security item should include scanner runtime prerequisite");
@@ -120,9 +130,10 @@ const manifest = buildManifest({
 });
 
 assert(manifest.status === "OPEN", "manifest should be OPEN while questions remain");
-assert(manifest.summary.itemCount === 4, "manifest should count backlog items");
+assert(manifest.summary.itemCount === 5, "manifest should count backlog items");
 assert(manifest.sourceFinalStatus.includes("final-status"), "manifest should link final status source");
 assert(manifest.classificationSummary.bucketGateCounts.security_tooling === 1, "manifest should keep classification summary");
+assert(manifest.metadataEnvKeys.includes("FIELD_BASE_URL"), "manifest should expose field base URL as metadata env key");
 
 const markdown = buildMarkdown(manifest);
 [
@@ -131,6 +142,7 @@ const markdown = buildMarkdown(manifest);
   "Control-board TCP",
   "JWT_SECRET",
   "GitHub Actions",
+  "FIELD_BASE_URL",
   "never paste real secret values",
 ].forEach((token) => assert(markdown.includes(token), `markdown should include ${token}`));
 
