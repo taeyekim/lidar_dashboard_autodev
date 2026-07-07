@@ -25,6 +25,10 @@ const generator = readProjectFile("dashboard/server/scripts/generate-field-close
   [serverPackageJson, "verify-field-closeout-quickstart-contracts.js", "server verify chain"],
   [generator, "artifacts/field-closeout-quickstart", "quickstart generator"],
   [generator, "Env Keys To Fill", "quickstart generator"],
+  [generator, "ENV_KEY_GUIDE", "quickstart generator"],
+  [generator, "long random JWT signing secret", "quickstart generator"],
+  [generator, "integrated control-board IPv4", "quickstart generator"],
+  [generator, "never paste into evidence", "quickstart generator"],
   [generator, "Phase Queue", "quickstart generator"],
   [generator, "Owner Queue", "quickstart generator"],
   [generator, "Command Queue", "quickstart generator"],
@@ -99,6 +103,8 @@ const manifest = buildManifest({
 assert(manifest.status === "OPEN", "quickstart should be OPEN when action items exist");
 assert(manifest.openActionCount === 2, "quickstart should count open actions");
 assert(manifest.securityRequiredCount === 1, "quickstart should copy security bucket count");
+assert(manifest.envGuide.some((item) => item.key === "JWT_SECRET" && item.secret === true), "quickstart should mark JWT_SECRET as secret");
+assert(manifest.envGuide.some((item) => item.key === "CONTROL_BOARD_HOST" && item.owner === "Control-board TCP"), "quickstart should explain control board host ownership");
 assert(manifest.phaseQueue.length === 2, "quickstart should build phase queue");
 assert(manifest.ownerQueue.length === 1, "quickstart should build owner queue");
 
@@ -107,6 +113,9 @@ const markdown = buildMarkdown(manifest);
   "Field Closeout Quickstart",
   "Env Keys To Fill",
   "JWT_SECRET",
+  "Value Shape",
+  "Verify With",
+  "long random JWT signing secret",
   "CONTROL_BOARD_HOST",
   "Evidence Files To Prepare",
   "Phase Queue",

@@ -17,6 +17,120 @@ const PHASE_ORDER = [
   "Final Status",
   "Field Review",
 ];
+const ENV_KEY_GUIDE = {
+  AUTH_COOKIE_SAMESITE: {
+    owner: "Auth/Security",
+    valueShape: "strict/lax/none, delivery default usually strict or lax",
+    secret: false,
+    closes: "Auth cookie delivery settings",
+    verify: "field:preflight",
+  },
+  AUTH_COOKIE_SECURE: {
+    owner: "Auth/Security",
+    valueShape: "true when HTTPS/TLS is used at delivery entrypoint",
+    secret: false,
+    closes: "Auth cookie delivery settings",
+    verify: "field:preflight",
+  },
+  CONTROL_BOARD_DRY_RUN: {
+    owner: "Control-board TCP",
+    valueShape: "true until hardware owner approves LIVE TCP",
+    secret: false,
+    closes: "Control-board safety posture",
+    verify: "field:readiness, control-board-field-rehearsal",
+  },
+  CONTROL_BOARD_HOST: {
+    owner: "Control-board TCP",
+    valueShape: "integrated control-board IPv4/host on field network",
+    secret: false,
+    closes: "LIVE TCP readiness",
+    verify: "field:readiness, control-board-field-rehearsal",
+  },
+  CONTROL_BOARD_LIVE_APPROVED: {
+    owner: "Control-board TCP + PM",
+    valueShape: "false until approved, true only with recorded hardware approval",
+    secret: false,
+    closes: "LIVE TCP approval gate",
+    verify: "field:readiness, field:acceptance",
+  },
+  CONTROL_BOARD_PORT: {
+    owner: "Control-board TCP",
+    valueShape: "TCP port number assigned for raw 10-byte command frames",
+    secret: false,
+    closes: "LIVE TCP readiness",
+    verify: "field:readiness, control-board-field-rehearsal",
+  },
+  CORS_ORIGINS: {
+    owner: "Auth/Security",
+    valueShape: "comma-separated allowed dashboard origins",
+    secret: false,
+    closes: "CORS trusted origins",
+    verify: "field:preflight",
+  },
+  DEVICE_INGEST_API_KEY: {
+    owner: "LiDAR Ingest + Auth/Security",
+    valueShape: "long random shared device ingest key, never paste into evidence",
+    secret: true,
+    closes: "Device ingest key",
+    verify: "field:preflight, runtime:evidence",
+  },
+  FIELD_REVIEWER: {
+    owner: "PM/QA",
+    valueShape: "named reviewer or role signing field evidence",
+    secret: false,
+    closes: "Reviewer metadata",
+    verify: "handover:index, field:closeout-quickstart",
+  },
+  FIELD_SITE_NAME: {
+    owner: "PM/QA",
+    valueShape: "delivery site/system name",
+    secret: false,
+    closes: "Site metadata",
+    verify: "handover:index, field:closeout-quickstart",
+  },
+  JWT_SECRET: {
+    owner: "Auth/Security",
+    valueShape: "long random JWT signing secret, never paste into evidence",
+    secret: true,
+    closes: "JWT secret placeholder",
+    verify: "field:preflight",
+  },
+  NGINX_CONTENT_SECURITY_POLICY: {
+    owner: "Nginx Delivery + Auth/Security",
+    valueShape: "approved CSP header string for delivery dashboard/API",
+    secret: false,
+    closes: "Nginx content security policy",
+    verify: "field:preflight, security:evidence",
+  },
+  NGINX_SWAGGER_ALLOW: {
+    owner: "Nginx Delivery",
+    valueShape: "CIDR allowlist for Swagger access, not all",
+    secret: false,
+    closes: "Swagger allowlist",
+    verify: "field:preflight",
+  },
+  NGINX_WRONGWAY_BURST: {
+    owner: "Nginx Delivery",
+    valueShape: "numeric burst allowance for wrong-way ingest/API rate limit",
+    secret: false,
+    closes: "Nginx wrong-way rate limit",
+    verify: "field:preflight",
+  },
+  NGINX_WRONGWAY_RATE_LIMIT: {
+    owner: "Nginx Delivery",
+    valueShape: "Nginx rate expression such as 10r/s, field approved",
+    secret: false,
+    closes: "Nginx wrong-way rate limit",
+    verify: "field:preflight",
+  },
+  SEED_ADMIN_PASSWORD: {
+    owner: "Auth/Security",
+    valueShape: "field admin bootstrap password, rotate after setup",
+    secret: true,
+    closes: "Seed admin password placeholder",
+    verify: "field:preflight",
+  },
+};
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -124,6 +238,17 @@ function buildOwnerQueue(actionBoard) {
   }));
 }
 
+function buildEnvGuide(envKeys) {
+  return (envKeys || []).map((key) => ({
+    key,
+    owner: ENV_KEY_GUIDE[key]?.owner || "Field Operations",
+    valueShape: ENV_KEY_GUIDE[key]?.valueShape || "field-specific value",
+    secret: ENV_KEY_GUIDE[key]?.secret === true,
+    closes: ENV_KEY_GUIDE[key]?.closes || "field closeout item",
+    verify: ENV_KEY_GUIDE[key]?.verify || "field:preflight",
+  }));
+}
+
 function buildManifest(input = {}) {
   const actionBoard = Object.prototype.hasOwnProperty.call(input, "actionBoard")
     ? input.actionBoard
@@ -157,6 +282,7 @@ function buildManifest(input = {}) {
     securityRequiredCount: summary.bucketGateCounts?.security_tooling ?? null,
     reviewRequiredCount: (finalStatus?.data?.remainingGates || []).filter((gate) => gate.actionType === "REVIEW_REQUIRED").length,
     prerequisites,
+    envGuide: buildEnvGuide(prerequisites.env),
     phaseQueue,
     ownerQueue,
     commandQueue: uniq(phaseQueue.flatMap((phase) => phase.commands)),
@@ -194,9 +320,14 @@ function buildMarkdown(manifest) {
     "",
     "## Env Keys To Fill",
     "",
-    ...(manifest.prerequisites.env.length > 0
-      ? manifest.prerequisites.env.map((key) => `- ${key}`)
-      : ["- none"]),
+    "| Key | Owner | Secret | Value Shape | Closes | Verify With |",
+    "| --- | --- | --- | --- | --- | --- |",
+    ...(manifest.envGuide.length > 0
+      ? manifest.envGuide.map(
+          (item) =>
+            `| ${markdownCell(item.key)} | ${markdownCell(item.owner)} | ${item.secret ? "yes" : "no"} | ${markdownCell(item.valueShape)} | ${markdownCell(item.closes)} | ${markdownCell(item.verify)} |`,
+        )
+      : ["| none | - | no | - | - | - |"]),
     "",
     "## Evidence Files To Prepare",
     "",
