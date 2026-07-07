@@ -207,6 +207,7 @@ function buildManifest(input = {}) {
     : readLatestJsonManifest("artifacts/final-gate-classification");
   const baseUrl = resolveFieldBaseUrl(input.baseUrl, finalStatus?.data?.baseUrl, classification?.data?.baseUrl);
   const items = buildBacklogItems(finalStatus, baseUrl);
+  const summary = summarize(items);
   return {
     generatedAt: input.generatedAt || new Date().toISOString(),
     generatedBy: input.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
@@ -217,9 +218,14 @@ function buildManifest(input = {}) {
     sourceFinalStatus: finalStatus?.path || null,
     sourceFinalGateClassification: classification?.path || null,
     remainingGateCount: finalStatus?.data?.remainingGates?.length ?? null,
+    itemCount: summary.itemCount,
+    openItemCount: items.length,
+    ownerCount: Object.keys(summary.byOwner).length,
+    priorityCounts: summary.byPriority,
+    actionTypeCounts: summary.byActionType,
     classificationSummary: classification?.data?.summary || null,
     metadataEnvKeys: ["FIELD_REVIEWER", "FIELD_SITE_NAME", "FIELD_BASE_URL"],
-    summary: summarize(items),
+    summary,
     backlogItems: items,
     guardrails: [
       "Record only questions, owners, placeholders, and evidence paths here; never paste real secret values.",

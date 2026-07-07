@@ -153,6 +153,11 @@ const manifest = buildManifest({
 
 assert(manifest.status === "OPEN", "manifest should be OPEN while questions remain");
 assert(manifest.summary.itemCount === 6, "manifest should count backlog items");
+assert(manifest.itemCount === 6, "manifest should expose top-level item count for automation");
+assert(manifest.openItemCount === 6, "manifest should expose top-level open item count for automation");
+assert(manifest.ownerCount >= 4, "manifest should expose top-level owner count for routing");
+assert(manifest.priorityCounts.P0 >= 1, "manifest should expose top-level priority counts");
+assert(manifest.actionTypeCounts.FIELD_ACTION_REQUIRED >= 1, "manifest should expose top-level action type counts");
 assert(manifest.sourceFinalStatus.includes("final-status"), "manifest should link final status source");
 assert(manifest.classificationSummary.bucketGateCounts.security_tooling === 1, "manifest should keep classification summary");
 assert(manifest.metadataEnvKeys.includes("FIELD_BASE_URL"), "manifest should expose field base URL as metadata env key");
