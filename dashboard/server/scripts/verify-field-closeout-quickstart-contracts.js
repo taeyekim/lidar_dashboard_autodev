@@ -26,6 +26,8 @@ const generator = readProjectFile("dashboard/server/scripts/generate-field-close
   [generator, "artifacts/field-closeout-quickstart", "quickstart generator"],
   [generator, "Env Keys To Fill", "quickstart generator"],
   [generator, "ENV_KEY_GUIDE", "quickstart generator"],
+  [generator, "fieldRequirementsBacklog", "quickstart generator"],
+  [generator, "sourceFieldRequirementsBacklog", "quickstart generator"],
   [generator, "long random JWT signing secret", "quickstart generator"],
   [generator, "integrated control-board IPv4", "quickstart generator"],
   [generator, "never paste into evidence", "quickstart generator"],
@@ -106,6 +108,13 @@ const manifest = buildManifest({
       },
     },
   },
+  fieldRequirementsBacklog: {
+    path: "artifacts/field-requirements-backlog/fixture/manifest.json",
+    data: {
+      status: "OPEN",
+      remainingGateCount: 2,
+    },
+  },
 });
 
 assert(manifest.status === "OPEN", "quickstart should be OPEN when action items exist");
@@ -120,6 +129,10 @@ assert(
 assert(manifest.phaseQueue.length === 2, "quickstart should build phase queue");
 assert(manifest.ownerQueue.length === 1, "quickstart should build owner queue");
 assert(manifest.sourceFieldEnvCloseout.includes("field-env-closeout"), "quickstart should link field env closeout evidence");
+assert(
+  manifest.sourceFieldRequirementsBacklog.includes("field-requirements-backlog"),
+  "quickstart should link field requirements backlog evidence",
+);
 assert(manifest.envPatchBlockLines.includes("JWT_SECRET=replace_in_field"), "quickstart should sanitize secret patch values");
 assert(manifest.envPatchBlockLines.includes("CONTROL_BOARD_DRY_RUN=true"), "quickstart should include safe control-board defaults");
 
@@ -135,6 +148,7 @@ const markdown = buildMarkdown(manifest);
   "long random JWT signing secret",
   "FIELD_BASE_URL",
   "delivery Nginx/operator entrypoint",
+  "Source field requirements backlog",
   "CONTROL_BOARD_HOST",
   "Evidence Files To Prepare",
   "Phase Queue",

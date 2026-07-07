@@ -310,6 +310,9 @@ function buildManifest(input = {}) {
   const fieldEnvCloseout = Object.prototype.hasOwnProperty.call(input, "fieldEnvCloseout")
     ? input.fieldEnvCloseout
     : readLatestJsonManifest("artifacts/field-env-closeout");
+  const fieldRequirementsBacklog = Object.prototype.hasOwnProperty.call(input, "fieldRequirementsBacklog")
+    ? input.fieldRequirementsBacklog
+    : readLatestJsonManifest("artifacts/field-requirements-backlog");
   const actionItems = actionBoard?.data?.actionItems || [];
   const baseUrl = resolveFieldBaseUrl(input.baseUrl, actionBoard?.data?.baseUrl, finalStatus?.data?.baseUrl);
   const prerequisites = flattenPrerequisites(actionItems);
@@ -328,6 +331,7 @@ function buildManifest(input = {}) {
     sourceFieldActionBoard: actionBoard?.path || null,
     sourceFinalGateClassification: classification?.path || null,
     sourceFieldEnvCloseout: fieldEnvCloseout?.path || null,
+    sourceFieldRequirementsBacklog: fieldRequirementsBacklog?.path || null,
     remainingGateCount: finalStatus?.data?.remainingGates?.length ?? null,
     openActionCount: actionItems.length,
     bucketGateCounts: summary.bucketGateCounts || {},
@@ -368,6 +372,7 @@ function buildMarkdown(manifest) {
     `- Source field action board: ${manifest.sourceFieldActionBoard || "missing"}`,
     `- Source final gate classification: ${manifest.sourceFinalGateClassification || "missing"}`,
     `- Source field env closeout: ${manifest.sourceFieldEnvCloseout || "missing"}`,
+    `- Source field requirements backlog: ${manifest.sourceFieldRequirementsBacklog || "missing"}`,
     "",
     "## Guardrails",
     "",

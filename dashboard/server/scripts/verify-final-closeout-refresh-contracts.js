@@ -142,8 +142,8 @@ const ids = steps.map((step) => step.id);
   "field-action-board",
   "field-gate-closure-map",
   "field-owner-briefs",
-  "field-closeout-quickstart",
   "field-requirements-backlog",
+  "field-closeout-quickstart",
   "handover-package-pass-2",
   "final-status-pass-2",
   "final-execution-plan",
@@ -155,8 +155,8 @@ const ids = steps.map((step) => step.id);
   "field-action-board-final-index",
   "field-gate-closure-map-final-index",
   "field-owner-briefs-final-index",
-  "field-closeout-quickstart-final-index",
   "field-requirements-backlog-final-index",
+  "field-closeout-quickstart-final-index",
   "handover-package-action-index",
   "final-status-action-index",
   "final-execution-plan-final-index",
@@ -167,12 +167,14 @@ const ids = steps.map((step) => step.id);
   "handover-package-closeout-sync",
   "final-status-closeout-sync",
   "final-gate-classification-closeout-sync",
-  "field-closeout-quickstart-closeout-sync",
   "field-requirements-backlog-closeout-sync",
+  "field-closeout-quickstart-closeout-sync",
 ].forEach((id) => assert(ids.includes(id), `steps should include ${id}`));
 
 assert(
   ids.indexOf("final-status-pass-1") < ids.indexOf("field-action-board") &&
+    ids.indexOf("field-owner-briefs") < ids.indexOf("field-requirements-backlog") &&
+    ids.indexOf("field-requirements-backlog") < ids.indexOf("field-closeout-quickstart") &&
     ids.indexOf("field-action-board") < ids.indexOf("handover-package-pass-2") &&
     ids.indexOf("handover-package-pass-2") < ids.indexOf("final-status-pass-2") &&
     ids.indexOf("final-status-pass-2") < ids.indexOf("final-execution-plan") &&
@@ -184,18 +186,18 @@ assert(
     ids.indexOf("field-risk-register-final-index") < ids.indexOf("field-action-board-final-index") &&
     ids.indexOf("field-action-board-final-index") < ids.indexOf("field-gate-closure-map-final-index") &&
     ids.indexOf("field-gate-closure-map-final-index") < ids.indexOf("field-owner-briefs-final-index") &&
-    ids.indexOf("field-owner-briefs-final-index") < ids.indexOf("field-closeout-quickstart-final-index") &&
-    ids.indexOf("field-closeout-quickstart-final-index") < ids.indexOf("field-requirements-backlog-final-index") &&
-    ids.indexOf("field-requirements-backlog-final-index") < ids.indexOf("handover-package-action-index") &&
+    ids.indexOf("field-owner-briefs-final-index") < ids.indexOf("field-requirements-backlog-final-index") &&
+    ids.indexOf("field-requirements-backlog-final-index") < ids.indexOf("field-closeout-quickstart-final-index") &&
+    ids.indexOf("field-closeout-quickstart-final-index") < ids.indexOf("handover-package-action-index") &&
     ids.indexOf("handover-package-action-index") < ids.indexOf("final-status-action-index") &&
     ids.indexOf("final-status-action-index") < ids.indexOf("final-execution-plan-final-index") &&
     ids.indexOf("final-execution-plan-final-index") < ids.indexOf("field-closure-plan-final-index") &&
     ids.indexOf("field-closure-plan-final-index") < ids.indexOf("final-bundle-handoff-final-index") &&
     ids.indexOf("final-bundle-handoff-final-index") < ids.indexOf("final-gate-classification-final-index") &&
     ids.indexOf("final-status-action-index") < ids.indexOf("final-gate-classification-final-index") &&
-    ids.indexOf("final-gate-classification-final-index") < ids.indexOf("field-closeout-quickstart-closeout-sync") &&
-    ids.indexOf("field-closeout-quickstart-closeout-sync") < ids.indexOf("field-requirements-backlog-closeout-sync") &&
-    ids.indexOf("field-requirements-backlog-closeout-sync") < ids.indexOf("handover-index-closeout-sync") &&
+    ids.indexOf("final-gate-classification-final-index") < ids.indexOf("field-requirements-backlog-closeout-sync") &&
+    ids.indexOf("field-requirements-backlog-closeout-sync") < ids.indexOf("field-closeout-quickstart-closeout-sync") &&
+    ids.indexOf("field-closeout-quickstart-closeout-sync") < ids.indexOf("handover-index-closeout-sync") &&
     ids.indexOf("final-status-closeout-sync") < ids.indexOf("final-gate-classification-closeout-sync"),
   "refresh should converge final status, action artifacts, handover package, final status, execution plan, bundle handoff, gate classification, final handover package index, final status, final action artifacts, final handover package, final status, final execution plan, field closure plan, final bundle handoff, then final gate classification",
 );
