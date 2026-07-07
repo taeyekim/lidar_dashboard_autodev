@@ -469,6 +469,14 @@ function buildSteps(options) {
       doneWhen: "Final gate classification sourceFinalStatus points to the latest final-status manifest.",
     },
     {
+      id: "field-closeout-quickstart-closeout-sync",
+      phase: "Field Action Artifacts",
+      command: npm,
+      args: ["run", "field:closeout-quickstart", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Refresh quickstart before the final handover package so the package references the latest field closeout queue.",
+      doneWhen: "Quickstart source refs point to the latest final status, action board, and classification before packaging.",
+    },
+    {
       id: "handover-index-closeout-sync",
       phase: "Final Decision",
       command: npm,
@@ -500,14 +508,6 @@ function buildSteps(options) {
       args: ["run", "final:gate-classification", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
       purpose: "Reclassify gates from the closeout-synced final status so package-refresh examples do not point at stale handover evidence.",
       doneWhen: "Final gate classification sourceFinalStatus points to final-status-closeout-sync.",
-    },
-    {
-      id: "field-closeout-quickstart-closeout-sync",
-      phase: "Field Action Artifacts",
-      command: npm,
-      args: ["run", "field:closeout-quickstart", "--", `--base-url=${baseUrl}`, `--generated-by=${reviewer}`, `--site-name=${siteName}`],
-      purpose: "Refresh quickstart from the closeout-synced final status and gate classification.",
-      doneWhen: "Quickstart source refs point to the final closeout-synced status, action board, and classification.",
     },
   );
 

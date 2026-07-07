@@ -101,7 +101,7 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "final-status-closeout-sync", "final closeout refresh generator"],
   [generator, "final-gate-classification-closeout-sync", "final closeout refresh generator"],
   [generator, "field-closeout-quickstart-closeout-sync", "final closeout refresh generator"],
-  [generator, "one-page field closeout queue", "final closeout refresh generator"],
+  [generator, "latest field closeout queue", "final closeout refresh generator"],
   [generator, "package-refresh examples do not point at stale handover evidence", "final closeout refresh generator"],
   [generator, "does not report stale closure-plan evidence", "final closeout refresh generator"],
   [generator, "evidenceRefs.finalBundleHandoff points to the latest final-bundle-handoff manifest", "final closeout refresh generator"],
@@ -185,7 +185,9 @@ assert(
     ids.indexOf("field-closure-plan-final-index") < ids.indexOf("final-bundle-handoff-final-index") &&
     ids.indexOf("final-bundle-handoff-final-index") < ids.indexOf("final-gate-classification-final-index") &&
     ids.indexOf("final-status-action-index") < ids.indexOf("final-gate-classification-final-index") &&
-    ids.indexOf("final-gate-classification-closeout-sync") < ids.indexOf("field-closeout-quickstart-closeout-sync"),
+    ids.indexOf("final-gate-classification-final-index") < ids.indexOf("field-closeout-quickstart-closeout-sync") &&
+    ids.indexOf("field-closeout-quickstart-closeout-sync") < ids.indexOf("handover-index-closeout-sync") &&
+    ids.indexOf("final-status-closeout-sync") < ids.indexOf("final-gate-classification-closeout-sync"),
   "refresh should converge final status, action artifacts, handover package, final status, execution plan, bundle handoff, gate classification, final handover package index, final status, final action artifacts, final handover package, final status, final execution plan, field closure plan, final bundle handoff, then final gate classification",
 );
 assert(
