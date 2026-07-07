@@ -292,6 +292,38 @@ function fieldActionArtifactStrictFailures({
   return failures;
 }
 
+function buildCloseoutArtifactSummary({ fieldCloseoutQuickstart, fieldRequirementsBacklog }) {
+  const quickstartData = fieldCloseoutQuickstart?.data || {};
+  const backlogData = fieldRequirementsBacklog?.data || {};
+  const backlogSummary = quickstartData.requirementsBacklogSummary || {};
+  return {
+    fieldRequirementsBacklog: {
+      path: fieldRequirementsBacklog?.path || null,
+      status: backlogData.status || "MISSING",
+      itemCount: backlogData.itemCount ?? backlogData.summary?.itemCount ?? null,
+      openItemCount: backlogData.openItemCount ?? backlogData.itemCount ?? backlogData.summary?.itemCount ?? null,
+      ownerCount: backlogData.ownerCount ?? Object.keys(backlogData.summary?.byOwner || {}).length,
+      priorityCounts: backlogData.priorityCounts || backlogData.summary?.byPriority || {},
+      actionTypeCounts: backlogData.actionTypeCounts || backlogData.summary?.byActionType || {},
+    },
+    fieldCloseoutQuickstart: {
+      path: fieldCloseoutQuickstart?.path || null,
+      status: quickstartData.status || "MISSING",
+      remainingGateCount: quickstartData.remainingGateCount ?? null,
+      openActionCount: quickstartData.openActionCount ?? null,
+      sourceFieldRequirementsBacklog: quickstartData.sourceFieldRequirementsBacklog || null,
+      requirementsBacklogSummary: {
+        status: backlogSummary.status || "MISSING",
+        itemCount: backlogSummary.itemCount ?? null,
+        openItemCount: backlogSummary.openItemCount ?? null,
+        ownerCount: backlogSummary.ownerCount ?? null,
+        priorityCounts: backlogSummary.priorityCounts || {},
+        actionTypeCounts: backlogSummary.actionTypeCounts || {},
+      },
+    },
+  };
+}
+
 function fieldEvidenceNextAction(type, baseUrl = fieldBaseUrlArg) {
   const actions = {
     "Field Preflight":
@@ -574,6 +606,13 @@ function buildMarkdown(manifest) {
     `- Final gate classification: ${manifest.evidenceRefs.finalGateClassification || "missing"}`,
     `- CI status: ${manifest.evidenceRefs.ciStatus || "missing"}`,
     "",
+    "## Field Closeout Artifact Summary",
+    "",
+    "| Artifact | Status | Key Counts | Source |",
+    "| --- | --- | --- | --- |",
+    `| Field requirements backlog | ${markdownCell(manifest.closeoutArtifactSummary.fieldRequirementsBacklog.status)} | ${markdownCell(`itemCount=${manifest.closeoutArtifactSummary.fieldRequirementsBacklog.itemCount ?? "unknown"}, openItemCount=${manifest.closeoutArtifactSummary.fieldRequirementsBacklog.openItemCount ?? "unknown"}, ownerCount=${manifest.closeoutArtifactSummary.fieldRequirementsBacklog.ownerCount ?? "unknown"}`)} | ${manifest.closeoutArtifactSummary.fieldRequirementsBacklog.path ? `\`${markdownCell(manifest.closeoutArtifactSummary.fieldRequirementsBacklog.path)}\`` : "missing"} |`,
+    `| Field closeout quickstart | ${markdownCell(manifest.closeoutArtifactSummary.fieldCloseoutQuickstart.status)} | ${markdownCell(`remainingGateCount=${manifest.closeoutArtifactSummary.fieldCloseoutQuickstart.remainingGateCount ?? "unknown"}, openActionCount=${manifest.closeoutArtifactSummary.fieldCloseoutQuickstart.openActionCount ?? "unknown"}, backlogItemCount=${manifest.closeoutArtifactSummary.fieldCloseoutQuickstart.requirementsBacklogSummary.itemCount ?? "unknown"}`)} | ${manifest.closeoutArtifactSummary.fieldCloseoutQuickstart.path ? `\`${markdownCell(manifest.closeoutArtifactSummary.fieldCloseoutQuickstart.path)}\`` : "missing"} |`,
+    "",
     "## Manual Evidence References",
     "",
     "| Type | Status | Path | Template | Required When | Validation |",
@@ -663,7 +702,7 @@ function buildMarkdown(manifest) {
     "",
     "## Package Notes",
     "",
-    "- This command refreshes the final evidence chain in order: delivery evidence, field readiness, field risk register, manual evidence drafts, manual evidence readiness, field action board, field gate closure map, field owner briefs, field requirements backlog, CI status, completion audit, field closure plan, then handover index.",
+    "- This command refreshes the final evidence chain in order: delivery evidence, field readiness, field risk register, manual evidence drafts, manual evidence readiness, field action board, field gate closure map, field owner briefs, field requirements backlog, field closeout quickstart, CI status, completion audit, field closure plan, then handover index.",
     "- Attach this manifest together with the referenced evidence folders.",
     "- Attach the latest final bundle handoff when available so field reviewers can open bundle-specific closeout files.",
     "- Attach the latest final gate classification when available so field reviewers can open per-bucket owner closeout files.",
@@ -711,6 +750,7 @@ function main() {
     ["field gate closure map", ["run", "field:gate-closure-map", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["field owner briefs", ["run", "field:owner-briefs", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["field requirements backlog", ["run", "field:requirements-backlog", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
+    ["field closeout quickstart", ["run", "field:closeout-quickstart", "--", `--base-url=${baseUrl}`, `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
     ["CI status", ["run", "ci:status", "--", `--generated-by=${generatedBy}`]],
     ["completion audit", ["run", "completion:audit"]],
     ["field closure plan", ["run", "field:closure-plan", "--", `--generated-by=${generatedBy}`, `--site-name=${siteName}`]],
@@ -725,6 +765,8 @@ function main() {
   const fieldActionBoard = readLatestJsonManifest("artifacts/field-action-board");
   const fieldGateClosureMap = readLatestJsonManifest("artifacts/field-gate-closure-map");
   const fieldOwnerBriefs = readLatestJsonManifest("artifacts/field-owner-briefs");
+  const fieldRequirementsBacklog = readLatestJsonManifest("artifacts/field-requirements-backlog");
+  const fieldCloseoutQuickstart = readLatestJsonManifest("artifacts/field-closeout-quickstart");
   const ciStatus = readLatestJsonManifest("artifacts/ci-status");
   const failedCommands = commands.filter((item) => item.exitCode !== 0);
   const packageStatus = failedCommands.length > 0 ? "FAILED" : handoverIndex?.data?.status || "UNKNOWN";
@@ -735,6 +777,10 @@ function main() {
   const fieldEvidenceOpenItems = buildFieldEvidenceOpenItems(fieldEvidenceSummary, baseUrl);
   const fieldEvidenceCommandRunbook = buildFieldEvidenceCommandRunbook(fieldEvidenceOpenItems);
   const fieldEvidenceFollowUps = buildFieldEvidenceFollowUps(fieldEvidenceSummary);
+  const closeoutArtifactSummary = buildCloseoutArtifactSummary({
+    fieldCloseoutQuickstart,
+    fieldRequirementsBacklog,
+  });
   const manualEvidence = manualEvidenceRefs();
   const openManualEvidence = manualEvidence.filter((item) => item.required && item.status !== "PRESENT");
   const knownLimitations = knownFieldLimitations(manualEvidence);
@@ -814,6 +860,7 @@ function main() {
       logFile: writeCommandLog(outputDir, item),
     })),
     evidenceRefs,
+    closeoutArtifactSummary,
     manualEvidenceRefs: manualEvidence,
     knownFieldLimitations: knownLimitations,
     residualFieldGates,

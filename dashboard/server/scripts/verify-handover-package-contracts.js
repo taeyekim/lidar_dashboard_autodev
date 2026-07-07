@@ -90,6 +90,13 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "fieldCloseoutQuickstart",
   "fieldRequirementsBacklog",
   "field:requirements-backlog",
+  "field:closeout-quickstart",
+  "buildCloseoutArtifactSummary",
+  "closeoutArtifactSummary",
+  "Field Closeout Artifact Summary",
+  "requirementsBacklogSummary",
+  "itemCount",
+  "ownerCount",
   "finalBundleHandoff",
   "finalGateClassification",
   "ciStatus",
@@ -240,11 +247,15 @@ assert(
     generator.indexOf('["field gate closure map", ["run", "field:gate-closure-map"') &&
     generator.indexOf('["field gate closure map", ["run", "field:gate-closure-map"') <
     generator.indexOf('["field owner briefs", ["run", "field:owner-briefs"') &&
+    generator.indexOf('["field owner briefs", ["run", "field:owner-briefs"') <
+    generator.indexOf('["field requirements backlog", ["run", "field:requirements-backlog"') &&
+    generator.indexOf('["field requirements backlog", ["run", "field:requirements-backlog"') <
+    generator.indexOf('["field closeout quickstart", ["run", "field:closeout-quickstart"') &&
     generator.indexOf("fieldActionArtifactStrictFailures") <
     generator.indexOf("const residualFieldGates = buildResidualFieldGates") &&
     generator.indexOf('["field closure plan", ["run", "field:closure-plan"') <
     generator.indexOf('["handover index", ["run", "handover:index"'),
-  "handover package must refresh field readiness before risk register, risk register before manual evidence drafts, drafts before readiness, action board before gate closure map before owner briefs, evaluate field action artifacts before residual gates, and field closure plan before handover index",
+  "handover package must refresh field readiness before risk register, risk register before manual evidence drafts, drafts before readiness, action board before gate closure map before owner briefs, requirements backlog before quickstart, evaluate field action artifacts before residual gates, and field closure plan before handover index",
 );
 
 [
@@ -266,7 +277,7 @@ assertIncludes(checklist, "npm run handover:package", "acceptance checklist");
 assertIncludes(checklist, "--reuse-existing-evidence", "acceptance checklist");
 assertIncludes(checklist, "do not use it as a standalone final-close proof", "acceptance checklist");
 assertIncludes(checklist, "field gate closure map", "acceptance checklist");
-assertIncludes(checklist, "gate-closure-map/owner-brief/final-bundle-handoff/final-gate-classification references", "acceptance checklist");
+assertIncludes(checklist, "gate-closure-map/owner-brief/field-closeout-quickstart/field-requirements-backlog/final-bundle-handoff/final-gate-classification references", "acceptance checklist");
 assertIncludes(checklist, "Git commit", "acceptance checklist");
 assertIncludes(checklist, "Git pushed to origin/dev", "acceptance checklist");
 assertIncludes(matrix, "npm run handover:package", "delivery evidence matrix");
