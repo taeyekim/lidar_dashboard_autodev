@@ -63,6 +63,9 @@ function compactText(value) {
 
 function questionForGate(gate) {
   const text = `${gate.category || ""} ${gate.actionType || ""} ${gate.status || ""} ${gate.message || ""} ${gate.closeWhen || ""}`.toLowerCase();
+  if (isAggregateCloseoutGate(gate)) {
+    return "Review aggregate closeout blockers after the source-specific field, security, CI, and evidence questions are resolved.";
+  }
   if (text.includes("control-board") || text.includes("live_tcp") || text.includes("hardware")) {
     return "Confirm control-board host, TCP port, live approval owner, and command/ACK rehearsal window.";
   }
@@ -101,14 +104,52 @@ function questionForGate(gate) {
   return "Confirm the field decision or evidence needed to close this gate.";
 }
 
+function isAggregateCloseoutGate(gate) {
+  const category = String(gate.category || "").toLowerCase();
+  const message = String(gate.message || "");
+  return (
+    category === "completion audit" ||
+    category === "handover package" ||
+    (category === "strict gate" && /handover package status|canmarkgoalcomplete|field .* has \d+/i.test(message))
+  );
+}
+
+function ownerForRequirementGate(gate) {
+  return isAggregateCloseoutGate(gate) ? "Field Operations" : ownerForGate(gate);
+}
+
+function phaseForRequirementGate(gate) {
+  return isAggregateCloseoutGate(gate) ? "Final Status" : phaseForGate(gate);
+}
+
+function prerequisiteHintsForRequirementGate(gate) {
+  if (!isAggregateCloseoutGate(gate)) return prerequisiteHintsForGate(gate);
+  return {
+    env: ["FIELD_REVIEWER", "FIELD_SITE_NAME", "FIELD_BASE_URL"],
+    evidence: [],
+    runtime: [],
+    closeout: gate.evidence ? [`Refresh ${gate.evidence}`] : [],
+  };
+}
+
+function commandForRequirementGate(gate, baseUrl) {
+  if (!isAggregateCloseoutGate(gate)) return commandForGate(gate, baseUrl);
+  const category = String(gate.category || "").toLowerCase();
+  if (category === "completion audit") return "npm.cmd run completion:audit";
+  if (category === "handover package") {
+    return `npm.cmd run handover:package -- --base-url=${baseUrl} --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME" --strict`;
+  }
+  return `npm.cmd run final:status -- --base-url=${baseUrl} --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`;
+}
+
 function buildBacklogItems(finalStatus, baseUrl) {
   const gates = finalStatus?.data?.remainingGates || [];
   const grouped = new Map();
   gates.forEach((gate) => {
-    const owner = ownerForGate(gate);
-    const phase = phaseForGate(gate);
+    const owner = ownerForRequirementGate(gate);
+    const phase = phaseForRequirementGate(gate);
     const question = questionForGate(gate);
-    const prerequisites = prerequisiteHintsForGate(gate);
+    const prerequisites = prerequisiteHintsForRequirementGate(gate);
     const key = [owner, phase, gate.actionType || "UNKNOWN", question].join("|");
     if (!grouped.has(key)) {
       grouped.set(key, {
@@ -124,7 +165,7 @@ function buildBacklogItems(finalStatus, baseUrl) {
         closeout: [],
         sourceGateIds: [],
         sourceMessages: [],
-        command: commandForGate(gate, baseUrl),
+        command: commandForRequirementGate(gate, baseUrl),
         closeWhen: gate.closeWhen || "The referenced final-status gate is closed.",
       });
     }

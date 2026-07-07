@@ -86,6 +86,16 @@ const gates = [
     message: "Field Preflight: Nginx content security policy",
     closeWhen: "Preflight manifest has no REVIEW or SKIPPED checks required by the field acceptance policy.",
   },
+  {
+    id: "gate-handover-aggregate",
+    actionType: "REVIEW_REQUIRED",
+    category: "Handover Package",
+    status: "REVIEW",
+    message:
+      "Site name metadata is missing or placeholder.; CI status evidence is REVIEW.; Field Preflight field evidence has 5 REVIEW and 3 SKIPPED item(s).; Control Board TCP field evidence has 1 REVIEW and 0 SKIPPED item(s).",
+    closeWhen: "Resolve strictFailureReasons and rerun handover:package.",
+    evidence: "artifacts/handover-package/fixture/manifest.json",
+  },
 ];
 
 assert(questionForGate(gates[0]).includes("control-board host"), "control-board question should ask for TCP field details");
@@ -93,6 +103,7 @@ assert(questionForGate(gates[1]).includes(".env values"), "env question should a
 assert(questionForGate(gates[2]).includes("scanner evidence"), "security question should ask for scanner evidence route");
 assert(questionForGate(gates[3]).includes("GitHub Actions"), "CI question should ask for GitHub Actions closeout");
 assert(questionForGate(gates[4]).includes(".env values"), "CSP field gate should ask for approved env values, not scanner evidence");
+assert(questionForGate(gates[5]).includes("aggregate closeout blockers"), "handover aggregate gate should stay an aggregate closeout question");
 
 const finalStatus = {
   path: "artifacts/final-status/fixture/manifest.json",
@@ -106,18 +117,29 @@ const classification = {
   path: "artifacts/final-gate-classification/fixture/manifest.json",
   data: {
     summary: {
-      remainingGateCount: 5,
-      bucketGateCounts: { hardware_runtime: 1, field_configuration: 2, security_tooling: 1, external_ci: 1 },
+      remainingGateCount: 6,
+      bucketGateCounts: { hardware_runtime: 1, field_configuration: 2, security_tooling: 1, external_ci: 1, package_refresh: 1 },
     },
   },
 };
 
 const items = buildBacklogItems(finalStatus, "http://field.local:8080");
-assert(items.length === 5, "backlog should preserve distinct field questions");
+assert(items.length === 6, "backlog should preserve distinct field questions");
 assert(items.some((item) => item.owner === "Control-board TCP" && item.envKeys.includes("CONTROL_BOARD_HOST")), "control-board item should include host env key");
 assert(items.some((item) => item.envKeys.includes("JWT_SECRET")), "env item should include JWT secret key without value");
 assert(items.some((item) => item.runtime.some((entry) => entry.includes("gitleaks"))), "security item should include scanner runtime prerequisite");
 assert(items.some((item) => item.command.includes("ci:status") || item.question.includes("GitHub Actions")), "CI item should include CI closeout path");
+assert(
+  items.some(
+    (item) =>
+      item.owner === "Field Operations" &&
+      item.phase === "Final Status" &&
+      item.question.includes("aggregate closeout blockers") &&
+      item.envKeys.includes("FIELD_BASE_URL") &&
+      !item.envKeys.includes("CONTROL_BOARD_HOST"),
+  ),
+  "aggregate handover gate should not inherit mixed control-board/nginx prerequisites",
+);
 
 const manifest = buildManifest({
   generatedAt: "2026-01-01T00:00:00.000Z",
@@ -130,7 +152,7 @@ const manifest = buildManifest({
 });
 
 assert(manifest.status === "OPEN", "manifest should be OPEN while questions remain");
-assert(manifest.summary.itemCount === 5, "manifest should count backlog items");
+assert(manifest.summary.itemCount === 6, "manifest should count backlog items");
 assert(manifest.sourceFinalStatus.includes("final-status"), "manifest should link final status source");
 assert(manifest.classificationSummary.bucketGateCounts.security_tooling === 1, "manifest should keep classification summary");
 assert(manifest.metadataEnvKeys.includes("FIELD_BASE_URL"), "manifest should expose field base URL as metadata env key");
