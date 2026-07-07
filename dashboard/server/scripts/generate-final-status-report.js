@@ -466,7 +466,7 @@ function buildFinalStatusReport(input = {}) {
   const referenceFreshness = refsAreFresh(handoverPackage, evidenceRefs);
   const git = buildGitState(input.git);
   const sourceRevisionFreshness = sourceGitFreshness(evidenceRefs, git);
-  const baseUrl = input.baseUrl || "http://localhost:8080";
+  const baseUrl = input.baseUrl || process.env.FIELD_BASE_URL || "http://localhost:8080";
   const generatedBy = input.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
   const siteName = input.siteName || "unspecified";
   const deliveryEntrypointConsistency = endpointConsistency(baseUrl, evidenceRefs);
@@ -1149,7 +1149,7 @@ function main() {
   const outputRoot = argValue("output-root", "artifacts/final-status");
   const outputDir = path.join(root, outputRoot, timestampForPath());
   const manifest = buildFinalStatusReport({
-    baseUrl: argValue("base-url", "http://localhost:8080"),
+    baseUrl: argValue("base-url", process.env.FIELD_BASE_URL || "http://localhost:8080"),
     siteName: argValue("site-name", "unspecified"),
     generatedBy: argValue("generated-by", process.env.USERNAME || process.env.USER || "Codex"),
   });

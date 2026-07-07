@@ -184,7 +184,7 @@ function buildManifest(input = {}) {
     : readLatestJsonManifest("artifacts/field-action-board");
   const generatedBy = input.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
   const siteName = input.siteName || actionBoard?.data?.siteName || "unspecified";
-  const baseUrl = input.baseUrl || actionBoard?.data?.baseUrl || "http://localhost:8080";
+  const baseUrl = input.baseUrl || process.env.FIELD_BASE_URL || actionBoard?.data?.baseUrl || "http://localhost:8080";
   const commandGroups = [
     ...buildCommandGroups(actionBoard),
     ...buildMetadataCommandGroups(generatedBy, siteName, baseUrl),

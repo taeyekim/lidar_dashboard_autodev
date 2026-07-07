@@ -33,6 +33,15 @@ const serverPackageJson = readProjectFile("dashboard/server/package.json");
 const evidenceScript = readProjectFile("dashboard/server/scripts/generate-delivery-evidence.js");
 const securityEvidenceScript = readProjectFile("dashboard/server/scripts/generate-security-evidence.js");
 const runtimeEvidenceScript = readProjectFile("dashboard/server/scripts/generate-runtime-evidence.js");
+const fieldReadinessReport = readProjectFile("dashboard/server/scripts/generate-field-readiness-report.js");
+const fieldActionBoard = readProjectFile("dashboard/server/scripts/generate-field-action-board.js");
+const fieldGateClosureMap = readProjectFile("dashboard/server/scripts/generate-field-gate-closure-map.js");
+const fieldOwnerBriefs = readProjectFile("dashboard/server/scripts/generate-field-owner-briefs.js");
+const fieldRiskRegister = readProjectFile("dashboard/server/scripts/generate-field-risk-register.js");
+const finalExecutionPlan = readProjectFile("dashboard/server/scripts/generate-final-execution-plan.js");
+const finalGateClassification = readProjectFile("dashboard/server/scripts/generate-final-gate-classification.js");
+const finalStatusReport = readProjectFile("dashboard/server/scripts/generate-final-status-report.js");
+const manualEvidenceDrafts = readProjectFile("dashboard/server/scripts/generate-manual-evidence-drafts.js");
 const controlBoardSimulator = readProjectFile("dashboard/server/scripts/control-board-tcp-simulator.js");
 const securityScanScript = readProjectFile("scripts/security-scan.ps1");
 const fieldPreflightScript = readProjectFile("scripts/field-preflight.ps1");
@@ -303,6 +312,17 @@ assert(
   [runtimeEvidenceScript, "presentKeys", "runtime evidence script"],
   [runtimeEvidenceScript, "missingKeys", "runtime evidence script"],
   [runtimeEvidenceScript, "Values are intentionally omitted.", "runtime evidence script"],
+  [runtimeEvidenceScript, "process.env.FIELD_BASE_URL", "runtime evidence script"],
+  [securityEvidenceScript, "process.env.FIELD_BASE_URL", "security evidence script"],
+  [fieldReadinessReport, "process.env.FIELD_BASE_URL", "field readiness generator"],
+  [fieldActionBoard, "process.env.FIELD_BASE_URL", "field action board generator"],
+  [fieldGateClosureMap, "process.env.FIELD_BASE_URL", "field gate closure map generator"],
+  [fieldOwnerBriefs, "process.env.FIELD_BASE_URL", "field owner briefs generator"],
+  [fieldRiskRegister, "process.env.FIELD_BASE_URL", "field risk register generator"],
+  [finalExecutionPlan, "process.env.FIELD_BASE_URL", "final execution plan generator"],
+  [finalGateClassification, "process.env.FIELD_BASE_URL", "final gate classification generator"],
+  [finalStatusReport, "process.env.FIELD_BASE_URL", "final status generator"],
+  [manualEvidenceDrafts, "process.env.FIELD_BASE_URL", "manual evidence drafts generator"],
   [runtimeSmoke, "FIELD_BASE_URL", "runtime smoke script"],
   [runtimeSmoke, "DEVICE_INGEST_API_KEY", "runtime smoke script"],
   [runtimeSmoke, "X-Device-Key", "runtime smoke script"],

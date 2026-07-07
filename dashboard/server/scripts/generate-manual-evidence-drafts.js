@@ -68,7 +68,7 @@ function buildRiskAcceptanceDraftRows(fieldRiskRegister) {
 }
 
 function buildOperatorWalkthroughCapturePlan(options = {}) {
-  const baseUrl = options.baseUrl || "http://localhost:8080";
+  const baseUrl = options.baseUrl || process.env.FIELD_BASE_URL || "http://localhost:8080";
   const baseApiUrl = options.baseApiUrl || `${baseUrl}/api`;
   const trim = (value) => String(value || "").replace(/\/+$/, "");
   const ui = trim(baseUrl);
@@ -164,7 +164,7 @@ function buildDraftContent(templateContent, definition, options = {}) {
   content = replaceTableValue(content, "Site name", options.siteName);
   content = replaceTableValue(content, "Reviewer", options.reviewer);
   content = replaceTableValue(content, "Entry URL", options.baseUrl);
-  content = replaceTableValue(content, "Base API URL", options.baseApiUrl || `${options.baseUrl || "http://localhost:8080"}/api`);
+  content = replaceTableValue(content, "Base API URL", options.baseApiUrl || `${options.baseUrl || process.env.FIELD_BASE_URL || "http://localhost:8080"}/api`);
   content = replaceTableValue(content, "Base URL", options.baseUrl);
   content = replaceTableValue(content, "Captured at", options.generatedAt);
   content = replaceTableValue(content, "Acceptance date", options.generatedAt ? options.generatedAt.slice(0, 10) : "");
@@ -243,7 +243,7 @@ function writeManualEvidenceDrafts(options = {}) {
     generatedBy: options.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
     siteName: options.siteName || "unspecified",
     hostName: os.hostname(),
-    baseUrl: options.baseUrl || "http://localhost:8080",
+    baseUrl: options.baseUrl || process.env.FIELD_BASE_URL || "http://localhost:8080",
     force: options.force === true,
     git: options.git || {
       branch: gitValue(["rev-parse", "--abbrev-ref", "HEAD"]),
@@ -336,7 +336,7 @@ function main() {
     generatedBy: argValue("generated-by", process.env.USERNAME || process.env.USER || "Codex"),
     siteName: argValue("site-name", "unspecified"),
     reviewer: argValue("reviewer", ""),
-    baseUrl: argValue("base-url", "http://localhost:8080"),
+    baseUrl: argValue("base-url", process.env.FIELD_BASE_URL || "http://localhost:8080"),
     baseApiUrl: argValue("base-api-url", ""),
     force: hasFlag("force"),
   });

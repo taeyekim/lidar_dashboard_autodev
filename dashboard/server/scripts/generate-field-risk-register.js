@@ -330,7 +330,7 @@ function buildManifest(options = {}) {
     generatedBy,
     siteName,
     hostName: options.hostName || os.hostname(),
-    baseUrl: options.baseUrl || finalStatus?.data?.baseUrl || "http://localhost:8080",
+    baseUrl: options.baseUrl || process.env.FIELD_BASE_URL || finalStatus?.data?.baseUrl || "http://localhost:8080",
     status: riskItems.length > 0 ? "OPEN" : "NO_OPEN_RISKS",
     openRiskCount: riskItems.length,
     copyToRiskAcceptanceCount: riskItems.filter((item) => item.copyToRiskAcceptance).length,

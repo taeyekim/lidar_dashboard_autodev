@@ -437,7 +437,7 @@ function main() {
   const outputDir = path.join(root, outputRoot, timestampForPath());
   ensureDir(outputDir);
   const manifest = buildManifest({
-    baseUrl: argValue("base-url", "http://localhost:8080"),
+    baseUrl: argValue("base-url", process.env.FIELD_BASE_URL || "http://localhost:8080"),
     generatedBy: argValue("generated-by", process.env.USERNAME || process.env.USER || "Codex"),
     siteName: argValue("site-name", "unspecified"),
   });

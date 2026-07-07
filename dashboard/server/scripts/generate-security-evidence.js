@@ -195,7 +195,7 @@ function scannerCloseoutCommand(value, targetUrl) {
 }
 
 function buildScannerCloseout(checks, options = {}) {
-  const targetUrl = options.targetUrl || "http://localhost:8080";
+  const targetUrl = options.targetUrl || process.env.FIELD_BASE_URL || "http://localhost:8080";
   return scannerCloseoutDefinitions.map((definition) => {
     const relatedChecks = checks.filter((item) => definition.checks.includes(item.label));
     const blocking = relatedChecks.some((item) => item.disposition.blocksStrictAcceptance);
@@ -569,7 +569,7 @@ function main() {
   const useDockerScanners = process.argv.includes("--use-docker-scanners");
   const targetUrlArg = process.argv.find((arg) => arg.startsWith("--target-url="));
   const outputRootArg = process.argv.find((arg) => arg.startsWith("--output-root="));
-  const targetUrl = targetUrlArg ? targetUrlArg.slice("--target-url=".length) : "http://localhost:8080";
+  const targetUrl = targetUrlArg ? targetUrlArg.slice("--target-url=".length) : process.env.FIELD_BASE_URL || "http://localhost:8080";
   const outputRoot = outputRootArg ? outputRootArg.slice("--output-root=".length) : "artifacts/security";
   const outputDir = path.join(root, outputRoot, timestampForPath());
   ensureDir(outputDir);

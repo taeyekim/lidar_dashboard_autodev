@@ -419,7 +419,7 @@ function buildExecutionQueue(items) {
 
 function buildManifest(input = {}) {
   const finalStatus = input.finalStatus || readLatestJsonManifest("artifacts/final-status");
-  const baseUrl = input.baseUrl || finalStatus?.data?.baseUrl || "http://localhost:8080";
+  const baseUrl = input.baseUrl || process.env.FIELD_BASE_URL || finalStatus?.data?.baseUrl || "http://localhost:8080";
   const generatedBy = input.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
   const siteName = input.siteName || finalStatus?.data?.siteName || "unspecified";
   const items = [

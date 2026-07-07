@@ -166,7 +166,7 @@ function main() {
   const runSmoke = process.argv.includes("--run-smoke");
   const useExistingStack = process.argv.includes("--use-existing-stack");
   const baseUrlArg = process.argv.find((arg) => arg.startsWith("--base-url="));
-  const baseUrl = baseUrlArg ? baseUrlArg.slice("--base-url=".length) : "http://localhost:8080";
+  const baseUrl = baseUrlArg ? baseUrlArg.slice("--base-url=".length) : process.env.FIELD_BASE_URL || "http://localhost:8080";
   const outputRootArg = process.argv.find((arg) => arg.startsWith("--output-root="));
   const outputRoot = outputRootArg ? outputRootArg.slice("--output-root=".length) : "artifacts/runtime";
   const outputDir = path.join(root, outputRoot, timestampForPath());
