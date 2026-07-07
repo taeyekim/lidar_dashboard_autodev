@@ -74,6 +74,13 @@ const ENV_KEY_GUIDE = {
     closes: "Device ingest key",
     verify: "field:preflight, runtime:evidence",
   },
+  FIELD_BASE_URL: {
+    owner: "Field Operations",
+    valueShape: "delivery Nginx/operator entrypoint URL, e.g. http://<dashboard-pc-ip>:<nginx-port>",
+    secret: false,
+    closes: "Shared field command base URL",
+    verify: "final:refresh, field:readiness, handover:package",
+  },
   FIELD_REVIEWER: {
     owner: "PM/QA",
     valueShape: "named reviewer or role signing field evidence",
@@ -259,6 +266,7 @@ function placeholderForEnvKey(key) {
     CONTROL_BOARD_LIVE_APPROVED: "false",
     CONTROL_BOARD_PORT: "replace_in_field",
     CORS_ORIGINS: "replace_in_field",
+    FIELD_BASE_URL: "http://localhost:8080",
     FIELD_REVIEWER: "replace_in_field",
     FIELD_SITE_NAME: "replace_in_field",
     NGINX_CONTENT_SECURITY_POLICY: "replace_in_field",

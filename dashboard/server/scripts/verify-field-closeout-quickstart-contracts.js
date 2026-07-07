@@ -46,7 +46,7 @@ const actionItems = [
     command: "npm.cmd run field:preflight",
     closeWhen: "preflight has no review items",
     prerequisites: {
-      env: ["JWT_SECRET", "CORS_ORIGINS", "JWT_SECRET"],
+      env: ["JWT_SECRET", "CORS_ORIGINS", "FIELD_BASE_URL", "JWT_SECRET"],
       evidence: [],
       runtime: ["Nginx is running"],
       closeout: ["Refresh field preflight"],
@@ -113,6 +113,10 @@ assert(manifest.openActionCount === 2, "quickstart should count open actions");
 assert(manifest.securityRequiredCount === 1, "quickstart should copy security bucket count");
 assert(manifest.envGuide.some((item) => item.key === "JWT_SECRET" && item.secret === true), "quickstart should mark JWT_SECRET as secret");
 assert(manifest.envGuide.some((item) => item.key === "CONTROL_BOARD_HOST" && item.owner === "Control-board TCP"), "quickstart should explain control board host ownership");
+assert(
+  manifest.envGuide.some((item) => item.key === "FIELD_BASE_URL" && item.valueShape.includes("delivery Nginx/operator entrypoint")),
+  "quickstart should explain FIELD_BASE_URL ownership and value shape",
+);
 assert(manifest.phaseQueue.length === 2, "quickstart should build phase queue");
 assert(manifest.ownerQueue.length === 1, "quickstart should build owner queue");
 assert(manifest.sourceFieldEnvCloseout.includes("field-env-closeout"), "quickstart should link field env closeout evidence");
@@ -129,6 +133,8 @@ const markdown = buildMarkdown(manifest);
   "Value Shape",
   "Verify With",
   "long random JWT signing secret",
+  "FIELD_BASE_URL",
+  "delivery Nginx/operator entrypoint",
   "CONTROL_BOARD_HOST",
   "Evidence Files To Prepare",
   "Phase Queue",
