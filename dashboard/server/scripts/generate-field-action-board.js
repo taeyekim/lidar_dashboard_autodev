@@ -10,6 +10,7 @@ const { resolveFieldBaseUrl } = require("./field-env");
 const root = path.join(__dirname, "..", "..", "..");
 const fieldReviewerArg = '"$env:FIELD_REVIEWER"';
 const fieldSiteArg = '"$env:FIELD_SITE_NAME"';
+const fieldMetadataEnvKeys = ["FIELD_REVIEWER", "FIELD_SITE_NAME", "FIELD_BASE_URL"];
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -149,7 +150,7 @@ function runtimeNoteForGate(gate) {
 function prerequisiteHintsForGate(gate) {
   const text = `${gate.category || ""} ${gate.status || ""} ${gate.actionType || ""} ${gate.message || ""} ${gate.closeWhen || ""}`.toLowerCase();
   const hints = {
-    env: ["FIELD_REVIEWER", "FIELD_SITE_NAME"],
+    env: [...fieldMetadataEnvKeys],
     evidence: [],
     runtime: [],
     closeout: [],
@@ -254,7 +255,7 @@ function buildMetadataActionItems(generatedBy, siteName, baseUrl) {
         evidence: null,
         runtimeNote: "",
         prerequisites: {
-          env: ["FIELD_REVIEWER", "FIELD_SITE_NAME"],
+          env: [...fieldMetadataEnvKeys],
           evidence: [],
           runtime: [],
           closeout: ["Regenerate field-action-board with concrete reviewer metadata"],
@@ -276,7 +277,7 @@ function buildMetadataActionItems(generatedBy, siteName, baseUrl) {
       evidence: null,
       runtimeNote: "",
       prerequisites: {
-        env: ["FIELD_REVIEWER", "FIELD_SITE_NAME"],
+        env: [...fieldMetadataEnvKeys],
         evidence: [],
         runtime: [],
         closeout: ["Regenerate field-action-board with concrete site metadata"],

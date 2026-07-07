@@ -64,6 +64,7 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "sourceGateIds",
   "FIELD_REVIEWER",
   "FIELD_SITE_NAME",
+  "FIELD_BASE_URL",
   "closeoutCommands",
   "dockerScannerRuntime",
   "runtimeNoteForGate",
@@ -212,13 +213,18 @@ assert(
   "scanner gate should expose scanner runtime prerequisite",
 );
 assert(
+  prerequisiteHintsForGate(gates[1]).env.includes("FIELD_BASE_URL"),
+  "scanner gate should expose field base URL metadata prerequisite",
+);
+assert(
   prerequisiteHintsForGate(gates[1]).evidence.includes("artifacts/manual/field-risk-acceptance.md"),
   "scanner gate should expose risk acceptance evidence prerequisite",
 );
 assert(
   prerequisiteHintsForGate(gates[2]).env.includes("CONTROL_BOARD_HOST") &&
     prerequisiteHintsForGate(gates[2]).env.includes("CONTROL_BOARD_DRY_RUN") &&
-    prerequisiteHintsForGate(gates[2]).env.includes("CONTROL_BOARD_LIVE_APPROVED"),
+    prerequisiteHintsForGate(gates[2]).env.includes("CONTROL_BOARD_LIVE_APPROVED") &&
+    prerequisiteHintsForGate(gates[2]).env.includes("FIELD_BASE_URL"),
   "control-board gate should expose live TCP env prerequisites and dry-run transition state",
 );
 assert(
