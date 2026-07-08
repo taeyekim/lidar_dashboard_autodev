@@ -5,6 +5,11 @@ const { spawnSync } = require("child_process");
 
 const { readLatestJsonManifest, timestampForPath } = require("./generate-delivery-evidence");
 const { resolveFieldBaseUrl } = require("./field-env");
+const {
+  actionForFieldEnvKey,
+  placeholderForFieldEnvKey,
+  suggestedValueForFieldEnvKey,
+} = require("./field-env-catalog");
 
 const root = path.join(__dirname, "..", "..", "..");
 
@@ -43,57 +48,17 @@ function buildGitState() {
 
 function actionCommandForItem(item, baseUrl) {
   const strictPreflight = `npm.cmd run field:preflight -- -BaseUrl ${baseUrl} -Reviewer "$env:FIELD_REVIEWER" -SiteName "$env:FIELD_SITE_NAME" -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -Strict`;
-  const commands = {
-    JWT_SECRET: "Set JWT_SECRET to a field-only random value, then rerun strict field preflight. Do not paste the value into evidence.",
-    SEED_ADMIN_PASSWORD: "Set SEED_ADMIN_PASSWORD to a non-example value before seeding the intended field DB, then rerun strict field preflight.",
-    DEVICE_INGEST_API_KEY: "Set DEVICE_INGEST_API_KEY and configure the LiDAR sender X-Device-Key header, or attach accepted trusted-LAN risk evidence.",
-    CONTROL_BOARD_HOST: "Fill CONTROL_BOARD_HOST after the hardware owner confirms the integrated control-board field IP.",
-    CONTROL_BOARD_PORT: "Fill CONTROL_BOARD_PORT after the hardware owner confirms the integrated control-board TCP port.",
-    CONTROL_BOARD_DRY_RUN: "Keep CONTROL_BOARD_DRY_RUN=true until live TCP is approved; set false only for approved live rehearsal.",
-    CONTROL_BOARD_LIVE_APPROVED: "Set CONTROL_BOARD_LIVE_APPROVED=true only after hardware owner approval is recorded.",
-    AUTH_COOKIE_SECURE: "Set AUTH_COOKIE_SECURE=true for the HTTPS/TLS delivery route.",
-    AUTH_COOKIE_SAMESITE: "Set AUTH_COOKIE_SAMESITE to lax, strict, or none according to the delivery topology.",
-    CORS_ORIGINS: "Set CORS_ORIGINS to explicit approved operator UI origins only.",
-    NGINX_WRONGWAY_RATE_LIMIT: "Set NGINX_WRONGWAY_RATE_LIMIT after confirming the LiDAR sender event rate.",
-    NGINX_WRONGWAY_BURST: "Set NGINX_WRONGWAY_BURST after confirming the LiDAR sender burst profile.",
-    NGINX_CONTENT_SECURITY_POLICY: "Set NGINX_CONTENT_SECURITY_POLICY after reviewing final camera, LiDAR, Swagger, and operator UI hosts.",
-    NGINX_SWAGGER_ALLOW: "Set NGINX_SWAGGER_ALLOW to the approved operator/internal CIDR.",
-  };
-  return `${commands[item.name] || item.nextAction || "Fill the field value and rerun strict field preflight."} Close with: ${strictPreflight}`;
+  return `${actionForFieldEnvKey(item.name, item.nextAction)} Close with: ${strictPreflight}`;
 }
 
 function envPlaceholderForItem(item) {
   if (item.redacted !== false) return "<field-secret-redacted>";
-  if (item.name === "CONTROL_BOARD_LIVE_APPROVED" || item.name === "CONTROL_BOARD_DRY_RUN" || item.name === "AUTH_COOKIE_SECURE") {
-    return "<true-or-false>";
-  }
-  if (String(item.name || "").endsWith("_MS") || item.name === "CONTROL_BOARD_PORT" || item.name === "CONTROL_BOARD_RETRY_COUNT") {
-    return "<number>";
-  }
-  return "<field-value>";
+  return placeholderForFieldEnvKey(item.name);
 }
 
 function suggestedValueForItem(item) {
   if (item.redacted !== false) return "<field-secret-redacted>";
-  const suggestions = {
-    CONTROL_BOARD_HOST: "<approved-control-board-ip>",
-    CONTROL_BOARD_LIVE_APPROVED: "false",
-    CONTROL_BOARD_PORT: "<approved-tcp-port>",
-    CONTROL_BOARD_DRY_RUN: "true",
-    CONTROL_BOARD_CONNECT_TIMEOUT_MS: "1000",
-    CONTROL_BOARD_RESPONSE_TIMEOUT_MS: "1000",
-    CONTROL_BOARD_RETRY_COUNT: "1",
-    CONTROL_BOARD_HEARTBEAT_INTERVAL_MS: "5000",
-    AUTH_COOKIE_SECURE: "true",
-    AUTH_COOKIE_SAMESITE: "lax",
-    CORS_ORIGINS: "<approved-operator-ui-origin>",
-    NGINX_WRONGWAY_RATE_LIMIT: "30r/s",
-    NGINX_WRONGWAY_BURST: "60",
-    NGINX_CONTENT_SECURITY_POLICY:
-      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; media-src 'self' blob: http: https:; connect-src 'self' http: https: ws: wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'",
-    NGINX_SWAGGER_ALLOW: "127.0.0.1/32",
-  };
-  return suggestions[item.name] || envPlaceholderForItem(item);
+  return suggestedValueForFieldEnvKey(item.name);
 }
 
 function buildEnvTemplateLines(items) {

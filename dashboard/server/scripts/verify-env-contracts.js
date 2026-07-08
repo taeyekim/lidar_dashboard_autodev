@@ -36,6 +36,7 @@ const securityEvidenceScript = readProjectFile("dashboard/server/scripts/generat
 const runtimeEvidenceScript = readProjectFile("dashboard/server/scripts/generate-runtime-evidence.js");
 const handoverPackageScript = readProjectFile("dashboard/server/scripts/generate-handover-package.js");
 const fieldEnvCloseout = readProjectFile("dashboard/server/scripts/generate-field-env-closeout.js");
+const fieldEnvCatalog = readProjectFile("dashboard/server/scripts/field-env-catalog.js");
 const fieldReadinessReport = readProjectFile("dashboard/server/scripts/generate-field-readiness-report.js");
 const fieldActionBoard = readProjectFile("dashboard/server/scripts/generate-field-action-board.js");
 const fieldGateClosureMap = readProjectFile("dashboard/server/scripts/generate-field-gate-closure-map.js");
@@ -345,6 +346,15 @@ assert(
   [securityEvidenceScript, "resolveFieldBaseUrl", "security evidence script"],
   [fieldReadinessReport, "resolveFieldBaseUrl", "field readiness generator"],
   [fieldEnvCloseout, "resolveFieldBaseUrl", "field env closeout generator"],
+  [fieldEnvCloseout, "field-env-catalog", "field env closeout generator"],
+  [fieldEnvCatalog, "FIELD_ENV_CATALOG", "field env catalog"],
+  [fieldEnvCatalog, "CONTROL_BOARD_HOST", "field env catalog"],
+  [fieldEnvCatalog, "CONTROL_BOARD_PORT", "field env catalog"],
+  [fieldEnvCatalog, "CONTROL_BOARD_LIVE_APPROVED", "field env catalog"],
+  [fieldEnvCatalog, "DEVICE_INGEST_API_KEY", "field env catalog"],
+  [fieldEnvCatalog, "JWT_SECRET", "field env catalog"],
+  [fieldEnvCatalog, "NGINX_SWAGGER_ALLOW", "field env catalog"],
+  [fieldEnvCatalog, "suggestedValueForFieldEnvKey", "field env catalog"],
   [fieldActionBoard, "resolveFieldBaseUrl", "field action board generator"],
   [fieldGateClosureMap, "resolveFieldBaseUrl", "field gate closure map generator"],
   [fieldOwnerBriefs, "resolveFieldBaseUrl", "field owner briefs generator"],

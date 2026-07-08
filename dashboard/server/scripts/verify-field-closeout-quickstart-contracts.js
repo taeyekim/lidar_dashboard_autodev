@@ -18,6 +18,7 @@ function readProjectFile(relativePath) {
 const packageJson = readProjectFile("package.json");
 const serverPackageJson = readProjectFile("dashboard/server/package.json");
 const generator = readProjectFile("dashboard/server/scripts/generate-field-closeout-quickstart.js");
+const catalog = readProjectFile("dashboard/server/scripts/field-env-catalog.js");
 
 [
   [packageJson, "field:closeout-quickstart", "root package scripts"],
@@ -25,14 +26,16 @@ const generator = readProjectFile("dashboard/server/scripts/generate-field-close
   [serverPackageJson, "verify-field-closeout-quickstart-contracts.js", "server verify chain"],
   [generator, "artifacts/field-closeout-quickstart", "quickstart generator"],
   [generator, "Env Keys To Fill", "quickstart generator"],
-  [generator, "ENV_KEY_GUIDE", "quickstart generator"],
+  [generator, "field-env-catalog", "quickstart generator"],
+  [generator, "fieldEnvMeta", "quickstart generator"],
+  [generator, "isSecretFieldEnvKey", "quickstart generator"],
   [generator, "fieldRequirementsBacklog", "quickstart generator"],
   [generator, "sourceFieldRequirementsBacklog", "quickstart generator"],
   [generator, "requirementsBacklogSummary", "quickstart generator"],
   [generator, "Requirements Backlog Summary", "quickstart generator"],
-  [generator, "long random JWT signing secret", "quickstart generator"],
-  [generator, "integrated control-board IPv4", "quickstart generator"],
-  [generator, "never paste into evidence", "quickstart generator"],
+  [catalog, "long random JWT signing secret", "field env catalog"],
+  [catalog, "integrated control-board IPv4", "field env catalog"],
+  [catalog, "never paste into evidence", "field env catalog"],
   [generator, "Phase Queue", "quickstart generator"],
   [generator, "Owner Queue", "quickstart generator"],
   [generator, "Command Queue", "quickstart generator"],

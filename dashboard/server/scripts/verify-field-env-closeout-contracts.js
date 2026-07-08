@@ -25,12 +25,16 @@ function assertIncludes(content, token, label) {
 }
 
 const generator = readProjectFile("dashboard/server/scripts/generate-field-env-closeout.js");
+const catalog = readProjectFile("dashboard/server/scripts/field-env-catalog.js");
 const packageJson = readProjectFile("package.json");
 const serverPackageJson = readProjectFile("dashboard/server/package.json");
 const runbook = readProjectFile("docs/ops/delivery-runbook.md");
 
 [
   [generator, "artifacts/field-env-closeout", "field env closeout generator"],
+  [generator, "field-env-catalog", "field env closeout generator"],
+  [generator, "actionForFieldEnvKey", "field env closeout generator"],
+  [generator, "suggestedValueForFieldEnvKey", "field env closeout generator"],
   [generator, "readinessEvidence", "field env closeout generator"],
   [generator, "requiredFieldValueCount", "field env closeout generator"],
   [generator, "blockingCount", "field env closeout generator"],
@@ -48,13 +52,18 @@ const runbook = readProjectFile("docs/ops/delivery-runbook.md");
   [generator, "readEnvKeySet", "field env closeout generator"],
   [generator, "missingCurrentEnvKeys", "field env closeout generator"],
   [generator, "appendMissingEnvBlockLines", "field env closeout generator"],
-  [generator, "127.0.0.1/32", "field env closeout generator"],
   [generator, "<field-secret-redacted>", "field env closeout generator"],
   [generator, "Do not paste real secret values into evidence", "field env closeout generator"],
   [generator, "strictPreflightCommand", "field env closeout generator"],
-  [generator, "DEVICE_INGEST_API_KEY", "field env closeout generator"],
-  [generator, "NGINX_CONTENT_SECURITY_POLICY", "field env closeout generator"],
-  [generator, "Do not paste the value into evidence", "field env closeout generator"],
+  [catalog, "FIELD_ENV_CATALOG", "field env catalog"],
+  [catalog, "Do not paste the value into evidence", "field env catalog"],
+  [catalog, "DEVICE_INGEST_API_KEY", "field env catalog"],
+  [catalog, "CONTROL_BOARD_HOST", "field env catalog"],
+  [catalog, "NGINX_CONTENT_SECURITY_POLICY", "field env catalog"],
+  [catalog, "NGINX_SWAGGER_ALLOW", "field env catalog"],
+  [catalog, "127.0.0.1/32", "field env catalog"],
+  [catalog, "suggestedValueForFieldEnvKey", "field env catalog"],
+  [catalog, "placeholderForFieldEnvKey", "field env catalog"],
   [packageJson, "field:env-closeout", "root package scripts"],
   [packageJson, "verify:field-env-closeout", "root package scripts"],
   [packageJson, "verify-field-env-closeout-contracts.js", "root smoke chain"],
