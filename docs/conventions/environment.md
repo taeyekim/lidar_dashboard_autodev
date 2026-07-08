@@ -63,6 +63,28 @@
 - 실제 운영 또는 현장 설정이 들어간 `config.json`은 Git에 올리지 않습니다.
 - `config.example.json`에는 예시값만 유지합니다.
 
+## 현장 납품 환경 키
+
+실제 현장값은 루트 `.env`에만 작성합니다. 아래 키는 `.env.example`과 자동 산출물에서 안내하지만, 실제 IP, 포트, 토큰, 비밀번호, 승인 여부는 Git에 올리지 않습니다.
+
+| 키 | 담당 | 관리 기준 |
+| --- | --- | --- |
+| `FIELD_BASE_URL` | Field Operations | Nginx 또는 운영자 UI 진입 URL입니다. 로컬 검토는 `http://localhost:8080`을 사용할 수 있지만, 납품 검수는 현장 URL로 바꿉니다. |
+| `CONTROL_BOARD_HOST` | Control-board TCP | 통합제어보드의 현장 내부망 IP 또는 host입니다. 장비 담당자 확인 전에는 비워 둡니다. |
+| `CONTROL_BOARD_PORT` | Control-board TCP | 통합제어보드 TCP 포트입니다. 실제 포트는 현장 연동 때만 `.env`에 적습니다. |
+| `CONTROL_BOARD_DRY_RUN` | Control-board TCP | 실제 장비 승인 전에는 `true`를 유지합니다. |
+| `CONTROL_BOARD_LIVE_APPROVED` | Control-board TCP + PM | 실제 TCP 명령 시험 승인과 ACK 증거가 준비된 경우에만 `true`로 바꿉니다. |
+| `DEVICE_INGEST_API_KEY` | LiDAR Ingest + Auth/Security | 라이다 PC 또는 브리지의 `X-Device-Key` 공유 키입니다. 실제 값은 증거 문서에 붙이지 않습니다. |
+| `JWT_SECRET` | Auth/Security | 운영 JWT 서명 비밀값입니다. `.env.example`의 예시값을 그대로 쓰지 않습니다. |
+| `SEED_ADMIN_PASSWORD` | Auth/Security | 초기 관리자 비밀번호입니다. 현장 세팅 후 교체 또는 회수 절차를 남깁니다. |
+| `CORS_ORIGINS` | Auth/Security | 운영자 UI origin만 쉼표로 나열합니다. 와일드카드나 불필요한 origin은 금지합니다. |
+| `AUTH_COOKIE_SECURE` / `AUTH_COOKIE_SAMESITE` | Auth/Security | HTTPS/TLS와 배포 토폴로지에 맞춰 설정합니다. `SameSite=None`은 Secure 쿠키가 필요합니다. |
+| `NGINX_SWAGGER_ALLOW` | Nginx Delivery | Swagger 접근 허용 CIDR입니다. 납품 환경에서 `all`로 열어 두지 않습니다. |
+| `NGINX_CONTENT_SECURITY_POLICY` | Nginx Delivery + Auth/Security | 운영자 UI, API, WebSocket, 미디어 경로를 검토한 뒤 승인된 CSP만 사용합니다. |
+| `NGINX_WRONGWAY_RATE_LIMIT` / `NGINX_WRONGWAY_BURST` | Nginx Delivery | 라이다 PC 이벤트 전송량과 버스트 프로파일을 확인한 뒤 정합니다. |
+
+현장값 정리는 `npm run field:env-closeout`, `npm run field:closeout-quickstart`, `npm run final:gate-classification` 산출물을 함께 보고 진행합니다. 키별 소유자와 제안값은 `dashboard/server/scripts/field-env-catalog.js`에서 공통 관리합니다.
+
 ## 데모 서버
 
 | 파일 | 공유 범위 | Git 업로드 | 설명 |
