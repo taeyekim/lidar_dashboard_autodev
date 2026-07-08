@@ -170,10 +170,16 @@ function sanitizeEnvPatchLine(line) {
 }
 
 function buildEnvPatchBlockLines(envGuide, fieldEnvCloseout) {
-  const closeoutLines = fieldEnvCloseout?.data?.envFile?.appendMissingEnvBlockLines || [];
+  const closeout = unwrapManifestData(fieldEnvCloseout);
+  const closeoutLines = closeout?.envFile?.appendMissingEnvBlockLines || [];
   const sanitizedCloseoutLines = closeoutLines.map(sanitizeEnvPatchLine).filter(Boolean);
   if (sanitizedCloseoutLines.length > 0) return uniq(sanitizedCloseoutLines);
   return uniq((envGuide || []).map((item) => `${item.key}=${placeholderForEnvKey(item.key)}`));
+}
+
+function unwrapManifestData(manifest) {
+  if (!manifest) return null;
+  return manifest.data || manifest;
 }
 
 function summarizeRequirementsBacklog(fieldRequirementsBacklog) {
@@ -196,6 +202,86 @@ function summarizeRequirementsBacklog(fieldRequirementsBacklog) {
     ownerCount: data.ownerCount ?? Object.keys(summary.byOwner || {}).length,
     priorityCounts: data.priorityCounts || summary.byPriority || {},
     actionTypeCounts: data.actionTypeCounts || summary.byActionType || {},
+  };
+}
+
+function filterEnvGuide(envGuide, keys) {
+  const keySet = new Set(keys);
+  return (envGuide || []).filter((item) => keySet.has(item.key));
+}
+
+function buildFieldCloseoutPacket({ baseUrl, envGuide, fieldEnvCloseout, classification, finalStatus, requirementsBacklogSummary }) {
+  const envData = unwrapManifestData(fieldEnvCloseout) || {};
+  const summary = classification?.data?.summary || {};
+  const remainingGates = finalStatus?.data?.remainingGates || [];
+  const liveTcpKeys = ["CONTROL_BOARD_HOST", "CONTROL_BOARD_PORT", "CONTROL_BOARD_DRY_RUN", "CONTROL_BOARD_LIVE_APPROVED"];
+  const strictPreflightKeys = [
+    "JWT_SECRET",
+    "CORS_ORIGINS",
+    "DEVICE_INGEST_API_KEY",
+    "AUTH_COOKIE_SECURE",
+    "AUTH_COOKIE_SAMESITE",
+    "NGINX_SWAGGER_ALLOW",
+    "NGINX_CONTENT_SECURITY_POLICY",
+    "NGINX_WRONGWAY_RATE_LIMIT",
+    "NGINX_WRONGWAY_BURST",
+    "SEED_ADMIN_PASSWORD",
+  ];
+  const reviewerKeys = ["FIELD_SITE_NAME", "FIELD_REVIEWER", "FIELD_BASE_URL"];
+  const envGroups = [
+    { id: "reviewer", label: "Reviewer/site metadata", keys: reviewerKeys },
+    { id: "auth-security", label: "Auth/security delivery values", keys: strictPreflightKeys },
+    { id: "control-board-live-tcp", label: "Control-board live TCP values", keys: liveTcpKeys },
+  ].map((group) => ({
+    ...group,
+    items: filterEnvGuide(envGuide, group.keys),
+    missingCount: filterEnvGuide(envGuide, group.keys).length,
+  }));
+
+  return {
+    summary: {
+      baseUrl,
+      remainingGateCount: remainingGates.length,
+      openEnvItemCount: envData.openItemCount ?? envData.closeoutItemCount ?? envData.summary?.openItemCount ?? null,
+      blockingEnvItemCount: envData.blockingItemCount ?? envData.blockingCount ?? envData.summary?.blockingItemCount ?? null,
+      reviewEnvItemCount: envData.reviewItemCount ?? envData.reviewCount ?? envData.summary?.reviewItemCount ?? null,
+      fieldRequiredCount: summary.fieldRequiredCount ?? null,
+      refreshOnlyCount: summary.refreshOnlyCount ?? null,
+      requirementsBacklogOpenItemCount: requirementsBacklogSummary.openItemCount,
+    },
+    envGroups,
+    liveTcpChecklist: [
+      "Keep CONTROL_BOARD_DRY_RUN=true for every local rehearsal until hardware approval is recorded.",
+      "Fill CONTROL_BOARD_HOST and CONTROL_BOARD_PORT with the integrated control-board TCP endpoint from the field network.",
+      "Set CONTROL_BOARD_LIVE_APPROVED=true only for the approved live window, then set CONTROL_BOARD_DRY_RUN=false.",
+      "Run scripts/control-board-field-rehearsal.ps1 with -AllowLiveTcp and capture acknowledged command evidence.",
+      "Restore the agreed safe/default control-board state and refresh field readiness, field acceptance, and final status.",
+    ],
+    strictCommandSequence: [
+      `npm.cmd run field:preflight -- -BaseUrl "${baseUrl}" -RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -Strict`,
+      `npm.cmd run field:readiness -- --base-url="${baseUrl}"`,
+      `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/control-board-field-rehearsal.ps1 -BaseUrl "${baseUrl}" -AllowLiveTcp`,
+      `npm.cmd run field:acceptance -- -BaseUrl "${baseUrl}" -StrictPreflight -RequireScanners`,
+      `npm.cmd run handover:package -- --base-url="${baseUrl}" --strict`,
+      `npm.cmd run final:status -- --base-url="${baseUrl}"`,
+      `npm.cmd run final:gate-classification -- --base-url="${baseUrl}"`,
+      `npm.cmd run field:closeout-quickstart -- --base-url="${baseUrl}"`,
+    ],
+    evidenceToAttach: [
+      "artifacts/field-preflight/<timestamp>/manifest.json",
+      "artifacts/field-readiness/<timestamp>/manifest.json",
+      "artifacts/field-control-board-rehearsal/<timestamp>/manifest.json",
+      "artifacts/field-acceptance/<timestamp>/manifest.json",
+      "artifacts/security/<timestamp>/manifest.json",
+      "artifacts/ci-status/<timestamp>/manifest.json",
+      "artifacts/handover-package/<timestamp>/manifest.json",
+      "artifacts/final-status/<timestamp>/manifest.json",
+    ],
+    unresolvedRequirements: [
+      "Level-2 escalation rule is intentionally a field measurement requirement before implementation is closed.",
+      "Live integrated control-board ACK cannot be marked complete without hardware-owner approval and captured ACK evidence.",
+      "Delivery Nginx exposure values must be reviewed against the final operator network and Swagger access policy.",
+    ],
   };
 }
 
@@ -222,6 +308,15 @@ function buildManifest(input = {}) {
   const ownerQueue = buildOwnerQueue(actionBoard);
   const summary = classification?.data?.summary || {};
   const envGuide = buildEnvGuide(prerequisites.env);
+  const requirementsBacklogSummary = summarizeRequirementsBacklog(fieldRequirementsBacklog);
+  const fieldCloseoutPacket = buildFieldCloseoutPacket({
+    baseUrl,
+    envGuide,
+    fieldEnvCloseout,
+    classification,
+    finalStatus,
+    requirementsBacklogSummary,
+  });
   return {
     generatedAt: input.generatedAt || new Date().toISOString(),
     generatedBy: input.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
@@ -234,7 +329,7 @@ function buildManifest(input = {}) {
     sourceFinalGateClassification: classification?.path || null,
     sourceFieldEnvCloseout: fieldEnvCloseout?.path || null,
     sourceFieldRequirementsBacklog: fieldRequirementsBacklog?.path || null,
-    requirementsBacklogSummary: summarizeRequirementsBacklog(fieldRequirementsBacklog),
+    requirementsBacklogSummary,
     remainingGateCount: finalStatus?.data?.remainingGates?.length ?? null,
     openActionCount: actionItems.length,
     bucketGateCounts: summary.bucketGateCounts || {},
@@ -244,6 +339,7 @@ function buildManifest(input = {}) {
     prerequisites,
     envGuide,
     envPatchBlockLines: buildEnvPatchBlockLines(envGuide, fieldEnvCloseout),
+    fieldCloseoutPacket,
     phaseQueue,
     ownerQueue,
     commandQueue: uniq(phaseQueue.flatMap((phase) => phase.commands)),
@@ -289,6 +385,50 @@ function buildMarkdown(manifest) {
     "## Guardrails",
     "",
     ...manifest.guardrails.map((item) => `- ${item}`),
+    "",
+    "## Field Closeout Packet",
+    "",
+    `- Packet base URL: ${manifest.fieldCloseoutPacket.summary.baseUrl}`,
+    `- Packet remaining gates: ${manifest.fieldCloseoutPacket.summary.remainingGateCount}`,
+    `- Packet open env items: ${manifest.fieldCloseoutPacket.summary.openEnvItemCount ?? "unknown"}`,
+    `- Packet blocking env items: ${manifest.fieldCloseoutPacket.summary.blockingEnvItemCount ?? "unknown"}`,
+    `- Packet review env items: ${manifest.fieldCloseoutPacket.summary.reviewEnvItemCount ?? "unknown"}`,
+    `- Packet field-required gates: ${manifest.fieldCloseoutPacket.summary.fieldRequiredCount ?? "unknown"}`,
+    `- Packet refresh-only gates: ${manifest.fieldCloseoutPacket.summary.refreshOnlyCount ?? "unknown"}`,
+    `- Packet open requirements: ${manifest.fieldCloseoutPacket.summary.requirementsBacklogOpenItemCount ?? "unknown"}`,
+    "",
+    "### Required Field Inputs",
+    "",
+    ...(manifest.fieldCloseoutPacket.envGroups.length > 0
+      ? manifest.fieldCloseoutPacket.envGroups.flatMap((group) => [
+          `#### ${group.label}`,
+          "",
+          "| Key | Owner | Secret | Value Shape | Verify With |",
+          "| --- | --- | --- | --- | --- |",
+          ...(group.items.length > 0
+            ? group.items.map(
+                (item) =>
+                  `| ${markdownCell(item.key)} | ${markdownCell(item.owner)} | ${item.secret ? "yes" : "no"} | ${markdownCell(item.valueShape)} | ${markdownCell(item.verify)} |`,
+              )
+            : ["| none | - | no | - | - |"]),
+          "",
+        ])
+      : ["- none", ""]),
+    "### Live TCP ACK Checklist",
+    "",
+    ...manifest.fieldCloseoutPacket.liveTcpChecklist.map((item) => `- ${item}`),
+    "",
+    "### Strict Closeout Command Sequence",
+    "",
+    ...manifest.fieldCloseoutPacket.strictCommandSequence.map((command, index) => `${index + 1}. \`${command}\``),
+    "",
+    "### Evidence To Attach",
+    "",
+    ...manifest.fieldCloseoutPacket.evidenceToAttach.map((item) => `- \`${item}\``),
+    "",
+    "### Deferred Field Requirements",
+    "",
+    ...manifest.fieldCloseoutPacket.unresolvedRequirements.map((item) => `- ${item}`),
     "",
     "## Env Keys To Fill",
     "",
@@ -380,4 +520,5 @@ module.exports = {
   buildMarkdown,
   flattenPrerequisites,
   buildPhaseQueue,
+  buildFieldCloseoutPacket,
 };

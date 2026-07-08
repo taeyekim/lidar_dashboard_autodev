@@ -33,6 +33,14 @@ const catalog = readProjectFile("dashboard/server/scripts/field-env-catalog.js")
   [generator, "sourceFieldRequirementsBacklog", "quickstart generator"],
   [generator, "requirementsBacklogSummary", "quickstart generator"],
   [generator, "Requirements Backlog Summary", "quickstart generator"],
+  [generator, "Field Closeout Packet", "quickstart generator"],
+  [generator, "Required Field Inputs", "quickstart generator"],
+  [generator, "Live TCP ACK Checklist", "quickstart generator"],
+  [generator, "Strict Closeout Command Sequence", "quickstart generator"],
+  [generator, "Evidence To Attach", "quickstart generator"],
+  [generator, "fieldCloseoutPacket", "quickstart generator"],
+  [generator, "CONTROL_BOARD_LIVE_APPROVED=true", "quickstart generator"],
+  [generator, "scripts/control-board-field-rehearsal.ps1", "quickstart generator"],
   [catalog, "long random JWT signing secret", "field env catalog"],
   [catalog, "integrated control-board IPv4", "field env catalog"],
   [catalog, "never paste into evidence", "field env catalog"],
@@ -108,6 +116,9 @@ const manifest = buildManifest({
   fieldEnvCloseout: {
     path: "artifacts/field-env-closeout/fixture/manifest.json",
     data: {
+      openItemCount: 2,
+      blockingItemCount: 1,
+      reviewItemCount: 1,
       envFile: {
         appendMissingEnvBlockLines: ["JWT_SECRET=<field-secret-redacted>", "CONTROL_BOARD_DRY_RUN=true"],
       },
@@ -148,6 +159,25 @@ assert(manifest.requirementsBacklogSummary.ownerCount === 2, "quickstart should 
 assert(manifest.requirementsBacklogSummary.priorityCounts.P0 === 1, "quickstart should preserve backlog priority counts");
 assert(manifest.envPatchBlockLines.includes("JWT_SECRET=replace_in_field"), "quickstart should sanitize secret patch values");
 assert(manifest.envPatchBlockLines.includes("CONTROL_BOARD_DRY_RUN=true"), "quickstart should include safe control-board defaults");
+assert(manifest.fieldCloseoutPacket.summary.openEnvItemCount === 2, "quickstart packet should summarize open env items");
+assert(
+  manifest.fieldCloseoutPacket.envGroups.some(
+    (group) => group.id === "control-board-live-tcp" && group.items.some((item) => item.key === "CONTROL_BOARD_HOST"),
+  ),
+  "quickstart packet should group live TCP env keys",
+);
+assert(
+  manifest.fieldCloseoutPacket.liveTcpChecklist.some((item) => item.includes("CONTROL_BOARD_LIVE_APPROVED=true")),
+  "quickstart packet should include live approval checklist",
+);
+assert(
+  manifest.fieldCloseoutPacket.strictCommandSequence.some((command) => command.includes("control-board-field-rehearsal.ps1")),
+  "quickstart packet should include live TCP rehearsal command",
+);
+assert(
+  manifest.fieldCloseoutPacket.evidenceToAttach.some((item) => item.includes("field-control-board-rehearsal")),
+  "quickstart packet should list control-board rehearsal evidence",
+);
 
 const markdown = buildMarkdown(manifest);
 [
@@ -164,6 +194,16 @@ const markdown = buildMarkdown(manifest);
   "Source field requirements backlog",
   "Requirements Backlog Summary",
   "Item count: 3",
+  "Field Closeout Packet",
+  "Required Field Inputs",
+  "Auth/security delivery values",
+  "Control-board live TCP values",
+  "Live TCP ACK Checklist",
+  "Strict Closeout Command Sequence",
+  "Evidence To Attach",
+  "Deferred Field Requirements",
+  "CONTROL_BOARD_LIVE_APPROVED=true",
+  "control-board-field-rehearsal.ps1",
   "CONTROL_BOARD_HOST",
   "Evidence Files To Prepare",
   "Phase Queue",
