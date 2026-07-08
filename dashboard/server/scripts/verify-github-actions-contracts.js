@@ -47,6 +47,9 @@ assertIncludes("npm run ci:db");
 assertIncludes("npm --prefix dashboard/dashboard-web run lint");
 assertIncludes("npm run ci");
 assertIncludes("npm run verify:audit-policy");
+assertIncludes("Prepare Compose env file");
+assertIncludes("cp .env.example .env");
+assertOrder("cp .env.example .env", "docker compose config --quiet");
 assertIncludes("docker compose config --quiet");
 
 console.log("github actions contracts ok");
