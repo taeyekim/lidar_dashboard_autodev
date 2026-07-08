@@ -30,6 +30,10 @@ const packageJson = readProjectFile("package.json");
 const generator = readProjectFile("dashboard/server/scripts/generate-security-evidence.js");
 const prepareTools = readProjectFile("scripts/prepare-security-tools.ps1");
 
+assert((generator.match(/function securityDisposition/g) || []).length === 1, "security disposition should have one canonical implementation");
+assert(!generator.includes("李⑤떒"), "security evidence generator should not contain mojibake Korean labels");
+assert(generator.includes("dispositionLabelsKo"), "security evidence should centralize Korean disposition labels");
+assert(generator.includes('DELIVERY_FIX: "납품 전 수정"'), "security evidence should preserve Korean delivery-fix labels");
 assert(packageJson.includes("security:tools:prepare"), "root package scripts should expose portable security tool preparation");
 assert(generator.includes("securityToolDirs"), "security evidence should search local security tool dirs");
 assert(generator.includes(".local-tools"), "security evidence should search .local-tools");

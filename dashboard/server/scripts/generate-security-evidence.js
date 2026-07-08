@@ -348,66 +348,19 @@ function blockingScannerExecutionFailure(item) {
   return label.includes("gitleaks") || label.includes("trivy");
 }
 
-function securityDisposition(item, requireScanners) {
-  if (item.status === "policy_accepted") {
-    return {
-      code: "RISK_ACCEPTED",
-      labelKo: "위험 수용",
-      labelEn: "Risk accepted",
-      reason: item.reason || "Finding is accepted by the documented audit policy.",
-      blocksStrictAcceptance: false,
-    };
-  }
-  if (requiredScannerFailure(item, requireScanners)) {
-    return {
-      code: "BLOCKING",
-      labelKo: "차단",
-      labelEn: "Blocking",
-      reason: `${item.label} is required for strict security acceptance but was skipped.`,
-      blocksStrictAcceptance: true,
-    };
-  }
-  if (item.status === "skipped") {
-    return {
-      code: "UNVERIFIED",
-      labelKo: "미검증",
-      labelEn: "Unverified",
-      reason: item.reason || "Security check was not executed.",
-      blocksStrictAcceptance: false,
-    };
-  }
-  if (item.exitCode === 0) {
-    return {
-      code: "PASS",
-      labelKo: "통과",
-      labelEn: "Pass",
-      reason: "Command completed successfully.",
-      blocksStrictAcceptance: false,
-    };
-  }
-  if (blockingScannerExecutionFailure(item)) {
-    return {
-      code: "BLOCKING",
-      labelKo: "李⑤떒",
-      labelEn: "Blocking",
-      reason: item.error || `${item.label} did not produce acceptable scanner evidence and exited with code ${item.exitCode}.`,
-      blocksStrictAcceptance: true,
-    };
-  }
-  return {
-    code: item.label === "npm audit policy gate" ? "BLOCKING" : "DELIVERY_FIX",
-    labelKo: item.label === "npm audit policy gate" ? "차단" : "납품 전 수정",
-    labelEn: item.label === "npm audit policy gate" ? "Blocking" : "Delivery fix required",
-    reason: item.error || `${item.label} exited with code ${item.exitCode}.`,
-    blocksStrictAcceptance: item.label === "npm audit policy gate",
-  };
-}
+const dispositionLabelsKo = Object.freeze({
+  PASS: "통과",
+  BLOCKING: "차단",
+  DELIVERY_FIX: "납품 전 수정",
+  RISK_ACCEPTED: "위험 수용",
+  UNVERIFIED: "미검증",
+});
 
-function disposition(code, label, reason, blocksStrictAcceptance) {
+function disposition(code, labelEn, reason, blocksStrictAcceptance) {
   return {
     code,
-    labelKo: label,
-    labelEn: label,
+    labelKo: dispositionLabelsKo[code] || labelEn,
+    labelEn,
     reason,
     blocksStrictAcceptance,
   };
