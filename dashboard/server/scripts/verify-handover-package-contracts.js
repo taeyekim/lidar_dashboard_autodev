@@ -91,6 +91,8 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "fieldRequirementsBacklog",
   "field:requirements-backlog",
   "field:closeout-quickstart",
+  "localVerification",
+  "Local verification",
   "buildCloseoutArtifactSummary",
   "closeoutArtifactSummary",
   "Field Closeout Artifact Summary",

@@ -55,6 +55,9 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "runtime:evidence", "final closeout refresh generator"],
   [generator, "--run-smoke", "final closeout refresh generator"],
   [generator, "--use-existing-stack", "final closeout refresh generator"],
+  [generator, "local:verification", "final closeout refresh generator"],
+  [generator, "local-verification", "final closeout refresh generator"],
+  [generator, "standalone handover artifact", "final closeout refresh generator"],
   [generator, "field:preflight", "final closeout refresh generator"],
   [generator, "field:readiness", "final closeout refresh generator"],
   [generator, "field:env-closeout", "final closeout refresh generator"],
@@ -128,6 +131,7 @@ const ids = steps.map((step) => step.id);
   "ci-status",
   "security-evidence",
   "runtime-evidence",
+  "local-verification",
   "field-preflight",
   "field-readiness",
   "field-env-closeout",
@@ -209,8 +213,10 @@ assert(
 );
 assert(
   ids.indexOf("security-evidence") < ids.indexOf("runtime-evidence") &&
-    ids.indexOf("runtime-evidence") < ids.indexOf("field-readiness"),
-  "refresh should record strict security and runtime evidence before field readiness",
+    ids.indexOf("runtime-evidence") < ids.indexOf("delivery-evidence") &&
+    ids.indexOf("delivery-evidence") < ids.indexOf("local-verification") &&
+    ids.indexOf("local-verification") < ids.indexOf("field-readiness"),
+  "refresh should record strict security, runtime, delivery, and local verification evidence before field readiness",
 );
 assert(
   steps.find((step) => step.id === "ci-status").command.includes("npm"),
@@ -272,6 +278,10 @@ assert(
 assert(
   steps.find((step) => step.id === "runtime-evidence").args.includes("--run-smoke"),
   "runtime refresh should run smoke checks",
+);
+assert(
+  steps.find((step) => step.id === "local-verification").args.includes("local:verification"),
+  "final refresh should capture local verification evidence",
 );
 assert(
   !buildSteps({

@@ -155,6 +155,15 @@ function buildSteps(options) {
       doneWhen: "Delivery evidence companion runtime/security summaries have zero REVIEW/SKIPPED items.",
     },
     {
+      id: "local-verification",
+      phase: "Pre Evidence",
+      command: npm,
+      args: ["run", "local:verification", "--", `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      timeoutMs: 1200000,
+      purpose: "Capture local smoke verification as a standalone handover artifact tied to the final source revision.",
+      doneWhen: "Local verification evidence is PASS and records the pushed dev commit.",
+    },
+    {
       id: "field-preflight",
       phase: "Pre Evidence",
       command: npm,
