@@ -48,6 +48,9 @@ jobs:
           npm ci --include=optional
           npm --prefix dashboard/dashboard-web ci --include=optional
 
+      - name: Generate Prisma client
+        run: npm run db:generate
+
       - name: Run smoke contracts
         run: npm run smoke
 

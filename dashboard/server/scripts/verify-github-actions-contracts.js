@@ -12,6 +12,14 @@ function assertIncludes(token) {
   assert(workflow.includes(token), `.github/workflows/ci.yml is missing ${token}`);
 }
 
+function assertOrder(first, second) {
+  const firstIndex = workflow.indexOf(first);
+  const secondIndex = workflow.indexOf(second);
+  assert(firstIndex >= 0, `.github/workflows/ci.yml is missing ${first}`);
+  assert(secondIndex >= 0, `.github/workflows/ci.yml is missing ${second}`);
+  assert(firstIndex < secondIndex, `.github/workflows/ci.yml must place ${first} before ${second}`);
+}
+
 assertIncludes("push:");
 assertIncludes("workflow_dispatch:");
 assertIncludes("branches:");
@@ -26,7 +34,10 @@ assertIncludes("SEED_ADMIN_USER_ID: admin");
 assertIncludes("SEED_ADMIN_PASSWORD: ci-only-randomized-admin-password");
 assert(!workflow.includes("SEED_ADMIN_PASSWORD: admin1234!"), "CI workflow must not use the example seed admin password");
 assertIncludes("CONTROL_BOARD_DRY_RUN: \"true\"");
+assertIncludes("Generate Prisma client");
+assertIncludes("npm run db:generate");
 assertIncludes("npm run smoke");
+assertOrder("npm run db:generate", "npm run smoke");
 assertIncludes("npm run server:test");
 assertIncludes("npm run ci:db");
 assertIncludes("npm --prefix dashboard/dashboard-web run lint");
