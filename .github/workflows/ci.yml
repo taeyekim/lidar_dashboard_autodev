@@ -30,6 +30,10 @@ jobs:
       SEED_ADMIN_USER_ID: admin
       SEED_ADMIN_PASSWORD: ci-only-randomized-admin-password
       SEED_ADMIN_NAME: CI Administrator
+      POSTGRES_DB: lidar_dashboard_ci
+      POSTGRES_USER: lidar_dashboard_ci
+      POSTGRES_PASSWORD: lidar_dashboard_ci
+      POSTGRES_PORT: "5432"
       CONTROL_BOARD_DRY_RUN: "true"
 
     steps:
