@@ -75,6 +75,9 @@ function buildBundleHandoff(input = {}) {
   const finalExecutionPlan = Object.prototype.hasOwnProperty.call(input, "finalExecutionPlan")
     ? input.finalExecutionPlan
     : readLatestJsonManifest("artifacts/final-execution-plan");
+  const finalGateClassification = Object.prototype.hasOwnProperty.call(input, "finalGateClassification")
+    ? input.finalGateClassification
+    : readLatestJsonManifest("artifacts/final-gate-classification");
   const generatedBy = input.generatedBy || process.env.USERNAME || process.env.USER || "Codex";
   const siteName = input.siteName || finalExecutionPlan?.data?.siteName || "unspecified";
   const metadataReview = metadataReviewItems(generatedBy, siteName);
@@ -93,11 +96,20 @@ function buildBundleHandoff(input = {}) {
     git: buildGitState(input.git),
     status: !finalExecutionPlan ? "FINAL_EXECUTION_PLAN_MISSING" : metadataReview.length > 0 ? "REVIEW" : bundles.length > 0 ? "OPEN" : "READY_TO_CLOSE",
     sourceFinalExecutionPlan: finalExecutionPlan?.path || null,
+    sourceFinalGateClassification: finalGateClassification?.path || null,
     remainingGateCount: finalExecutionPlan?.data?.remainingGateCount || 0,
     bundleCount: bundles.length,
     totalBundleGateCount: bundles.reduce((sum, bundle) => sum + (bundle.gateCount || 0), 0),
     metadataReview,
     bundles,
+    ownerCloseoutFiles: (finalGateClassification?.data?.ownerCloseoutFileIndex || []).map((item) => ({
+      order: item.order,
+      bucketId: item.bucketId,
+      bucketLabel: item.bucketLabel,
+      owner: item.owner,
+      gateCount: item.gateCount,
+      fileName: item.fileName,
+    })),
     guardrails: [
       "Final bundle handoff files are field execution aids, not completion evidence.",
       "Do not paste secrets into bundle notes, screenshots, or manual evidence.",
@@ -142,6 +154,7 @@ function buildIndexMarkdown(manifest) {
     `- Working tree clean: ${manifest.git.clean ? "yes" : "no"}`,
     `- Git pushed to origin/dev: ${manifest.git.pushed ? "yes" : "no"}`,
     `- Source final execution plan: ${manifest.sourceFinalExecutionPlan || "missing"}`,
+    `- Source final gate classification: ${manifest.sourceFinalGateClassification || "missing"}`,
     "",
     "## Guardrails",
     "",
@@ -157,6 +170,17 @@ function buildIndexMarkdown(manifest) {
             `| ${bundle.order} | ${markdownCell(bundle.label)} | ${bundle.gateCount} | ${markdownCell((bundle.sourceGateIds || []).join(", ") || "none")} | ${markdownCell((bundle.owners || []).join(", ") || "none")} | \`${markdownCell(bundle.fileName)}\` | ${markdownCell((bundle.reviewerChecklist || []).join("; ") || "none")} |`,
         )
       : ["| none | none | 0 | none | none | none | none |"]),
+    "",
+    "## Owner Closeout Files",
+    "",
+    "| Order | Bucket | Owner | Gates | File |",
+    "| ---: | --- | --- | ---: | --- |",
+    ...(manifest.ownerCloseoutFiles.length > 0
+      ? manifest.ownerCloseoutFiles.map(
+          (item) =>
+            `| ${item.order} | ${markdownCell(item.bucketLabel || item.bucketId)} | ${markdownCell(item.owner)} | ${item.gateCount} | \`${markdownCell(item.fileName)}\` |`,
+        )
+      : ["| - | none | none | 0 | none |"]),
     ...(manifest.metadataReview.length
       ? ["", "## Metadata Review", "", ...manifest.metadataReview.map((item) => `- ${item}`)]
       : []),

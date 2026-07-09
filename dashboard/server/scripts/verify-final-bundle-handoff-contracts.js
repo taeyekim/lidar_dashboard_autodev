@@ -35,6 +35,9 @@ const finalExecutionPlanGenerator = readProjectFile("dashboard/server/scripts/ge
   [generator, "Final bundle handoff files are field execution aids", "final bundle handoff generator"],
   [generator, "Reviewer Checklist", "final bundle handoff generator"],
   [generator, "Source Gate IDs", "final bundle handoff generator"],
+  [generator, "Source final gate classification", "final bundle handoff generator"],
+  [generator, "Owner Closeout Files", "final bundle handoff generator"],
+  [generator, "ownerCloseoutFiles", "final bundle handoff generator"],
   [generator, "Evidence Targets", "final bundle handoff generator"],
   [generator, "commandGuardrail", "final bundle handoff generator"],
   [generator, "approved external CI closeout window", "final bundle handoff generator"],
@@ -99,6 +102,21 @@ const fixture = buildBundleHandoff({
       ],
     },
   },
+  finalGateClassification: {
+    path: "artifacts/final-gate-classification/20260101-000000/manifest.json",
+    data: {
+      ownerCloseoutFileIndex: [
+        {
+          order: 1,
+          bucketId: "hardware_runtime",
+          bucketLabel: "Hardware Runtime",
+          owner: "Hardware + Backend + Field Operations",
+          gateCount: 8,
+          fileName: "01-hardware-runtime.md",
+        },
+      ],
+    },
+  },
 });
 
 assert(fixture.status === "OPEN", "fixture bundle handoff should be OPEN");
@@ -106,6 +124,8 @@ assert(fixture.bundleCount === 1, "fixture should count bundles");
 assert(fixture.totalBundleGateCount === 17, "fixture should sum bundle gates");
 assert(fixture.bundles[0].fileName === "01-field-input-and-risk-acceptance.md", "bundle handoff should create stable file names");
 assert(fixture.bundles[0].sourceGateIds.includes("final-manual-evidence"), "bundle handoff should preserve source gate ids");
+assert(fixture.sourceFinalGateClassification.includes("final-gate-classification"), "bundle handoff should link final gate classification source");
+assert(fixture.ownerCloseoutFiles[0].fileName === "01-hardware-runtime.md", "bundle handoff should expose owner closeout files");
 assert(fixture.git.pushed === true, "bundle handoff should expose pushed git state");
 
 const indexMarkdown = buildIndexMarkdown(fixture);
@@ -114,6 +134,9 @@ assert(indexMarkdown.includes("Reviewer Checklist"), "index markdown should incl
 assert(indexMarkdown.includes("Source Gate IDs"), "index markdown should include source gate id column");
 assert(indexMarkdown.includes("final-manual-evidence"), "index markdown should include source final-status gate id");
 assert(indexMarkdown.includes("01-field-input-and-risk-acceptance.md"), "index markdown should link bundle file names");
+assert(indexMarkdown.includes("Source final gate classification"), "index markdown should include classification source");
+assert(indexMarkdown.includes("Owner Closeout Files"), "index markdown should include owner closeout file section");
+assert(indexMarkdown.includes("01-hardware-runtime.md"), "index markdown should link owner closeout files");
 
 const bundleMarkdown = buildBundleMarkdown(fixture.bundles[0], fixture);
 assert(bundleMarkdown.includes("Bundle Handoff - Field Input And Risk Acceptance"), "bundle markdown should include title");
