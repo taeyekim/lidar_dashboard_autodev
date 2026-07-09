@@ -73,8 +73,10 @@ assert(
     runtimeSmoke.includes("Assert-SecurityHeaders") &&
     runtimeSmoke.includes("Swagger UI path smoke") &&
     runtimeSmoke.includes("max-age=2592000") &&
-    runtimeSmoke.includes("immutable"),
-  "Runtime smoke must verify Swagger UI routing, SPA no-store, and immutable frontend asset cache headers",
+    runtimeSmoke.includes("immutable") &&
+    runtimeSmoke.includes("delivery Nginx entrypoint") &&
+    runtimeSmoke.includes("NGINX_PORT/FIELD_BASE_URL"),
+  "Runtime smoke must verify Swagger UI routing, frontend cache headers, and actionable delivery entrypoint diagnostics",
 );
 assert(
   frontendConfig.includes("sameOriginWsBase") &&

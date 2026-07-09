@@ -171,7 +171,11 @@ function Assert-HttpStatus {
   )
 
   if ($Response.statusCode -ne $Expected) {
-    throw "$Label expected HTTP $Expected, got $($Response.statusCode)."
+    $server = ""
+    if ($Response.headers.ContainsKey("server")) {
+      $server = " Server: $($Response.headers["server"])."
+    }
+    throw "$Label expected HTTP $Expected, got $($Response.statusCode).$server Check BaseUrl points at the delivery Nginx entrypoint and that NGINX_PORT/FIELD_BASE_URL are not occupied by another local service."
   }
 }
 
