@@ -105,6 +105,36 @@ const FIELD_ENV_CATALOG = Object.freeze({
     verify: "field:preflight, runtime:evidence",
     action: "Set DEVICE_INGEST_API_KEY and configure the LiDAR sender X-Device-Key header, or attach accepted trusted-LAN risk evidence.",
   },
+  WRONGWAY_LEVEL2_ESCALATION_ENABLED: {
+    owner: "PM/QA + Field Operations",
+    valueShape: "false until field measurement approves dashboard-side level-2 escalation; true only with signed threshold evidence",
+    secret: false,
+    closes: "Dashboard-side level-2 escalation approval",
+    verify: "wrongway runtime dedupe, field acceptance, operator walkthrough",
+    suggestedValue: "false",
+    action:
+      "Keep WRONGWAY_LEVEL2_ESCALATION_ENABLED=false until field measurement criteria are approved; set true only with approved threshold evidence and rerun wrongway/field acceptance checks.",
+  },
+  WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT: {
+    owner: "PM/QA + Field Operations",
+    valueShape: "integer consecutive level-1 detections required before dashboard-side level-2 escalation",
+    secret: false,
+    closes: "Dashboard-side level-2 escalation threshold",
+    verify: "wrongway runtime dedupe, field acceptance, operator walkthrough",
+    suggestedValue: "<approved-consecutive-count>",
+    action:
+      "Fill WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT only after field measurement approves the consecutive-detection threshold.",
+  },
+  WRONGWAY_LEVEL2_MIN_CONFIDENCE: {
+    owner: "PM/QA + Field Operations",
+    valueShape: "decimal confidence threshold from 0 to 1 for dashboard-side level-2 escalation",
+    secret: false,
+    closes: "Dashboard-side level-2 escalation threshold",
+    verify: "wrongway runtime dedupe, field acceptance, operator walkthrough",
+    suggestedValue: "<approved-confidence-threshold>",
+    action:
+      "Fill WRONGWAY_LEVEL2_MIN_CONFIDENCE only after field measurement approves the confidence threshold.",
+  },
   FIELD_BASE_URL: {
     owner: "Field Operations",
     valueShape: "delivery Nginx/operator entrypoint URL, e.g. http://<dashboard-pc-ip>:<nginx-port>",

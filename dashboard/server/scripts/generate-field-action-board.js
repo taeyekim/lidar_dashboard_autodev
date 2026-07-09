@@ -64,6 +64,7 @@ function ownerForGate(gate) {
   if (text.includes("security") || text.includes("scanner") || text.includes("cookie") || text.includes("jwt") || text.includes("password") || text.includes("cors")) return "Auth/Security";
   if (text.includes("lidar") || text.includes("ingest") || text.includes("device")) return "LiDAR Ingest";
   if (text.includes("control-board") || text.includes("live_tcp") || text.includes("tcp") || text.includes("hardware")) return "Control-board TCP";
+  if (text.includes("level-2") || text.includes("wrong-way-level-2") || text.includes("escalation threshold")) return "PM/QA";
   if (text.includes("operator") || text.includes("manual") || text.includes("walkthrough") || text.includes("risk acceptance")) return "PM/QA";
   if (text.includes("field env closeout") || text.includes("field environment closeout") || text.includes(".env item")) return "Field Operations";
   if (text.includes("db") || text.includes("prisma") || text.includes("runtime")) return "Backend/Runtime";
@@ -185,6 +186,17 @@ function prerequisiteHintsForGate(gate) {
   if (text.includes("swagger")) hints.env.push("NGINX_SWAGGER_ALLOW");
   if (text.includes("rate limit") || text.includes("burst")) hints.env.push("NGINX_WRONGWAY_RATE_LIMIT", "NGINX_WRONGWAY_BURST");
   if (text.includes("content security") || text.includes("csp")) hints.env.push("NGINX_CONTENT_SECURITY_POLICY");
+  if (text.includes("level-2") || text.includes("wrong-way-level-2") || text.includes("escalation threshold")) {
+    hints.env.push(
+      "WRONGWAY_LEVEL2_ESCALATION_ENABLED",
+      "WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT",
+      "WRONGWAY_LEVEL2_MIN_CONFIDENCE",
+    );
+    hints.evidence.push("artifacts/manual/operator-ui-walkthrough.md");
+    hints.closeout.push(
+      "Attach approved field-measurement threshold evidence before enabling dashboard-side level-2 escalation.",
+    );
+  }
   if (text.includes("control-board") || text.includes("live_tcp") || text.includes("tcp") || text.includes("hardware")) {
     hints.env.push("CONTROL_BOARD_HOST", "CONTROL_BOARD_PORT", "CONTROL_BOARD_DRY_RUN", "CONTROL_BOARD_LIVE_APPROVED");
     hints.runtime.push("Approved integrated control board reachable on the field network");

@@ -79,6 +79,9 @@ const matrix = readProjectFile("docs/ops/delivery-evidence-matrix.md");
   "AUTH_COOKIE_SECURE",
   "AUTH_COOKIE_SAMESITE",
   "NGINX_SWAGGER_ALLOW",
+  "WRONGWAY_LEVEL2_ESCALATION_ENABLED",
+  "WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT",
+  "WRONGWAY_LEVEL2_MIN_CONFIDENCE",
 ].forEach((token) => assertIncludes(generator, token, "field action board generator"));
 
 [
@@ -254,6 +257,19 @@ assert(prerequisiteHintsForGate(rateLimitGate).env.includes("NGINX_WRONGWAY_BURS
 const cspGate = { category: "Field Evidence", message: "Field Preflight: Nginx content security policy", closeWhen: "Set content security policy." };
 assert(ownerForGate(cspGate) === "Nginx Delivery", "CSP gate should map to Nginx Delivery");
 assert(prerequisiteHintsForGate(cspGate).env.includes("NGINX_CONTENT_SECURITY_POLICY"), "CSP gate should expose NGINX_CONTENT_SECURITY_POLICY");
+const level2Gate = {
+  category: "Known Limitation",
+  message: "Level-2 Escalation threshold remains field-measurement dependent.",
+  closeWhen: "Approve dashboard-side wrong-way-level-2 escalation threshold values.",
+};
+assert(ownerForGate(level2Gate) === "PM/QA", "level-2 escalation threshold gate should map to PM/QA");
+assert(prerequisiteHintsForGate(level2Gate).env.includes("WRONGWAY_LEVEL2_ESCALATION_ENABLED"), "level-2 gate should expose enablement env key");
+assert(prerequisiteHintsForGate(level2Gate).env.includes("WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT"), "level-2 gate should expose consecutive-count threshold env key");
+assert(prerequisiteHintsForGate(level2Gate).env.includes("WRONGWAY_LEVEL2_MIN_CONFIDENCE"), "level-2 gate should expose confidence threshold env key");
+assert(
+  prerequisiteHintsForGate(level2Gate).closeout.some((item) => item.includes("field-measurement threshold evidence")),
+  "level-2 gate should require approved threshold evidence before enablement",
+);
 assert(
   commandForGate(gates[3], "http://field.local:8080").includes("manual:evidence-readiness -- --generated-by="),
   "manual evidence gate should pass reviewer/site metadata args to readiness",

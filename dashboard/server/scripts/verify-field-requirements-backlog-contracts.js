@@ -110,6 +110,14 @@ const gates = [
     closeWhen: "Resolve strictFailureReasons and rerun handover:package.",
     evidence: "artifacts/handover-package/fixture/manifest.json",
   },
+  {
+    id: "gate-level2-escalation",
+    actionType: "FIELD_ACTION_REQUIRED",
+    category: "Known Limitation",
+    status: "FIELD_REVIEW",
+    message: "Level-2 Escalation threshold remains field-measurement dependent.",
+    closeWhen: "Approve dashboard-side wrong-way-level-2 escalation threshold values and rerun wrongway/field acceptance evidence.",
+  },
 ];
 
 assert(questionForGate(gates[0]).includes("control-board host"), "control-board question should ask for TCP field details");
@@ -118,6 +126,7 @@ assert(questionForGate(gates[2]).includes("scanner evidence"), "security questio
 assert(questionForGate(gates[3]).includes("GitHub Actions"), "CI question should ask for GitHub Actions closeout");
 assert(questionForGate(gates[4]).includes(".env values"), "CSP field gate should ask for approved env values, not scanner evidence");
 assert(questionForGate(gates[5]).includes("aggregate closeout blockers"), "handover aggregate gate should stay an aggregate closeout question");
+assert(questionForGate(gates[6]).includes("level-2 escalation"), "level-2 gate should ask for field measurement criteria");
 
 const finalStatus = {
   path: "artifacts/final-status/fixture/manifest.json",
@@ -131,14 +140,14 @@ const classification = {
   path: "artifacts/final-gate-classification/fixture/manifest.json",
   data: {
     summary: {
-      remainingGateCount: 6,
-      bucketGateCounts: { hardware_runtime: 1, field_configuration: 2, security_tooling: 1, external_ci: 1, package_refresh: 1 },
+      remainingGateCount: 7,
+      bucketGateCounts: { hardware_runtime: 1, field_configuration: 2, security_tooling: 1, external_ci: 1, package_refresh: 1, field_acceptance: 1 },
     },
   },
 };
 
 const items = buildBacklogItems(finalStatus, "http://field.local:8080");
-assert(items.length === 6, "backlog should preserve distinct field questions");
+assert(items.length === 7, "backlog should preserve distinct field questions");
 assert(items.some((item) => item.owner === "Control-board TCP" && item.envKeys.includes("CONTROL_BOARD_HOST")), "control-board item should include host env key");
 assert(items.some((item) => item.envKeys.includes("JWT_SECRET")), "env item should include JWT secret key without value");
 assert(items.some((item) => item.runtime.some((entry) => entry.includes("gitleaks"))), "security item should include scanner runtime prerequisite");
@@ -154,13 +163,24 @@ assert(
   ),
   "aggregate handover gate should not inherit mixed control-board/nginx prerequisites",
 );
+assert(
+  items.some(
+    (item) =>
+      item.question.includes("level-2 escalation") &&
+      item.envKeys.includes("WRONGWAY_LEVEL2_ESCALATION_ENABLED") &&
+      item.envKeys.includes("WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT") &&
+      item.envKeys.includes("WRONGWAY_LEVEL2_MIN_CONFIDENCE"),
+  ),
+  "level-2 backlog item should expose approved escalation env keys",
+);
 
 const packet = buildBatchedQuestionPacket(items);
-assert(packet.questionCount === 6, "batched packet should count all questions");
+assert(packet.questionCount === 7, "batched packet should count all questions");
 assert(packet.ownerCount >= 4, "batched packet should group questions by owner");
 assert(packet.highPriorityQuestionCount >= 1, "batched packet should count high priority questions");
 assert(packet.fieldValueChecklist.some((item) => item.key === "CONTROL_BOARD_HOST"), "batched packet should list control-board host field value");
 assert(packet.fieldValueChecklist.some((item) => item.key === "JWT_SECRET"), "batched packet should list JWT secret key without values");
+assert(packet.fieldValueChecklist.some((item) => item.key === "WRONGWAY_LEVEL2_ESCALATION_ENABLED"), "batched packet should list level-2 enablement key");
 assert(packet.runtimeChecklist.some((item) => item.includes("gitleaks")), "batched packet should list scanner runtime prerequisites");
 assert(
   packet.deferredDecisions.some((item) => item.decision.includes("control-board host")),
@@ -169,11 +189,12 @@ assert(
 assert(packet.acceptanceRule.includes("zero remaining gates"), "batched packet should define closeout acceptance rule");
 
 const answerSheet = buildFieldAnswerSheet(items);
-assert(answerSheet.length === 6, "answer sheet should include every backlog item");
+assert(answerSheet.length === 7, "answer sheet should include every backlog item");
 assert(answerSheet.every((item) => item.answerStatus === "TODO"), "answer sheet should start with TODO answer status");
 assert(answerSheet.some((item) => item.envKeysToFill.includes("CONTROL_BOARD_HOST")), "answer sheet should expose env keys to fill");
 assert(answerSheet.some((item) => item.commandToRerun.includes("ci:status") || item.question.includes("GitHub Actions")), "answer sheet should include rerun command guidance");
 assert(answerSheet.some((item) => item.riskAcceptanceNeeded === true), "answer sheet should flag risk acceptance candidates");
+assert(answerSheet.some((item) => item.envKeysToFill.includes("WRONGWAY_LEVEL2_MIN_CONFIDENCE")), "answer sheet should expose level-2 threshold env keys");
 assert(answerSheet.every((item) => item.targetRecheckDate === ""), "answer sheet should leave recheck date blank for field reviewer");
 
 const manifest = buildManifest({
@@ -187,18 +208,18 @@ const manifest = buildManifest({
 });
 
 assert(manifest.status === "OPEN", "manifest should be OPEN while questions remain");
-assert(manifest.summary.itemCount === 6, "manifest should count backlog items");
-assert(manifest.itemCount === 6, "manifest should expose top-level item count for automation");
-assert(manifest.openItemCount === 6, "manifest should expose top-level open item count for automation");
+assert(manifest.summary.itemCount === 7, "manifest should count backlog items");
+assert(manifest.itemCount === 7, "manifest should expose top-level item count for automation");
+assert(manifest.openItemCount === 7, "manifest should expose top-level open item count for automation");
 assert(manifest.ownerCount >= 4, "manifest should expose top-level owner count for routing");
 assert(manifest.priorityCounts.P0 >= 1, "manifest should expose top-level priority counts");
 assert(manifest.actionTypeCounts.FIELD_ACTION_REQUIRED >= 1, "manifest should expose top-level action type counts");
 assert(manifest.sourceFinalStatus.includes("final-status"), "manifest should link final status source");
 assert(manifest.classificationSummary.bucketGateCounts.security_tooling === 1, "manifest should keep classification summary");
 assert(manifest.metadataEnvKeys.includes("FIELD_BASE_URL"), "manifest should expose field base URL as metadata env key");
-assert(manifest.batchedQuestionPacket.questionCount === 6, "manifest should include batched question packet");
+assert(manifest.batchedQuestionPacket.questionCount === 7, "manifest should include batched question packet");
 assert(manifest.batchedQuestionPacket.fieldValueChecklist.some((item) => item.key === "FIELD_BASE_URL"), "manifest packet should include field base URL checklist");
-assert(manifest.fieldAnswerSheet.length === 6, "manifest should include field answer sheet");
+assert(manifest.fieldAnswerSheet.length === 7, "manifest should include field answer sheet");
 assert(manifest.guardrails.some((item) => item.includes("Field Answer Sheet")), "manifest guardrails should tell reviewers how to fill answer sheet");
 
 const markdown = buildMarkdown(manifest);
@@ -220,6 +241,7 @@ const markdown = buildMarkdown(manifest);
   "JWT_SECRET",
   "GitHub Actions",
   "FIELD_BASE_URL",
+  "WRONGWAY_LEVEL2_ESCALATION_ENABLED",
   "never paste real secret values",
 ].forEach((token) => assert(markdown.includes(token), `markdown should include ${token}`));
 
