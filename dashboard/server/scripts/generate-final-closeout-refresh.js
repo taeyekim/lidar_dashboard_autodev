@@ -128,6 +128,7 @@ function buildSteps(options) {
       phase: "Pre Evidence",
       command: npm,
       args: ["run", "runtime:evidence", "--", "--run-smoke", "--use-existing-stack", `--base-url=${baseUrl}`],
+      acceptReviewExitCodes: [1],
       purpose: "Refresh runtime smoke evidence against the delivery Nginx entrypoint before readiness and handover packaging.",
       doneWhen: "Runtime evidence has no failed required delivery checks for health, headers, API, statistics, and control-board status.",
     },

@@ -247,6 +247,10 @@ assert(
   "strict security REVIEW exit should be recorded without failing refresh",
 );
 assert(
+  steps.find((step) => step.id === "runtime-evidence").acceptReviewExitCodes.includes(1),
+  "runtime evidence REVIEW exit should be recorded without failing refresh",
+);
+assert(
   steps.find((step) => step.id === "delivery-evidence").acceptReviewExitCodes.includes(1),
   "delivery evidence REVIEW exit should be recorded without failing refresh when strict security evidence remains open",
 );

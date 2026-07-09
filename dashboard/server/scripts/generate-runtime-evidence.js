@@ -170,10 +170,44 @@ function buildRuntimeSmokeCoverage(commands, options) {
   };
 }
 
+function buildRuntimeEvidenceStatus(commands, options) {
+  const requiredLabels = ["docker version", "docker compose version", "docker compose config"];
+  const requiredFailures = commands.filter((item) => requiredLabels.includes(item.label) && item.exitCode !== 0);
+  const runtimeSmoke = commands.find((item) => item.label === "runtime smoke");
+  const smokeFailed = options.runSmoke === true && runtimeSmoke?.status !== "skipped" && runtimeSmoke?.exitCode !== 0;
+  if (requiredFailures.length > 0) {
+    return {
+      status: "FAILED",
+      requiredFailures: requiredFailures.map((item) => item.label),
+      reviewReasons: [],
+    };
+  }
+  if (smokeFailed) {
+    return {
+      status: "REVIEW",
+      requiredFailures: [],
+      reviewReasons: ["runtime smoke failed; inspect runtime-smoke.log and rerun against the delivery Nginx entrypoint."],
+    };
+  }
+  if (options.runSmoke !== true) {
+    return {
+      status: "REVIEW",
+      requiredFailures: [],
+      reviewReasons: ["runtime smoke was skipped; rerun with --run-smoke for delivery runtime proof."],
+    };
+  }
+  return {
+    status: "PASS",
+    requiredFailures: [],
+    reviewReasons: [],
+  };
+}
+
 function buildMarkdown(manifest) {
   const lines = [
     "# Runtime Evidence Manifest",
     "",
+    `- Status: ${manifest.status}`,
     `- Generated at: ${manifest.generatedAt}`,
     `- Run compose smoke: ${manifest.options.runSmoke ? "yes" : "no"}`,
     `- Smoke base URL: ${manifest.options.baseUrl}`,
@@ -196,6 +230,12 @@ function buildMarkdown(manifest) {
   if (manifest.notes.length > 0) {
     lines.push("", "## Notes", "");
     manifest.notes.forEach((note) => lines.push(`- ${note}`));
+  }
+
+  if (manifest.reviewReasons.length > 0 || manifest.requiredFailures.length > 0) {
+    lines.push("", "## Status Reasons", "");
+    manifest.requiredFailures.forEach((item) => lines.push(`- Required failure: ${item}`));
+    manifest.reviewReasons.forEach((item) => lines.push(`- Review: ${item}`));
   }
 
   lines.push(
@@ -353,18 +393,16 @@ function main() {
     }),
   };
   manifest.runtimeSmokeCoverage = buildRuntimeSmokeCoverage(manifest.commands, manifest.options);
+  const statusInfo = buildRuntimeEvidenceStatus(manifest.commands, manifest.options);
+  manifest.status = statusInfo.status;
+  manifest.requiredFailures = statusInfo.requiredFailures;
+  manifest.reviewReasons = statusInfo.reviewReasons;
 
   fs.writeFileSync(path.join(outputDir, "manifest.json"), JSON.stringify(manifest, null, 2));
   fs.writeFileSync(path.join(outputDir, "manifest.md"), buildMarkdown(manifest));
 
   console.log(`runtime evidence written to ${path.relative(root, outputDir)}`);
-  const requiredFailures = manifest.commands.filter(
-    (item) =>
-      item.status !== "skipped" &&
-      ["docker version", "docker compose version", "docker compose config"].includes(item.label) &&
-      item.exitCode !== 0,
-  );
-  if (requiredFailures.length > 0) {
+  if (manifest.status === "FAILED" || manifest.status === "REVIEW") {
     process.exit(1);
   }
 }
