@@ -72,6 +72,24 @@ function latestRunForHead(runs, commit) {
   return runs.find((item) => item.headSha === commit) || runs[0] || null;
 }
 
+function buildRecentRunEventSummary(runs = []) {
+  const byEvent = runs.reduce((summary, run) => {
+    const event = run.event || "unknown";
+    summary[event] = (summary[event] || 0) + 1;
+    return summary;
+  }, {});
+  const pushRunCount = Number(byEvent.push || 0);
+  const workflowDispatchRunCount = Number(byEvent.workflow_dispatch || 0);
+  return {
+    totalRuns: runs.length,
+    byEvent,
+    pushRunCount,
+    workflowDispatchRunCount,
+    pushRunObserved: pushRunCount > 0,
+    onlyWorkflowDispatchObserved: runs.length > 0 && workflowDispatchRunCount === runs.length,
+  };
+}
+
 function workflowFileText() {
   try {
     return fs.readFileSync(path.join(root, ".github", "workflows", "ci.yml"), "utf8");
@@ -215,9 +233,10 @@ function buildCiStatusEvidence(input = {}) {
       "--limit",
       "10",
       "--json",
-      "databaseId,headSha,conclusion,status,url,createdAt,updatedAt,workflowName,displayTitle",
+      "databaseId,headSha,conclusion,status,url,createdAt,updatedAt,workflowName,displayTitle,event",
     ]);
   const runs = input.runs || parseJsonArray(ghResult.stdout);
+  const recentRunEventSummary = buildRecentRunEventSummary(runs);
   const latestRun = latestRunForHead(runs, git.commit);
   const toolAvailable = ghResult.exitCode === 0;
   const runMatchesHead = Boolean(latestRun && latestRun.headSha === git.commit);
@@ -240,6 +259,8 @@ function buildCiStatusEvidence(input = {}) {
     diagnosis:
       noRunForPushedHead && runListEmpty
         ? `${workflow} workflow is active and Actions are enabled, but no run is visible for pushed ${branch} commit ${git.commit}.`
+        : noRunForPushedHead && recentRunEventSummary.onlyWorkflowDispatchObserved
+          ? `${workflow} workflow is active and Actions are enabled, but recent visible runs are all workflow_dispatch and none match pushed ${branch} commit ${git.commit}.`
         : noRunForPushedHead
           ? `${workflow} workflow is active and Actions are enabled, but the visible run does not match pushed ${branch} commit ${git.commit}.`
           : ciRunOk
@@ -314,6 +335,7 @@ function buildCiStatusEvidence(input = {}) {
           databaseId: latestRun.databaseId ?? null,
           workflowName: latestRun.workflowName || null,
           displayTitle: latestRun.displayTitle || null,
+          event: latestRun.event || null,
           headSha: latestRun.headSha || null,
           status: latestRun.status || null,
           conclusion: latestRun.conclusion || null,
@@ -325,6 +347,7 @@ function buildCiStatusEvidence(input = {}) {
     runMatchesHead,
     runCompleted,
     runSucceeded,
+    recentRunEventSummary,
     ciTriggerDiagnosis,
     ciCloseoutChecklist,
     reviewReasons,
@@ -385,9 +408,14 @@ function buildMarkdown(manifest) {
     `| workflow ready for run | ${manifest.ciTriggerDiagnosis.workflowReadyForRun ? "yes" : "no"} |`,
     `| run list empty | ${manifest.ciTriggerDiagnosis.runListEmpty ? "yes" : "no"} |`,
     `| no run for pushed head | ${manifest.ciTriggerDiagnosis.noRunForPushedHead ? "yes" : "no"} |`,
+    `| recent run count | ${manifest.recentRunEventSummary.totalRuns} |`,
+    `| recent run events | ${markdownCell(Object.entries(manifest.recentRunEventSummary.byEvent).map(([event, count]) => `${event}:${count}`).join(", ") || "none")} |`,
+    `| push run observed | ${manifest.recentRunEventSummary.pushRunObserved ? "yes" : "no"} |`,
+    `| only workflow_dispatch observed | ${manifest.recentRunEventSummary.onlyWorkflowDispatchObserved ? "yes" : "no"} |`,
     `| trigger diagnosis | ${markdownCell(manifest.ciTriggerDiagnosis.diagnosis)} |`,
     `| trigger recommended action | ${markdownCell(manifest.ciTriggerDiagnosis.recommendedAction)} |`,
     `| run id | ${markdownCell(manifest.latestRun?.databaseId || "missing")} |`,
+    `| run event | ${markdownCell(manifest.latestRun?.event || "missing")} |`,
     `| head sha | ${markdownCell(manifest.latestRun?.headSha || "missing")} |`,
     `| status | ${markdownCell(manifest.latestRun?.status || "missing")} |`,
     `| conclusion | ${markdownCell(manifest.latestRun?.conclusion || "missing")} |`,
