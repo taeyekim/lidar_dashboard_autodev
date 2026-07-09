@@ -69,10 +69,12 @@ const checklist = readProjectFile("docs/ops/acceptance-checklist.md");
 ].forEach(([content, token, label]) => assertIncludes(content, token, label));
 
 assert(bucketForGate({ category: "Control Board TCP", message: "LIVE_TCP ACK required" }) === "hardware_runtime", "control-board gates should route to hardware runtime");
+assert(bucketForGate({ category: "Strict Gate", message: "Control Board TCP field evidence has 1 REVIEW item" }) === "hardware_runtime", "control board strict gates should route to hardware runtime");
 assert(bucketForGate({ category: "Security Scanner Closeout", message: "Trivy filesystem scanner closeout" }) === "security_tooling", "scanner gates should route to security tooling");
 assert(bucketForGate({ category: "Manual Evidence", message: "Operator UI Walkthrough evidence is INVALID" }) === "manual_reviewer", "manual evidence gates should route to manual reviewer");
 assert(bucketForGate({ category: "CI Status", message: "No CI workflow run was found" }) === "external_ci", "CI gates should route to external CI");
 assert(bucketForGate({ category: "Field Evidence", message: "JWT secret placeholder" }) === "field_configuration", "env gates should route to field configuration");
+assert(bucketForGate({ category: "Field Risk Register", message: "field risk register has 48 open risk items" }) === "field_acceptance", "field risk/action gates should route to field acceptance");
 
 const buckets = summarizeBuckets([
   { id: "gate-control", area: "Control Board TCP", gate: "Control Board TCP: DRY_RUN_SAFE", category: "Control Board TCP", status: "DRY_RUN_SAFE", actionType: "FIELD_ACTION_REQUIRED", message: "LIVE_TCP ACK required" },

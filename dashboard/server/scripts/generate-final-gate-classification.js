@@ -20,7 +20,7 @@ function argValue(name, fallback) {
 
 function bucketForGate(gate) {
   const text = `${gate.category || ""} ${gate.status || ""} ${gate.actionType || ""} ${gate.message || ""} ${gate.closeWhen || ""}`.toLowerCase();
-  if (text.includes("control-board") || text.includes("live_tcp") || text.includes("hardware")) {
+  if (text.includes("control-board") || text.includes("control board") || text.includes("live_tcp") || text.includes("hardware")) {
     return "hardware_runtime";
   }
   if (text.includes("lidar") || text.includes("db and prisma") || text.includes("runtime smoke") || text.includes("field rehearsal")) {
@@ -38,7 +38,15 @@ function bucketForGate(gate) {
   if (text.includes(".env") || text.includes("jwt secret") || text.includes("cors") || text.includes("swagger allowlist") || text.includes("device ingest key") || text.includes("cookie")) {
     return "field_configuration";
   }
-  if (text.includes("field readiness") || text.includes("field acceptance") || text.includes("field preflight")) {
+  if (
+    text.includes("field readiness") ||
+    text.includes("field acceptance") ||
+    text.includes("field preflight") ||
+    text.includes("field risk register") ||
+    text.includes("field action board") ||
+    text.includes("field gate closure map") ||
+    text.includes("field owner briefs")
+  ) {
     return "field_acceptance";
   }
   return "package_refresh";
