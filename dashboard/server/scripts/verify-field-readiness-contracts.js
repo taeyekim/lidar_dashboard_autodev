@@ -50,6 +50,10 @@ const riskAcceptanceTemplate = readProjectFile("docs/ops/field-risk-acceptance-t
   "NGINX_WRONGWAY_RATE_LIMIT",
   "NGINX_WRONGWAY_BURST",
   "NGINX_CONTENT_SECURITY_POLICY",
+  "WRONGWAY_LEVEL2_ESCALATION_ENABLED",
+  "WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT",
+  "WRONGWAY_LEVEL2_MIN_CONFIDENCE",
+  "dashboard-side level-2 escalation",
   "CONTROL_BOARD_LIVE_APPROVED",
   "CONTROL_BOARD_CONNECT_TIMEOUT_MS",
   "CONTROL_BOARD_RESPONSE_TIMEOUT_MS",
@@ -100,7 +104,9 @@ const riskAcceptanceTemplate = readProjectFile("docs/ops/field-risk-acceptance-t
   "Blocks browser/API exposure review",
   "Blocks Nginx delivery posture review",
   "Blocks Nginx security posture review",
+  "Blocks dashboard-side level-2 escalation acceptance",
   "expected lidar event rate",
+  "field measurement approval",
   "final camera/lidar/media hosts",
   "docker compose config --quiet",
   "gitleaks detect --source . --redact",
@@ -111,6 +117,8 @@ const riskAcceptanceTemplate = readProjectFile("docs/ops/field-risk-acceptance-t
   "NGINX_SWAGGER_ALLOW is open, missing, or placeholder.",
   "Nginx wrong-way rate limit or burst is missing or placeholder.",
   "NGINX_CONTENT_SECURITY_POLICY is missing or placeholder.",
+  "Dashboard-side level-2 escalation is disabled until field measurement approval.",
+  "Dashboard-side level-2 escalation is enabled or invalid without complete approved threshold values.",
   "DEVICE_INGEST_API_KEY is not configured or is placeholder.",
   "Control-board TCP timing values are missing or invalid.",
   "hostState === \"configured\" && portState === \"configured\" && tcpTimingReady",
@@ -129,6 +137,9 @@ assert(numericState("TBD") === "invalid", "placeholder TCP port/timing values mu
 assert(numericState("5020") === "configured", "numeric TCP port/timing values should be configured");
 assert(corsOriginState("https://operator.example.local") === "trusted-only", "explicit CORS origin should be trusted-only");
 assert(fieldValuePriority({ state: "placeholder" }) === "BLOCKING", "placeholder field values should be blocking");
+assert(fieldValuePriority({ state: "disabled" }) === "READY", "disabled level-2 escalation should be ready before approval");
+assert(fieldValuePriority({ state: "not-required" }) === "READY", "not-required level-2 threshold values should be ready while escalation is disabled");
+assert(fieldValuePriority({ state: "invalid" }) === "REVIEW", "invalid level-2 threshold values should require review");
 assert(metadataReviewItems("field-reviewer", "field-site").length === 2, "placeholder readiness reviewer/site should require metadata review");
 assert(metadataReviewItems("reviewer-a", "delivery-site").length === 0, "concrete readiness reviewer/site should not require metadata review");
 

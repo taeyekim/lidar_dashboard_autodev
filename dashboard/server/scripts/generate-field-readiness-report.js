@@ -97,6 +97,7 @@ function checkEvidenceCommand(name) {
     "Swagger allowlist": "Confirm NGINX_SWAGGER_ALLOW is restricted to the operator/internal CIDR.",
     "Nginx wrong-way rate limit": "Confirm NGINX_WRONGWAY_RATE_LIMIT and NGINX_WRONGWAY_BURST match the expected lidar event rate.",
     "Nginx content security policy": "Confirm NGINX_CONTENT_SECURITY_POLICY allows final media hosts while keeping script/object restrictions.",
+    "dashboard-side level-2 escalation": "Confirm WRONGWAY_LEVEL2_ESCALATION_ENABLED remains false until field measurement approval, or attach approved threshold evidence and configured threshold values.",
     "Docker CLI": "docker --version",
     "Docker daemon": "docker compose ps --format json",
     "Docker compose config": "docker compose config --quiet",
@@ -123,6 +124,7 @@ function checkDoneWhen(name) {
     "Swagger allowlist": "NGINX_SWAGGER_ALLOW is restricted to the approved operator/internal CIDR.",
     "Nginx wrong-way rate limit": "Wrong-way ingest rate limit and burst values match the expected lidar sender rate.",
     "Nginx content security policy": "Content Security Policy is reviewed for the final camera/lidar/media hosts.",
+    "dashboard-side level-2 escalation": "Level-2 dashboard escalation is disabled, or enabled only with approved consecutive-count/confidence thresholds and reviewer evidence.",
     "Docker CLI": "Docker CLI version command exits successfully on the delivery host.",
     "Docker daemon": "Docker daemon responds and compose service state can be listed.",
     "Docker compose config": "Docker compose config validates without errors.",
@@ -206,6 +208,7 @@ function fieldValueOwner(name) {
   if (["JWT_SECRET", "SEED_ADMIN_PASSWORD", "AUTH_COOKIE_SECURE", "AUTH_COOKIE_SAMESITE"].includes(name)) return "Auth/Security";
   if (["CORS_ORIGINS"].includes(name)) return "Auth/Security";
   if (["DEVICE_INGEST_API_KEY"].includes(name)) return "LiDAR Ingest";
+  if (name.startsWith("WRONGWAY_LEVEL2_")) return "PM/QA + Field Operations";
   if (name.startsWith("CONTROL_BOARD_")) return "Control-board TCP";
   if (name.startsWith("NGINX_")) return "Nginx Delivery";
   return "Field Operations";
@@ -215,7 +218,15 @@ function fieldValuePriority(item) {
   const state = String(item.state || "");
   if (["missing", "placeholder", "not-approved"].includes(state)) return "BLOCKING";
   if (state.includes("exception") || state === "open-or-missing" || state === "open-or-wildcard") return "REVIEW";
-  if (state === "true" || state === "configured" || state === "approved" || state === "restricted" || state === "trusted-only") return "READY";
+  if (
+    state === "true" ||
+    state === "configured" ||
+    state === "approved" ||
+    state === "restricted" ||
+    state === "trusted-only" ||
+    state === "disabled" ||
+    state === "not-required"
+  ) return "READY";
   return "REVIEW";
 }
 
@@ -304,9 +315,24 @@ function buildEnvChecks() {
   const wrongwayRateLimit = envValue(values, "NGINX_WRONGWAY_RATE_LIMIT");
   const wrongwayBurst = envValue(values, "NGINX_WRONGWAY_BURST");
   const contentSecurityPolicy = envValue(values, "NGINX_CONTENT_SECURITY_POLICY");
+  const level2EscalationEnabled = envValue(values, "WRONGWAY_LEVEL2_ESCALATION_ENABLED").toLowerCase();
+  const level2MinConsecutiveCount = envValue(values, "WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT");
+  const level2MinConfidence = envValue(values, "WRONGWAY_LEVEL2_MIN_CONFIDENCE");
   const wrongwayRateLimitState = fieldStringState(wrongwayRateLimit);
   const wrongwayBurstState = fieldStringState(wrongwayBurst);
   const contentSecurityPolicyState = fieldStringState(contentSecurityPolicy);
+  const level2EnabledState = level2EscalationEnabled === "true" ? "approved" : level2EscalationEnabled === "false" || !level2EscalationEnabled ? "disabled" : "invalid";
+  const level2ConsecutiveState = level2EscalationEnabled === "true" ? numericState(level2MinConsecutiveCount) : "not-required";
+  const level2ConfidenceNumber = Number(level2MinConfidence);
+  const level2ConfidenceState =
+    level2EscalationEnabled === "true"
+      ? level2MinConfidence && Number.isFinite(level2ConfidenceNumber) && level2ConfidenceNumber >= 0 && level2ConfidenceNumber <= 1
+        ? "configured"
+        : "invalid"
+      : "not-required";
+  const level2EscalationReady =
+    level2EnabledState === "disabled" ||
+    (level2EnabledState === "approved" && level2ConsecutiveState === "configured" && level2ConfidenceState === "configured");
   const swaggerAllowState = isPlaceholderFieldValue(swaggerAllow)
     ? "placeholder"
     : swaggerAllow && swaggerAllow !== "all"
@@ -319,6 +345,19 @@ function buildEnvChecks() {
   checks.push(buildCheck("Swagger allowlist", swaggerAllowState === "restricted" ? "PASS" : "REVIEW", "warning", swaggerAllowState === "restricted" ? "NGINX_SWAGGER_ALLOW is restricted." : "NGINX_SWAGGER_ALLOW is open, missing, or placeholder.", "Restrict Swagger to the operator/internal network before delivery."));
   checks.push(buildCheck("Nginx wrong-way rate limit", wrongwayRateLimitState === "configured" && wrongwayBurstState === "configured" ? "PASS" : "REVIEW", "warning", wrongwayRateLimitState === "configured" && wrongwayBurstState === "configured" ? "Nginx wrong-way rate limit and burst are configured." : "Nginx wrong-way rate limit or burst is missing or placeholder.", "Set NGINX_WRONGWAY_RATE_LIMIT and NGINX_WRONGWAY_BURST for the expected lidar event rate."));
   checks.push(buildCheck("Nginx content security policy", contentSecurityPolicyState === "configured" ? "PASS" : "REVIEW", "warning", contentSecurityPolicyState === "configured" ? "NGINX_CONTENT_SECURITY_POLICY is configured." : "NGINX_CONTENT_SECURITY_POLICY is missing or placeholder.", "Review and set NGINX_CONTENT_SECURITY_POLICY for final camera/lidar/media hosts."));
+  checks.push(
+    buildCheck(
+      "dashboard-side level-2 escalation",
+      level2EscalationReady ? "PASS" : "REVIEW",
+      level2EnabledState === "approved" ? "critical" : "warning",
+      level2EscalationReady
+        ? level2EnabledState === "disabled"
+          ? "Dashboard-side level-2 escalation is disabled until field measurement approval."
+          : "Dashboard-side level-2 escalation is enabled with approved threshold-shaped values."
+        : "Dashboard-side level-2 escalation is enabled or invalid without complete approved threshold values.",
+      "Keep WRONGWAY_LEVEL2_ESCALATION_ENABLED=false until field measurement approval, or configure approved WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT and WRONGWAY_LEVEL2_MIN_CONFIDENCE values with reviewer evidence.",
+    ),
+  );
 
   const exampleKeys = Object.keys(example.values);
   const missingExampleKeys = local.exists ? exampleKeys.filter((key) => !(key in values)) : exampleKeys;
@@ -462,6 +501,30 @@ function buildEnvChecks() {
       "Restrict Swagger to the operator/internal network CIDR before delivery.",
       "Blocks Swagger exposure acceptance when open, missing, or placeholder.",
       "Set NGINX_SWAGGER_ALLOW to the approved operator/internal CIDR.",
+      false,
+    ),
+    buildRequiredFieldValue(
+      "WRONGWAY_LEVEL2_ESCALATION_ENABLED",
+      level2EnabledState,
+      "Keep false until field measurement criteria are approved; use true only with signed threshold evidence.",
+      "Blocks dashboard-side level-2 escalation acceptance when enabled without approval.",
+      "Keep WRONGWAY_LEVEL2_ESCALATION_ENABLED=false or attach approved threshold evidence before enabling.",
+      false,
+    ),
+    buildRequiredFieldValue(
+      "WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT",
+      level2ConsecutiveState,
+      "Set only when dashboard-side level-2 escalation is approved.",
+      "Blocks level-2 escalation acceptance when enabled without an approved consecutive-count threshold.",
+      "Set WRONGWAY_LEVEL2_MIN_CONSECUTIVE_COUNT to the approved integer threshold.",
+      false,
+    ),
+    buildRequiredFieldValue(
+      "WRONGWAY_LEVEL2_MIN_CONFIDENCE",
+      level2ConfidenceState,
+      "Set only when dashboard-side level-2 escalation is approved.",
+      "Blocks level-2 escalation acceptance when enabled without an approved 0..1 confidence threshold.",
+      "Set WRONGWAY_LEVEL2_MIN_CONFIDENCE to the approved decimal confidence threshold.",
       false,
     ),
   ];
