@@ -36,6 +36,8 @@ const finalExecutionPlanGenerator = readProjectFile("dashboard/server/scripts/ge
   [generator, "Reviewer Checklist", "final bundle handoff generator"],
   [generator, "Source Gate IDs", "final bundle handoff generator"],
   [generator, "Source final gate classification", "final bundle handoff generator"],
+  [generator, "remainingGateCountSource", "final bundle handoff generator"],
+  [generator, "totalOwnerCloseoutGateCount", "final bundle handoff generator"],
   [generator, "Owner Closeout Files", "final bundle handoff generator"],
   [generator, "ownerCloseoutFiles", "final bundle handoff generator"],
   [generator, "Evidence Targets", "final bundle handoff generator"],
@@ -105,6 +107,9 @@ const fixture = buildBundleHandoff({
   finalGateClassification: {
     path: "artifacts/final-gate-classification/20260101-000000/manifest.json",
     data: {
+      summary: {
+        remainingGateCount: 26,
+      },
       ownerCloseoutFileIndex: [
         {
           order: 1,
@@ -121,7 +126,12 @@ const fixture = buildBundleHandoff({
 
 assert(fixture.status === "OPEN", "fixture bundle handoff should be OPEN");
 assert(fixture.bundleCount === 1, "fixture should count bundles");
+assert(fixture.remainingGateCount === 26, "fixture should prefer latest final gate classification remaining gate count");
+assert(fixture.remainingGateCountSource === "final-gate-classification", "fixture should record remaining gate count source");
+assert(fixture.executionPlanRemainingGateCount === 27, "fixture should retain execution-plan remaining gate count");
+assert(fixture.classificationRemainingGateCount === 26, "fixture should retain classification remaining gate count");
 assert(fixture.totalBundleGateCount === 17, "fixture should sum bundle gates");
+assert(fixture.totalOwnerCloseoutGateCount === 8, "fixture should sum owner closeout gates");
 assert(fixture.bundles[0].fileName === "01-field-input-and-risk-acceptance.md", "bundle handoff should create stable file names");
 assert(fixture.bundles[0].sourceGateIds.includes("final-manual-evidence"), "bundle handoff should preserve source gate ids");
 assert(fixture.sourceFinalGateClassification.includes("final-gate-classification"), "bundle handoff should link final gate classification source");
@@ -135,6 +145,8 @@ assert(indexMarkdown.includes("Source Gate IDs"), "index markdown should include
 assert(indexMarkdown.includes("final-manual-evidence"), "index markdown should include source final-status gate id");
 assert(indexMarkdown.includes("01-field-input-and-risk-acceptance.md"), "index markdown should link bundle file names");
 assert(indexMarkdown.includes("Source final gate classification"), "index markdown should include classification source");
+assert(indexMarkdown.includes("Remaining gate count source: final-gate-classification"), "index markdown should include remaining gate count source");
+assert(indexMarkdown.includes("Owner closeout gate count: 8"), "index markdown should include owner closeout gate count");
 assert(indexMarkdown.includes("Owner Closeout Files"), "index markdown should include owner closeout file section");
 assert(indexMarkdown.includes("01-hardware-runtime.md"), "index markdown should link owner closeout files");
 
