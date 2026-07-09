@@ -35,6 +35,7 @@ const runbook = readProjectFile("docs/ops/delivery-runbook.md");
   [generator, "artifacts/field-env-closeout", "field env closeout generator"],
   [generator, "field-env-catalog", "field env closeout generator"],
   [generator, "actionForFieldEnvKey", "field env closeout generator"],
+  [generator, "fieldEnvMeta", "field env closeout generator"],
   [generator, "suggestedValueForFieldEnvKey", "field env closeout generator"],
   [generator, "readinessEvidence", "field env closeout generator"],
   [generator, "requiredFieldValueCount", "field env closeout generator"],
@@ -50,6 +51,9 @@ const runbook = readProjectFile("docs/ops/delivery-runbook.md");
   [generator, "Redacted Env Skeleton", "field env closeout generator"],
   [generator, "Suggested Field Env Draft", "field env closeout generator"],
   [generator, "suggestedEnvLines", "field env closeout generator"],
+  [generator, "valueShape", "field env closeout generator"],
+  [generator, "Suggested Evidence-Safe Value", "field env closeout generator"],
+  [generator, "Verify With", "field env closeout generator"],
   [generator, "Current Env Key Coverage", "field env closeout generator"],
   [generator, "Append Missing Env Block", "field env closeout generator"],
   [generator, "readEnvKeySet", "field env closeout generator"],
@@ -139,6 +143,10 @@ assert(manifest.blockingCount === 1, "manifest should count blocking placeholder
 assert(manifest.reviewCount === 1, "manifest should count review field values");
 assert(manifest.closeoutItemCount === 2, "manifest should expose blocking plus review items");
 assert(manifest.closeoutItems.some((item) => item.name === "JWT_SECRET" && item.redacted === true), "manifest should preserve redaction metadata");
+assert(manifest.closeoutItems.some((item) => item.name === "JWT_SECRET" && item.valueShape.includes("never paste into evidence")), "manifest should expose value shape metadata");
+assert(manifest.closeoutItems.some((item) => item.name === "JWT_SECRET" && item.closes === "JWT secret placeholder"), "manifest should expose closeout gate metadata");
+assert(manifest.closeoutItems.some((item) => item.name === "JWT_SECRET" && item.verify === "field:preflight"), "manifest should expose verifier metadata");
+assert(manifest.closeoutItems.some((item) => item.name === "JWT_SECRET" && item.suggestedValue === "<field-secret-redacted>"), "manifest should keep suggested secret values redacted");
 assert(manifest.closeoutItems.some((item) => item.owner === "Nginx Delivery"), "manifest should map env items to owner groups");
 assert(manifest.envTemplateLines.includes("JWT_SECRET=<field-secret-redacted>"), "manifest should include redacted secret env skeleton line");
 assert(manifest.envTemplateLines.includes("NGINX_SWAGGER_ALLOW=<field-value>"), "manifest should include non-secret env skeleton line");
@@ -222,6 +230,11 @@ assert(markdown.includes("Owner Closeout Checklists"), "markdown should include 
 assert(markdown.includes("Post-Update Verification Sequence"), "markdown should include post-update verification section");
 assert(markdown.includes("Set reviewer/session metadata"), "markdown should include reviewer metadata step");
 assert(markdown.includes("final:refresh"), "markdown should include final refresh verification command");
+assert(markdown.includes("Closeout Items"), "markdown should include closeout items section");
+assert(markdown.includes("Value Shape"), "markdown should include value shape column");
+assert(markdown.includes("Suggested Evidence-Safe Value"), "markdown should include evidence-safe suggested values");
+assert(markdown.includes("Verify With"), "markdown should include verification metadata");
+assert(markdown.includes("JWT secret placeholder"), "markdown should include closeout gate metadata");
 assert(markdown.includes("JWT_SECRET=<field-secret-redacted>"), "markdown should include redacted secret placeholder");
 assert(!markdown.includes("JWT_SECRET=fixture-secret"), "markdown should not include concrete secret values");
 assert(markdown.includes("NGINX_SWAGGER_ALLOW"), "markdown should include open env key");

@@ -7,6 +7,7 @@ const { readLatestJsonManifest, timestampForPath } = require("./generate-deliver
 const { resolveFieldBaseUrl } = require("./field-env");
 const {
   actionForFieldEnvKey,
+  fieldEnvMeta,
   placeholderForFieldEnvKey,
   suggestedValueForFieldEnvKey,
 } = require("./field-env-catalog");
@@ -187,6 +188,10 @@ function buildManifest(options = {}) {
     owner: (envActionGroups.find((group) => (group.items || []).some((groupItem) => groupItem.name === item.name)) || {}).owner || "Field Operations",
     priority: blockingItems.includes(item) ? "BLOCKING" : "REVIEW",
     redacted: item.redacted !== false,
+    valueShape: fieldEnvMeta(item.name).valueShape,
+    closes: fieldEnvMeta(item.name).closes,
+    verify: fieldEnvMeta(item.name).verify,
+    suggestedValue: suggestedValueForItem(item),
     completionGate: item.completionGate,
     nextAction: item.nextAction,
     closeoutCommand: actionCommandForItem(item, baseUrl),
@@ -363,14 +368,16 @@ function buildMarkdown(manifest) {
     "",
     "## Closeout Items",
     "",
-    "| Priority | Owner | Env Key | State | Redacted | Completion Gate | Next Action | Closeout Command |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Priority | Owner | Env Key | State | Value Shape | Suggested Evidence-Safe Value | Closes | Verify With | Redacted | Completion Gate | Next Action | Closeout Command |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...(manifest.closeoutItems.length > 0
       ? manifest.closeoutItems.map(
           (item) =>
-            `| ${item.priority} | ${markdownCell(item.owner)} | ${markdownCell(item.name)} | ${markdownCell(item.state)} | ${item.redacted ? "yes" : "no"} | ${markdownCell(item.completionGate)} | ${markdownCell(item.nextAction)} | ${markdownCell(item.closeoutCommand)} |`,
+            `| ${item.priority} | ${markdownCell(item.owner)} | ${markdownCell(item.name)} | ${markdownCell(item.state)} | ${markdownCell(item.valueShape)} | ${markdownCell(item.suggestedValue)} | ${markdownCell(item.closes)} | ${markdownCell(item.verify)} | ${item.redacted ? "yes" : "no"} | ${markdownCell(item.completionGate)} | ${markdownCell(item.nextAction)} | ${markdownCell(item.closeoutCommand)} |`,
         )
-      : ["| READY | none | none | configured | yes | No open field environment gate remains. | No action required. | Rerun final:refresh. |"]),
+      : [
+          "| READY | none | none | configured | none | none | No open field environment gate remains. | final:refresh | yes | No open field environment gate remains. | No action required. | Rerun final:refresh. |",
+        ]),
     "",
   ].join("\n");
 }
