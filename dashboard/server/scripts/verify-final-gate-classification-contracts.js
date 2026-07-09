@@ -70,10 +70,15 @@ const checklist = readProjectFile("docs/ops/acceptance-checklist.md");
 
 assert(bucketForGate({ category: "Control Board TCP", message: "LIVE_TCP ACK required" }) === "hardware_runtime", "control-board gates should route to hardware runtime");
 assert(bucketForGate({ category: "Strict Gate", message: "Control Board TCP field evidence has 1 REVIEW item" }) === "hardware_runtime", "control board strict gates should route to hardware runtime");
+assert(bucketForGate({ category: "Handover Package", message: "handover package status is REVIEW; Control Board TCP field evidence has 1 REVIEW item" }) === "field_acceptance", "handover package aggregate gates should route to field acceptance before hardware keywords");
+assert(bucketForGate({ category: "Completion Audit", message: "Control-board safety is DRY_RUN_SAFE and field readiness is REVIEW" }) === "field_acceptance", "completion audit aggregate gates should route to field acceptance before hardware keywords");
 assert(bucketForGate({ category: "Security Scanner Closeout", message: "Trivy filesystem scanner closeout" }) === "security_tooling", "scanner gates should route to security tooling");
 assert(bucketForGate({ category: "Manual Evidence", message: "Operator UI Walkthrough evidence is INVALID" }) === "manual_reviewer", "manual evidence gates should route to manual reviewer");
 assert(bucketForGate({ category: "CI Status", message: "No CI workflow run was found" }) === "external_ci", "CI gates should route to external CI");
 assert(bucketForGate({ category: "Field Evidence", message: "JWT secret placeholder" }) === "field_configuration", "env gates should route to field configuration");
+assert(bucketForGate({ category: "Field Evidence", message: "Field Preflight: seed admin password" }) === "field_configuration", "seed admin password gates should route to field configuration");
+assert(bucketForGate({ category: "Field Evidence", message: "Field Preflight: Nginx wrong-way rate limit" }) === "field_configuration", "Nginx rate limit gates should route to field configuration");
+assert(bucketForGate({ category: "Field Evidence", message: "Field Preflight: Nginx content security policy" }) === "field_configuration", "Nginx CSP gates should route to field configuration");
 assert(bucketForGate({ category: "Field Risk Register", message: "field risk register has 48 open risk items" }) === "field_acceptance", "field risk/action gates should route to field acceptance");
 assert(bucketForGate({ category: "Strict Gate", message: "canMarkGoalComplete is false" }) === "field_acceptance", "goal closeout gates should route to field acceptance");
 assert(bucketForGate({ category: "Known Limitation", message: "Level-2 Escalation threshold remains field-measurement dependent" }) === "field_acceptance", "field measurement escalation gates should route to field acceptance");

@@ -19,7 +19,16 @@ function argValue(name, fallback) {
 }
 
 function bucketForGate(gate) {
+  const category = String(gate.category || "").toLowerCase();
   const text = `${gate.category || ""} ${gate.status || ""} ${gate.actionType || ""} ${gate.message || ""} ${gate.closeWhen || ""}`.toLowerCase();
+  if (
+    category === "completion audit" ||
+    category === "handover package" ||
+    text.includes("handover package status") ||
+    text.includes("canmarkgoalcomplete")
+  ) {
+    return "field_acceptance";
+  }
   if (text.includes("control-board") || text.includes("control board") || text.includes("live_tcp") || text.includes("hardware")) {
     return "hardware_runtime";
   }
@@ -35,7 +44,18 @@ function bucketForGate(gate) {
   if (text.includes("ci status") || text.includes("github actions") || text.includes("ci workflow")) {
     return "external_ci";
   }
-  if (text.includes(".env") || text.includes("jwt secret") || text.includes("cors") || text.includes("swagger allowlist") || text.includes("device ingest key") || text.includes("cookie")) {
+  if (
+    text.includes(".env") ||
+    text.includes("jwt secret") ||
+    text.includes("seed admin") ||
+    text.includes("cors") ||
+    text.includes("swagger allowlist") ||
+    text.includes("device ingest key") ||
+    text.includes("cookie") ||
+    text.includes("rate limit") ||
+    text.includes("content security policy") ||
+    text.includes(" csp")
+  ) {
     return "field_configuration";
   }
   if (
