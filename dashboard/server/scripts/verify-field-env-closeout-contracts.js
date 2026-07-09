@@ -8,6 +8,7 @@ const {
   buildEnvTemplateLines,
   buildSuggestedEnvLines,
   buildAppendMissingEnvLines,
+  buildPostUpdateVerificationSequence,
   envPlaceholderForItem,
   suggestedValueForItem,
 } = require("./generate-field-env-closeout");
@@ -42,6 +43,8 @@ const runbook = readProjectFile("docs/ops/delivery-runbook.md");
   [generator, "ownerEnvTemplates", "field env closeout generator"],
   [generator, "ownerCloseoutChecklists", "field env closeout generator"],
   [generator, "Owner Closeout Checklists", "field env closeout generator"],
+  [generator, "postUpdateVerificationSequence", "field env closeout generator"],
+  [generator, "Post-Update Verification Sequence", "field env closeout generator"],
   [generator, "Set reviewer/session metadata", "field env closeout generator"],
   [generator, "Rerun strict field preflight", "field env closeout generator"],
   [generator, "Redacted Env Skeleton", "field env closeout generator"],
@@ -161,6 +164,9 @@ assert(
   ),
   "manifest should create owner closeout checklists with redacted placeholders",
 );
+assert(manifest.postUpdateVerificationSequence.length === 4, "manifest should expose post-update verification sequence");
+assert(manifest.postUpdateVerificationSequence[0].id === "strict-field-preflight", "post-update sequence should start with strict field preflight");
+assert(manifest.postUpdateVerificationSequence.some((step) => step.id === "final-refresh"), "post-update sequence should include final refresh guidance");
 assert(manifest.strictPreflightCommand.includes("-RequireDeviceKey -RequireHttpsCookies -RequireSwaggerAllowlist -Strict"), "manifest should expose strict preflight command");
 assert(actionCommandForItem({ name: "JWT_SECRET" }, "https://delivery.example.local").includes("Do not paste the value into evidence"), "JWT action should protect secret values");
 assert(envPlaceholderForItem({ name: "CONTROL_BOARD_PORT", redacted: false }) === "<number>", "numeric env values should use number placeholder");
@@ -198,6 +204,12 @@ assert(
   ),
   "owner checklist helper should redact secret placeholders",
 );
+assert(
+  buildPostUpdateVerificationSequence("https://delivery.example.local", "npm.cmd run field:preflight -- -Strict").some(
+    (step) => step.command.includes("final:refresh") && step.doneWhen.includes("field_configuration"),
+  ),
+  "post-update verification helper should include final refresh and field configuration closeout criteria",
+);
 
 const markdown = buildMarkdown(manifest);
 assert(markdown.includes("Field Environment Closeout"), "markdown should include title");
@@ -207,7 +219,9 @@ assert(markdown.includes("Suggested Field Env Draft"), "markdown should include 
 assert(markdown.includes("Current Env Key Coverage"), "markdown should include current env coverage section");
 assert(markdown.includes("Append Missing Env Block"), "markdown should include append missing env section");
 assert(markdown.includes("Owner Closeout Checklists"), "markdown should include owner closeout checklist section");
+assert(markdown.includes("Post-Update Verification Sequence"), "markdown should include post-update verification section");
 assert(markdown.includes("Set reviewer/session metadata"), "markdown should include reviewer metadata step");
+assert(markdown.includes("final:refresh"), "markdown should include final refresh verification command");
 assert(markdown.includes("JWT_SECRET=<field-secret-redacted>"), "markdown should include redacted secret placeholder");
 assert(!markdown.includes("JWT_SECRET=fixture-secret"), "markdown should not include concrete secret values");
 assert(markdown.includes("NGINX_SWAGGER_ALLOW"), "markdown should include open env key");

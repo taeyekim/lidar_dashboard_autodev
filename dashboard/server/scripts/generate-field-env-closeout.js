@@ -135,6 +135,35 @@ function buildOwnerCloseoutChecklists(items, strictPreflightCommand) {
   }));
 }
 
+function buildPostUpdateVerificationSequence(baseUrl, strictPreflightCommand) {
+  return [
+    {
+      order: 1,
+      id: "strict-field-preflight",
+      command: strictPreflightCommand,
+      doneWhen: "Latest field preflight has zero REVIEW/SKIPPED items for JWT, CORS, device key, cookie, Swagger, Nginx rate limit, and CSP settings.",
+    },
+    {
+      order: 2,
+      id: "field-readiness",
+      command: `npm.cmd run field:readiness -- --base-url=${baseUrl} --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`,
+      doneWhen: "Field readiness status is PASS or only non-env field/hardware acceptance gates remain.",
+    },
+    {
+      order: 3,
+      id: "field-env-closeout",
+      command: `npm.cmd run field:env-closeout -- --base-url=${baseUrl} --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`,
+      doneWhen: "Field environment closeout status is READY_TO_CLOSE and closeoutItemCount is 0.",
+    },
+    {
+      order: 4,
+      id: "final-refresh",
+      command: `npm.cmd run final:refresh -- --base-url=${baseUrl} --generated-by="$env:FIELD_REVIEWER" --site-name="$env:FIELD_SITE_NAME"`,
+      doneWhen: "Latest final gate classification no longer lists field_configuration gates for the updated env keys.",
+    },
+  ];
+}
+
 function buildManifest(options = {}) {
   const readiness = Object.prototype.hasOwnProperty.call(options, "readiness")
     ? options.readiness
@@ -213,6 +242,7 @@ function buildManifest(options = {}) {
     ownerGroups: Object.values(ownerGroups),
     ownerEnvTemplates,
     ownerCloseoutChecklists: buildOwnerCloseoutChecklists(closeoutItems, strictPreflightCommand),
+    postUpdateVerificationSequence: buildPostUpdateVerificationSequence(baseUrl, strictPreflightCommand),
     envTemplateLines: buildEnvTemplateLines(closeoutItems),
     suggestedEnvLines: buildSuggestedEnvLines(closeoutItems),
     closeoutItems,
@@ -320,6 +350,17 @@ function buildMarkdown(manifest) {
           "",
         ])
       : ["No owner closeout checklists remain.", ""]),
+    "## Post-Update Verification Sequence",
+    "",
+    "| Order | ID | Command | Done When |",
+    "| --- | --- | --- | --- |",
+    ...(manifest.postUpdateVerificationSequence.length > 0
+      ? manifest.postUpdateVerificationSequence.map(
+          (step) =>
+            `| ${step.order} | ${markdownCell(step.id)} | \`${markdownCell(step.command)}\` | ${markdownCell(step.doneWhen)} |`,
+        )
+      : ["| - | none | No command required. | No open field environment gate remains. |"]),
+    "",
     "## Closeout Items",
     "",
     "| Priority | Owner | Env Key | State | Redacted | Completion Gate | Next Action | Closeout Command |",
@@ -361,6 +402,7 @@ module.exports = {
   buildEnvTemplateLines,
   buildSuggestedEnvLines,
   buildAppendMissingEnvLines,
+  buildPostUpdateVerificationSequence,
   readEnvKeySet,
   envPlaceholderForItem,
   suggestedValueForItem,
