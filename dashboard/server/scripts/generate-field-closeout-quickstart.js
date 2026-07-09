@@ -205,6 +205,32 @@ function summarizeRequirementsBacklog(fieldRequirementsBacklog) {
   };
 }
 
+function summarizeFieldAnswerSheet(fieldRequirementsBacklog) {
+  const data = fieldRequirementsBacklog?.data || null;
+  const rows = Array.isArray(data?.fieldAnswerSheet) ? data.fieldAnswerSheet : [];
+  return {
+    status: rows.length > 0 ? "OPEN" : data ? "EMPTY" : "MISSING",
+    answerCount: rows.length,
+    todoCount: rows.filter((row) => row.answerStatus === "TODO").length,
+    riskAcceptanceCount: rows.filter((row) => row.riskAcceptanceNeeded === true).length,
+    owners: uniq(rows.map((row) => row.owner)).sort(),
+    rows: rows.map((row) => ({
+      id: row.id,
+      owner: row.owner,
+      priority: row.priority,
+      answerStatus: row.answerStatus,
+      question: row.question,
+      envKeysToFill: row.envKeysToFill || [],
+      evidenceToAttach: row.evidenceToAttach || [],
+      runtimeToRun: row.runtimeToRun || [],
+      commandToRerun: row.commandToRerun || "",
+      riskAcceptanceNeeded: row.riskAcceptanceNeeded === true,
+      targetRecheckDate: row.targetRecheckDate || "",
+      closeWhen: row.closeWhen || "",
+    })),
+  };
+}
+
 function filterEnvGuide(envGuide, keys) {
   const keySet = new Set(keys);
   return (envGuide || []).filter((item) => keySet.has(item.key));
@@ -321,6 +347,7 @@ function buildManifest(input = {}) {
   const summary = classification?.data?.summary || {};
   const envGuide = buildEnvGuide(prerequisites.env);
   const requirementsBacklogSummary = summarizeRequirementsBacklog(fieldRequirementsBacklog);
+  const fieldAnswerSheetLinkage = summarizeFieldAnswerSheet(fieldRequirementsBacklog);
   const fieldCloseoutPacket = buildFieldCloseoutPacket({
     baseUrl,
     envGuide,
@@ -342,6 +369,7 @@ function buildManifest(input = {}) {
     sourceFieldEnvCloseout: fieldEnvCloseout?.path || null,
     sourceFieldRequirementsBacklog: fieldRequirementsBacklog?.path || null,
     requirementsBacklogSummary,
+    fieldAnswerSheetLinkage,
     remainingGateCount: finalStatus?.data?.remainingGates?.length ?? null,
     openActionCount: actionItems.length,
     bucketGateCounts: summary.bucketGateCounts || {},
@@ -393,6 +421,9 @@ function buildMarkdown(manifest) {
     `- Owner count: ${manifest.requirementsBacklogSummary.ownerCount ?? "unknown"}`,
     `- Priority counts: ${JSON.stringify(manifest.requirementsBacklogSummary.priorityCounts)}`,
     `- Action type counts: ${JSON.stringify(manifest.requirementsBacklogSummary.actionTypeCounts)}`,
+    `- Field answer sheet status: ${manifest.fieldAnswerSheetLinkage.status}`,
+    `- Field answer sheet TODO count: ${manifest.fieldAnswerSheetLinkage.todoCount}`,
+    `- Field answer sheet risk-acceptance count: ${manifest.fieldAnswerSheetLinkage.riskAcceptanceCount}`,
     "",
     "## Guardrails",
     "",
@@ -449,6 +480,24 @@ function buildMarkdown(manifest) {
     "### Deferred Field Requirements",
     "",
     ...manifest.fieldCloseoutPacket.unresolvedRequirements.map((item) => `- ${item}`),
+    "",
+    "## Field Answer Sheet Linkage",
+    "",
+    "Use this linkage after filling the field requirements backlog answer sheet. Every row keeps secrets out of evidence and points back to the command that should be rerun after the answer or evidence is available.",
+    "",
+    `- Answer rows: ${manifest.fieldAnswerSheetLinkage.answerCount}`,
+    `- TODO rows: ${manifest.fieldAnswerSheetLinkage.todoCount}`,
+    `- Risk acceptance rows: ${manifest.fieldAnswerSheetLinkage.riskAcceptanceCount}`,
+    `- Owners: ${manifest.fieldAnswerSheetLinkage.owners.join(", ") || "none"}`,
+    "",
+    "| ID | Owner | Priority | Status | Question | Env Keys | Evidence | Runtime | Command To Rerun | Risk Acceptance | Target Recheck Date | Close When |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    ...(manifest.fieldAnswerSheetLinkage.rows.length > 0
+      ? manifest.fieldAnswerSheetLinkage.rows.map(
+          (item) =>
+            `| ${item.id} | ${markdownCell(item.owner)} | ${item.priority} | ${markdownCell(item.answerStatus)} | ${markdownCell(item.question)} | ${markdownCell(item.envKeysToFill.join(", ") || "-")} | ${markdownCell(item.evidenceToAttach.join(", ") || "-")} | ${markdownCell(item.runtimeToRun.join(", ") || "-")} | ${markdownCell(item.commandToRerun || "-")} | ${item.riskAcceptanceNeeded ? "yes" : "no"} | ${markdownCell(item.targetRecheckDate || "YYYY-MM-DD")} | ${markdownCell(item.closeWhen)} |`,
+        )
+      : ["| - | none | - | DONE | No field answer rows. | - | - | - | - | no | - | - |"]),
     "",
     "## Env Keys To Fill",
     "",
@@ -541,4 +590,5 @@ module.exports = {
   flattenPrerequisites,
   buildPhaseQueue,
   buildFieldCloseoutPacket,
+  summarizeFieldAnswerSheet,
 };

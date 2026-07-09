@@ -5,6 +5,7 @@ const {
   buildMarkdown,
   buildPhaseQueue,
   flattenPrerequisites,
+  summarizeFieldAnswerSheet,
 } = require("./generate-field-closeout-quickstart");
 
 function assert(condition, message) {
@@ -33,6 +34,10 @@ const catalog = readProjectFile("dashboard/server/scripts/field-env-catalog.js")
   [generator, "sourceFieldRequirementsBacklog", "quickstart generator"],
   [generator, "requirementsBacklogSummary", "quickstart generator"],
   [generator, "Requirements Backlog Summary", "quickstart generator"],
+  [generator, "Field Answer Sheet Linkage", "quickstart generator"],
+  [generator, "summarizeFieldAnswerSheet", "quickstart generator"],
+  [generator, "Risk acceptance rows", "quickstart generator"],
+  [generator, "Command To Rerun", "quickstart generator"],
   [generator, "Field Closeout Packet", "quickstart generator"],
   [generator, "Required Field Inputs", "quickstart generator"],
   [generator, "Live TCP ACK Checklist", "quickstart generator"],
@@ -95,6 +100,31 @@ const phaseQueue = buildPhaseQueue(actionItems);
 assert(phaseQueue[0].phase === "Field Preflight", "phase queue should use field closeout order");
 assert(phaseQueue[1].phase === "Field Rehearsal", "phase queue should keep rehearsal after preflight");
 
+const answerSheetLinkage = summarizeFieldAnswerSheet({
+  data: {
+    fieldAnswerSheet: [
+      {
+        id: "REQ-001",
+        owner: "Control-board TCP",
+        priority: "P0",
+        answerStatus: "TODO",
+        question: "Confirm control-board host and TCP port.",
+        envKeysToFill: ["CONTROL_BOARD_HOST", "CONTROL_BOARD_PORT"],
+        evidenceToAttach: ["artifacts/field-control-board-rehearsal/<timestamp>/manifest.json"],
+        runtimeToRun: ["Integrated control board reachable"],
+        commandToRerun: "scripts/control-board-field-rehearsal.ps1 -AllowLiveTcp",
+        riskAcceptanceNeeded: true,
+        targetRecheckDate: "",
+        closeWhen: "Live ACK evidence is captured.",
+      },
+    ],
+  },
+});
+assert(answerSheetLinkage.answerCount === 1, "answer sheet linkage should count rows");
+assert(answerSheetLinkage.todoCount === 1, "answer sheet linkage should count TODO rows");
+assert(answerSheetLinkage.riskAcceptanceCount === 1, "answer sheet linkage should count risk acceptance rows");
+assert(answerSheetLinkage.rows[0].commandToRerun.includes("AllowLiveTcp"), "answer sheet linkage should keep rerun command");
+
 const manifest = buildManifest({
   generatedAt: "2026-01-01T00:00:00.000Z",
   generatedBy: "reviewer",
@@ -138,6 +168,22 @@ const manifest = buildManifest({
       ownerCount: 2,
       priorityCounts: { P0: 1, P1: 2 },
       actionTypeCounts: { FIELD_ACTION_REQUIRED: 2, REVIEW_REQUIRED: 1 },
+      fieldAnswerSheet: [
+        {
+          id: "REQ-001",
+          owner: "Control-board TCP",
+          priority: "P0",
+          answerStatus: "TODO",
+          question: "Confirm control-board host and TCP port.",
+          envKeysToFill: ["CONTROL_BOARD_HOST", "CONTROL_BOARD_PORT"],
+          evidenceToAttach: ["artifacts/field-control-board-rehearsal/<timestamp>/manifest.json"],
+          runtimeToRun: ["Integrated control board reachable"],
+          commandToRerun: "scripts/control-board-field-rehearsal.ps1 -AllowLiveTcp",
+          riskAcceptanceNeeded: true,
+          targetRecheckDate: "",
+          closeWhen: "Live ACK evidence is captured.",
+        },
+      ],
     },
   },
 });
@@ -161,6 +207,10 @@ assert(
 assert(manifest.requirementsBacklogSummary.itemCount === 3, "quickstart should summarize backlog item count");
 assert(manifest.requirementsBacklogSummary.ownerCount === 2, "quickstart should summarize backlog owner count");
 assert(manifest.requirementsBacklogSummary.priorityCounts.P0 === 1, "quickstart should preserve backlog priority counts");
+assert(manifest.fieldAnswerSheetLinkage.answerCount === 1, "quickstart should summarize answer sheet rows");
+assert(manifest.fieldAnswerSheetLinkage.todoCount === 1, "quickstart should summarize answer sheet TODO rows");
+assert(manifest.fieldAnswerSheetLinkage.riskAcceptanceCount === 1, "quickstart should summarize answer sheet risk rows");
+assert(manifest.fieldAnswerSheetLinkage.rows[0].envKeysToFill.includes("CONTROL_BOARD_HOST"), "quickstart should link answer sheet env keys");
 assert(manifest.envPatchBlockLines.includes("JWT_SECRET=replace_in_field"), "quickstart should sanitize secret patch values");
 assert(manifest.envPatchBlockLines.includes("CONTROL_BOARD_DRY_RUN=true"), "quickstart should include safe control-board defaults");
 assert(manifest.fieldCloseoutPacket.summary.openEnvItemCount === 2, "quickstart packet should summarize open env items");
@@ -206,6 +256,11 @@ const markdown = buildMarkdown(manifest);
   "Source field requirements backlog",
   "Requirements Backlog Summary",
   "Item count: 3",
+  "Field Answer Sheet Linkage",
+  "Answer rows: 1",
+  "Risk acceptance rows: 1",
+  "Command To Rerun",
+  "REQ-001",
   "Field Closeout Packet",
   "Required Field Inputs",
   "Auth/security delivery values",
