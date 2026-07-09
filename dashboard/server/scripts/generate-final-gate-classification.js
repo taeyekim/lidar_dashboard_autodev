@@ -42,6 +42,10 @@ function bucketForGate(gate) {
     text.includes("field readiness") ||
     text.includes("field acceptance") ||
     text.includes("field preflight") ||
+    text.includes("handover package status") ||
+    text.includes("canmarkgoalcomplete") ||
+    text.includes("level-2 escalation") ||
+    text.includes("escalation threshold") ||
     text.includes("field risk register") ||
     text.includes("field action board") ||
     text.includes("field gate closure map") ||

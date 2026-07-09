@@ -75,6 +75,8 @@ assert(bucketForGate({ category: "Manual Evidence", message: "Operator UI Walkth
 assert(bucketForGate({ category: "CI Status", message: "No CI workflow run was found" }) === "external_ci", "CI gates should route to external CI");
 assert(bucketForGate({ category: "Field Evidence", message: "JWT secret placeholder" }) === "field_configuration", "env gates should route to field configuration");
 assert(bucketForGate({ category: "Field Risk Register", message: "field risk register has 48 open risk items" }) === "field_acceptance", "field risk/action gates should route to field acceptance");
+assert(bucketForGate({ category: "Strict Gate", message: "canMarkGoalComplete is false" }) === "field_acceptance", "goal closeout gates should route to field acceptance");
+assert(bucketForGate({ category: "Known Limitation", message: "Level-2 Escalation threshold remains field-measurement dependent" }) === "field_acceptance", "field measurement escalation gates should route to field acceptance");
 
 const buckets = summarizeBuckets([
   { id: "gate-control", area: "Control Board TCP", gate: "Control Board TCP: DRY_RUN_SAFE", category: "Control Board TCP", status: "DRY_RUN_SAFE", actionType: "FIELD_ACTION_REQUIRED", message: "LIVE_TCP ACK required" },
