@@ -257,6 +257,47 @@ function New-CommandSequence {
   })
 }
 
+function New-PostLiveTcpVerificationSequence {
+  param(
+    [string]$BaseUrl,
+    [string]$Reviewer,
+    [string]$SiteName
+  )
+
+  return @(
+    [pscustomobject]@{
+      order = 1
+      id = "safe-state-confirmation"
+      command = "Confirm STAGE_2_RETURN output and hardware default/safe state with the field spotter and hardware owner."
+      doneWhen = "Barrier, signboard, and speaker are back in the agreed safe/default state after the final STAGE_2_RETURN rehearsal."
+    },
+    [pscustomobject]@{
+      order = 2
+      id = "field-readiness"
+      command = "npm.cmd run field:readiness -- --base-url=$BaseUrl --generated-by=`"$Reviewer`" --site-name=`"$SiteName`""
+      doneWhen = "Field readiness records LIVE_TCP_READY or lists only non-control-board field acceptance gates."
+    },
+    [pscustomobject]@{
+      order = 3
+      id = "field-acceptance"
+      command = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/field-acceptance.ps1 -BaseUrl $BaseUrl -Reviewer `"$Reviewer`" -SiteName `"$SiteName`""
+      doneWhen = "Field acceptance includes this control-board rehearsal manifest and no control-board REVIEW/SKIPPED item remains."
+    },
+    [pscustomobject]@{
+      order = 4
+      id = "handover-package"
+      command = "npm.cmd run handover:package -- --base-url=$BaseUrl --generated-by=`"$Reviewer`" --site-name=`"$SiteName`" --strict"
+      doneWhen = "Handover package references the latest control-board rehearsal, field readiness, and field acceptance manifests."
+    },
+    [pscustomobject]@{
+      order = 5
+      id = "final-refresh"
+      command = "npm.cmd run final:refresh -- --base-url=$BaseUrl --generated-by=`"$Reviewer`" --site-name=`"$SiteName`""
+      doneWhen = "Latest final gate classification no longer lists hardware_runtime gates for control-board LIVE TCP ACK evidence."
+    }
+  )
+}
+
 $envValues = Read-DotEnv ".env"
 $liveApproved = ""
 if ($env:CONTROL_BOARD_LIVE_APPROVED) { $liveApproved = $env:CONTROL_BOARD_LIVE_APPROVED }
@@ -346,6 +387,7 @@ try {
   }
   $liveTcpApprovalChecklist = New-LiveTcpApprovalChecklist -Status $finalStatus -AllowLiveTcp ([bool]$AllowLiveTcp) -LiveApproved $liveApproved -EnvValues $envValues
   $liveTcpApprovalStatus = if (@($liveTcpApprovalChecklist | Where-Object { $_.status -ne "PASS" }).Count -eq 0) { "READY" } else { "REVIEW" }
+  $postLiveTcpVerificationSequence = New-PostLiveTcpVerificationSequence -BaseUrl $BaseUrl -Reviewer $Reviewer -SiteName $SiteName
 
   $manifest = [pscustomobject]@{
     generatedAt = (Get-Date).ToUniversalTime().ToString("o")
@@ -364,6 +406,7 @@ try {
     liveTcpApprovalStatus = $liveTcpApprovalStatus
     liveTcpApprovalChecklist = $liveTcpApprovalChecklist
     commandSequence = $commandSequence
+    postLiveTcpVerificationSequence = $postLiveTcpVerificationSequence
     results = $results
   }
 
@@ -406,6 +449,12 @@ try {
     "| Order | Command | Purpose | Expected Frame Bytes | Expected Result |",
     "| --- | --- | --- | --- | --- |"
   ) + ($commandSequence | ForEach-Object { "| $($_.order) | $($_.commandType) | $($_.purpose) | $($_.expectedFrameBytes) | $($_.expectedResult) |" }) + @(
+    "",
+    "## Post-LIVE TCP Verification Sequence",
+    "",
+    "| Order | ID | Command | Done When |",
+    "| --- | --- | --- | --- |"
+  ) + ($postLiveTcpVerificationSequence | ForEach-Object { "| $($_.order) | $($_.id) | ``$($_.command)`` | $($_.doneWhen) |" }) + @(
     "",
     "## Safety",
     "",

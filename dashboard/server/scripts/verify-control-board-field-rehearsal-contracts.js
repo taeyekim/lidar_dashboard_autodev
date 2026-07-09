@@ -60,11 +60,14 @@ const serverPackageJson = readProjectFile("dashboard/server/package.json");
   "Git pushed to origin/dev",
   "New-LiveTcpApprovalChecklist",
   "New-CommandSequence",
+  "New-PostLiveTcpVerificationSequence",
   "liveTcpApprovalStatus",
   "liveTcpApprovalChecklist",
   "commandSequence",
+  "postLiveTcpVerificationSequence",
   "LIVE TCP Approval Checklist",
   "Command Sequence",
+  "Post-LIVE TCP Verification Sequence",
   "expectedFrameBytes = 10",
   "10-byte TCP frame sent and ACK/response evidence recorded",
   "10-byte frame generated and DRY_RUN_SKIPPED_SEND log recorded without TCP send",
@@ -78,6 +81,8 @@ const serverPackageJson = readProjectFile("dashboard/server/package.json");
   "SiteName is missing or placeholder",
   "Control-board field rehearsal completed with REVIEW items",
   "field hardware approval",
+  "safe/default state",
+  "hardware_runtime gates",
   "control-board field rehearsal ok",
 ].forEach((token) => assertIncludes(script, token, "control-board field rehearsal script"));
 
