@@ -224,6 +224,10 @@ Before the final handover package, run
 `npm.cmd run manual:evidence-drafts -- --base-url=http://localhost:8080 --site-name="$env:FIELD_SITE_NAME" --reviewer="$env:FIELD_REVIEWER"`
 when `artifacts/manual/operator-ui-walkthrough.md` or
 `artifacts/manual/field-risk-acceptance.md` is missing. It creates reviewer-fillable
+draft guidance and a Field Acceptance Evidence Pack Checklist covering reviewer metadata,
+operator route walkthrough, level-2 escalation criteria, traffic statistics reconciliation,
+control-board safety ladder, and final package linkage. It preserves existing
+manual evidence files unless `--force` is intentionally used.
 drafts and writes `artifacts/manual-evidence-drafts/<timestamp>/manifest.json`
 plus `manifest.md`. When a latest `field:risk-register` manifest exists, the
 draft report also carries its copyable `Risk Acceptance Draft Rows` and uses

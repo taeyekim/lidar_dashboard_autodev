@@ -19,6 +19,11 @@ This matrix maps the delivery requirements for the lidar wrong-way prevention da
 
 Field gate closure map evidence (`artifacts/field-gate-closure-map/<timestamp>/manifest.json`) groups the latest field action board by command so reviewers can see which final-status gates, owners, phases, categories, statuses, evidence paths, and close criteria each field command is expected to resolve. The field gate closure map is reviewer-facing execution evidence, not completion evidence.
 
+Manual evidence draft reports include a Field Acceptance Evidence Pack Checklist so the
+operator walkthrough can capture reviewer metadata, route screenshots, level-2 escalation
+criteria, traffic statistics reconciliation, control-board safety ladder evidence, and
+final package linkage without fabricating field-measurement-dependent approvals.
+
 Field Closeout Quickstart evidence (`npm run field:closeout-quickstart`, `artifacts/field-closeout-quickstart/<timestamp>/manifest.json`, and `artifacts/field-closeout-quickstart/<timestamp>/manifest.md`) links the latest final status, action board, gate closure map, owner briefs, field env closeout, and Field Requirements Backlog into one operator-facing closeout guide. It exposes the `Safe .env Patch Block`, field evidence prerequisites, runtime prerequisites, and phase command queue without printing secret values.
 
 Field Requirements Backlog evidence (`npm run field:requirements-backlog`, `artifacts/field-requirements-backlog/<timestamp>/manifest.json`, and `artifacts/field-requirements-backlog/<timestamp>/manifest.md`) groups Batched unresolved field questions by owner, priority, action type, source gate, and close criteria. It is used to collect `FIELD_REVIEWER`, `FIELD_SITE_NAME`, `FIELD_BASE_URL`, control-board live TCP, Nginx, Swagger, CSP, JWT/cookie, LiDAR ingest, manual evidence, CI, and aggregate final closeout decisions without interrupting auto-mode development; it is not a substitute for reviewer approval or live field evidence.

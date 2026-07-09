@@ -62,10 +62,13 @@ const riskTemplate = readProjectFile("docs/ops/field-risk-acceptance-template.md
   [finalExecutionPlan, "manual:evidence-drafts", "final execution plan"],
   [runbook, "npm.cmd run manual:evidence-drafts", "delivery runbook"],
   [runbook, "artifacts/manual-evidence-drafts/<timestamp>/manifest.json", "delivery runbook"],
+  [runbook, "Field Acceptance Evidence Pack Checklist", "delivery runbook"],
   [checklist, "npm run manual:evidence-drafts", "acceptance checklist"],
   [checklist, "artifacts/manual-evidence-drafts/<timestamp>/manifest.json", "acceptance checklist"],
+  [checklist, "Field Acceptance Evidence Pack Checklist", "acceptance checklist"],
   [matrix, "manual:evidence-drafts", "delivery evidence matrix"],
   [matrix, "artifacts/manual-evidence-drafts/<timestamp>/manifest.json", "delivery evidence matrix"],
+  [matrix, "Field Acceptance Evidence Pack Checklist", "delivery evidence matrix"],
 ].forEach(([content, token, label]) => assertIncludes(content, token, label));
 
 const draftedOperator = buildDraftContent(operatorTemplate, { type: "Operator UI Walkthrough" }, {
