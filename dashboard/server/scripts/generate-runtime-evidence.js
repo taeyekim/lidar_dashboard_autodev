@@ -95,6 +95,81 @@ function statusLabel(item) {
   return item.exitCode === 0 ? "PASS" : "REVIEW";
 }
 
+const RUNTIME_SMOKE_COVERAGE = Object.freeze([
+  {
+    id: "nginx-health-security",
+    area: "Nginx And Runtime",
+    evidence: "healthz, SPA, and frontend asset status/security/cache headers",
+    probes: ["Nginx healthz smoke", "healthz security header smoke", "SPA security header smoke", "frontend asset security header smoke"],
+    acceptance: "Nginx entrypoint returns expected status codes and security/cache headers.",
+  },
+  {
+    id: "swagger-entrypoint",
+    area: "API And Swagger",
+    evidence: "GET /api-docs.json and Swagger UI path",
+    probes: ["Swagger UI path smoke"],
+    acceptance: "Swagger JSON and UI are reachable through the delivery entrypoint.",
+  },
+  {
+    id: "auth-cookie-csrf",
+    area: "Authentication",
+    evidence: "HttpOnly login, readable CSRF cookie, protected reads, CSRF mutation checks, logout clearing",
+    probes: ["non-json mutation smoke", "cookie-auth mutation without CSRF smoke", "cookie-auth mutation with CSRF smoke", "cookie-auth logout smoke", "logout clears cookie smoke"],
+    acceptance: "Cookie auth does not expose JWT body token, CSRF is required for mutations, and logout clears session cookies.",
+  },
+  {
+    id: "device-ingest-key",
+    area: "LiDAR Ingest + Security",
+    evidence: "missing X-Device-Key rejection for wrongway, LiDAR ingest, and control-board bridge paths when configured",
+    probes: ["missing X-Device-Key wrongway smoke", "missing X-Device-Key lidar ingest smoke", "missing X-Device-Key control-board ingest smoke"],
+    acceptance: "Configured device ingest key gates reject unauthenticated device/bridge writes before processing.",
+  },
+  {
+    id: "wrongway-lifecycle",
+    area: "LiDAR Ingest",
+    evidence: "normal-driving, wrong-way level-1/2, duplicate handling, situation-ended, event detail raw payload and command timeline",
+    probes: ["POST /api/wrongway", "event detail raw payload", "controlCommands", "packetHex"],
+    acceptance: "Representative LiDAR payloads create/update tracks and events, retain raw payload, and expose linked control command data.",
+  },
+  {
+    id: "control-board-frame",
+    area: "Control Board TCP",
+    evidence: "POST /api/ingest/control-board/tcp/test parser/CRC and status metrics",
+    probes: ["/api/ingest/control-board/tcp/test", "TCP_FRAME_TEST", "GET /api/control-board/status", "averageResponseMs", "responseSampleCount", "liveTcpReady", "liveApproved", "safetyStatus"],
+    acceptance: "TCP frame diagnostic endpoint validates the 10-byte frame contract and status exposes timing/safety fields.",
+  },
+  {
+    id: "operator-kpis",
+    area: "Traffic Statistics",
+    evidence: "events summary and daily traffic statistics counters/rates/latency",
+    probes: ["/api/events/summary", "vehiclesPassed", "wrongwayVehicles", "wrongWayEvents", "wrongwayRate", "/api/statistics/traffic?range=daily", "normalVehicles", "averageResponseMs"],
+    acceptance: "Operator KPI endpoints expose unique vehicle counts, wrong-way counts/rate, and command latency fields.",
+  },
+]);
+
+function buildRuntimeSmokeCoverage(commands, options) {
+  const runtimeSmoke = commands.find((item) => item.label === "runtime smoke");
+  const commandStatus = !runtimeSmoke || runtimeSmoke.status === "skipped" ? "SKIPPED" : runtimeSmoke.exitCode === 0 ? "PASS" : "REVIEW";
+  const rows = RUNTIME_SMOKE_COVERAGE.map((item) => ({
+    ...item,
+    status: commandStatus,
+    command: runtimeSmoke?.command || null,
+    logFile: runtimeSmoke?.logFile || null,
+    baseUrl: options.baseUrl,
+  }));
+  return {
+    source: "scripts/runtime-smoke.ps1",
+    enabled: options.runSmoke === true,
+    baseUrl: options.baseUrl,
+    useExistingStack: options.useExistingStack === true,
+    commandStatus,
+    coveredAreaCount: commandStatus === "PASS" ? rows.length : 0,
+    reviewAreaCount: commandStatus === "REVIEW" ? rows.length : 0,
+    skippedAreaCount: commandStatus === "SKIPPED" ? rows.length : 0,
+    rows,
+  };
+}
+
 function buildMarkdown(manifest) {
   const lines = [
     "# Runtime Evidence Manifest",
@@ -122,6 +197,28 @@ function buildMarkdown(manifest) {
     lines.push("", "## Notes", "");
     manifest.notes.forEach((note) => lines.push(`- ${note}`));
   }
+
+  lines.push(
+    "",
+    "## Runtime Smoke Coverage",
+    "",
+    `- Source: ${manifest.runtimeSmokeCoverage.source}`,
+    `- Enabled: ${manifest.runtimeSmokeCoverage.enabled ? "yes" : "no"}`,
+    `- Base URL: ${manifest.runtimeSmokeCoverage.baseUrl}`,
+    `- Use existing stack: ${manifest.runtimeSmokeCoverage.useExistingStack ? "yes" : "no"}`,
+    `- Command status: ${manifest.runtimeSmokeCoverage.commandStatus}`,
+    `- Covered area count: ${manifest.runtimeSmokeCoverage.coveredAreaCount}`,
+    `- Review area count: ${manifest.runtimeSmokeCoverage.reviewAreaCount}`,
+    `- Skipped area count: ${manifest.runtimeSmokeCoverage.skippedAreaCount}`,
+    "",
+    "| Area | Status | Evidence | Probes | Acceptance | Log |",
+    "| --- | --- | --- | --- | --- | --- |",
+  );
+  manifest.runtimeSmokeCoverage.rows.forEach((item) => {
+    lines.push(
+      `| ${item.area} | ${item.status} | ${item.evidence.replace(/\|/g, "\\|")} | ${item.probes.join(", ").replace(/\|/g, "\\|")} | ${item.acceptance.replace(/\|/g, "\\|")} | ${item.logFile ? `\`${item.logFile}\`` : "-"} |`,
+    );
+  });
 
   lines.push(
     "",
@@ -255,6 +352,7 @@ function main() {
       };
     }),
   };
+  manifest.runtimeSmokeCoverage = buildRuntimeSmokeCoverage(manifest.commands, manifest.options);
 
   fs.writeFileSync(path.join(outputDir, "manifest.json"), JSON.stringify(manifest, null, 2));
   fs.writeFileSync(path.join(outputDir, "manifest.md"), buildMarkdown(manifest));
