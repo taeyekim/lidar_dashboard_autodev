@@ -543,6 +543,14 @@ function buildSteps(options) {
       purpose: "Reclassify gates from the closeout-synced final status so package-refresh examples do not point at stale handover evidence.",
       doneWhen: "Final gate classification sourceFinalStatus points to final-status-closeout-sync.",
     },
+    {
+      id: "final-bundle-handoff-closeout-sync",
+      phase: "Final Decision",
+      command: npm,
+      args: ["run", "final:bundle-handoff", "--", `--generated-by=${reviewer}`, `--site-name=${siteName}`],
+      purpose: "Rebuild reviewer-facing bundle files from the closeout-synced final gate classification.",
+      doneWhen: "Final bundle handoff owner closeout files and gate counts match final-gate-classification-closeout-sync.",
+    },
   );
 
   return steps.map((step, index) => ({ order: index + 1, ...step }));

@@ -105,6 +105,7 @@ const generator = readProjectFile("dashboard/server/scripts/generate-final-close
   [generator, "handover-package-closeout-sync", "final closeout refresh generator"],
   [generator, "final-status-closeout-sync", "final closeout refresh generator"],
   [generator, "final-gate-classification-closeout-sync", "final closeout refresh generator"],
+  [generator, "final-bundle-handoff-closeout-sync", "final closeout refresh generator"],
   [generator, "field-closeout-quickstart-closeout-sync", "final closeout refresh generator"],
   [generator, "field-requirements-backlog-closeout-sync", "final closeout refresh generator"],
   [generator, "batched unresolved requirement questions", "final closeout refresh generator"],
@@ -171,6 +172,7 @@ const ids = steps.map((step) => step.id);
   "handover-package-closeout-sync",
   "final-status-closeout-sync",
   "final-gate-classification-closeout-sync",
+  "final-bundle-handoff-closeout-sync",
   "field-requirements-backlog-closeout-sync",
   "field-closeout-quickstart-closeout-sync",
 ].forEach((id) => assert(ids.includes(id), `steps should include ${id}`));
@@ -202,7 +204,8 @@ assert(
     ids.indexOf("final-gate-classification-final-index") < ids.indexOf("field-requirements-backlog-closeout-sync") &&
     ids.indexOf("field-requirements-backlog-closeout-sync") < ids.indexOf("field-closeout-quickstart-closeout-sync") &&
     ids.indexOf("field-closeout-quickstart-closeout-sync") < ids.indexOf("handover-index-closeout-sync") &&
-    ids.indexOf("final-status-closeout-sync") < ids.indexOf("final-gate-classification-closeout-sync"),
+    ids.indexOf("final-status-closeout-sync") < ids.indexOf("final-gate-classification-closeout-sync") &&
+    ids.indexOf("final-gate-classification-closeout-sync") < ids.indexOf("final-bundle-handoff-closeout-sync"),
   "refresh should converge final status, action artifacts, handover package, final status, execution plan, bundle handoff, gate classification, final handover package index, final status, final action artifacts, final handover package, final status, final execution plan, field closure plan, final bundle handoff, then final gate classification",
 );
 assert(
