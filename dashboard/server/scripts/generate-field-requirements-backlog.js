@@ -198,6 +198,74 @@ function summarize(items) {
   );
 }
 
+function buildBatchedQuestionPacket(items) {
+  const ownerGroups = groupItems(items, (item) => item.owner).map(({ key, items: ownerItems }) => ({
+    owner: key,
+    itemCount: ownerItems.length,
+    priorityCounts: countBy(ownerItems, (item) => item.priority),
+    questions: ownerItems.map((item) => ({
+      id: item.id,
+      priority: item.priority,
+      phase: item.phase,
+      question: item.question,
+      blocks: item.closeWhen,
+      envKeys: item.envKeys,
+      evidence: item.evidence,
+      runtime: item.runtime,
+      command: item.command,
+      sourceGateCount: item.sourceGateIds.length,
+    })),
+  }));
+  const allEnvKeys = uniq(items.flatMap((item) => item.envKeys)).sort();
+  const allRuntime = uniq(items.flatMap((item) => item.runtime)).sort();
+  const allEvidence = uniq(items.flatMap((item) => item.evidence)).sort();
+  return {
+    purpose: "Collect every field-dependent answer in one batch before the next live field closeout pass.",
+    questionCount: items.length,
+    ownerCount: ownerGroups.length,
+    highPriorityQuestionCount: items.filter((item) => item.priority === "P0" || item.priority === "P1").length,
+    owners: ownerGroups,
+    fieldValueChecklist: allEnvKeys.map((key) => ({
+      key,
+      requestedFrom: uniq(items.filter((item) => item.envKeys.includes(key)).map((item) => item.owner)).sort(),
+      blocksQuestionIds: items.filter((item) => item.envKeys.includes(key)).map((item) => item.id),
+    })),
+    runtimeChecklist: allRuntime,
+    evidenceChecklist: allEvidence,
+    deferredDecisions: items
+      .filter((item) => /level-2|live tcp|ack|risk acceptance|manual evidence|nginx|swagger|cookie|cors|device ingest/i.test(`${item.question} ${item.sourceMessages.join(" ")}`))
+      .map((item) => ({
+        id: item.id,
+        owner: item.owner,
+        priority: item.priority,
+        decision: item.question,
+        closeWhen: item.closeWhen,
+      })),
+    acceptanceRule:
+      "The backlog is closed only after required field values are filled in .env, live hardware evidence is attached where applicable, strict field acceptance passes, and final status has zero remaining gates.",
+  };
+}
+
+function groupItems(items, keyFn) {
+  const groups = new Map();
+  items.forEach((item) => {
+    const key = keyFn(item);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  });
+  return [...groups.entries()]
+    .map(([key, groupItems]) => ({ key, items: groupItems }))
+    .sort((a, b) => a.key.localeCompare(b.key));
+}
+
+function countBy(items, keyFn) {
+  return items.reduce((acc, item) => {
+    const key = keyFn(item);
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+}
+
 function buildManifest(input = {}) {
   const finalStatus = Object.prototype.hasOwnProperty.call(input, "finalStatus")
     ? input.finalStatus
@@ -208,6 +276,7 @@ function buildManifest(input = {}) {
   const baseUrl = resolveFieldBaseUrl(input.baseUrl, finalStatus?.data?.baseUrl, classification?.data?.baseUrl);
   const items = buildBacklogItems(finalStatus, baseUrl);
   const summary = summarize(items);
+  const batchedQuestionPacket = buildBatchedQuestionPacket(items);
   return {
     generatedAt: input.generatedAt || new Date().toISOString(),
     generatedBy: input.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
@@ -226,6 +295,7 @@ function buildManifest(input = {}) {
     classificationSummary: classification?.data?.summary || null,
     metadataEnvKeys: ["FIELD_REVIEWER", "FIELD_SITE_NAME", "FIELD_BASE_URL"],
     summary,
+    batchedQuestionPacket,
     backlogItems: items,
     guardrails: [
       "Record only questions, owners, placeholders, and evidence paths here; never paste real secret values.",
@@ -260,6 +330,64 @@ function buildMarkdown(manifest) {
     `- By owner: ${JSON.stringify(manifest.summary.byOwner)}`,
     `- By priority: ${JSON.stringify(manifest.summary.byPriority)}`,
     `- By action type: ${JSON.stringify(manifest.summary.byActionType)}`,
+    "",
+    "## Batched Question Packet",
+    "",
+    `- Purpose: ${manifest.batchedQuestionPacket.purpose}`,
+    `- Question count: ${manifest.batchedQuestionPacket.questionCount}`,
+    `- Owner count: ${manifest.batchedQuestionPacket.ownerCount}`,
+    `- High-priority question count: ${manifest.batchedQuestionPacket.highPriorityQuestionCount}`,
+    `- Acceptance rule: ${manifest.batchedQuestionPacket.acceptanceRule}`,
+    "",
+    "### Questions By Owner",
+    "",
+    ...(manifest.batchedQuestionPacket.owners.length > 0
+      ? manifest.batchedQuestionPacket.owners.flatMap((ownerGroup) => [
+          `#### ${ownerGroup.owner}`,
+          "",
+          `- Item count: ${ownerGroup.itemCount}`,
+          `- Priority counts: ${JSON.stringify(ownerGroup.priorityCounts)}`,
+          "",
+          "| ID | Priority | Phase | Question | Blocks | Env Keys | Runtime | Evidence |",
+          "| --- | --- | --- | --- | --- | --- | --- | --- |",
+          ...ownerGroup.questions.map(
+            (item) =>
+              `| ${item.id} | ${item.priority} | ${markdownCell(item.phase)} | ${markdownCell(item.question)} | ${markdownCell(item.blocks)} | ${markdownCell(item.envKeys.join(", ") || "-")} | ${markdownCell(item.runtime.join(", ") || "-")} | ${markdownCell(item.evidence.join(", ") || "-")} |`,
+          ),
+          "",
+        ])
+      : ["- none", ""]),
+    "### Field Value Checklist",
+    "",
+    "| Key | Requested From | Blocks Questions |",
+    "| --- | --- | --- |",
+    ...(manifest.batchedQuestionPacket.fieldValueChecklist.length > 0
+      ? manifest.batchedQuestionPacket.fieldValueChecklist.map(
+          (item) => `| ${markdownCell(item.key)} | ${markdownCell(item.requestedFrom.join(", "))} | ${markdownCell(item.blocksQuestionIds.join(", "))} |`,
+        )
+      : ["| none | - | - |"]),
+    "",
+    "### Runtime Checklist",
+    "",
+    ...(manifest.batchedQuestionPacket.runtimeChecklist.length > 0
+      ? manifest.batchedQuestionPacket.runtimeChecklist.map((item) => `- ${item}`)
+      : ["- none"]),
+    "",
+    "### Evidence Checklist",
+    "",
+    ...(manifest.batchedQuestionPacket.evidenceChecklist.length > 0
+      ? manifest.batchedQuestionPacket.evidenceChecklist.map((item) => `- \`${item}\``)
+      : ["- none"]),
+    "",
+    "### Deferred Decisions",
+    "",
+    "| ID | Priority | Owner | Decision | Close When |",
+    "| --- | --- | --- | --- | --- |",
+    ...(manifest.batchedQuestionPacket.deferredDecisions.length > 0
+      ? manifest.batchedQuestionPacket.deferredDecisions.map(
+          (item) => `| ${item.id} | ${item.priority} | ${markdownCell(item.owner)} | ${markdownCell(item.decision)} | ${markdownCell(item.closeWhen)} |`,
+        )
+      : ["| none | - | - | - | - |"]),
     "",
     "## Backlog Questions",
     "",
@@ -297,6 +425,7 @@ function main() {
 if (require.main === module) main();
 
 module.exports = {
+  buildBatchedQuestionPacket,
   buildBacklogItems,
   buildManifest,
   buildMarkdown,

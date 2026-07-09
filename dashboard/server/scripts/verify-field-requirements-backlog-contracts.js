@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 
 const {
+  buildBatchedQuestionPacket,
   buildBacklogItems,
   buildManifest,
   buildMarkdown,
@@ -36,6 +37,14 @@ const packageJson = readProjectFile("package.json");
   "FIELD_REVIEWER",
   "FIELD_SITE_NAME",
   "FIELD_BASE_URL",
+  "buildBatchedQuestionPacket",
+  "Batched Question Packet",
+  "Questions By Owner",
+  "Field Value Checklist",
+  "Runtime Checklist",
+  "Evidence Checklist",
+  "Deferred Decisions",
+  "Collect every field-dependent answer",
 ].forEach((token) => assertIncludes(generator, token, "field requirements backlog generator"));
 
 [
@@ -141,6 +150,19 @@ assert(
   "aggregate handover gate should not inherit mixed control-board/nginx prerequisites",
 );
 
+const packet = buildBatchedQuestionPacket(items);
+assert(packet.questionCount === 6, "batched packet should count all questions");
+assert(packet.ownerCount >= 4, "batched packet should group questions by owner");
+assert(packet.highPriorityQuestionCount >= 1, "batched packet should count high priority questions");
+assert(packet.fieldValueChecklist.some((item) => item.key === "CONTROL_BOARD_HOST"), "batched packet should list control-board host field value");
+assert(packet.fieldValueChecklist.some((item) => item.key === "JWT_SECRET"), "batched packet should list JWT secret key without values");
+assert(packet.runtimeChecklist.some((item) => item.includes("gitleaks")), "batched packet should list scanner runtime prerequisites");
+assert(
+  packet.deferredDecisions.some((item) => item.decision.includes("control-board host")),
+  "batched packet should surface live TCP as deferred field decision",
+);
+assert(packet.acceptanceRule.includes("zero remaining gates"), "batched packet should define closeout acceptance rule");
+
 const manifest = buildManifest({
   generatedAt: "2026-01-01T00:00:00.000Z",
   generatedBy: "reviewer",
@@ -161,10 +183,19 @@ assert(manifest.actionTypeCounts.FIELD_ACTION_REQUIRED >= 1, "manifest should ex
 assert(manifest.sourceFinalStatus.includes("final-status"), "manifest should link final status source");
 assert(manifest.classificationSummary.bucketGateCounts.security_tooling === 1, "manifest should keep classification summary");
 assert(manifest.metadataEnvKeys.includes("FIELD_BASE_URL"), "manifest should expose field base URL as metadata env key");
+assert(manifest.batchedQuestionPacket.questionCount === 6, "manifest should include batched question packet");
+assert(manifest.batchedQuestionPacket.fieldValueChecklist.some((item) => item.key === "FIELD_BASE_URL"), "manifest packet should include field base URL checklist");
 
 const markdown = buildMarkdown(manifest);
 [
   "Field Requirements Backlog",
+  "Batched Question Packet",
+  "Questions By Owner",
+  "Field Value Checklist",
+  "Runtime Checklist",
+  "Evidence Checklist",
+  "Deferred Decisions",
+  "zero remaining gates",
   "Backlog Questions",
   "Control-board TCP",
   "JWT_SECRET",
