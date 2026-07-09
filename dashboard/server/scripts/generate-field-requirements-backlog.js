@@ -246,6 +246,27 @@ function buildBatchedQuestionPacket(items) {
   };
 }
 
+function buildFieldAnswerSheet(items) {
+  return (items || []).map((item) => ({
+    id: item.id,
+    owner: item.owner,
+    priority: item.priority,
+    question: item.question,
+    answerStatus: "TODO",
+    fieldAnswer: "",
+    envKeysToFill: item.envKeys,
+    evidenceToAttach: item.evidence,
+    runtimeToRun: item.runtime,
+    commandToRerun: item.command,
+    riskAcceptanceNeeded: /risk acceptance|scanner|swagger|cookie|device ingest|trusted-lan|ci status|live tcp|hardware|level-2/i.test(
+      `${item.question} ${item.sourceMessages.join(" ")}`,
+    ),
+    evidenceReference: "",
+    targetRecheckDate: "",
+    closeWhen: item.closeWhen,
+  }));
+}
+
 function groupItems(items, keyFn) {
   const groups = new Map();
   items.forEach((item) => {
@@ -277,6 +298,7 @@ function buildManifest(input = {}) {
   const items = buildBacklogItems(finalStatus, baseUrl);
   const summary = summarize(items);
   const batchedQuestionPacket = buildBatchedQuestionPacket(items);
+  const fieldAnswerSheet = buildFieldAnswerSheet(items);
   return {
     generatedAt: input.generatedAt || new Date().toISOString(),
     generatedBy: input.generatedBy || process.env.USERNAME || process.env.USER || "Codex",
@@ -296,9 +318,11 @@ function buildManifest(input = {}) {
     metadataEnvKeys: ["FIELD_REVIEWER", "FIELD_SITE_NAME", "FIELD_BASE_URL"],
     summary,
     batchedQuestionPacket,
+    fieldAnswerSheet,
     backlogItems: items,
     guardrails: [
       "Record only questions, owners, placeholders, and evidence paths here; never paste real secret values.",
+      "Fill the Field Answer Sheet with approved field answers, evidence paths, and YYYY-MM-DD recheck dates before final handover.",
       "Do not close field, security, CI, or hardware gates from this backlog alone.",
       "Use this backlog as the batched user/team question list when auto-mode reaches field-dependent blockers.",
     ],
@@ -389,6 +413,19 @@ function buildMarkdown(manifest) {
         )
       : ["| none | - | - | - | - |"]),
     "",
+    "## Field Answer Sheet",
+    "",
+    "Fill this table during field closeout. Keep secret values out of the answer text; reference the evidence path or the owner-approved `.env` key instead.",
+    "",
+    "| ID | Owner | Priority | Question | Answer Status | Field Answer | Env Keys To Fill | Evidence To Attach | Runtime To Run | Command To Rerun | Risk Acceptance Needed | Evidence Reference | Target Recheck Date | Close When |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    ...(manifest.fieldAnswerSheet.length > 0
+      ? manifest.fieldAnswerSheet.map(
+          (item) =>
+            `| ${item.id} | ${markdownCell(item.owner)} | ${item.priority} | ${markdownCell(item.question)} | ${item.answerStatus} | ${markdownCell(item.fieldAnswer || "TODO")} | ${markdownCell(item.envKeysToFill.join(", ") || "-")} | ${markdownCell(item.evidenceToAttach.join(", ") || "-")} | ${markdownCell(item.runtimeToRun.join(", ") || "-")} | ${markdownCell(item.commandToRerun)} | ${item.riskAcceptanceNeeded ? "yes" : "no"} | ${markdownCell(item.evidenceReference || "TODO")} | ${markdownCell(item.targetRecheckDate || "YYYY-MM-DD")} | ${markdownCell(item.closeWhen)} |`,
+        )
+      : ["| - | none | - | No open field questions. | DONE | - | - | - | - | - | no | - | - | - |"]),
+    "",
     "## Backlog Questions",
     "",
     "| ID | Priority | Owner | Phase | Question | Env Keys | Evidence | Runtime | Command | Source Gates |",
@@ -426,6 +463,7 @@ if (require.main === module) main();
 
 module.exports = {
   buildBatchedQuestionPacket,
+  buildFieldAnswerSheet,
   buildBacklogItems,
   buildManifest,
   buildMarkdown,

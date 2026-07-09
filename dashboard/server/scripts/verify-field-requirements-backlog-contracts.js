@@ -3,6 +3,7 @@ const path = require("path");
 
 const {
   buildBatchedQuestionPacket,
+  buildFieldAnswerSheet,
   buildBacklogItems,
   buildManifest,
   buildMarkdown,
@@ -44,6 +45,10 @@ const packageJson = readProjectFile("package.json");
   "Runtime Checklist",
   "Evidence Checklist",
   "Deferred Decisions",
+  "Field Answer Sheet",
+  "answerStatus",
+  "riskAcceptanceNeeded",
+  "YYYY-MM-DD recheck dates",
   "Collect every field-dependent answer",
 ].forEach((token) => assertIncludes(generator, token, "field requirements backlog generator"));
 
@@ -163,6 +168,14 @@ assert(
 );
 assert(packet.acceptanceRule.includes("zero remaining gates"), "batched packet should define closeout acceptance rule");
 
+const answerSheet = buildFieldAnswerSheet(items);
+assert(answerSheet.length === 6, "answer sheet should include every backlog item");
+assert(answerSheet.every((item) => item.answerStatus === "TODO"), "answer sheet should start with TODO answer status");
+assert(answerSheet.some((item) => item.envKeysToFill.includes("CONTROL_BOARD_HOST")), "answer sheet should expose env keys to fill");
+assert(answerSheet.some((item) => item.commandToRerun.includes("ci:status") || item.question.includes("GitHub Actions")), "answer sheet should include rerun command guidance");
+assert(answerSheet.some((item) => item.riskAcceptanceNeeded === true), "answer sheet should flag risk acceptance candidates");
+assert(answerSheet.every((item) => item.targetRecheckDate === ""), "answer sheet should leave recheck date blank for field reviewer");
+
 const manifest = buildManifest({
   generatedAt: "2026-01-01T00:00:00.000Z",
   generatedBy: "reviewer",
@@ -185,6 +198,8 @@ assert(manifest.classificationSummary.bucketGateCounts.security_tooling === 1, "
 assert(manifest.metadataEnvKeys.includes("FIELD_BASE_URL"), "manifest should expose field base URL as metadata env key");
 assert(manifest.batchedQuestionPacket.questionCount === 6, "manifest should include batched question packet");
 assert(manifest.batchedQuestionPacket.fieldValueChecklist.some((item) => item.key === "FIELD_BASE_URL"), "manifest packet should include field base URL checklist");
+assert(manifest.fieldAnswerSheet.length === 6, "manifest should include field answer sheet");
+assert(manifest.guardrails.some((item) => item.includes("Field Answer Sheet")), "manifest guardrails should tell reviewers how to fill answer sheet");
 
 const markdown = buildMarkdown(manifest);
 [
@@ -195,6 +210,10 @@ const markdown = buildMarkdown(manifest);
   "Runtime Checklist",
   "Evidence Checklist",
   "Deferred Decisions",
+  "Field Answer Sheet",
+  "Answer Status",
+  "Risk Acceptance Needed",
+  "Target Recheck Date",
   "zero remaining gates",
   "Backlog Questions",
   "Control-board TCP",
