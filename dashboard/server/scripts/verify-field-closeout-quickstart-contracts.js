@@ -36,10 +36,14 @@ const catalog = readProjectFile("dashboard/server/scripts/field-env-catalog.js")
   [generator, "Field Closeout Packet", "quickstart generator"],
   [generator, "Required Field Inputs", "quickstart generator"],
   [generator, "Live TCP ACK Checklist", "quickstart generator"],
+  [generator, "Live TCP Stop Conditions", "quickstart generator"],
+  [generator, "Safe State Evidence Checklist", "quickstart generator"],
   [generator, "Strict Closeout Command Sequence", "quickstart generator"],
   [generator, "Evidence To Attach", "quickstart generator"],
   [generator, "fieldCloseoutPacket", "quickstart generator"],
   [generator, "CONTROL_BOARD_LIVE_APPROVED=true", "quickstart generator"],
+  [generator, "CRC mismatch", "quickstart generator"],
+  [generator, "safe/default state", "quickstart generator"],
   [generator, "scripts/control-board-field-rehearsal.ps1", "quickstart generator"],
   [catalog, "long random JWT signing secret", "field env catalog"],
   [catalog, "integrated control-board IPv4", "field env catalog"],
@@ -171,6 +175,14 @@ assert(
   "quickstart packet should include live approval checklist",
 );
 assert(
+  manifest.fieldCloseoutPacket.liveTcpStopConditions.some((item) => item.includes("CRC mismatch")),
+  "quickstart packet should include live TCP stop conditions",
+);
+assert(
+  manifest.fieldCloseoutPacket.safeStateEvidenceChecklist.some((item) => item.includes("safe/default state")),
+  "quickstart packet should include safe state evidence checklist",
+);
+assert(
   manifest.fieldCloseoutPacket.strictCommandSequence.some((command) => command.includes("control-board-field-rehearsal.ps1")),
   "quickstart packet should include live TCP rehearsal command",
 );
@@ -199,10 +211,14 @@ const markdown = buildMarkdown(manifest);
   "Auth/security delivery values",
   "Control-board live TCP values",
   "Live TCP ACK Checklist",
+  "Live TCP Stop Conditions",
+  "Safe State Evidence Checklist",
   "Strict Closeout Command Sequence",
   "Evidence To Attach",
   "Deferred Field Requirements",
   "CONTROL_BOARD_LIVE_APPROVED=true",
+  "CRC mismatch",
+  "safe/default state",
   "control-board-field-rehearsal.ps1",
   "CONTROL_BOARD_HOST",
   "Evidence Files To Prepare",
