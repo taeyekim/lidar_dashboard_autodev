@@ -325,6 +325,144 @@ function buildCloseoutArtifactSummary({ fieldCloseoutQuickstart, fieldRequiremen
   };
 }
 
+const REQUIREMENT_COVERAGE_DEFINITIONS = Object.freeze([
+  {
+    area: "Requirements",
+    requirement: "Field context, LiDAR payload rules, control-board TCP assumptions, and unresolved field decisions are documented.",
+    automatedEvidence: ["docs/ai/field-system-requirements.md", "docs/specs/lidar-dashboard-payload.md", "docs/specs/dashboard-control-board-protocol.md"],
+    fieldEvidence: ["fieldRequirementsBacklog", "fieldCloseoutQuickstart"],
+    fieldStillRequired: "Final control-board IP/port, heartbeat/ACK criteria, and level-2 escalation thresholds from field measurement.",
+  },
+  {
+    area: "API And Swagger",
+    requirement: "Operator, ingest, event, statistics, health, database health, device, status, and control-board APIs are documented.",
+    automatedEvidence: ["verify:swagger-contracts"],
+    fieldEvidence: ["fieldPreflight"],
+    fieldStillRequired: "Swagger access policy confirmed through the field Nginx allowlist.",
+  },
+  {
+    area: "DB And Prisma",
+    requirement: "Vehicle tracks, traffic events, command logs, device status logs, sites, zones, and devices are represented in Prisma.",
+    automatedEvidence: ["verify:prisma-contracts", "ci:db"],
+    fieldEvidence: ["dbFieldRehearsal"],
+    fieldStillRequired: "Field seed data reviewed for actual site, zone, and device names.",
+  },
+  {
+    area: "Lidar Ingest",
+    requirement: "normal-driving de-duplicates unique tracks while wrong-way stages create or reuse events and retain raw payloads.",
+    automatedEvidence: ["verify:wrongway-contracts", "verify:lidar-rehearsal"],
+    fieldEvidence: ["lidarFieldRehearsal"],
+    fieldStillRequired: "LiDAR PC sends representative JSON over the internal network.",
+  },
+  {
+    area: "Control Board TCP",
+    requirement: "Dashboard sends raw 10-byte TCP frames with CRC-8, dry-run default, live approval gating, response parsing, and ACK latency fields.",
+    automatedEvidence: ["verify:control-board-protocol", "verify:control-board-tcp", "verify:control-board-tcp-simulator", "verify:control-board-field-rehearsal"],
+    fieldEvidence: ["controlBoardFieldRehearsal", "fieldReadiness"],
+    fieldStillRequired: "Live integrated control-board TCP test with field IP/port, CONTROL_BOARD_LIVE_APPROVED=true, and hardware approval.",
+  },
+  {
+    area: "Frontend Control UI",
+    requirement: "Operator UI shows current status, event detail, raw payload, linked commands, packet hex, device status, realtime state, and DRY_RUN/LIVE_TCP state.",
+    automatedEvidence: ["verify:frontend-ui-contracts", "verify:frontend-settings-contracts", "verify:realtime-contracts"],
+    fieldEvidence: ["fieldAcceptance"],
+    fieldStillRequired: "Browser walkthrough on the delivery display resolution attached to field acceptance.",
+  },
+  {
+    area: "Traffic Statistics",
+    requirement: "Daily, weekly, monthly, and yearly statistics use DB unique track counts, wrong-way counts/rate, command metrics, and TCP ACK averages.",
+    automatedEvidence: ["verify:statistics-metrics", "verify:statistics-contracts"],
+    fieldEvidence: ["fieldAcceptance"],
+    fieldStillRequired: "Field acceptance of period labels and operational KPI wording.",
+  },
+  {
+    area: "Authentication",
+    requirement: "JWT login uses HttpOnly access cookies, readable CSRF cookie for mutations, Bearer compatibility, logout clearing, and secure cookie policy.",
+    automatedEvidence: ["verify:auth-cookie", "verify:auth-crypto", "verify:auth-runtime"],
+    fieldEvidence: ["fieldPreflight"],
+    fieldStillRequired: "HTTPS/TLS topology confirms AUTH_COOKIE_SECURE and AUTH_COOKIE_SAMESITE values.",
+  },
+  {
+    area: "Nginx And Runtime",
+    requirement: "Nginx proxies UI/API/WebSocket/Swagger, applies security headers, rate limits wrong-way ingest, and exposes runtime smoke coverage.",
+    automatedEvidence: ["verify:delivery-proxy-contracts", "runtime:evidence"],
+    fieldEvidence: ["runtimeEvidence", "fieldReadiness"],
+    fieldStillRequired: "Runtime smoke against the delivery PC Nginx entrypoint.",
+  },
+  {
+    area: "Security",
+    requirement: "Dependency audit, secret/container/ZAP evidence, scanner closeout matrix, acceptance classifications, and active-scan restrictions are documented.",
+    automatedEvidence: ["verify:audit-policy", "security:evidence", "verify:security-evidence"],
+    fieldEvidence: ["securityEvidence", "manualEvidenceReadiness"],
+    fieldStillRequired: "Optional native scanner outputs or documented risk acceptance when Docker scanner fallback is not used.",
+  },
+  {
+    area: "Delivery Evidence",
+    requirement: "Build, lint, smoke, server tests, audit policy, Docker compose config, local verification, CI, and handover artifacts are packaged.",
+    automatedEvidence: ["local:verification", "ci:status", "handover:package", "final:gate-classification"],
+    fieldEvidence: ["localVerification", "ciStatus", "fieldRiskRegister", "fieldActionBoard", "fieldGateClosureMap", "fieldOwnerBriefs"],
+    fieldStillRequired: "Attach generated artifacts, manual evidence, and live field runtime logs to the handover package.",
+  },
+  {
+    area: "Final Status",
+    requirement: "The project is complete only when final status proves COMPLETE/READY/PASS states, clean pushed dev source, fresh evidence, and zero residual field gates.",
+    automatedEvidence: ["final:status", "final:execution-plan", "final:bundle-handoff"],
+    fieldEvidence: ["finalBundleHandoff", "finalGateClassification", "completionAudit"],
+    fieldStillRequired: "Latest final status proves READY_TO_CLOSE with no residual field gates.",
+  },
+]);
+
+function buildRequirementsCoveragePacket({ evidenceRefs, fieldEvidenceSummary, strictFailureReasons, residualFieldGates }) {
+  const fieldEvidenceByType = new Map((fieldEvidenceSummary || []).map((item) => [item.type, item]));
+  const fieldEvidenceStatus = {
+    fieldPreflight: fieldEvidenceByType.get("Field Preflight"),
+    fieldAcceptance: fieldEvidenceByType.get("Field Acceptance"),
+    dbFieldRehearsal: fieldEvidenceByType.get("DB And Prisma"),
+    lidarFieldRehearsal: fieldEvidenceByType.get("Lidar Ingest"),
+    controlBoardFieldRehearsal: fieldEvidenceByType.get("Control Board TCP"),
+  };
+  const rows = REQUIREMENT_COVERAGE_DEFINITIONS.map((definition) => {
+    const evidenceKeys = definition.fieldEvidence || [];
+    const resolvedEvidence = evidenceKeys.map((key) => {
+      const fieldEvidence = fieldEvidenceStatus[key];
+      return {
+        key,
+        path: evidenceRefs[key] || fieldEvidence?.manifestPath || null,
+        status: fieldEvidence ? evidenceStatusFromSummary(fieldEvidence) : evidenceRefs[key] ? "REFERENCED" : "MISSING",
+      };
+    });
+    const missingEvidence = resolvedEvidence.filter((item) => !item.path);
+    const reviewEvidence = resolvedEvidence.filter((item) => ["REVIEW", "SKIPPED", "MISSING"].includes(item.status));
+    return {
+      area: definition.area,
+      requirement: definition.requirement,
+      automatedEvidence: definition.automatedEvidence,
+      fieldEvidence: resolvedEvidence,
+      fieldStillRequired: definition.fieldStillRequired,
+      status: missingEvidence.length > 0 ? "MISSING_EVIDENCE" : reviewEvidence.length > 0 ? "FIELD_REVIEW_REQUIRED" : "EVIDENCE_REFERENCED",
+      missingEvidenceKeys: missingEvidence.map((item) => item.key),
+      reviewEvidenceKeys: reviewEvidence.map((item) => item.key),
+    };
+  });
+  return {
+    source: "docs/ops/delivery-evidence-matrix.md",
+    areaCount: rows.length,
+    coveredAreaCount: rows.filter((row) => row.status === "EVIDENCE_REFERENCED").length,
+    fieldReviewAreaCount: rows.filter((row) => row.status === "FIELD_REVIEW_REQUIRED").length,
+    missingEvidenceAreaCount: rows.filter((row) => row.status === "MISSING_EVIDENCE").length,
+    strictFailureCount: strictFailureReasons.length,
+    residualFieldGateCount: residualFieldGates.length,
+    rows,
+  };
+}
+
+function evidenceStatusFromSummary(summary) {
+  if ((summary.reviewCount || 0) > 0) return "REVIEW";
+  if ((summary.skippedCount || 0) > 0) return "SKIPPED";
+  if ((summary.passCount || 0) > 0) return "PASS";
+  return summary.manifestPath ? "REFERENCED" : "MISSING";
+}
+
 function fieldEvidenceNextAction(type, baseUrl = fieldBaseUrlArg) {
   const actions = {
     "Field Preflight":
@@ -615,6 +753,23 @@ function buildMarkdown(manifest) {
     `| Field requirements backlog | ${markdownCell(manifest.closeoutArtifactSummary.fieldRequirementsBacklog.status)} | ${markdownCell(`itemCount=${manifest.closeoutArtifactSummary.fieldRequirementsBacklog.itemCount ?? "unknown"}, openItemCount=${manifest.closeoutArtifactSummary.fieldRequirementsBacklog.openItemCount ?? "unknown"}, ownerCount=${manifest.closeoutArtifactSummary.fieldRequirementsBacklog.ownerCount ?? "unknown"}`)} | ${manifest.closeoutArtifactSummary.fieldRequirementsBacklog.path ? `\`${markdownCell(manifest.closeoutArtifactSummary.fieldRequirementsBacklog.path)}\`` : "missing"} |`,
     `| Field closeout quickstart | ${markdownCell(manifest.closeoutArtifactSummary.fieldCloseoutQuickstart.status)} | ${markdownCell(`remainingGateCount=${manifest.closeoutArtifactSummary.fieldCloseoutQuickstart.remainingGateCount ?? "unknown"}, openActionCount=${manifest.closeoutArtifactSummary.fieldCloseoutQuickstart.openActionCount ?? "unknown"}, backlogItemCount=${manifest.closeoutArtifactSummary.fieldCloseoutQuickstart.requirementsBacklogSummary.itemCount ?? "unknown"}`)} | ${manifest.closeoutArtifactSummary.fieldCloseoutQuickstart.path ? `\`${markdownCell(manifest.closeoutArtifactSummary.fieldCloseoutQuickstart.path)}\`` : "missing"} |`,
     "",
+    "## Requirements Coverage Packet",
+    "",
+    `- Source: ${manifest.requirementsCoveragePacket.source}`,
+    `- Requirement area count: ${manifest.requirementsCoveragePacket.areaCount}`,
+    `- Evidence-referenced area count: ${manifest.requirementsCoveragePacket.coveredAreaCount}`,
+    `- Field-review area count: ${manifest.requirementsCoveragePacket.fieldReviewAreaCount}`,
+    `- Missing-evidence area count: ${manifest.requirementsCoveragePacket.missingEvidenceAreaCount}`,
+    `- Strict failure count: ${manifest.requirementsCoveragePacket.strictFailureCount}`,
+    `- Residual field gate count: ${manifest.requirementsCoveragePacket.residualFieldGateCount}`,
+    "",
+    "| Area | Status | Automated Evidence | Field Evidence | Field Still Required |",
+    "| --- | --- | --- | --- | --- |",
+    ...manifest.requirementsCoveragePacket.rows.map(
+      (item) =>
+        `| ${markdownCell(item.area)} | ${markdownCell(item.status)} | ${markdownCell(item.automatedEvidence.join(", "))} | ${markdownCell(item.fieldEvidence.map((evidence) => `${evidence.key}:${evidence.status}`).join(", "))} | ${markdownCell(item.fieldStillRequired)} |`,
+    ),
+    "",
     "## Manual Evidence References",
     "",
     "| Type | Status | Path | Template | Required When | Validation |",
@@ -838,6 +993,12 @@ function main() {
     knownLimitations,
   });
   const strictFailureItems = buildStrictFailureItems(strictFailureReasons);
+  const requirementsCoveragePacket = buildRequirementsCoveragePacket({
+    evidenceRefs,
+    fieldEvidenceSummary,
+    strictFailureReasons,
+    residualFieldGates,
+  });
   const manifest = {
     generatedAt: new Date().toISOString(),
     generatedBy,
@@ -863,6 +1024,7 @@ function main() {
     })),
     evidenceRefs,
     closeoutArtifactSummary,
+    requirementsCoveragePacket,
     manualEvidenceRefs: manualEvidence,
     knownFieldLimitations: knownLimitations,
     residualFieldGates,
