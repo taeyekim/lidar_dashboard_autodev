@@ -143,6 +143,63 @@ function buildOperatorCapturePlanMarkdown(rows) {
   ].join("\n");
 }
 
+function buildFieldAcceptanceEvidencePackPlan(options = {}) {
+  const baseUrl = resolveFieldBaseUrl(options.baseUrl);
+  const baseApiUrl = options.baseApiUrl || `${baseUrl}/api`;
+  const trim = (value) => String(value || "").replace(/\/+$/, "");
+  const ui = trim(baseUrl);
+  const api = trim(baseApiUrl);
+  return [
+    {
+      phase: "Reviewer metadata",
+      evidence: "FIELD_REVIEWER, FIELD_SITE_NAME, FIELD_BASE_URL, browser version, display resolution, and capture timestamp.",
+      closeWhen: "All values are concrete delivery-session values and contain no placeholders such as TBD, unknown, or pending.",
+    },
+    {
+      phase: "Operator route walkthrough",
+      evidence: `Screenshots and browser/network notes for ${ui}/login, ${ui}/, ${ui}/events, ${ui}/devices, ${ui}/settings, ${ui}/api-docs, and API checks under ${api}.`,
+      closeWhen: "Every Required Screens row is PASS and the evidence table links screenshot plus field-acceptance and handover-package manifests.",
+    },
+    {
+      phase: "Level-2 escalation criteria",
+      evidence: "Approved field-measurement basis for dashboard-side wrong-way level-2 escalation, including threshold owner, measurement source, and effective date.",
+      closeWhen: "The approved threshold is attached or the limitation remains open; Codex must not invent level-2 criteria before field measurement approval.",
+    },
+    {
+      phase: "Traffic statistics reconciliation",
+      evidence: "Daily, weekly, monthly, and yearly unique normal/wrong-way counts plus wrong-way rate from the UI and `/api/statistics/traffic`.",
+      closeWhen: "Reviewer confirms DB unique vehicle-track counts match the displayed KPI values for the sampled delivery window.",
+    },
+    {
+      phase: "Control-board safety ladder",
+      evidence: "DRY_RUN proof, LIVE_TCP approval proof, 10-byte packet hex, ACK/CRC evidence, and the post-LIVE TCP verification sequence after real hardware send.",
+      closeWhen: "No barrier-affecting LIVE_TCP command is sent before hardware-owner approval, and post-live verification confirms the expected safe state.",
+    },
+    {
+      phase: "Final package linkage",
+      evidence: "Latest field acceptance, manual evidence readiness, field risk acceptance, handover package, final status, and final bundle handoff manifests.",
+      closeWhen: "Strict handover package and final status reference the same pushed dev commit and show no stale local-only evidence.",
+    },
+  ];
+}
+
+function buildFieldAcceptanceEvidencePackMarkdown(rows) {
+  if (!rows || rows.length === 0) return "";
+  return [
+    "## Field Acceptance Evidence Pack Checklist",
+    "",
+    "Use this sequence after the route walkthrough so reviewer evidence closes the same gates that final-status and final-bundle-handoff report. Keep field-measurement-dependent items open until an approved owner provides concrete criteria.",
+    "",
+    "| Phase | Evidence To Attach | Close When |",
+    "| --- | --- | --- |",
+    ...rows.map(
+      (row) =>
+        `| ${markdownCell(row.phase)} | ${markdownCell(row.evidence)} | ${markdownCell(row.closeWhen)} |`,
+    ),
+    "",
+  ].join("\n");
+}
+
 function replaceAcceptedItemRows(content, rows) {
   if (!rows || rows.length === 0) return content;
   const lines = content.split(/\r?\n/);
@@ -176,6 +233,10 @@ function buildDraftContent(templateContent, definition, options = {}) {
     const checklist = buildOperatorCapturePlanMarkdown(options.operatorWalkthroughCapturePlan || []);
     if (checklist && !content.includes("## Capture Route Checklist")) {
       content = `${content.trimEnd()}\n\n${checklist}`;
+    }
+    const evidencePack = buildFieldAcceptanceEvidencePackMarkdown(options.fieldAcceptanceEvidencePackPlan || []);
+    if (evidencePack && !content.includes("## Field Acceptance Evidence Pack Checklist")) {
+      content = `${content.trimEnd()}\n\n${evidencePack}`;
     }
   }
 
@@ -222,6 +283,8 @@ function writeManualEvidenceDrafts(options = {}) {
   const fieldRiskRegister = options.fieldRiskRegister || readLatestJsonManifest("artifacts/field-risk-register");
   const riskAcceptanceDraftRows = options.riskAcceptanceDraftRows || buildRiskAcceptanceDraftRows(fieldRiskRegister);
   const operatorWalkthroughCapturePlan = options.operatorWalkthroughCapturePlan || buildOperatorWalkthroughCapturePlan(options);
+  const fieldAcceptanceEvidencePackPlan =
+    options.fieldAcceptanceEvidencePackPlan || buildFieldAcceptanceEvidencePackPlan(options);
   const plan = buildManualEvidenceDraftPlan({ ...options, generatedAt });
   const items = plan.map((item) => {
     if (item.status !== "READY_TO_WRITE") return item;
@@ -232,6 +295,7 @@ function writeManualEvidenceDrafts(options = {}) {
       generatedAt,
       riskAcceptanceDraftRows,
       operatorWalkthroughCapturePlan,
+      fieldAcceptanceEvidencePackPlan,
     });
     const targetPath = path.join(root, definition.path);
     ensureDir(path.dirname(targetPath));
@@ -255,6 +319,7 @@ function writeManualEvidenceDrafts(options = {}) {
     riskAcceptanceDraftRowCount: riskAcceptanceDraftRows.length,
     riskAcceptanceDraftRows,
     operatorWalkthroughCapturePlan,
+    fieldAcceptanceEvidencePackPlan,
     createdCount: items.filter((item) => item.status === "CREATED").length,
     skippedCount: items.filter((item) => item.status === "SKIP_EXISTS").length,
     missingTemplateCount: items.filter((item) => item.status === "TEMPLATE_MISSING").length,
@@ -287,6 +352,7 @@ function buildMarkdown(manifest) {
     `- Source field risk register: ${manifest.sourceFieldRiskRegister || "missing"}`,
     `- Risk acceptance draft rows: ${manifest.riskAcceptanceDraftRowCount}`,
     `- Operator walkthrough capture routes: ${manifest.operatorWalkthroughCapturePlan.length}`,
+    `- Field acceptance evidence pack phases: ${manifest.fieldAcceptanceEvidencePackPlan.length}`,
     "",
     "## Guardrails",
     "",
@@ -327,6 +393,19 @@ function buildMarkdown(manifest) {
         )
       : ["| none | - | - | No operator walkthrough routes were generated. |"]),
     "",
+    "## Field Acceptance Evidence Pack Checklist",
+    "",
+    "This sequence helps reviewers close field acceptance, level-2 escalation, control-board safety, statistics reconciliation, and final package linkage without inventing field-only evidence.",
+    "",
+    "| Phase | Evidence To Attach | Close When |",
+    "| --- | --- | --- |",
+    ...(manifest.fieldAcceptanceEvidencePackPlan.length > 0
+      ? manifest.fieldAcceptanceEvidencePackPlan.map(
+          (row) =>
+            `| ${markdownCell(row.phase)} | ${markdownCell(row.evidence)} | ${markdownCell(row.closeWhen)} |`,
+        )
+      : ["| none | - | No field acceptance evidence pack phases were generated. |"]),
+    "",
   ].join("\n");
 }
 
@@ -357,9 +436,11 @@ module.exports = {
   buildDraftContent,
   buildManualEvidenceDraftPlan,
   buildOperatorWalkthroughCapturePlan,
+  buildFieldAcceptanceEvidencePackPlan,
   buildRiskAcceptanceDraftRows,
   buildMarkdown,
   buildOperatorCapturePlanMarkdown,
+  buildFieldAcceptanceEvidencePackMarkdown,
   replaceAcceptedItemRows,
   writeManualEvidenceDrafts,
 };
