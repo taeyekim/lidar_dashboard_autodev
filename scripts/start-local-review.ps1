@@ -87,7 +87,8 @@ function Get-GitInfo {
   try {
     $branch = (& git rev-parse --abbrev-ref HEAD).Trim()
     $commit = (& git rev-parse HEAD).Trim()
-    $status = (& git status --short).Trim()
+    $statusLines = @(& git status --short)
+    $status = ($statusLines -join "`n").Trim()
     return [ordered]@{
       branch = $branch
       commit = $commit
