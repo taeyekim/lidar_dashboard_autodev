@@ -527,6 +527,12 @@ export default function DashboardPage({
       ? "1차 경고 감지"
       : "감지 상황 없음";
   const lastLidarText = lastLidarEvent?.timestamp ? formatEventTimestamp(lastLidarEvent.timestamp) : "수신 대기";
+  const reviewOrigin = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "";
+  const reviewLinks = [
+    { label: "Dashboard", href: reviewOrigin || "/" },
+    { label: "Swagger", href: `${reviewOrigin}/api-docs` },
+    { label: "API health", href: `${reviewOrigin}/api/health` },
+  ];
 
 
   return (
@@ -792,7 +798,7 @@ export default function DashboardPage({
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
         <Card className="flex min-h-32 flex-col justify-between border-solid bg-white">
           <div className="flex items-center justify-between">
             <div>
@@ -878,6 +884,27 @@ export default function DashboardPage({
                 : controlBoardReviewRequired
                   ? "LIVE_TCP_REVIEW: host/port 또는 현장 승인 확인이 필요합니다. LIVE_TCP_APPROVAL_REQUIRED 상태에서는 TCP 전송을 차단합니다."
                   : "DRY_RUN_SAFE: LIVE_TCP 전환 전에는 dry-run 명령으로 기록됩니다."}
+          </div>
+        </Card>
+
+        <Card className="min-h-32 border-solid bg-white">
+          <div className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-400">Review Access</div>
+          <div className="space-y-2">
+            {reviewLinks.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-between rounded border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+              >
+                <span>{link.label}</span>
+                <ArrowUpRight className="h-3.5 w-3.5 text-gray-400" />
+              </a>
+            ))}
+          </div>
+          <div className="mt-3 truncate font-mono text-[11px] text-gray-500">
+            {reviewOrigin || "same-origin runtime"}
           </div>
         </Card>
       </div>
