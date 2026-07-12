@@ -29,6 +29,9 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -Scope Global -ErrorAction SilentlyContinue) {
+  $global:PSNativeCommandUseErrorActionPreference = $false
+}
 
 # Contract anchor: scripts/field-acceptance.ps1 writes the top-level ordered
 # field acceptance evidence package.

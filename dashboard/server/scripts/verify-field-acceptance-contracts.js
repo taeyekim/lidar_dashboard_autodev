@@ -64,6 +64,7 @@ const operatorUiTemplate = readProjectFile("docs/ops/operator-ui-walkthrough-tem
   "StartCompose",
   "StopCompose",
   "scripts/delivery-verify.ps1",
+  "PSNativeCommandUseErrorActionPreference",
   "scripts/runtime-smoke.ps1",
   "scripts/db-field-rehearsal.ps1",
   "scripts/lidar-ingest-rehearsal.ps1",
