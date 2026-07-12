@@ -173,6 +173,31 @@ async function main() {
     });
     assert(authenticatedIngestStatus.status === 200, "authenticated operator must be able to read ingest status diagnostics");
     assert(authenticatedIngestStatus.json?.ok === true, "ingest status diagnostics must use the API success envelope");
+
+    const unauthenticatedSystemStatus = await request(server, { path: "/api/status" });
+    assert(unauthenticatedSystemStatus.status === 401, "system status endpoint must require operator auth");
+
+    const authenticatedSystemStatus = await request(server, {
+      path: "/api/status",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    assert(authenticatedSystemStatus.status === 200, "authenticated operator must be able to read system status");
+    assert(
+      authenticatedSystemStatus.json?.deliveryReadiness?.status,
+      "system status must expose deliveryReadiness status for field review",
+    );
+    assert(
+      Array.isArray(authenticatedSystemStatus.json?.deliveryReadiness?.reviewLinks),
+      "system status must expose delivery review links",
+    );
+    assert(
+      authenticatedSystemStatus.json?.deliveryReadiness?.checks?.deviceIngestKeyConfigured === true,
+      "delivery readiness must expose device key configuration as a boolean",
+    );
+    assert(
+      !JSON.stringify(authenticatedSystemStatus.json).includes("runtime-device-key"),
+      "system status must not expose DEVICE_INGEST_API_KEY value",
+    );
   } finally {
     if (originalDeviceKey === undefined) delete process.env.DEVICE_INGEST_API_KEY;
     else process.env.DEVICE_INGEST_API_KEY = originalDeviceKey;

@@ -173,6 +173,10 @@ export default function SettingsPage() {
   const controlMode = controlBoardStatus?.mode || systemStatus?.controlBoard?.mode || "UNKNOWN";
   const controlSafetyStatus = controlBoardStatus?.safetyStatus || systemStatus?.controlBoard?.safetyStatus || "UNKNOWN";
   const controlLiveApproved = Boolean(controlBoardStatus?.liveApproved || systemStatus?.controlBoard?.liveApproved);
+  const deliveryReadiness = systemStatus?.deliveryReadiness || {};
+  const deliveryChecks = deliveryReadiness.checks || {};
+  const deliveryOpenChecks = Array.isArray(deliveryReadiness.openChecks) ? deliveryReadiness.openChecks : [];
+  const deliveryReviewLinks = Array.isArray(deliveryReadiness.reviewLinks) ? deliveryReadiness.reviewLinks : [];
   const csrfEnabled =
     typeof document !== "undefined" && document.cookie.includes(`${AUTH_CSRF_COOKIE_NAME}=`);
 
@@ -315,6 +319,57 @@ export default function SettingsPage() {
                   description="정주행 1초 반복 수신은 track ID 기반 unique count로 집계합니다."
                   value="DB vehicle_tracks"
                 />
+              </Card>
+
+              <Card title="Delivery Readiness" className="border-gray-200 bg-gray-50">
+                <SettingRow
+                  icon={CheckCircle2}
+                  title="Review status"
+                  description="Local review links and field-readiness booleans from /api/status."
+                >
+                  <StatusBadge tone={deliveryReadiness.status === "READY_FOR_FIELD_REVIEW" ? "ok" : "warn"}>
+                    {deliveryReadiness.status || "UNKNOWN"}
+                  </StatusBadge>
+                </SettingRow>
+                <SettingRow
+                  icon={Shield}
+                  title="Security posture"
+                  description="JWT, cookie, device key, CORS, and Swagger exposure checks without exposing secret values."
+                  value={`open ${deliveryOpenChecks.length}`}
+                />
+                <div className="grid grid-cols-1 gap-2 border-t border-gray-200 pt-4 sm:grid-cols-2">
+                  {[
+                    ["JWT", deliveryChecks.jwtSecretConfigured],
+                    ["Cookie secure", deliveryChecks.authCookieSecure],
+                    ["Device key", deliveryChecks.deviceIngestKeyConfigured],
+                    ["CORS", deliveryChecks.corsOriginsConfigured],
+                    ["Swagger allowlist", deliveryChecks.swaggerAllowlistRestricted],
+                    ["Control board ready", deliveryChecks.controlBoardLiveTcpReady],
+                    ["Level-2 posture", deliveryChecks.level2EscalationPostureReady],
+                  ].map(([label, ready]) => (
+                    <div
+                      key={label}
+                      className={`rounded border px-3 py-2 text-xs font-bold ${
+                        ready ? STATUS_TONE.ok : STATUS_TONE.warn
+                      }`}
+                    >
+                      {label}: {ready ? "READY" : "REVIEW"}
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {deliveryReviewLinks.map((link) => (
+                    <a
+                      key={link.label}
+                      href={link.path}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50"
+                    >
+                      {link.label}
+                    </a>
+                  ))}
+                </div>
               </Card>
             </>
           )}

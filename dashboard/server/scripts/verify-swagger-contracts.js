@@ -145,6 +145,20 @@ assert(
 });
 
 [
+  "deliveryReadiness",
+  "reviewLinks",
+  "jwtSecretConfigured",
+  "authCookieSecure",
+  "deviceIngestKeyConfigured",
+  "swaggerAllowlistRestricted",
+  "controlBoardLiveTcpReady",
+  "level2EscalationPostureReady",
+  "openChecks",
+].forEach((field) => {
+  assert(swaggerText.includes(field), `SystemStatusResponse must document ${field}`);
+});
+
+[
   ["/api/database/health", "get"],
   ["/api/status", "get"],
   ["/api/state", "get"],

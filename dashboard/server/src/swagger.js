@@ -1245,6 +1245,42 @@ const swaggerSpec = {
           },
           devices: { $ref: "#/components/schemas/DeviceStatusSummaryResponse" },
           controlBoard: { $ref: "#/components/schemas/ControlBoardStatusResponse" },
+          deliveryReadiness: {
+            type: "object",
+            additionalProperties: true,
+            properties: {
+              status: { type: "string", example: "REVIEW_REQUIRED" },
+              reviewBasePath: { type: "string", example: "/" },
+              reviewLinks: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    label: { type: "string", example: "Swagger" },
+                    path: { type: "string", example: "/api-docs" },
+                  },
+                },
+              },
+              checks: {
+                type: "object",
+                additionalProperties: { type: "boolean" },
+                properties: {
+                  jwtSecretConfigured: { type: "boolean", example: true },
+                  authCookieSecure: { type: "boolean", example: true },
+                  deviceIngestKeyConfigured: { type: "boolean", example: true },
+                  swaggerAllowlistRestricted: { type: "boolean", example: true },
+                  controlBoardLiveTcpReady: { type: "boolean", example: false },
+                  level2EscalationPostureReady: { type: "boolean", example: true },
+                },
+              },
+              openChecks: {
+                type: "array",
+                items: { type: "string" },
+                example: ["authCookieSecure", "controlBoardLiveTcpReady"],
+              },
+              note: { type: "string" },
+            },
+          },
         },
       },
       OkResponse: {
