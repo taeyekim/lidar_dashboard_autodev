@@ -26,6 +26,29 @@ Development-style start:
 docker compose up --build
 ```
 
+Local review start for a workstation that already has other services on
+`8080`, `5000`, or `5173`:
+
+```powershell
+npm.cmd run review:local
+```
+
+The local review command uses conflict-resistant defaults:
+
+- Dashboard entrypoint: `http://localhost:18080`
+- Backend port: `15000`
+- Frontend port: `15173`
+- PostgreSQL port: `15433`
+
+It starts the Docker Compose stack, waits for the dashboard, API health, and
+Swagger endpoints, and records a non-secret manifest under
+`artifacts/local-review/<timestamp>/`. Override ports with script parameters
+when a workstation already uses one of those defaults:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-local-review.ps1 -NginxPort 28080 -DashboardPort 25000 -FrontendPort 25173 -PostgresPort 25433
+```
+
 Delivery-style browser entrypoint through Nginx:
 
 ```bash

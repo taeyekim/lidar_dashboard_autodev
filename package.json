@@ -8,6 +8,7 @@
     "dev:web": "npm --prefix dashboard/dashboard-web run dev",
     "dev:server": "npm --prefix dashboard/server start",
     "dev:demo": "node -e \"const r=require('child_process').spawnSync('dashboard/demo-server/venv/Scripts/python.exe',['dashboard/demo-server/wrongway_detector.py'],{stdio:'inherit'}); process.exit(r.status ?? 1);\"",
+    "review:local": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-local-review.ps1",
     "db:deploy": "npm --prefix dashboard/server run db:deploy",
     "db:generate": "npm --prefix dashboard/server run db:generate",
     "db:migrate": "npm --prefix dashboard/server run db:migrate",
